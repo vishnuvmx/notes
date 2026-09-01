@@ -8,7 +8,8 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 import '../../../state/theme_provider.dart';
 
-/// Top header app bar for the Tack home screen with cute HeroIcons.
+/// Top header app bar for Tack home screen.
+/// Clean, playful-professional header with "Hey Tack" greeting.
 class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenDrawer;
   final VoidCallback onToggleSearch;
@@ -24,7 +25,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(84);
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
@@ -38,72 +39,33 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Drawer Hamburger Button (Cute HeroIcon)
+            // Drawer Menu Button
             IconButton(
               onPressed: onOpenDrawer,
               icon: TackIcon(TackIcons.menu, size: 24, color: iconColor),
               style: IconButton.styleFrom(
                 padding: EdgeInsets.zero,
-                minimumSize: const Size(44, 44),
+                minimumSize: const Size(40, 40),
               ),
               tooltip: 'Navigation Menu',
             ),
             const SizedBox(width: AppSpacing.sm),
 
-            // App Icon & Brand Title / Subtitle
+            // Clean, Playful Greeting "Hey Tack"
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.asset(
-                          'icon.png',
-                          width: 22,
-                          height: 22,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => TackIcon(TackIcons.pin, size: 20, color: iconColor),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Tack',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  RichText(
-                    text: TextSpan(
-                      style: AppTypography.lightTextTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontSize: 12,
-                      ),
-                      children: [
-                        const TextSpan(text: 'Everything '),
-                        TextSpan(
-                          text: 'worth',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.pastelAmberLight : AppColors.accentAmber,
-                          ),
-                        ),
-                        const TextSpan(text: ' remembering.'),
-                      ],
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Hey Tack',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                ),
               ),
             ),
 
@@ -119,12 +81,16 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
                 workspace.viewMode == HomeViewMode.notebook
                     ? TackIcons.gridView
                     : TackIcons.listView,
-                size: 22,
+                size: 20,
                 color: iconColor,
               ),
               tooltip: workspace.viewMode == HomeViewMode.notebook
-                  ? 'Switch to Sticky Grid'
-                  : 'Switch to Notebook List',
+                  ? 'Switch to Grid View'
+                  : 'Switch to List View',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(38, 38),
+                padding: EdgeInsets.zero,
+              ),
             ),
 
             // Search Toggle Button
@@ -132,22 +98,30 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: onToggleSearch,
               icon: TackIcon(
                 isSearching ? TackIcons.close : TackIcons.search,
-                size: 22,
+                size: 20,
                 color: iconColor,
               ),
               tooltip: isSearching ? 'Close Search' : 'Search Notes',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(38, 38),
+                padding: EdgeInsets.zero,
+              ),
             ),
 
-            // Quick Theme Toggle Button
+            // Quick Theme Switch
             IconButton(
               onPressed: () => themeProv.toggleTheme(context),
               icon: TackIcon(
                 isDark ? TackIcons.sun : TackIcons.moon,
-                size: 22,
+                size: 20,
                 color: isDark ? AppColors.pastelAmberLight : iconColor,
                 style: isDark ? HeroIconStyle.solid : HeroIconStyle.outline,
               ),
-              tooltip: isDark ? 'Switch to Light' : 'Switch to Dark',
+              tooltip: isDark ? 'Light Mode' : 'Dark Mode',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(38, 38),
+                padding: EdgeInsets.zero,
+              ),
             ),
           ],
         ),

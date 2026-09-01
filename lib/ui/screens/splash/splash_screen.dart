@@ -224,11 +224,13 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
           // Central Hero Branding Animation
           Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Animated App Icon Container
-                ScaleTransition(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated App Icon Container
+                  ScaleTransition(
                   scale: _scaleAnimation,
                   child: FadeTransition(
                     opacity: _fadeAnimation,
@@ -355,6 +357,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

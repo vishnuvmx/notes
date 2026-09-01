@@ -19,6 +19,7 @@ class CreateItemSheet extends StatefulWidget {
     return showModalBottomSheet<BaseWorkspaceItem>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateItemSheet(defaultType: defaultType),
     );
@@ -78,19 +79,25 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
-      padding: EdgeInsets.only(
-        left: AppSpacing.lg,
-        right: AppSpacing.lg,
-        top: AppSpacing.md,
-        bottom: AppSpacing.lg + keyboardBottom,
+    final size = MediaQuery.sizeOf(context);
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: size.height * 0.88,
       ),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
-        boxShadow: AppSpacing.floatingControlShadow,
-      ),
-      child: SingleChildScrollView(
+      child: Container(
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          top: AppSpacing.md,
+          bottom: AppSpacing.lg + keyboardBottom,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
+          boxShadow: AppSpacing.floatingControlShadow,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,6 +233,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

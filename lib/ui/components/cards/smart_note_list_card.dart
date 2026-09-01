@@ -10,8 +10,8 @@ import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../state/workspace_provider.dart';
 
-
-/// Tactile Spiral Notebook List Card with cute HeroIcons.
+/// Tactile, unbloated Note List Card matching reference design (Screenshot 2).
+/// Features clean index number, crisp typography, and uncluttered layout.
 class SmartNoteListCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final int index;
@@ -32,127 +32,112 @@ class SmartNoteListCard extends StatelessWidget {
     final palette = AppColors.getPaletteById(item.paletteId);
     final formattedIndex = (index + 1).toString().padLeft(2, '0');
 
-    // Extract read time / subtitle metadata
+    // Metadata line (clean & subtle)
     String metaString = DateFormatter.formatTimestamp(item.updatedAt);
     if (item is TextNote) {
       final note = item as TextNote;
-      metaString += '  •  ${note.estimatedMinutes} min read';
-    } else if (item.type == ItemType.whiteboard) {
-      metaString += '  •  Canvas';
+      metaString = '${note.estimatedMinutes} min read  •  $metaString';
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 5),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: AppSpacing.roundedMd,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
           width: 1,
         ),
-        boxShadow: isDark ? AppSpacing.softShadowDark : AppSpacing.softShadowLight,
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.35)
+                : const Color(0xFF191A23).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: AppSpacing.roundedMd,
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
-          borderRadius: AppSpacing.roundedMd,
-          child: IntrinsicHeight(
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tactile Spiral Notebook Spine Accent
-                _buildSpiralSpine(isDark),
-
-                // Large Stylized Number Index (01, 02...)
+                // Clean Tactile Index Number (e.g. 01, 02)
                 Container(
-                  width: 58,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.only(left: 4),
+                  width: 44,
+                  padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     formattedIndex,
-                    style: AppTypography.scriptIndexStyle(
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
                       color: palette.resolveAccentColor(isDark),
-                      fontSize: 34,
                     ),
                   ),
                 ),
 
-                // Note Content & Details
+                // Note Content (Title, Summary, Timestamp)
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Category Label + Cute Star Pin
-                        Row(
-                          children: [
-                            Text(
-                              item.type.label,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: palette.resolveAccentColor(isDark),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                            if (item.isFavorite) ...[
-                              const SizedBox(width: 6),
-                              const TackIcon(
-                                TackIcons.star,
-                                size: 14,
-                                color: AppColors.accentAmber,
-                                style: HeroIconStyle.solid,
-                              ),
-                            ],
-                          ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Text(
+                        item.title,
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
-                        const SizedBox(height: 3),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 5),
 
-                        // Title
-                        Text(
-                          item.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      // Content Summary
+                      Text(
+                        item.getSummary(),
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 13.5,
+                          height: 1.4,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
-                        const SizedBox(height: 4),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
 
-                        // Summary Snippet
-                        Text(
-                          item.getSummary(),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            height: 1.35,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      // Subtle Meta Info
+                      Text(
+                        metaString,
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11.5,
+                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                         ),
-                        const SizedBox(height: 6),
-
-                        // Timestamp & Meta
-                        Text(
-                          metaString,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 
-                // 3-Dots Context Menu (Cute HeroIcon)
+                // Sleek Context Menu
                 PopupMenuButton<String>(
                   icon: TackIcon(
                     TackIcons.more,
-                    size: 20,
+                    size: 18,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),
                   shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -185,7 +170,7 @@ class SmartNoteListCard extends StatelessWidget {
                       value: 'archive',
                       child: Row(
                         children: [
-                          TackIcon(TackIcons.archive, size: 18),
+                          const TackIcon(TackIcons.archive, size: 18),
                           const SizedBox(width: 8),
                           Text(item.isArchived ? 'Unarchive' : 'Archive'),
                         ],
@@ -204,39 +189,6 @@ class SmartNoteListCard extends StatelessWidget {
                   ],
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSpiralSpine(bool isDark) {
-    return Container(
-      width: 14,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181A1F) : const Color(0xFFF1F3F5),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppSpacing.radiusMd),
-          bottomLeft: Radius.circular(AppSpacing.radiusMd),
-        ),
-        border: Border(
-          right: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(
-          6,
-          (i) => Container(
-            width: 7,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF333842) : const Color(0xFFC4C9D2),
-              borderRadius: BorderRadius.circular(2),
             ),
           ),
         ),

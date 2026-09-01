@@ -20,7 +20,7 @@ import 'ui/screens/settings/settings_screen.dart';
 
 import 'ui/screens/splash/splash_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Android edge-to-edge system navigation & status bar
@@ -32,13 +32,16 @@ void main() {
     ),
   );
 
-  final repository = InMemoryWorkspaceRepository();
+  // Load saved theme preference & repository items from local storage
+  final initialTheme = await ThemeProvider.loadSavedThemeMode();
+  final repository = LocalStorageWorkspaceRepository();
+  await repository.init();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => WorkspaceProvider(repository)),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider(initialMode: initialTheme)),
       ],
       child: const TackApp(),
     ),

@@ -3,14 +3,13 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
-
 import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/cards/smart_note_list_card.dart';
-import '../../components/cards/sticky_note_card.dart';
+import '../../components/cards/bento_workspace_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
@@ -18,7 +17,7 @@ import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
 
 /// Main Home Dashboard Screen for Tack.
-/// Supports both tactile Notebook View (Screenshot 5) and Sticky Pastel Grid (Screenshots 1 & 3).
+/// Offers both Pinterest / Givingli-style Bento Feed and Tactile Push-Pin List View.
 class HomeScreen extends StatefulWidget {
   final Function(BaseWorkspaceItem item)? onOpenItem;
   final VoidCallback? onOpenWhiteboardTab;
@@ -38,7 +37,6 @@ class HomeScreen extends StatefulWidget {
     this.onOpenTrash,
     this.onOpenArchive,
   });
-
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -92,7 +90,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onOpenTrash: widget.onOpenTrash,
         onOpenSettings: widget.onOpenSettings,
       ),
-
       appBar: AppHeaderBar(
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
         onToggleSearch: () {
@@ -109,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Animated Search Bar if opened
+          // Animated Search Bar
           if (_isSearching) ...[
             SmartSearchBar(
               onClose: () {
@@ -120,19 +117,19 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.sm),
           ],
 
-          // Category Filter Pills
+          // Pill Filter Tabs (Wallpaper / Avatar / Upload style)
           const CategoryFilterPills(),
           const SizedBox(height: AppSpacing.md),
 
-          // Main Feed (Notebook List vs Sticky Grid)
+          // Main Feed: Pinterest Bento-Box vs Tactile Note List
           Expanded(
             child: workspace.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : items.isEmpty
                     ? _buildEmptyState(workspace)
                     : workspace.viewMode == HomeViewMode.notebook
-                        ? _buildNotebookListView(items)
-                        : _buildStickyGridView(items),
+                        ? _buildTactileListView(items)
+                        : _buildBentoFeedView(items),
           ),
         ],
       ),
@@ -144,8 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Tactile Spiral Notebook List View (Screenshot 5)
-  Widget _buildNotebookListView(List<BaseWorkspaceItem> items) {
+  /// Tactile Push-Pin Note List View (Screenshot 2)
+  Widget _buildTactileListView(List<BaseWorkspaceItem> items) {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: AppSpacing.xl),
       itemCount: items.length,
@@ -168,25 +165,84 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Colorful Sticky Note 2-Column Grid (Screenshots 1 & 3)
-  Widget _buildStickyGridView(List<BaseWorkspaceItem> items) {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.md,
-        mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.82,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return StickyNoteCard(
-          item: item,
-          onTap: () => widget.onOpenItem?.call(item),
+  /// Givingli / Pinterest Bento-Box Feed View (Screenshot 3 & 4)
+  Widget _buildBentoFeedView(List<BaseWorkspaceItem> items) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      itemCount: _calculateBentoRowCount(items.length),
+      itemBuilder: (context, rowIndex) {
+        // First item or every 4th row is a Hero full-width Bento Card
+        final startIndex = _getBentoStartIndex(rowIndex);
+        final isHeroRow = (rowIndex % 3 == 0) && (startIndex < items.length);
+
+        if (isHeroRow || startIndex + 1 >= items.length) {
+          final item = items[startIndex];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: BentoWorkspaceCard(
+              item: item,
+              isHero: true,
+              onTap: () => widget.onOpenItem?.call(item),
+            ),
+          );
+        }
+
+        // 2-Column paired bento cards
+        final item1 = items[startIndex];
+        final item2 = items[startIndex + 1];
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: BentoWorkspaceCard(
+                    item: item1,
+                    onTap: () => widget.onOpenItem?.call(item1),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: BentoWorkspaceCard(
+                    item: item2,
+                    onTap: () => widget.onOpenItem?.call(item2),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
+  }
+
+  int _calculateBentoRowCount(int totalItems) {
+    if (totalItems == 0) return 0;
+    int count = 0;
+    int itemsPlaced = 0;
+    while (itemsPlaced < totalItems) {
+      if (count % 3 == 0) {
+        itemsPlaced += 1;
+      } else {
+        itemsPlaced += 2;
+      }
+      count++;
+    }
+    return count;
+  }
+
+  int _getBentoStartIndex(int targetRow) {
+    int index = 0;
+    for (int r = 0; r < targetRow; r++) {
+      if (r % 3 == 0) {
+        index += 1;
+      } else {
+        index += 2;
+      }
+    }
+    return index;
   }
 
   Widget _buildEmptyState(WorkspaceProvider workspace) {
@@ -201,5 +257,4 @@ class _HomeScreenState extends State<HomeScreen> {
       onAction: () => _openCreateSheet(defaultType: workspace.selectedCategory),
     );
   }
-
 }

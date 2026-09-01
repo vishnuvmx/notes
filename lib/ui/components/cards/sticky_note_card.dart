@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/tack_icons.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/sticky_note.dart';
-import '../../../state/workspace_provider.dart';
 
-/// Colorful rounded Sticky Note Card with cute HeroIcons.
+/// Tactile, playful-professional Sticky Note Card matching reference (Screenshot 2).
+/// Features a cute 3D push-pin tack, clean pastel surface, and uncluttered layout.
 class StickyNoteCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
@@ -23,9 +21,9 @@ class StickyNoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final workspace = context.read<WorkspaceProvider>();
     final palette = AppColors.getPaletteById(item.paletteId);
-    final cardColor = palette.resolveCardColor(isDark);
+    final cardBgColor = palette.resolveCardColor(isDark);
+    final pinColor = palette.pinColor;
 
     final double rotation = item is StickyNote
         ? (item as StickyNote).rotationAngle
@@ -33,113 +31,139 @@ class StickyNoteCard extends StatelessWidget {
 
     return Transform.rotate(
       angle: rotation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: AppSpacing.roundedLg,
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.4)
-                  : cardColor.withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-              spreadRadius: -2,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          // Main Sticky Card
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: cardBgColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.45)
+                      : cardBgColor.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -2,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: AppSpacing.roundedLg,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: AppSpacing.roundedLg,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Top Row: Type Pill + Star Favorite Pin
-                  Column(
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg + 4, AppSpacing.md, AppSpacing.md),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Card Body
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              borderRadius: AppSpacing.roundedPill,
+                          // Title
+                          Text(
+                            item.title,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF18191F),
+                              letterSpacing: -0.3,
                             ),
-                            child: Text(
-                              item.type.label,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          IconButton(
-                            icon: TackIcon(
-                              TackIcons.star,
-                              size: 18,
-                              color: item.isFavorite ? AppColors.accentAmber : Colors.white70,
-                              style: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
+                          const SizedBox(height: 6),
+
+                          // Summary
+                          Text(
+                            item.getSummary(),
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 12.5,
+                              height: 1.38,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.85)
+                                  : const Color(0xFF2D3142).withValues(alpha: 0.9),
                             ),
-                            constraints: const BoxConstraints(),
-                            padding: EdgeInsets.zero,
-                            onPressed: () => workspace.toggleFavorite(item.id),
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
 
-                      // Title
-                      Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
+                      // Timestamp at bottom
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          DateFormatter.formatTimestamp(item.updatedAt),
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.6)
+                                : const Color(0xFF4A4E69).withValues(alpha: 0.75),
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Content Preview
-                      Text(
-                        item.getSummary(),
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.35,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-
-                  // Bottom Timestamp
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.md),
-                    child: Text(
-                      DateFormatter.formatTimestamp(item.updatedAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
+
+          // 3D Translucent Tactile Push-Pin Tack (Top Center - Screenshot 2)
+          Positioned(
+            top: -7,
+            child: _buildPushPin(pinColor, isDark),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPushPin(Color color, bool isDark) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: color.withValues(alpha: 0.6),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        gradient: RadialGradient(
+          center: const Alignment(-0.3, -0.3),
+          radius: 0.8,
+          colors: [
+            Colors.white.withValues(alpha: 0.8),
+            color,
+            color.withValues(alpha: 0.9),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1,
         ),
       ),
     );

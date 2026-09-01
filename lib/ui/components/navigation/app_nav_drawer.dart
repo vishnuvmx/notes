@@ -7,6 +7,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 
 /// Navigation Drawer for secondary destinations with cute HeroIcons.
+/// Fully responsive across all Android device heights and orientations.
 class AppNavDrawer extends StatelessWidget {
   final VoidCallback? onOpenFavorites;
   final VoidCallback? onOpenArchive;
@@ -33,8 +34,8 @@ class AppNavDrawer extends StatelessWidget {
         borderRadius: BorderRadius.horizontal(right: Radius.circular(AppSpacing.radiusLg)),
       ),
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
             // Drawer Header with Tack icon and branding
             Padding(
@@ -60,33 +61,37 @@ class AppNavDrawer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tack',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.4,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tack',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Tactile notes & canvas',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        Text(
+                          'Tactile notes & canvas',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const Divider(),
+            const Divider(height: 1),
 
             // Primary Navigation Items with cute HeroIcons
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              child: Column(
                 children: [
                   _buildDrawerTile(
                     context,
@@ -135,7 +140,7 @@ class AppNavDrawer extends StatelessWidget {
               ),
             ),
 
-            const Divider(),
+            const Divider(height: 1),
 
             // Settings & About
             Padding(

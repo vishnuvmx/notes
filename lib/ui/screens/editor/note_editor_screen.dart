@@ -33,7 +33,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late List<String> _tags;
 
   bool _isEditingMode = true;
-  bool _autoSaveEnabled = true;
+  final bool _autoSaveEnabled = true;
   bool _isSaving = false;
 
   @override
@@ -319,23 +319,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             children: [
               TackIcon(
                 _isSaving ? TackIcons.undo : TackIcons.checkCircle,
-                size: 16,
+                size: 14,
                 color: _isSaving ? AppColors.accentAmber : AppColors.success,
                 style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               Text(
-                _isSaving ? 'Saving...' : 'Auto Save',
+                _isSaving ? 'Saving' : 'Saved',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   fontSize: 11,
+                  letterSpacing: -0.2,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Switch(
-                value: _autoSaveEnabled,
-                onChanged: (val) => setState(() => _autoSaveEnabled = val),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ],
           ),
@@ -345,10 +340,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           IconButton(
             icon: TackIcon(
               _isEditingMode ? TackIcons.notes : TackIcons.whiteboard,
-              size: 22,
+              size: 20,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
-            tooltip: _isEditingMode ? 'Switch to Reader Mode' : 'Switch to Edit Mode',
+            tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Mode',
             onPressed: () {
               HapticFeedback.selectionClick();
               setState(() => _isEditingMode = !_isEditingMode);
@@ -357,32 +352,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
           // Palette trigger
           IconButton(
-            icon: const TackIcon(TackIcons.palette, size: 22),
-            tooltip: 'Change Color Theme',
+            icon: const TackIcon(TackIcons.palette, size: 20),
+            tooltip: 'Colors',
             onPressed: _showColorPicker,
           ),
 
-          // Favorite Pin
-          IconButton(
-            icon: TackIcon(
-              TackIcons.star,
-              size: 22,
-              color: widget.item.isFavorite ? AppColors.accentAmber : null,
-              style: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-            ),
-            tooltip: 'Favorite',
-            onPressed: () {
-              workspace.toggleFavorite(widget.item.id);
-              setState(() {});
-            },
-          ),
-
-          // Overflow menu (Share / Trash)
+          // Overflow menu (Favorite, Share, Trash)
           PopupMenuButton<String>(
-            icon: const TackIcon(TackIcons.more, size: 22),
+            icon: const TackIcon(TackIcons.more, size: 20),
             shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
             onSelected: (val) {
-              if (val == 'share') {
+              if (val == 'favorite') {
+                workspace.toggleFavorite(widget.item.id);
+                setState(() {});
+              } else if (val == 'share') {
                 _showShareExportSheet();
               } else if (val == 'trash') {
                 workspace.moveToTrash(widget.item.id);
@@ -390,6 +373,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'favorite',
+                child: Row(
+                  children: [
+                    TackIcon(
+                      TackIcons.star,
+                      size: 18,
+                      color: widget.item.isFavorite ? AppColors.accentAmber : null,
+                      style: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(widget.item.isFavorite ? 'Unfavorite' : 'Favorite'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'share',
                 child: Row(

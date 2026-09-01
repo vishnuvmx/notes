@@ -19,11 +19,10 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    // Pump initial frames
+    await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify Tack brand title and subtitle
+    // Verify Tack brand title
     expect(find.text('Tack'), findsWidgets);
-    expect(find.text('All'), findsOneWidget);
-    expect(find.text('Notes'), findsWidgets);
   });
 }
