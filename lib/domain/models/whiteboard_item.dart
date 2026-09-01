@@ -1,0 +1,272 @@
+import 'package:flutter/material.dart';
+import 'base_item.dart';
+
+/// Node shape types matching the flowchart editor palette in Screenshot 4.
+enum CanvasNodeType {
+  startEnd,     // Rounded pill
+  process,      // Rectangle
+  decision,     // Diamond
+  inputOutput,  // Parallelogram
+  connector,    // Small circle
+  sticky,       // Sticky note shape
+  textOnly;     // Floating text
+
+  String get label {
+    switch (this) {
+      case CanvasNodeType.startEnd:
+        return 'Start / End';
+      case CanvasNodeType.process:
+        return 'Process';
+      case CanvasNodeType.decision:
+        return 'Decision';
+      case CanvasNodeType.inputOutput:
+        return 'Input / Output';
+      case CanvasNodeType.connector:
+        return 'Connector';
+      case CanvasNodeType.sticky:
+        return 'Sticky Note';
+      case CanvasNodeType.textOnly:
+        return 'Text';
+    }
+  }
+}
+
+/// Canvas node model composed inside WhiteboardCanvasItem.
+@immutable
+class CanvasNode {
+  final String id;
+  final String text;
+  final CanvasNodeType shapeType;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final String paletteId;
+
+  const CanvasNode({
+    required this.id,
+    required this.text,
+    required this.shapeType,
+    required this.x,
+    required this.y,
+    this.width = 140,
+    this.height = 64,
+    this.paletteId = 'peach',
+  });
+
+  CanvasNode copyWith({
+    String? text,
+    CanvasNodeType? shapeType,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    String? paletteId,
+  }) {
+    return CanvasNode(
+      id: id,
+      text: text ?? this.text,
+      shapeType: shapeType ?? this.shapeType,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      paletteId: paletteId ?? this.paletteId,
+    );
+  }
+
+  Offset get center => Offset(x + width / 2, y + height / 2);
+  Offset get topPort => Offset(x + width / 2, y);
+  Offset get bottomPort => Offset(x + width / 2, y + height);
+  Offset get leftPort => Offset(x, y + height / 2);
+  Offset get rightPort => Offset(x + width, y + height / 2);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'text': text,
+      'shapeType': shapeType.name,
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'paletteId': paletteId,
+    };
+  }
+
+  factory CanvasNode.fromJson(Map<String, dynamic> json) {
+    return CanvasNode(
+      id: json['id'] as String,
+      text: json['text'] as String? ?? '',
+      shapeType: CanvasNodeType.values.firstWhere(
+        (e) => e.name == json['shapeType'],
+        orElse: () => CanvasNodeType.process,
+      ),
+      x: (json['x'] as num?)?.toDouble() ?? 0.0,
+      y: (json['y'] as num?)?.toDouble() ?? 0.0,
+      width: (json['width'] as num?)?.toDouble() ?? 140.0,
+      height: (json['height'] as num?)?.toDouble() ?? 64.0,
+      paletteId: json['paletteId'] as String? ?? 'peach',
+    );
+  }
+}
+
+/// Canvas connector edge between two nodes.
+@immutable
+class CanvasEdge {
+  final String id;
+  final String fromNodeId;
+  final String toNodeId;
+  final String? label; // e.g. "Yes", "No"
+  final String fromPort; // 'top', 'bottom', 'left', 'right'
+  final String toPort;
+
+  const CanvasEdge({
+    required this.id,
+    required this.fromNodeId,
+    required this.toNodeId,
+    this.label,
+    this.fromPort = 'bottom',
+    this.toPort = 'top',
+  });
+
+  CanvasEdge copyWith({
+    String? label,
+    String? fromPort,
+    String? toPort,
+  }) {
+    return CanvasEdge(
+      id: id,
+      fromNodeId: fromNodeId,
+      toNodeId: toNodeId,
+      label: label ?? this.label,
+      fromPort: fromPort ?? this.fromPort,
+      toPort: toPort ?? this.toPort,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'fromNodeId': fromNodeId,
+      'toNodeId': toNodeId,
+      'label': label,
+      'fromPort': fromPort,
+      'toPort': toPort,
+    };
+  }
+
+  factory CanvasEdge.fromJson(Map<String, dynamic> json) {
+    return CanvasEdge(
+      id: json['id'] as String,
+      fromNodeId: json['fromNodeId'] as String,
+      toNodeId: json['toNodeId'] as String,
+      label: json['label'] as String?,
+      fromPort: json['fromPort'] as String? ?? 'bottom',
+      toPort: json['toPort'] as String? ?? 'top',
+    );
+  }
+}
+
+/// Concrete Whiteboard Canvas model inheriting from BaseWorkspaceItem and composing Nodes and Edges.
+class WhiteboardCanvasItem extends BaseWorkspaceItem {
+  final List<CanvasNode> nodes;
+  final List<CanvasEdge> edges;
+  final double zoomScale;
+  final Offset panOffset;
+
+  const WhiteboardCanvasItem({
+    required super.id,
+    required super.title,
+    required super.createdAt,
+    required super.updatedAt,
+    required super.paletteId,
+    super.isFavorite,
+    super.isArchived,
+    super.isTrash,
+    this.nodes = const [],
+    this.edges = const [],
+    this.zoomScale = 1.0,
+    this.panOffset = Offset.zero,
+  }) : super(type: ItemType.whiteboard);
+
+  @override
+  String getSummary() {
+    return '${nodes.length} nodes, ${edges.length} connections';
+  }
+
+  @override
+  WhiteboardCanvasItem copyWith({
+    String? title,
+    DateTime? updatedAt,
+    String? paletteId,
+    bool? isFavorite,
+    bool? isArchived,
+    bool? isTrash,
+    List<CanvasNode>? nodes,
+    List<CanvasEdge>? edges,
+    double? zoomScale,
+    Offset? panOffset,
+  }) {
+    return WhiteboardCanvasItem(
+      id: id,
+      title: title ?? this.title,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      paletteId: paletteId ?? this.paletteId,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isArchived: isArchived ?? this.isArchived,
+      isTrash: isTrash ?? this.isTrash,
+      nodes: nodes ?? this.nodes,
+      edges: edges ?? this.edges,
+      zoomScale: zoomScale ?? this.zoomScale,
+      panOffset: panOffset ?? this.panOffset,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'type': type.name,
+      'paletteId': paletteId,
+      'isFavorite': isFavorite,
+      'isArchived': isArchived,
+      'isTrash': isTrash,
+      'nodes': nodes.map((n) => n.toJson()).toList(),
+      'edges': edges.map((e) => e.toJson()).toList(),
+      'zoomScale': zoomScale,
+      'panX': panOffset.dx,
+      'panY': panOffset.dy,
+    };
+  }
+
+  factory WhiteboardCanvasItem.fromJson(Map<String, dynamic> json) {
+    return WhiteboardCanvasItem(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      paletteId: json['paletteId'] as String? ?? 'cyan',
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      isArchived: json['isArchived'] as bool? ?? false,
+      isTrash: json['isTrash'] as bool? ?? false,
+      nodes: (json['nodes'] as List<dynamic>?)
+              ?.map((n) => CanvasNode.fromJson(n as Map<String, dynamic>))
+              .toList() ??
+          [],
+      edges: (json['edges'] as List<dynamic>?)
+              ?.map((e) => CanvasEdge.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      zoomScale: (json['zoomScale'] as num?)?.toDouble() ?? 1.0,
+      panOffset: Offset(
+        (json['panX'] as num?)?.toDouble() ?? 0.0,
+        (json['panY'] as num?)?.toDouble() ?? 0.0,
+      ),
+    );
+  }
+}
