@@ -5,10 +5,8 @@ import 'package:notes/main.dart';
 import 'package:notes/ui/screens/home/home_screen.dart';
 import 'package:notes/ui/components/cards/smart_note_list_card.dart';
 import 'package:notes/ui/components/cards/clipboard_card.dart';
-import 'package:notes/ui/components/feedback/empty_state_widget.dart';
-import 'package:notes/ui/components/app_bars/app_header_bar.dart';
-import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
 import 'package:notes/ui/components/inputs/category_filter_pills.dart';
+import 'package:notes/ui/screens/splash/splash_screen.dart';
 import 'package:notes/domain/models/base_item.dart';
 import 'package:notes/data/repositories/workspace_repo_impl.dart';
 import 'package:notes/data/mock/mock_initial_data.dart';
@@ -31,6 +29,29 @@ void main() {
     final provider = WorkspaceProvider(repository);
     await provider.loadItems();
     expect(provider.items.isNotEmpty, true);
+  });
+
+  testWidgets('SplashScreen renders red background and centered app icon', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SplashScreen(nextScreen: Scaffold(body: Text('Home Content'))),
+      ),
+    );
+
+    // Initial frame
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Verify splash screen elements
+    expect(find.text('Tack'), findsOneWidget);
+    expect(find.text('Everything worth remembering.'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+
+    // Fast-forward animation to complete and slide up
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
+
+    // Verify next screen is displayed
+    expect(find.text('Home Content'), findsOneWidget);
   });
 
   testWidgets('SmartNoteListCard renders title and summary', (WidgetTester tester) async {
@@ -89,7 +110,7 @@ void main() {
     expect(find.byType(ClipboardCard), findsWidgets);
   });
 
-  testWidgets('TackApp launches with TackRootNavigator and allows category filtering', (WidgetTester tester) async {
+  testWidgets('TackApp launches with SplashScreen and slides up to HomeScreen', (WidgetTester tester) async {
     final repository = LocalStorageWorkspaceRepository(initialItems: MockInitialData.getInitialItems());
     final workspaceProvider = WorkspaceProvider(repository);
     await workspaceProvider.loadItems();
@@ -104,7 +125,13 @@ void main() {
       ),
     );
 
+    // Verify Splash Screen first on launch
     await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Tack'), findsOneWidget);
+
+    // Let splash finish and slide up to HomeScreen
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
 
     // Verify main screen is visible
     expect(find.text('Hey Tack'), findsOneWidget);

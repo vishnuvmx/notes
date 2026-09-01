@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 
-
-/// Delightful, tactile animated splash & loading screen for Tack.
-/// Features floating bouncy pastel sticky shapes, breathing brand icon,
-/// smooth animated typography, and seamless transition to the Home dashboard.
+/// Red-themed Splash Screen featuring centered app icon and smooth slide-up transition to HomeScreen.
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
 
@@ -17,388 +13,208 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  late final AnimationController _mainController;
-  late final AnimationController _pulseController;
-
-  // Staggered animations
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _fadeAnimation;
-  late final Animation<double> _taglineFadeAnimation;
-  late final Animation<double> _cardsBounceAnimation;
-  late final Animation<double> _dotsProgressAnimation;
+  late final Animation<double> _slideAnimation;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
 
-    _mainController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    );
-
-    _pulseController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.1, 0.55, curve: Curves.easeIn),
+    // Smooth elastic pop-in for the center icon
+    _scaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+      ),
     );
 
-    _cardsBounceAnimation = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.25, 0.70, curve: Curves.elasticOut),
+    // Fade-in animation
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.45, curve: Curves.easeIn),
+      ),
     );
 
-    _taglineFadeAnimation = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.50, 0.85, curve: Curves.easeOutCubic),
+    // Subtle gentle float-up
+    _slideAnimation = Tween<double>(begin: 18.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.70, curve: Curves.easeOutCubic),
+      ),
     );
 
-    _dotsProgressAnimation = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.60, 0.95, curve: Curves.easeInOut),
-    );
+    _controller.forward();
 
-    _mainController.forward();
-
-    // Navigate to Home screen after animation completes
-    _mainController.addStatusListener((status) {
+    // Trigger slide up transition when animation completes
+    _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        HapticFeedback.mediumImpact();
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 650),
-            pageBuilder: (_, animation, _) => widget.nextScreen,
-            transitionsBuilder: (_, animation, _, child) {
-
-              return FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.04),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-                  child: child,
-                ),
-              );
-            },
-          ),
-        );
+        _navigateToNext();
       }
     });
   }
 
+  void _navigateToNext() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+
+    HapticFeedback.lightImpact();
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 650),
+        pageBuilder: (_, animation, secondaryAnimation) => widget.nextScreen,
+        transitionsBuilder: (_, animation, secondaryAnimation, child) {
+          // Slide up from bottom (Offset(0, 1.0) -> Offset.zero)
+          final slideUpAnimation = Tween<Offset>(
+            begin: const Offset(0.0, 1.0),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.fastOutSlowIn,
+            ),
+          );
+
+          return SlideTransition(
+            position: slideUpAnimation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _mainController.dispose();
-    _pulseController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
+    // Red brand gradient (vibrant crimson red palette)
+    const Color primaryRed = Color(0xFFD92D20); // Modern vibrant red
+    const Color darkRed = Color(0xFFB42318);    // Deep rich red
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background ambient soft glowing gradients
-          Positioned(
-            top: size.height * 0.15,
-            left: size.width * 0.1,
-            child: _buildAmbientBlob(
-              color: AppColors.pastelPeachLight.withValues(alpha: isDark ? 0.08 : 0.25),
-              size: 220,
-            ),
-          ),
-          Positioned(
-            bottom: size.height * 0.2,
-            right: size.width * 0.08,
-            child: _buildAmbientBlob(
-              color: AppColors.pastelLavenderLight.withValues(alpha: isDark ? 0.08 : 0.25),
-              size: 260,
-            ),
-          ),
-          Positioned(
-            top: size.height * 0.45,
-            right: size.width * 0.12,
-            child: _buildAmbientBlob(
-              color: AppColors.pastelCyanLight.withValues(alpha: isDark ? 0.06 : 0.2),
-              size: 180,
-            ),
-          ),
-
-          // Floating background playful pastel cards
-          AnimatedBuilder(
-            animation: _cardsBounceAnimation,
-            builder: (context, child) {
-              final t = _cardsBounceAnimation.value;
-              return Stack(
-                children: [
-                  // Top Left Amber Sticky
-                  Positioned(
-                    top: size.height * 0.22 - (1 - t) * 40,
-                    left: 36,
-                    child: Transform.rotate(
-                      angle: -0.18 * t,
-                      child: Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: _buildFloatingStickyTile(
-                          color: AppColors.pastelAmberLight,
-                          width: 58,
-                          height: 58,
-                          isDark: isDark,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Top Right Coral Sticky
-                  Positioned(
-                    top: size.height * 0.26 - (1 - t) * 50,
-                    right: 42,
-                    child: Transform.rotate(
-                      angle: 0.15 * t,
-                      child: Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: _buildFloatingStickyTile(
-                          color: AppColors.pastelCoralLight,
-                          width: 64,
-                          height: 64,
-                          isDark: isDark,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Bottom Left Cyan Sticky
-                  Positioned(
-                    bottom: size.height * 0.28 + (1 - t) * 40,
-                    left: 48,
-                    child: Transform.rotate(
-                      angle: 0.12 * t,
-                      child: Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: _buildFloatingStickyTile(
-                          color: AppColors.pastelCyanLight,
-                          width: 52,
-                          height: 52,
-                          isDark: isDark,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Bottom Right Lime Sticky
-                  Positioned(
-                    bottom: size.height * 0.24 + (1 - t) * 40,
-                    right: 38,
-                    child: Transform.rotate(
-                      angle: -0.14 * t,
-                      child: Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: _buildFloatingStickyTile(
-                          color: AppColors.pastelLimeLight,
-                          width: 60,
-                          height: 60,
-                          isDark: isDark,
-                        ),
-                      ),
-                    ),
-                  ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: darkRed,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        body: GestureDetector(
+          onTap: _navigateToNext,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  primaryRed,
+                  darkRed,
                 ],
-              );
-            },
-          ),
-
-          // Central Hero Branding Animation
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Animated App Icon Container
-                  ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        final pulse = 1.0 + (_pulseController.value * 0.04);
-                        return Transform.scale(
-                          scale: pulse,
-                          child: Container(
-                            width: 108,
-                            height: 108,
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.darkSurface : Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (isDark ? Colors.black : AppColors.pastelPeachLight)
-                                      .withValues(alpha: isDark ? 0.6 : 0.4),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 12),
-                                  spreadRadius: -2,
+              ),
+            ),
+            child: Center(
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _slideAnimation.value),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Center App Icon Container
+                            Container(
+                              width: 110,
+                              height: 110,
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(28),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.22),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 12),
+                                    spreadRadius: -2,
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, -2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Image.asset(
+                                  'icon.png',
+                                  fit: BoxFit.cover,
                                 ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Image.asset(
-                                'icon.png',
-                                fit: BoxFit.cover,
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
+                            const SizedBox(height: AppSpacing.lg),
 
-                // App Brand Name "Tack"
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.25),
-                      end: Offset.zero,
-                    ).animate(_scaleAnimation),
-                    child: Text(
-                      'Tack',
-                      style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1.2,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        fontFamily: AppTypography.fontFamily,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // Subtitle Tagline
-                FadeTransition(
-                  opacity: _taglineFadeAnimation,
-                  child: RichText(
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontFamily: AppTypography.fontFamily,
-                        letterSpacing: -0.3,
-                      ),
-                      children: [
-                        const TextSpan(text: 'Everything '),
-                        TextSpan(
-                          text: 'worth',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.pastelAmberLight : AppColors.accentAmber,
-                          ),
-                        ),
-                        const TextSpan(text: ' remembering.'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-
-                // Cute Animated Pastel Loading Dots
-                FadeTransition(
-                  opacity: _dotsProgressAnimation,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(4, (index) {
-                      return AnimatedBuilder(
-                        animation: _pulseController,
-                        builder: (context, _) {
-                          final delay = (index * 0.25);
-                          final wave = ((_pulseController.value + delay) % 1.0);
-                          final dotScale = 0.7 + (wave * 0.6);
-                          final colors = [
-                            AppColors.pastelPeachLight,
-                            AppColors.pastelAmberLight,
-                            AppColors.pastelCyanLight,
-                            AppColors.pastelLavenderLight,
-                          ];
-
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: 8 * dotScale,
-                            height: 8 * dotScale,
-                            decoration: BoxDecoration(
-                              color: colors[index % colors.length],
-                              shape: BoxShape.circle,
+                            // Crisp App Title "Tack"
+                            Text(
+                              'Tack',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1.0,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    offset: const Offset(0, 3),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      );
-                    }),
-                  ),
-                ),
-              ],
+                            const SizedBox(height: 4),
+
+                            // Subtitle Tagline
+                            Text(
+                              'Everything worth remembering.',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.2,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAmbientBlob({required Color color, required double size}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            color,
-            color.withValues(alpha: 0.0),
-          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingStickyTile({
-    required Color color,
-    required double width,
-    required double height,
-    required bool isDark,
-  }) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.35 : 0.85),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
     );
   }

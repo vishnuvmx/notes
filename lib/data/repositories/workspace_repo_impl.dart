@@ -19,12 +19,19 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     }
   }
 
+  @override
   List<BaseWorkspaceItem> get cachedActiveItems =>
       _items.where((i) => !i.isTrash && !i.isArchived).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+  @override
   List<BaseWorkspaceItem> get cachedTrashItems =>
       _items.where((i) => i.isTrash).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+  @override
   List<BaseWorkspaceItem> get cachedArchivedItems =>
       _items.where((i) => !i.isTrash && i.isArchived).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+  @override
   List<BaseWorkspaceItem> get cachedFavoriteItems =>
       _items.where((i) => !i.isTrash && i.isFavorite).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 

@@ -17,7 +17,6 @@ import 'ui/screens/editor/note_editor_screen.dart';
 import 'ui/screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'ui/screens/folders/folder_view_screen.dart';
 import 'ui/screens/settings/settings_screen.dart';
-
 import 'ui/screens/splash/splash_screen.dart';
 
 void main() async {
@@ -61,7 +60,7 @@ class TackApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProv.themeMode,
-      home: const TackRootNavigator(),
+      home: const SplashScreen(nextScreen: TackRootNavigator()),
     );
   }
 }
@@ -91,24 +90,6 @@ class TackRootNavigator extends StatelessWidget {
           builder: (_) => NoteEditorScreen(item: item),
         ),
       );
-    }
-  }
-
-  void _openWhiteboardDirect(BuildContext context) {
-    final workspace = context.read<WorkspaceProvider>();
-    final whiteboard = workspace.items.cast<BaseWorkspaceItem?>().firstWhere(
-          (i) => i is WhiteboardCanvasItem,
-          orElse: () => null,
-        );
-
-    if (whiteboard != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => WhiteboardCanvasScreen(item: whiteboard as WhiteboardCanvasItem),
-        ),
-      );
-    } else {
-      workspace.setCategory(ItemType.whiteboard);
     }
   }
 
