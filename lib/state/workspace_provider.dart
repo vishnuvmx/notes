@@ -17,6 +17,10 @@ class WorkspaceProvider extends ChangeNotifier {
   final IWorkspaceRepository _repository;
 
   WorkspaceProvider(this._repository) {
+    _items = _repository.cachedActiveItems;
+    _trashItems = _repository.cachedTrashItems;
+    _archivedItems = _repository.cachedArchivedItems;
+    _favoriteItems = _repository.cachedFavoriteItems;
     loadItems();
   }
 
@@ -42,8 +46,10 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Load items based on active search and filter
   Future<void> loadItems() async {
-    _isLoading = true;
-    notifyListeners();
+    if (_items.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     if (_searchQuery.trim().isNotEmpty) {
       _items = await _repository.searchItems(_searchQuery.trim(), type: _selectedCategory);

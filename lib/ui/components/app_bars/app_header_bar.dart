@@ -25,7 +25,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 4);
 
   @override
   Widget build(BuildContext context) {
@@ -36,96 +36,98 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
 
     final iconColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Drawer Menu Button
-            IconButton(
-              onPressed: onOpenDrawer,
-              icon: TackIcon(TackIcons.menu, size: 24, color: iconColor),
-              style: IconButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(40, 40),
-              ),
-              tooltip: 'Navigation Menu',
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: AppSpacing.md,
+      title: Row(
+        children: [
+          // Drawer Menu Button
+          IconButton(
+            onPressed: onOpenDrawer,
+            icon: TackIcon(TackIcons.menu, size: 24, color: iconColor),
+            style: IconButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(40, 40),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            tooltip: 'Navigation Menu',
+          ),
+          const SizedBox(width: AppSpacing.sm),
 
-            // Clean, Playful Greeting "Hey Tack"
-            Expanded(
-              child: Text(
-                'Hey Tack',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                ),
+          // Clean, Playful Greeting "Hey Tack"
+          Expanded(
+            child: Text(
+              'Hey Tack',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.8,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               ),
             ),
-
-            // View Mode Toggle (Notebook vs Sticky Grid)
-            IconButton(
-              onPressed: () {
-                final nextMode = workspace.viewMode == HomeViewMode.notebook
-                    ? HomeViewMode.stickyGrid
-                    : HomeViewMode.notebook;
-                workspace.setViewMode(nextMode);
-              },
-              icon: TackIcon(
-                workspace.viewMode == HomeViewMode.notebook
-                    ? TackIcons.gridView
-                    : TackIcons.listView,
-                size: 20,
-                color: iconColor,
-              ),
-              tooltip: workspace.viewMode == HomeViewMode.notebook
-                  ? 'Switch to Grid View'
-                  : 'Switch to List View',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(38, 38),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-
-            // Search Toggle Button
-            IconButton(
-              onPressed: onToggleSearch,
-              icon: TackIcon(
-                isSearching ? TackIcons.close : TackIcons.search,
-                size: 20,
-                color: iconColor,
-              ),
-              tooltip: isSearching ? 'Close Search' : 'Search Notes',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(38, 38),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-
-            // Quick Theme Switch
-            IconButton(
-              onPressed: () => themeProv.toggleTheme(context),
-              icon: TackIcon(
-                isDark ? TackIcons.sun : TackIcons.moon,
-                size: 20,
-                color: isDark ? AppColors.pastelAmberLight : iconColor,
-                style: isDark ? HeroIconStyle.solid : HeroIconStyle.outline,
-              ),
-              tooltip: isDark ? 'Light Mode' : 'Dark Mode',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(38, 38),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+      actions: [
+        // View Mode Toggle (Notebook vs Sticky Grid)
+        IconButton(
+          onPressed: () {
+            final nextMode = workspace.viewMode == HomeViewMode.notebook
+                ? HomeViewMode.stickyGrid
+                : HomeViewMode.notebook;
+            workspace.setViewMode(nextMode);
+          },
+          icon: TackIcon(
+            workspace.viewMode == HomeViewMode.notebook
+                ? TackIcons.gridView
+                : TackIcons.listView,
+            size: 20,
+            color: iconColor,
+          ),
+          tooltip: workspace.viewMode == HomeViewMode.notebook
+              ? 'Switch to Grid View'
+              : 'Switch to List View',
+          style: IconButton.styleFrom(
+            minimumSize: const Size(38, 38),
+            padding: EdgeInsets.zero,
+          ),
+        ),
+
+        // Search Toggle Button
+        IconButton(
+          onPressed: onToggleSearch,
+          icon: TackIcon(
+            isSearching ? TackIcons.close : TackIcons.search,
+            size: 20,
+            color: iconColor,
+          ),
+          tooltip: isSearching ? 'Close Search' : 'Search Notes',
+          style: IconButton.styleFrom(
+            minimumSize: const Size(38, 38),
+            padding: EdgeInsets.zero,
+          ),
+        ),
+
+        // Quick Theme Switch
+        IconButton(
+          onPressed: () => themeProv.toggleTheme(context),
+          icon: TackIcon(
+            isDark ? TackIcons.sun : TackIcons.moon,
+            size: 20,
+            color: isDark ? AppColors.pastelAmberLight : iconColor,
+            style: isDark ? HeroIconStyle.solid : HeroIconStyle.outline,
+          ),
+          tooltip: isDark ? 'Light Mode' : 'Dark Mode',
+          style: IconButton.styleFrom(
+            minimumSize: const Size(38, 38),
+            padding: EdgeInsets.zero,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+      ],
     );
   }
 }

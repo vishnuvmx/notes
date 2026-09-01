@@ -43,9 +43,8 @@ class SmartBottomNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 60),
-          padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(
+          height: 64,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -77,12 +76,14 @@ class SmartBottomNavBar extends StatelessWidget {
 
     return Expanded(
       child: InkWell(
+        key: ValueKey('nav_item_${item.index}'),
         onTap: () {
           HapticFeedback.selectionClick();
           onTap(item.index);
         },
         borderRadius: AppSpacing.roundedSm,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TackIcon(

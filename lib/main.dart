@@ -61,7 +61,7 @@ class TackApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProv.themeMode,
-      home: const SplashScreen(nextScreen: TackRootNavigator()),
+      home: const TackRootNavigator(),
     );
   }
 }
@@ -116,10 +116,6 @@ class TackRootNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return HomeScreen(
       onOpenItem: (item) => _openItemDetail(context, item),
-      onOpenWhiteboardTab: () => _openWhiteboardDirect(context),
-      onOpenClipboardTab: () {
-        context.read<WorkspaceProvider>().setCategory(ItemType.clipboard);
-      },
       onOpenFavorites: () {
         Navigator.of(context).push(
           MaterialPageRoute(

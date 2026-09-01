@@ -2,6 +2,12 @@ import '../models/base_item.dart';
 
 /// Repository interface contract demonstrating Abstraction and Polymorphism.
 abstract class IWorkspaceRepository {
+  /// Synchronous cached getters for instantaneous frame-1 UI rendering
+  List<BaseWorkspaceItem> get cachedActiveItems => [];
+  List<BaseWorkspaceItem> get cachedTrashItems => [];
+  List<BaseWorkspaceItem> get cachedArchivedItems => [];
+  List<BaseWorkspaceItem> get cachedFavoriteItems => [];
+
   /// Fetch all active workspace items.
   Future<List<BaseWorkspaceItem>> getAllActiveItems();
 

@@ -20,8 +20,6 @@ import '../../components/feedback/empty_state_widget.dart';
 /// Offers both Pinterest / Givingli-style Bento Feed and Tactile Push-Pin List View.
 class HomeScreen extends StatefulWidget {
   final Function(BaseWorkspaceItem item)? onOpenItem;
-  final VoidCallback? onOpenWhiteboardTab;
-  final VoidCallback? onOpenClipboardTab;
   final VoidCallback? onOpenFavorites;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenTrash;
@@ -30,8 +28,6 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     this.onOpenItem,
-    this.onOpenWhiteboardTab,
-    this.onOpenClipboardTab,
     this.onOpenFavorites,
     this.onOpenSettings,
     this.onOpenTrash,
@@ -45,7 +41,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSearching = false;
-  int _currentNavIndex = 0;
 
   void _openCreateSheet({ItemType? defaultType}) async {
     final newItem = await CreateItemSheet.show(context, defaultType: defaultType);
@@ -55,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleBottomNavTap(int index) {
-    setState(() => _currentNavIndex = index);
     final workspace = context.read<WorkspaceProvider>();
 
     if (index == 0) {
@@ -63,17 +57,23 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (index == 1) {
       workspace.setCategory(ItemType.note);
     } else if (index == 3) {
-      if (widget.onOpenWhiteboardTab != null) {
-        widget.onOpenWhiteboardTab!();
-      } else {
-        workspace.setCategory(ItemType.whiteboard);
-      }
+      workspace.setCategory(ItemType.whiteboard);
     } else if (index == 4) {
-      if (widget.onOpenClipboardTab != null) {
-        widget.onOpenClipboardTab!();
-      } else {
-        workspace.setCategory(ItemType.clipboard);
-      }
+      workspace.setCategory(ItemType.clipboard);
+    }
+  }
+
+  int _calculateNavIndex(ItemType? category) {
+    if (category == null) return 0;
+    switch (category) {
+      case ItemType.note:
+        return 1;
+      case ItemType.whiteboard:
+        return 3;
+      case ItemType.clipboard:
+        return 4;
+      case ItemType.sticky:
+        return 0; // Sticky is shown on home dashboard
     }
   }
 
@@ -81,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceProvider>();
     final items = workspace.items;
+    final currentNavIndex = _calculateNavIndex(workspace.selectedCategory);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -134,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: SmartBottomNavBar(
-        currentIndex: _currentNavIndex,
+        currentIndex: currentNavIndex,
         onTap: _handleBottomNavTap,
         onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
       ),

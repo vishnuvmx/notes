@@ -19,6 +19,15 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     }
   }
 
+  List<BaseWorkspaceItem> get cachedActiveItems =>
+      _items.where((i) => !i.isTrash && !i.isArchived).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  List<BaseWorkspaceItem> get cachedTrashItems =>
+      _items.where((i) => i.isTrash).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  List<BaseWorkspaceItem> get cachedArchivedItems =>
+      _items.where((i) => !i.isTrash && i.isArchived).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  List<BaseWorkspaceItem> get cachedFavoriteItems =>
+      _items.where((i) => !i.isTrash && i.isFavorite).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
   /// Initialize and load items from local persistent storage.
   Future<void> init() async {
     if (_isInitialized) return;
@@ -38,8 +47,10 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
             }
           }
         }
-      } else {
-        // First app run: initialize with curated mock data and persist
+      }
+      
+      // If storage was empty or no items parsed, initialize with curated initial data
+      if (_items.isEmpty) {
         _items.clear();
         _items.addAll(MockInitialData.getInitialItems());
         await _persistToStorage();
