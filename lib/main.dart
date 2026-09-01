@@ -18,6 +18,8 @@ import 'ui/screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'ui/screens/folders/folder_view_screen.dart';
 import 'ui/screens/settings/settings_screen.dart';
 
+import 'ui/screens/splash/splash_screen.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -56,10 +58,11 @@ class TackApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProv.themeMode,
-      home: const TackRootNavigator(),
+      home: const SplashScreen(nextScreen: TackRootNavigator()),
     );
   }
 }
+
 
 /// Root navigator managing seamless routing between Home, Editor, Whiteboard, and Folders.
 class TackRootNavigator extends StatelessWidget {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
+
 import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
@@ -190,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEmptyState(WorkspaceProvider workspace) {
     final catName = workspace.selectedCategory?.label ?? 'items';
     return EmptyStateWidget(
-      icon: Icons.note_add_outlined,
+      icon: TackIcons.notes,
       title: 'No $catName found',
       subtitle: workspace.searchQuery.isNotEmpty
           ? 'No matching items for "${workspace.searchQuery}"'
@@ -199,4 +201,5 @@ class _HomeScreenState extends State<HomeScreen> {
       onAction: () => _openCreateSheet(defaultType: workspace.selectedCategory),
     );
   }
+
 }

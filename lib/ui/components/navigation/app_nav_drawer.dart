@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 
-/// Navigation Drawer for secondary destinations (Favorites, Archive, Trash, Settings).
+/// Navigation Drawer for secondary destinations with cute HeroIcons.
 class AppNavDrawer extends StatelessWidget {
   final VoidCallback? onOpenFavorites;
   final VoidCallback? onOpenArchive;
@@ -53,8 +55,7 @@ class AppNavDrawer extends StatelessWidget {
                       child: Image.asset(
                         'icon.png',
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(Icons.push_pin_rounded),
-
+                        errorBuilder: (_, _, _) => const TackIcon(TackIcons.pin),
                       ),
                     ),
                   ),
@@ -82,14 +83,14 @@ class AppNavDrawer extends StatelessWidget {
             ),
             const Divider(),
 
-            // Primary Navigation Items
+            // Primary Navigation Items with cute HeroIcons
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                 children: [
                   _buildDrawerTile(
                     context,
-                    icon: Icons.grid_view_rounded,
+                    icon: TackIcons.gridView,
                     title: 'All Notes',
                     badgeCount: workspace.items.length,
                     onTap: () {
@@ -99,8 +100,9 @@ class AppNavDrawer extends StatelessWidget {
                   ),
                   _buildDrawerTile(
                     context,
-                    icon: Icons.star_rounded,
+                    icon: TackIcons.star,
                     iconColor: AppColors.accentAmber,
+                    style: HeroIconStyle.solid,
                     title: 'Favorites',
                     badgeCount: workspace.favoriteItems.length,
                     onTap: () {
@@ -110,7 +112,7 @@ class AppNavDrawer extends StatelessWidget {
                   ),
                   _buildDrawerTile(
                     context,
-                    icon: Icons.archive_outlined,
+                    icon: TackIcons.archive,
                     title: 'Archived',
                     badgeCount: workspace.archivedItems.length,
                     onTap: () {
@@ -120,7 +122,7 @@ class AppNavDrawer extends StatelessWidget {
                   ),
                   _buildDrawerTile(
                     context,
-                    icon: Icons.delete_outline_rounded,
+                    icon: TackIcons.trash,
                     iconColor: AppColors.error,
                     title: 'Trash',
                     badgeCount: workspace.trashItems.length,
@@ -142,7 +144,7 @@ class AppNavDrawer extends StatelessWidget {
                 children: [
                   _buildDrawerTile(
                     context,
-                    icon: Icons.settings_outlined,
+                    icon: TackIcons.settings,
                     title: 'Settings',
                     onTap: () {
                       Navigator.of(context).pop();
@@ -181,9 +183,10 @@ class AppNavDrawer extends StatelessWidget {
 
   Widget _buildDrawerTile(
     BuildContext context, {
-    required IconData icon,
+    required HeroIcons icon,
     required String title,
     Color? iconColor,
+    HeroIconStyle style = HeroIconStyle.outline,
     int? badgeCount,
     required VoidCallback onTap,
   }) {
@@ -191,10 +194,11 @@ class AppNavDrawer extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return ListTile(
-      leading: Icon(
+      leading: TackIcon(
         icon,
         color: iconColor ?? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
         size: 22,
+        style: style,
       ),
       title: Text(
         title,

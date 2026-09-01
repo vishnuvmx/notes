@@ -1,0 +1,335 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
+
+/// Rich Interactive Content View for Tack Notes.
+/// Renders Headings, Blockquotes, Interactive Checklists, Bullet Lists, and Hashtags.
+class RichNoteContentView extends StatelessWidget {
+  final String content;
+  final ValueChanged<String>? onContentChanged;
+  final bool isInteractive;
+
+  const RichNoteContentView({
+    super.key,
+    required this.content,
+    this.onContentChanged,
+    this.isInteractive = true,
+  });
+
+  void _toggleCheckbox(int lineIndex) {
+    if (onContentChanged == null) return;
+    HapticFeedback.lightImpact();
+
+    final lines = content.split('\n');
+    if (lineIndex >= 0 && lineIndex < lines.length) {
+      final line = lines[lineIndex];
+      if (line.contains('[ ]')) {
+        lines[lineIndex] = line.replaceFirst('[ ]', '[x]');
+      } else if (line.contains('[x]')) {
+        lines[lineIndex] = line.replaceFirst('[x]', '[ ]');
+      } else if (line.contains('[X]')) {
+        lines[lineIndex] = line.replaceFirst('[X]', '[ ]');
+      }
+      onContentChanged!(lines.join('\n'));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final lines = content.split('\n');
+
+    if (content.trim().isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Text(
+          'No content yet. Switch to edit mode to write...',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(lines.length, (index) {
+        final line = lines[index];
+        return _buildLineWidget(context, line, index, isDark);
+      }),
+    );
+  }
+
+  Widget _buildLineWidget(BuildContext context, String line, int lineIndex, bool isDark) {
+    final theme = Theme.of(context);
+    final trimmed = line.trim();
+
+    if (trimmed.isEmpty) {
+      return const SizedBox(height: 10);
+    }
+
+    // 1. Heading 1 (# Heading)
+    if (line.startsWith('# ')) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 14, bottom: 6),
+        child: Text(
+          line.substring(2),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+      );
+    }
+
+    // 2. Heading 2 (## Subheading)
+    if (line.startsWith('## ')) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Text(
+          line.substring(3),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
+      );
+    }
+
+    // 3. Heading 3 (### Small Heading)
+    if (line.startsWith('### ')) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 4),
+        child: Text(
+          line.substring(4),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+        ),
+      );
+    }
+
+    // 4. Interactive Checklist item ([ ] or [x])
+    final isUnchecked = line.contains('[ ]');
+    final isChecked = line.contains('[x]') || line.contains('[X]');
+
+    if (isUnchecked || isChecked) {
+      final taskText = line
+          .replaceAll(RegExp(r'^\s*[-*]?\s*\[[ xX]\]\s*'), '')
+          .replaceAll(RegExp(r'\[[ xX]\]'), '')
+          .trim();
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: InkWell(
+          onTap: isInteractive ? () => _toggleCheckbox(lineIndex) : null,
+          borderRadius: AppSpacing.roundedSm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: AppSpacing.fastAnim,
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: isChecked
+                        ? (isDark ? AppColors.pastelLimeLight : AppColors.success)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isChecked
+                          ? (isDark ? AppColors.pastelLimeLight : AppColors.success)
+                          : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                      width: 1.8,
+                    ),
+                  ),
+                  child: isChecked
+                      ? const Center(
+                          child: TackIcon(
+                            TackIcons.check,
+                            size: 14,
+                            color: Colors.white,
+                            style: HeroIconStyle.solid,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    taskText,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      decoration: isChecked ? TextDecoration.lineThrough : null,
+                      color: isChecked
+                          ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
+                          : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                      fontWeight: isChecked ? FontWeight.w400 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 5. Blockquote (> Quote text)
+    if (line.startsWith('> ')) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
+          borderRadius: BorderRadius.circular(8),
+          border: const Border(
+            left: BorderSide(color: AppColors.pastelPeachLight, width: 3.5),
+          ),
+        ),
+        child: Text(
+          line.substring(2),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontStyle: FontStyle.italic,
+            height: 1.45,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+        ),
+      );
+    }
+
+    // 6. Numbered item (1. item) or Bullet item (• item or - item)
+    if (RegExp(r'^\d+\.\s').hasMatch(line)) {
+      final match = RegExp(r'^(\d+\.)\s*(.*)$').firstMatch(line);
+      final numPrefix = match?.group(1) ?? '';
+      final body = match?.group(2) ?? line;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 24,
+              child: Text(
+                numPrefix,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.pastelAmberLight : AppColors.accentAmber,
+                ),
+              ),
+            ),
+            Expanded(child: _buildRichTextSpans(body, isDark, theme)),
+          ],
+        ),
+      );
+    }
+
+    if (line.startsWith('• ') || line.startsWith('- ')) {
+      final body = line.substring(2);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 7, right: 8),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Expanded(child: _buildRichTextSpans(body, isDark, theme)),
+          ],
+        ),
+      );
+    }
+
+    // 7. Regular paragraph with bold, italic, and hashtag support
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: _buildRichTextSpans(line, isDark, theme),
+    );
+  }
+
+  Widget _buildRichTextSpans(String text, bool isDark, ThemeData theme) {
+    final spans = <InlineSpan>[];
+    final words = text.split(' ');
+
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+
+      // Hashtag detection (#Design, #Marketing)
+      if (word.startsWith('#') && word.length > 1) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelLavenderSoft,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isDark ? AppColors.pastelLavenderLight.withValues(alpha: 0.4) : AppColors.pastelLavenderLight,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                word,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      // Bold Markdown (**text**)
+      else if (word.startsWith('**') && word.endsWith('**') && word.length > 4) {
+        spans.add(
+          TextSpan(
+            text: '${word.substring(2, word.length - 2)} ',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        );
+      }
+      // Italic Markdown (*text*)
+      else if (word.startsWith('*') && word.endsWith('*') && word.length > 2) {
+        spans.add(
+          TextSpan(
+            text: '${word.substring(1, word.length - 1)} ',
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: '$word '));
+      }
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: theme.textTheme.bodyLarge?.copyWith(
+          height: 1.5,
+          fontSize: 15,
+          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          fontFamily: AppTypography.fontFamily,
+        ),
+        children: spans,
+      ),
+    );
+  }
+}

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 
-/// Animated search bar widget for Tack.
+/// Animated search bar widget for Tack with cute HeroIcons.
 class SmartSearchBar extends StatefulWidget {
   final VoidCallback onClose;
 
@@ -35,6 +36,7 @@ class _SmartSearchBarState extends State<SmartSearchBar> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
+    final iconColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
@@ -55,17 +57,20 @@ class _SmartSearchBarState extends State<SmartSearchBar> {
           onChanged: (val) => workspace.setSearchQuery(val),
           decoration: InputDecoration(
             hintText: 'Search notes, stickies, whiteboards...',
-            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TackIcon(TackIcons.search, size: 20, color: iconColor),
+            ),
             suffixIcon: _controller.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    icon: TackIcon(TackIcons.close, size: 18, color: iconColor),
                     onPressed: () {
                       _controller.clear();
                       workspace.setSearchQuery('');
                     },
                   )
                 : IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 18),
+                    icon: TackIcon(TackIcons.close, size: 18, color: iconColor),
                     onPressed: widget.onClose,
                   ),
             contentPadding: const EdgeInsets.symmetric(vertical: 12),

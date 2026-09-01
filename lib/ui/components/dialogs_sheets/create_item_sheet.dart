@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
+
 import '../../../state/workspace_provider.dart';
 import 'color_swatch_picker.dart';
 
@@ -117,12 +119,13 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const TackIcon(TackIcons.close, size: 20),
                   onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Close',
                 ),
               ],
             ),
+
             const SizedBox(height: AppSpacing.md),
 
             // Item Type Selector Chips

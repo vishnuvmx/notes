@@ -40,6 +40,15 @@ class TextNote extends BaseWorkspaceItem {
   }
 
   @override
+  bool matchesQuery(String query) {
+    if (query.isEmpty) return true;
+    final lowerQuery = query.toLowerCase().replaceAll('#', '');
+    final matchInTags = tags.any((t) => t.toLowerCase().contains(lowerQuery));
+    return super.matchesQuery(query) || matchInTags;
+  }
+
+
+  @override
   TextNote copyWith({
     String? title,
     DateTime? updatedAt,

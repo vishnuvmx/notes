@@ -19,10 +19,12 @@
     6. *Lime Zing*: `#B2CD4D` (Light) / `#4D5C1A` (Dark)
     7. *Rose Bubble*: `#F48FB1` (Light) / `#732A46` (Dark)
     8. *Slate Pure*: `#E2E8F0` (Light) / `#2D3748` (Dark)
+- **Iconography**: `HeroIcons` (`heroicons` package via `TackIcon`) with cute rounded caps, soft line weights, and outline/solid style pairings. Avoid generic sharp Material default icons.
 - **Radii & Elevation**:
   - Radii: 8dp (sm), 16dp (md - cards/buttons), 24dp (lg - sheets/dialogs), 999dp (pill).
   - Shadows: Soft, diffused drop shadows (`blurRadius: 12-20`, opacity `0.06 - 0.12`).
   - Touch Targets: Minimum 48x48 dp for interactive elements.
+
 
 ---
 

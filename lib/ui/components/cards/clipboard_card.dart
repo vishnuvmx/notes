@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/clipboard_item.dart';
 
-/// Clipboard Snippet Card with quick copy action.
+/// Clipboard Snippet Card with cute HeroIcons and quick copy action.
 class ClipboardCard extends StatelessWidget {
   final ClipboardItem item;
   final VoidCallback onTap;
@@ -49,9 +50,9 @@ class ClipboardCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.content_copy_rounded,
-                          size: 14,
+                        TackIcon(
+                          TackIcons.clipboard,
+                          size: 16,
                           color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
                         ),
                         const SizedBox(width: 6),
@@ -65,7 +66,11 @@ class ClipboardCard extends StatelessWidget {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy_all_rounded, size: 18),
+                      icon: TackIcon(
+                        TackIcons.copy,
+                        size: 18,
+                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                      ),
                       tooltip: 'Copy to Clipboard',
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,

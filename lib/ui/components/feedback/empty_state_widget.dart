@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 
-/// Playful, soft empty state illustration and action helper.
+/// Playful, soft empty state illustration with cute HeroIcons.
 class EmptyStateWidget extends StatelessWidget {
-  final IconData icon;
+  final HeroIcons icon;
   final String title;
   final String subtitle;
   final String? actionLabel;
@@ -37,10 +38,12 @@ class EmptyStateWidget extends StatelessWidget {
                 color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 38,
-                color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
+              child: Center(
+                child: TackIcon(
+                  icon,
+                  size: 38,
+                  color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -64,7 +67,7 @@ class EmptyStateWidget extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               ElevatedButton.icon(
                 onPressed: onAction,
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const TackIcon(TackIcons.plus, size: 18),
                 label: Text(actionLabel!),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,

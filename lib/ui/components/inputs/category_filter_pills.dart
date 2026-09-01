@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 
-/// Horizontal scrollable category filter pills ("All", "Notes", "Sticky", "Whiteboard", "Clipboard").
+/// Horizontal scrollable category filter pills with cute HeroIcons.
 class CategoryFilterPills extends StatelessWidget {
   const CategoryFilterPills({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
     final selectedType = workspace.selectedCategory;
 
-    final categories = <({ItemType? type, String label, IconData icon})>[
-      (type: null, label: 'All', icon: Icons.grid_view_rounded),
-      (type: ItemType.note, label: 'Notes', icon: Icons.article_outlined),
-      (type: ItemType.sticky, label: 'Sticky', icon: Icons.sticky_note_2_outlined),
-      (type: ItemType.whiteboard, label: 'Whiteboard', icon: Icons.gesture_rounded),
-      (type: ItemType.clipboard, label: 'Clipboard', icon: Icons.assignment_outlined),
+    final categories = <({ItemType? type, String label, HeroIcons icon})>[
+      (type: null, label: 'All', icon: TackIcons.gridView),
+      (type: ItemType.note, label: 'Notes', icon: TackIcons.notes),
+      (type: ItemType.sticky, label: 'Sticky', icon: TackIcons.sticky),
+      (type: ItemType.whiteboard, label: 'Whiteboard', icon: TackIcons.whiteboard),
+      (type: ItemType.clipboard, label: 'Clipboard', icon: TackIcons.clipboard),
     ];
 
     return SizedBox(
@@ -32,7 +33,6 @@ class CategoryFilterPills extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         itemCount: categories.length,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-
         itemBuilder: (context, index) {
           final item = categories[index];
           final isSelected = selectedType == item.type;
@@ -56,10 +56,11 @@ class CategoryFilterPills extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      TackIcon(
                         item.icon,
                         size: 16,
                         color: isSelected ? activeFg : inactiveFg.withValues(alpha: 0.7),
+                        style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
                       ),
                       const SizedBox(width: 6),
                       Text(

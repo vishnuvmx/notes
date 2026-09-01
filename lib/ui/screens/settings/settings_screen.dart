@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 
-/// Settings & Preferences screen for Tack.
+/// Settings & Preferences screen for Tack with cute HeroIcons.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -39,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
                     width: 56,
                     height: 56,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(Icons.push_pin_rounded, size: 40),
+                    errorBuilder: (_, _, _) => const TackIcon(TackIcons.pin, size: 40),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.lg),
@@ -87,39 +89,38 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 ListTile(
                   title: const Text('System Default'),
-                  leading: const Icon(Icons.settings_suggest_outlined),
+                  leading: const TackIcon(TackIcons.settings, size: 22),
                   trailing: themeProv.themeMode == ThemeMode.system
-                      ? const Icon(Icons.check_rounded, color: AppColors.accentAmber)
+                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
                       : null,
                   onTap: () => themeProv.setThemeMode(ThemeMode.system),
                 ),
                 const Divider(),
                 ListTile(
                   title: const Text('Light Mode'),
-                  leading: const Icon(Icons.light_mode_outlined),
+                  leading: const TackIcon(TackIcons.sun, size: 22),
                   trailing: themeProv.themeMode == ThemeMode.light
-                      ? const Icon(Icons.check_rounded, color: AppColors.accentAmber)
+                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
                       : null,
                   onTap: () => themeProv.setThemeMode(ThemeMode.light),
                 ),
                 const Divider(),
                 ListTile(
                   title: const Text('Dark Mode'),
-                  leading: const Icon(Icons.dark_mode_outlined),
+                  leading: const TackIcon(TackIcons.moon, size: 22),
                   trailing: themeProv.themeMode == ThemeMode.dark
-                      ? const Icon(Icons.check_rounded, color: AppColors.accentAmber)
+                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
                       : null,
                   onTap: () => themeProv.setThemeMode(ThemeMode.dark),
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: AppSpacing.xl),
 
           // Typography & Design Info
           Text(
-            'DESIGN SYSTEM',
+            'DESIGN SYSTEM & ICONS',
             style: theme.textTheme.labelSmall?.copyWith(
               color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
               fontWeight: FontWeight.w700,
@@ -138,6 +139,8 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildInfoRow('Icon Pack', 'HeroIcons (Cute Rounded Aesthetics)'),
+                const SizedBox(height: 8),
                 _buildInfoRow('Font Family', 'DM Sans (-2% letter spacing)'),
                 const SizedBox(height: 8),
                 _buildInfoRow('Color Tokens', '8 Curated Sticky Pastels + Dark Surfacing'),

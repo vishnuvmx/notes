@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../state/workspace_provider.dart';
 
 
-
-/// Tactile Spiral Notebook List Card matching Screenshot 5.
-/// Features a spiral binder motif, large colored script index (01, 02...), category label, and metadata.
+/// Tactile Spiral Notebook List Card with cute HeroIcons.
 class SmartNoteListCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final int index;
@@ -40,7 +40,6 @@ class SmartNoteListCard extends StatelessWidget {
     } else if (item.type == ItemType.whiteboard) {
       metaString += '  •  Canvas';
     }
-
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 4),
@@ -88,7 +87,7 @@ class SmartNoteListCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Category Label + Favorite Pin
+                        // Category Label + Cute Star Pin
                         Row(
                           children: [
                             Text(
@@ -101,10 +100,11 @@ class SmartNoteListCard extends StatelessWidget {
                             ),
                             if (item.isFavorite) ...[
                               const SizedBox(width: 6),
-                              Icon(
-                                Icons.star_rounded,
+                              const TackIcon(
+                                TackIcons.star,
                                 size: 14,
                                 color: AppColors.accentAmber,
+                                style: HeroIconStyle.solid,
                               ),
                             ],
                           ],
@@ -148,10 +148,10 @@ class SmartNoteListCard extends StatelessWidget {
                   ),
                 ),
 
-                // 3-Dots Context Menu
+                // 3-Dots Context Menu (Cute HeroIcon)
                 PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert_rounded,
+                  icon: TackIcon(
+                    TackIcons.more,
                     size: 20,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),
@@ -170,10 +170,11 @@ class SmartNoteListCard extends StatelessWidget {
                       value: 'favorite',
                       child: Row(
                         children: [
-                          Icon(
-                            item.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                          TackIcon(
+                            TackIcons.star,
                             size: 18,
                             color: AppColors.accentAmber,
+                            style: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                           ),
                           const SizedBox(width: 8),
                           Text(item.isFavorite ? 'Unfavorite' : 'Favorite'),
@@ -184,10 +185,7 @@ class SmartNoteListCard extends StatelessWidget {
                       value: 'archive',
                       child: Row(
                         children: [
-                          Icon(
-                            item.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
-                            size: 18,
-                          ),
+                          TackIcon(TackIcons.archive, size: 18),
                           const SizedBox(width: 8),
                           Text(item.isArchived ? 'Unarchive' : 'Archive'),
                         ],
@@ -197,7 +195,7 @@ class SmartNoteListCard extends StatelessWidget {
                       value: 'trash',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                          TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
                           SizedBox(width: 8),
                           Text('Move to Trash', style: TextStyle(color: AppColors.error)),
                         ],
@@ -213,7 +211,6 @@ class SmartNoteListCard extends StatelessWidget {
     );
   }
 
-  /// Spiral ring notebook edge
   Widget _buildSpiralSpine(bool isDark) {
     return Container(
       width: 14,
@@ -246,8 +243,4 @@ class SmartNoteListCard extends StatelessWidget {
       ),
     );
   }
-}
-
-extension WhiteboardItemTypeHelper on BaseWorkspaceItem {
-  bool get isWhiteboard => type == ItemType.whiteboard;
 }

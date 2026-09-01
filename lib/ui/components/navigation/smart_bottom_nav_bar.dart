@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 
-/// 5-Destination Bottom Navigation Bar with an elevated center (+) FAB.
-/// Matches Screenshots 4 & 5 for Android-first ergonomics.
+/// 5-Destination Bottom Navigation Bar with cute HeroIcons and elevated center (+) FAB.
 class SmartBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -20,14 +21,13 @@ class SmartBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final navItems = [
-      (icon: Icons.home_rounded, label: 'Home', index: 0),
-      (icon: Icons.article_outlined, label: 'Notes', index: 1),
-      (icon: Icons.gesture_rounded, label: 'Whiteboard', index: 3),
-      (icon: Icons.assignment_outlined, label: 'Clipboard', index: 4),
+      (icon: TackIcons.home, label: 'Home', index: 0),
+      (icon: TackIcons.notes, label: 'Notes', index: 1),
+      (icon: TackIcons.whiteboard, label: 'Whiteboard', index: 3),
+      (icon: TackIcons.clipboard, label: 'Clipboard', index: 4),
     ];
 
     return Container(
@@ -69,7 +69,7 @@ class SmartBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ({IconData icon, String label, int index}) item, bool isDark) {
+  Widget _buildNavItem(BuildContext context, ({HeroIcons icon, String label, int index}) item, bool isDark) {
     final isSelected = currentIndex == item.index;
     final activeColor = isDark ? AppColors.primaryLight : AppColors.primaryDark;
     final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
@@ -84,10 +84,11 @@ class SmartBottomNavBar extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            TackIcon(
               item.icon,
               size: 24,
               color: isSelected ? activeColor : inactiveColor,
+              style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
             ),
             const SizedBox(height: 3),
             Text(
@@ -129,10 +130,13 @@ class SmartBottomNavBar extends StatelessWidget {
             HapticFeedback.lightImpact();
             onFabTap();
           },
-          child: Icon(
-            Icons.add_rounded,
-            size: 28,
-            color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+          child: Center(
+            child: TackIcon(
+              TackIcons.plus,
+              size: 26,
+              color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+              style: HeroIconStyle.outline,
+            ),
           ),
         ),
       ),

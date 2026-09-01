@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/sticky_note.dart';
 import '../../../state/workspace_provider.dart';
 
-/// Colorful rounded Sticky Note Card matching Screenshots 1 & 3.
-/// Features vibrant pastel background, rounded corners, timestamp, and favorite pin.
+/// Colorful rounded Sticky Note Card with cute HeroIcons.
 class StickyNoteCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
@@ -21,8 +22,7 @@ class StickyNoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final workspace = context.read<WorkspaceProvider>();
     final palette = AppColors.getPaletteById(item.paletteId);
     final cardColor = palette.resolveCardColor(isDark);
@@ -60,7 +60,7 @@ class StickyNoteCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Top Row: Type Pill + Pin + Favorite
+                  // Top Row: Type Pill + Star Favorite Pin
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -83,10 +83,11 @@ class StickyNoteCard extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            icon: Icon(
-                              item.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                            icon: TackIcon(
+                              TackIcons.star,
                               size: 18,
                               color: item.isFavorite ? AppColors.accentAmber : Colors.white70,
+                              style: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                             ),
                             constraints: const BoxConstraints(),
                             padding: EdgeInsets.zero,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 
-/// Interactive color swatch picker matching the color circles in Screenshot 3.
+/// Interactive color swatch picker with cute HeroIcon checkmark.
 class ColorSwatchPicker extends StatelessWidget {
   final String selectedPaletteId;
   final ValueChanged<String> onPaletteSelected;
@@ -16,8 +18,7 @@ class ColorSwatchPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       height: 48,
@@ -25,7 +26,6 @@ class ColorSwatchPicker extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemCount: AppColors.presetPalettes.length,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-
         itemBuilder: (context, index) {
           final palette = AppColors.presetPalettes[index];
           final isSelected = palette.id == selectedPaletteId;
@@ -59,10 +59,13 @@ class ColorSwatchPicker extends StatelessWidget {
                     : [],
               ),
               child: isSelected
-                  ? Icon(
-                      Icons.check_rounded,
-                      size: 20,
-                      color: isDark ? Colors.white : Colors.white,
+                  ? const Center(
+                      child: TackIcon(
+                        TackIcons.check,
+                        size: 20,
+                        color: Colors.white,
+                        style: HeroIconStyle.solid,
+                      ),
                     )
                   : null,
             ),

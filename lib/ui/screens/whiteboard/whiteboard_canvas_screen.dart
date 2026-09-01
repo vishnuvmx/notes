@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/whiteboard_item.dart';
+
 import '../../../state/workspace_provider.dart';
 
 /// Whiteboard & Flowchart Canvas Screen matching Screenshot 4 ("Prime Number Checker").
@@ -143,7 +145,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const TackIcon(TackIcons.back, size: 22),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
@@ -168,12 +170,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.undo_rounded, size: 20),
+            icon: const TackIcon(TackIcons.undo, size: 20),
             onPressed: () {},
             tooltip: 'Undo',
           ),
           IconButton(
-            icon: const Icon(Icons.redo_rounded, size: 20),
+            icon: const TackIcon(TackIcons.redo, size: 20),
             onPressed: () {},
             tooltip: 'Redo',
           ),
@@ -200,6 +202,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           ),
         ],
       ),
+
       body: Stack(
         children: [
           // Infinite/Bounded Interactive Canvas
@@ -263,11 +266,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
   // Top Node Palette: Start/End, Process, Decision, I/O, Connector
   Widget _buildTopNodePalette(bool isDark) {
     final items = [
-      (type: CanvasNodeType.startEnd, label: 'Start / End', icon: Icons.play_circle_outline_rounded, color: AppColors.pastelCoralLight),
-      (type: CanvasNodeType.process, label: 'Process', icon: Icons.rectangle_outlined, color: AppColors.pastelLimeLight),
-      (type: CanvasNodeType.decision, label: 'Decision', icon: Icons.diamond_outlined, color: AppColors.pastelLavenderLight),
-      (type: CanvasNodeType.inputOutput, label: 'Input / Output', icon: Icons.polyline_outlined, color: AppColors.pastelAmberLight),
-      (type: CanvasNodeType.connector, label: 'Connector', icon: Icons.circle_outlined, color: AppColors.pastelCyanLight),
+      (type: CanvasNodeType.startEnd, label: 'Start / End', icon: TackIcons.play, color: AppColors.pastelCoralLight),
+      (type: CanvasNodeType.process, label: 'Process', icon: TackIcons.square, color: AppColors.pastelLimeLight),
+      (type: CanvasNodeType.decision, label: 'Decision', icon: TackIcons.diamond, color: AppColors.pastelLavenderLight),
+      (type: CanvasNodeType.inputOutput, label: 'Input / Output', icon: TackIcons.flow, color: AppColors.pastelAmberLight),
+      (type: CanvasNodeType.connector, label: 'Connector', icon: TackIcons.checkCircle, color: AppColors.pastelCyanLight),
     ];
 
     return Container(
@@ -289,7 +292,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(item.icon, size: 22, color: item.color),
+                  TackIcon(item.icon, size: 22, color: item.color),
                   const SizedBox(height: 2),
                   Text(
                     item.label,
@@ -311,12 +314,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
   // Left Tool Rail (Select, Pan, Line, Text, Sticky, Image)
   Widget _buildLeftToolRail(bool isDark) {
     final tools = [
-      (id: 'select', icon: Icons.near_me_outlined),
-      (id: 'pan', icon: Icons.pan_tool_outlined),
-      (id: 'connect', icon: Icons.trending_flat_rounded),
-      (id: 'text', icon: Icons.title_rounded),
-      (id: 'sticky', icon: Icons.sticky_note_2_outlined),
-      (id: 'image', icon: Icons.image_outlined),
+      (id: 'select', icon: TackIcons.cursor),
+      (id: 'pan', icon: TackIcons.hand),
+      (id: 'connect', icon: TackIcons.flow),
+      (id: 'text', icon: TackIcons.notes),
+      (id: 'sticky', icon: TackIcons.sticky),
+      (id: 'image', icon: TackIcons.photo),
     ];
 
     return Container(
@@ -332,7 +335,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
         children: tools.map((tool) {
           final isSelected = _activeTool == tool.id;
           return IconButton(
-            icon: Icon(
+            icon: TackIcon(
               tool.icon,
               color: isSelected
                   ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
@@ -350,6 +353,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
       ),
     );
   }
+
 
   // Right Zoom Controls (+, -, fit)
   Widget _buildRightZoomControls(bool isDark) {
@@ -372,7 +376,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           IconButton(
             icon: const Icon(Icons.add_rounded, size: 20),
             onPressed: () {
-              final matrix = _transformationController.value.clone()..scaleByDouble(1.25);
+              final matrix = _transformationController.value.clone()..scaleByDouble(1.25, 1.25, 1.0, 1.0);
               _transformationController.value = matrix;
             },
             tooltip: 'Zoom In',
@@ -380,11 +384,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           IconButton(
             icon: const Icon(Icons.remove_rounded, size: 20),
             onPressed: () {
-              final matrix = _transformationController.value.clone()..scaleByDouble(0.8);
+              final matrix = _transformationController.value.clone()..scaleByDouble(0.8, 0.8, 1.0, 1.0);
               _transformationController.value = matrix;
             },
             tooltip: 'Zoom Out',
           ),
+
+
 
         ],
       ),

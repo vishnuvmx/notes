@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 import '../../../state/theme_provider.dart';
 
-/// Top header app bar for the Tack home screen.
-/// Includes drawer menu trigger, Tack brand icon & title, subtitle, search toggle, view toggle, and theme switch.
+/// Top header app bar for the Tack home screen with cute HeroIcons.
 class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenDrawer;
   final VoidCallback onToggleSearch;
@@ -32,6 +33,8 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     final workspace = context.watch<WorkspaceProvider>();
     final themeProv = context.watch<ThemeProvider>();
 
+    final iconColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -39,10 +42,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Drawer Hamburger Button
+            // Drawer Hamburger Button (Cute HeroIcon)
             IconButton(
               onPressed: onOpenDrawer,
-              icon: const Icon(Icons.menu_rounded, size: 28),
+              icon: TackIcon(TackIcons.menu, size: 24, color: iconColor),
               style: IconButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(44, 44),
@@ -66,8 +69,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
                           width: 22,
                           height: 22,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const Icon(Icons.push_pin_rounded, size: 20),
-
+                          errorBuilder: (_, _, _) => TackIcon(TackIcons.pin, size: 20, color: iconColor),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -113,11 +115,12 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
                     : HomeViewMode.notebook;
                 workspace.setViewMode(nextMode);
               },
-              icon: Icon(
+              icon: TackIcon(
                 workspace.viewMode == HomeViewMode.notebook
-                    ? Icons.grid_view_rounded
-                    : Icons.view_agenda_outlined,
+                    ? TackIcons.gridView
+                    : TackIcons.listView,
                 size: 22,
+                color: iconColor,
               ),
               tooltip: workspace.viewMode == HomeViewMode.notebook
                   ? 'Switch to Sticky Grid'
@@ -127,9 +130,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             // Search Toggle Button
             IconButton(
               onPressed: onToggleSearch,
-              icon: Icon(
-                isSearching ? Icons.close_rounded : Icons.search_rounded,
-                size: 24,
+              icon: TackIcon(
+                isSearching ? TackIcons.close : TackIcons.search,
+                size: 22,
+                color: iconColor,
               ),
               tooltip: isSearching ? 'Close Search' : 'Search Notes',
             ),
@@ -137,9 +141,11 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             // Quick Theme Toggle Button
             IconButton(
               onPressed: () => themeProv.toggleTheme(context),
-              icon: Icon(
-                isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
+              icon: TackIcon(
+                isDark ? TackIcons.sun : TackIcons.moon,
                 size: 22,
+                color: isDark ? AppColors.pastelAmberLight : iconColor,
+                style: isDark ? HeroIconStyle.solid : HeroIconStyle.outline,
               ),
               tooltip: isDark ? 'Switch to Light' : 'Switch to Dark',
             ),

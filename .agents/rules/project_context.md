@@ -4,8 +4,10 @@
 
 1. **Design System & Typography**:
    - Always use `DM Sans` with `-2%` letter spacing (`letterSpacing: -0.3` to `-0.6`).
+   - Use `HeroIcons` (`heroicons` package via `TackIcon`) for soft, cute rounded aesthetics instead of generic Material icons.
    - Use the 8 curated sticky pastels with proper light and dark mode contrasts.
    - Maintain minimum 48x48 dp touch targets for all interactive elements.
+
 
 2. **OOP Domain Principles**:
    - Model all workspace items (`TextNote`, `StickyNote`, `WhiteboardCanvasItem`, `ClipboardItem`) as subclasses of `BaseWorkspaceItem`.

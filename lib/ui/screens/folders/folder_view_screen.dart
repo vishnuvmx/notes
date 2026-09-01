@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/cards/smart_note_list_card.dart';
@@ -24,7 +26,7 @@ enum FolderType {
   }
 }
 
-/// Dedicated Folder screen for Favorites, Archive, or Trash.
+/// Dedicated Folder screen for Favorites, Archive, or Trash with cute HeroIcons.
 class FolderViewScreen extends StatelessWidget {
   final FolderType folderType;
   final Function(BaseWorkspaceItem item)? onOpenItem;
@@ -60,7 +62,7 @@ class FolderViewScreen extends StatelessWidget {
         actions: [
           if (folderType == FolderType.trash && items.isNotEmpty)
             TextButton.icon(
-              icon: const Icon(Icons.delete_forever_rounded, size: 18, color: AppColors.error),
+              icon: const TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
               label: const Text('Empty', style: TextStyle(color: AppColors.error)),
               onPressed: () {
                 showDialog(
@@ -91,8 +93,8 @@ class FolderViewScreen extends StatelessWidget {
       body: items.isEmpty
           ? EmptyStateWidget(
               icon: folderType == FolderType.trash
-                  ? Icons.delete_outline_rounded
-                  : (folderType == FolderType.favorites ? Icons.star_outline_rounded : Icons.archive_outlined),
+                  ? TackIcons.trash
+                  : (folderType == FolderType.favorites ? TackIcons.star : TackIcons.archive),
               title: 'No items in ${folderType.title}',
               subtitle: 'Items you ${folderType.name} will appear here.',
             )
@@ -117,12 +119,12 @@ class FolderViewScreen extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.restore_from_trash_rounded, size: 20),
+                            icon: const TackIcon(TackIcons.redo, size: 20),
                             tooltip: 'Restore',
                             onPressed: () => workspace.restoreItem(item.id),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_forever_rounded, size: 20, color: AppColors.error),
+                            icon: const TackIcon(TackIcons.trash, size: 20, color: AppColors.error),
                             tooltip: 'Delete Forever',
                             onPressed: () => workspace.deletePermanently(item.id),
                           ),
