@@ -40,7 +40,7 @@ class AppTheme {
         ),
         titleTextStyle: AppTypography.lightTextTheme.headlineSmall,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.lightSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -110,13 +110,14 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.lightSurface,
         elevation: 12,
         shape: RoundedRectangleBorder(
           borderRadius: AppSpacing.roundedLg,
         ),
       ),
+
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.lightSurface,
         elevation: 16,
@@ -161,7 +162,7 @@ class AppTheme {
         ),
         titleTextStyle: AppTypography.darkTextTheme.headlineSmall,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.darkSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -231,13 +232,14 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.darkSurface,
         elevation: 12,
         shape: RoundedRectangleBorder(
           borderRadius: AppSpacing.roundedLg,
         ),
       ),
+
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.darkSurface,
         elevation: 16,

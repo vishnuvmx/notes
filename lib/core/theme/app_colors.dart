@@ -154,13 +154,14 @@ class AppColors {
 
   static TackColorPalette getPaletteByColor(Color color) {
     for (final palette in presetPalettes) {
-      if (palette.lightColor.value == color.value ||
-          palette.darkColor.value == color.value) {
+      if (palette.lightColor == color ||
+          palette.darkColor == color) {
         return palette;
       }
     }
     return presetPalettes[0];
   }
+
 }
 
 /// Strongly typed color palette model for sticky notes, flowchart nodes, and notebook tags.
