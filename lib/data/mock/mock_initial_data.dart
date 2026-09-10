@@ -10,6 +10,56 @@ class MockInitialData {
     final now = DateTime.now();
 
     return [
+      // Neo-Pop Reference Mockup Notes (Screenshot 1)
+      TextNote(
+        id: 'mockup_01',
+        title: 'Not sure where this is going',
+        content:
+            "Don't read the caption, its all same, you dumb dumb, did you even read this though.\n\nDon't read the caption, its all same, you dumb dumb, did you even read this though.",
+        createdAt: now.subtract(const Duration(minutes: 5)),
+        updatedAt: now.subtract(const Duration(minutes: 5)),
+        paletteId: 'lavender',
+        isFavorite: false,
+        tags: ['work', 'Ideas'],
+        estimatedMinutes: 3,
+      ),
+      TextNote(
+        id: 'mockup_02',
+        title: 'Yes, created all notes on same day 😐',
+        content:
+            "Don't read the caption, its all same, you dumb dumb, did you even read this though.\n\nDon't read the caption, its all same, you dumb dumb.",
+        createdAt: now.subtract(const Duration(minutes: 10)),
+        updatedAt: now.subtract(const Duration(minutes: 10)),
+        paletteId: 'lime',
+        isFavorite: true,
+        tags: ['Personal', 'Daily'],
+        estimatedMinutes: 2,
+      ),
+      TextNote(
+        id: 'mockup_03',
+        title: 'This is a mockup stupid',
+        content:
+            "Don't read the caption, its all same, you dumb dumb, did you even read this though.\n\nDon't read the caption, its all same, you dumb dumb, did you even read this though.",
+        createdAt: now.subtract(const Duration(minutes: 20)),
+        updatedAt: now.subtract(const Duration(minutes: 20)),
+        paletteId: 'cyan',
+        isFavorite: false,
+        tags: ['Personal', 'Design'],
+        estimatedMinutes: 4,
+      ),
+      TextNote(
+        id: 'mockup_04',
+        title: 'What do you expect from me 🤬?',
+        content:
+            "Don't read the caption, its all same, you dumb dumb, did you even read this though.\n\nDon't read the caption, its all same, you dumb dumb, did you even read this though.",
+        createdAt: now.subtract(const Duration(minutes: 30)),
+        updatedAt: now.subtract(const Duration(minutes: 30)),
+        paletteId: 'amber',
+        isFavorite: false,
+        tags: ['Fitness', 'Workout'],
+        estimatedMinutes: 5,
+      ),
+
       // 1. Text Note from Screenshot 5
       TextNote(
         id: 'note_01',
@@ -20,8 +70,8 @@ class MockInitialData {
             '2. Transparent contact information\n'
             '3. Genuine customer testimonials and case studies\n'
             '4. Secure checkout guarantees and clear refund policies.',
-        createdAt: now.subtract(const Duration(minutes: 15)),
-        updatedAt: now.subtract(const Duration(minutes: 15)),
+        createdAt: now.subtract(const Duration(hours: 2)),
+        updatedAt: now.subtract(const Duration(hours: 2)),
         paletteId: 'peach',
         isFavorite: true,
         tags: ['Design', 'Conversion', 'UX'],

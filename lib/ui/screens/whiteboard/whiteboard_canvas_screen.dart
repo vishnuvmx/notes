@@ -1,15 +1,71 @@
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/whiteboard_item.dart';
-
 import '../../../state/workspace_provider.dart';
 
-/// Whiteboard & Flowchart Canvas Screen matching Screenshot 4 ("Prime Number Checker").
-/// Interactive panning/zooming canvas with flowchart nodes, connectors, and tool rails.
+/// Immutable snapshot for Undo / Redo history ring buffer.
+class CanvasSnapshot {
+  final List<CanvasNode> nodes;
+  final List<CanvasEdge> edges;
+
+  CanvasSnapshot({
+    required List<CanvasNode> nodes,
+    required List<CanvasEdge> edges,
+  })  : nodes = List.unmodifiable(nodes.map((n) => n.copyWith())),
+        edges = List.unmodifiable(edges.map((e) => e.copyWith()));
+}
+
+/// Canvas History Manager keeping a ring buffer (max 30 snapshots).
+class CanvasHistoryManager {
+  static const int maxHistory = 30;
+  final List<CanvasSnapshot> _undoStack = [];
+  final List<CanvasSnapshot> _redoStack = [];
+
+  bool get canUndo => _undoStack.isNotEmpty;
+  bool get canRedo => _redoStack.isNotEmpty;
+
+  void recordSnapshot(List<CanvasNode> nodes, List<CanvasEdge> edges) {
+    _undoStack.add(CanvasSnapshot(nodes: nodes, edges: edges));
+    if (_undoStack.length > maxHistory) {
+      _undoStack.removeAt(0);
+    }
+    _redoStack.clear();
+  }
+
+  CanvasSnapshot? undo(List<CanvasNode> currentNodes, List<CanvasEdge> currentEdges) {
+    if (!canUndo) return null;
+    final previous = _undoStack.removeLast();
+    _redoStack.add(CanvasSnapshot(nodes: currentNodes, edges: currentEdges));
+    return previous;
+  }
+
+  CanvasSnapshot? redo(List<CanvasNode> currentNodes, List<CanvasEdge> currentEdges) {
+    if (!canRedo) return null;
+    final next = _redoStack.removeLast();
+    _undoStack.add(CanvasSnapshot(nodes: currentNodes, edges: currentEdges));
+    return next;
+  }
+
+  void clear() {
+    _undoStack.clear();
+    _redoStack.clear();
+  }
+}
+
+/// Interactive Whiteboard & Flowchart Canvas Screen with complete tools,
+/// Undo/Redo history, context actions, edge editing, intelligent ports, and PNG export.
 class WhiteboardCanvasScreen extends StatefulWidget {
   final WhiteboardCanvasItem item;
 
@@ -23,11 +79,19 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
   late List<CanvasNode> _nodes;
   late List<CanvasEdge> _edges;
   final TransformationController _transformationController = TransformationController();
-  String _activeTool = 'select'; // 'select', 'pan', 'connect', 'text', 'sticky'
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  final FocusNode _canvasFocusNode = FocusNode();
+
+  final CanvasHistoryManager _history = CanvasHistoryManager();
+
+  String _activeTool = 'select'; // 'select', 'pan', 'connect', 'text', 'sticky', 'image'
   String? _selectedNodeId;
+  String? _selectedEdgeId;
   String? _connectingFromNodeId;
+  bool _isDraggingNode = false;
   bool _showGrid = true;
   double _currentScale = 1.0;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -46,6 +110,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
   @override
   void dispose() {
     _transformationController.dispose();
+    _canvasFocusNode.dispose();
     super.dispose();
   }
 
@@ -59,10 +124,44 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
     workspace.saveItem(updated);
   }
 
-  void _addNode(CanvasNodeType shapeType) {
+  // ================= 1. Undo / Redo Actions =================
+  void _handleUndo() {
+    if (!_history.canUndo) return;
     HapticFeedback.lightImpact();
+    final snapshot = _history.undo(_nodes, _edges);
+    if (snapshot != null) {
+      setState(() {
+        _nodes = List.from(snapshot.nodes);
+        _edges = List.from(snapshot.edges);
+        _selectedNodeId = null;
+        _selectedEdgeId = null;
+      });
+      _saveCanvasState();
+    }
+  }
+
+  void _handleRedo() {
+    if (!_history.canRedo) return;
+    HapticFeedback.lightImpact();
+    final snapshot = _history.redo(_nodes, _edges);
+    if (snapshot != null) {
+      setState(() {
+        _nodes = List.from(snapshot.nodes);
+        _edges = List.from(snapshot.edges);
+        _selectedNodeId = null;
+        _selectedEdgeId = null;
+      });
+      _saveCanvasState();
+    }
+  }
+
+  // ================= 2. Node Operations & Context Actions =================
+  void _addNode(CanvasNodeType shapeType, {Offset? position, String? imagePath}) {
+    HapticFeedback.lightImpact();
+    _history.recordSnapshot(_nodes, _edges);
+
     final now = DateTime.now().millisecondsSinceEpoch;
-    final String paletteId;
+    String paletteId = 'lime';
     switch (shapeType) {
       case CanvasNodeType.startEnd:
         paletteId = 'coral';
@@ -73,27 +172,121 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
       case CanvasNodeType.inputOutput:
         paletteId = 'amber';
         break;
+      case CanvasNodeType.sticky:
+        paletteId = 'yellow';
+        break;
+      case CanvasNodeType.textOnly:
+        paletteId = 'slate';
+        break;
+      case CanvasNodeType.image:
+        paletteId = 'peach';
+        break;
       case CanvasNodeType.process:
       default:
         paletteId = 'lime';
         break;
     }
 
-    // Place node in visible center
+    final double x = position?.dx ?? 120.0;
+    final double y = position?.dy ?? (100.0 + (_nodes.length * 40.0 % 300));
+    final double width = shapeType == CanvasNodeType.decision
+        ? 140
+        : shapeType == CanvasNodeType.sticky
+            ? 130
+            : shapeType == CanvasNodeType.image
+                ? 160
+                : 130;
+    final double height = shapeType == CanvasNodeType.decision
+        ? 64
+        : shapeType == CanvasNodeType.sticky
+            ? 120
+            : shapeType == CanvasNodeType.image
+                ? 120
+                : shapeType == CanvasNodeType.textOnly
+                    ? 42
+                    : 52;
+
     final newNode = CanvasNode(
       id: 'node_$now',
-      text: shapeType.label,
+      text: shapeType == CanvasNodeType.image ? '' : shapeType.label,
       shapeType: shapeType,
-      x: 120,
-      y: 100 + (_nodes.length * 40.0 % 300),
-      width: shapeType == CanvasNodeType.decision ? 140 : 130,
-      height: shapeType == CanvasNodeType.decision ? 64 : 52,
+      x: x.clamp(0.0, 1200.0),
+      y: y.clamp(0.0, 1200.0),
+      width: width,
+      height: height,
       paletteId: paletteId,
+      imagePath: imagePath,
     );
 
     setState(() {
       _nodes.add(newNode);
       _selectedNodeId = newNode.id;
+      _selectedEdgeId = null;
+    });
+    _saveCanvasState();
+
+    if (shapeType == CanvasNodeType.textOnly || shapeType == CanvasNodeType.sticky) {
+      _editNodeText(newNode);
+    }
+  }
+
+  void _deleteSelectedNode() {
+    if (_selectedNodeId == null) return;
+    _history.recordSnapshot(_nodes, _edges);
+    HapticFeedback.mediumImpact();
+
+    final targetId = _selectedNodeId!;
+    setState(() {
+      _nodes.removeWhere((n) => n.id == targetId);
+      // Remove any attached edges
+      _edges.removeWhere((e) => e.fromNodeId == targetId || e.toNodeId == targetId);
+      _selectedNodeId = null;
+      _selectedEdgeId = null;
+      if (_connectingFromNodeId == targetId) _connectingFromNodeId = null;
+    });
+    _saveCanvasState();
+  }
+
+  void _duplicateSelectedNode() {
+    if (_selectedNodeId == null) return;
+    final original = _nodes.firstWhere((n) => n.id == _selectedNodeId!);
+    _history.recordSnapshot(_nodes, _edges);
+    HapticFeedback.lightImpact();
+
+    final cloned = original.copyWith(
+      text: original.text,
+      x: (original.x + 20).clamp(0.0, 1200.0),
+      y: (original.y + 20).clamp(0.0, 1200.0),
+    );
+    final newNode = CanvasNode(
+      id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+      text: cloned.text,
+      shapeType: cloned.shapeType,
+      x: cloned.x,
+      y: cloned.y,
+      width: cloned.width,
+      height: cloned.height,
+      paletteId: cloned.paletteId,
+      imagePath: cloned.imagePath,
+    );
+
+    setState(() {
+      _nodes.add(newNode);
+      _selectedNodeId = newNode.id;
+    });
+    _saveCanvasState();
+  }
+
+  void _changeNodeColor(String paletteId) {
+    if (_selectedNodeId == null) return;
+    _history.recordSnapshot(_nodes, _edges);
+    HapticFeedback.selectionClick();
+
+    setState(() {
+      final index = _nodes.indexWhere((n) => n.id == _selectedNodeId);
+      if (index >= 0) {
+        _nodes[index] = _nodes[index].copyWith(paletteId: paletteId);
+      }
     });
     _saveCanvasState();
   }
@@ -108,7 +301,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           content: TextField(
             controller: controller,
             autofocus: true,
+            maxLines: node.shapeType == CanvasNodeType.sticky ? 4 : 1,
             decoration: const InputDecoration(hintText: 'Enter node label...'),
+            onSubmitted: (val) {
+              _saveNodeText(node, val);
+              Navigator.of(context).pop();
+            },
           ),
           actions: [
             TextButton(
@@ -117,11 +315,171 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final newText = controller.text.trim();
+                _saveNodeText(node, controller.text);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _saveNodeText(CanvasNode node, String rawText) {
+    final newText = rawText.trim();
+    _history.recordSnapshot(_nodes, _edges);
+    setState(() {
+      final index = _nodes.indexWhere((n) => n.id == node.id);
+      if (index >= 0) {
+        _nodes[index] = _nodes[index].copyWith(text: newText);
+      }
+    });
+    _saveCanvasState();
+  }
+
+  // ================= 3. Edge Deletion & Editing =================
+  void _handleCanvasTap(Offset localPos) {
+    _canvasFocusNode.requestFocus();
+
+    // If waiting to connect and user taps empty canvas, cancel connect mode
+    if (_connectingFromNodeId != null) {
+      setState(() => _connectingFromNodeId = null);
+      return;
+    }
+
+    // 1. Tool Rail Placeholders (Sticky & Text)
+    if (_activeTool == 'sticky') {
+      _addNode(CanvasNodeType.sticky, position: localPos);
+      setState(() => _activeTool = 'select');
+      return;
+    }
+    if (_activeTool == 'text') {
+      _addNode(CanvasNodeType.textOnly, position: localPos);
+      setState(() => _activeTool = 'select');
+      return;
+    }
+
+    // 2. Edge Hit Testing
+    for (final edge in _edges) {
+      final from = _nodes.cast<CanvasNode?>().firstWhere(
+            (n) => n?.id == edge.fromNodeId,
+            orElse: () => null,
+          );
+      final to = _nodes.cast<CanvasNode?>().firstWhere(
+            (n) => n?.id == edge.toNodeId,
+            orElse: () => null,
+          );
+      if (from == null || to == null) continue;
+
+      final ports = _resolveEdgePorts(edge, from, to);
+      final start = ports.start;
+      final end = ports.end;
+
+      final midY = (start.dy + end.dy) / 2;
+      final d1 = _distToSegment(localPos, start, Offset(start.dx, midY));
+      final d2 = _distToSegment(localPos, Offset(start.dx, midY), Offset(end.dx, midY));
+      final d3 = _distToSegment(localPos, Offset(end.dx, midY), end);
+
+      final minDist = math.min(d1, math.min(d2, d3));
+      if (minDist <= 20.0) {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _selectedEdgeId = edge.id;
+          _selectedNodeId = null;
+        });
+        return;
+      }
+    }
+
+    // Deselect if tapped empty area
+    setState(() {
+      _selectedNodeId = null;
+      _selectedEdgeId = null;
+    });
+  }
+
+  ({Offset start, Offset end}) _resolveEdgePorts(CanvasEdge edge, CanvasNode from, CanvasNode to) {
+    Offset start = from.bottomPort;
+    Offset end = to.topPort;
+
+    if (edge.fromPort == 'top') start = from.topPort;
+    if (edge.fromPort == 'bottom') start = from.bottomPort;
+    if (edge.fromPort == 'left') start = from.leftPort;
+    if (edge.fromPort == 'right') start = from.rightPort;
+
+    if (edge.toPort == 'top') end = to.topPort;
+    if (edge.toPort == 'bottom') end = to.bottomPort;
+    if (edge.toPort == 'left') end = to.leftPort;
+    if (edge.toPort == 'right') end = to.rightPort;
+
+    return (start: start, end: end);
+  }
+
+  double _distToSegment(Offset p, Offset a, Offset b) {
+    final l2 = (b - a).distanceSquared;
+    if (l2 == 0) return (p - a).distance;
+    final t = (((p.dx - a.dx) * (b.dx - a.dx) + (p.dy - a.dy) * (b.dy - a.dy)) / l2).clamp(0.0, 1.0);
+    final projection = Offset(a.dx + t * (b.dx - a.dx), a.dy + t * (b.dy - a.dy));
+    return (p - projection).distance;
+  }
+
+  void _showEdgeEditDialog(CanvasEdge edge) {
+    final controller = TextEditingController(text: edge.label ?? '');
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Connector Line'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Edge Label',
+                  hintText: 'e.g. Yes, No, Approved',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ActionChip(
+                    label: const Text('Yes'),
+                    onPressed: () => controller.text = 'Yes',
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: const Text('No'),
+                    onPressed: () => controller.text = 'No',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton.icon(
+              icon: const TackIcon(TackIcons.trash, size: 16, color: AppColors.error),
+              label: const Text('Delete', style: TextStyle(color: AppColors.error)),
+              onPressed: () {
+                _history.recordSnapshot(_nodes, _edges);
                 setState(() {
-                  final index = _nodes.indexWhere((n) => n.id == node.id);
+                  _edges.removeWhere((e) => e.id == edge.id);
+                  _selectedEdgeId = null;
+                });
+                _saveCanvasState();
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final label = controller.text.trim();
+                _history.recordSnapshot(_nodes, _edges);
+                setState(() {
+                  final index = _edges.indexWhere((e) => e.id == edge.id);
                   if (index >= 0) {
-                    _nodes[index] = _nodes[index].copyWith(text: newText);
+                    _edges[index] = _edges[index].copyWith(label: label.isEmpty ? null : label);
                   }
                 });
                 _saveCanvasState();
@@ -135,133 +493,310 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
     );
   }
 
+  // ================= 4. Image Tool Picker =================
+  Future<void> _pickAndInsertImage() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery);
+    if (file != null) {
+      _addNode(
+        CanvasNodeType.image,
+        position: const Offset(200, 200),
+        imagePath: file.path,
+      );
+    }
+  }
+
+  // ================= 5. Share & Export PNG =================
+  Future<void> _exportAndShareCanvas() async {
+    if (_isExporting) return;
+
+    // Deselect active node/edge so highlight capsule doesn't get captured
+    if (_selectedNodeId != null || _selectedEdgeId != null) {
+      setState(() {
+        _selectedNodeId = null;
+        _selectedEdgeId = null;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+    }
+
+    setState(() => _isExporting = true);
+
+    try {
+      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception('Canvas render boundary not ready');
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Failed to generate PNG bytes');
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = await File(filePath).create();
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: '${widget.item.title} Diagram',
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFFAFBFD),
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-        leading: IconButton(
-          icon: const TackIcon(TackIcons.back, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.item.title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            Row(
-              children: [
-                Text(
-                  'Whiteboard',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+    return KeyboardListener(
+      focusNode: _canvasFocusNode,
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.delete ||
+              event.logicalKey == LogicalKeyboardKey.backspace) {
+            if (_selectedNodeId != null) {
+              _deleteSelectedNode();
+            } else if (_selectedEdgeId != null) {
+              _history.recordSnapshot(_nodes, _edges);
+              setState(() {
+                _edges.removeWhere((e) => e.id == _selectedEdgeId);
+                _selectedEdgeId = null;
+              });
+              _saveCanvasState();
+            }
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFFAFBFD),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+          leading: IconButton(
+            icon: const TackIcon(TackIcons.back, size: 22),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.item.title,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Whiteboard',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    ),
                   ),
+                  const Icon(Icons.keyboard_arrow_down_rounded, size: 14),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            // Undo Button (Disabled when stack is empty)
+            IconButton(
+              icon: TackIcon(
+                TackIcons.undo,
+                size: 20,
+                color: _history.canUndo
+                    ? (isDark ? Colors.white : AppColors.lightTextPrimary)
+                    : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+              ),
+              onPressed: _history.canUndo ? _handleUndo : null,
+              tooltip: 'Undo',
+            ),
+
+            // Redo Button (Disabled when stack is empty)
+            IconButton(
+              icon: TackIcon(
+                TackIcons.redo,
+                size: 20,
+                color: _history.canRedo
+                    ? (isDark ? Colors.white : AppColors.lightTextPrimary)
+                    : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+              ),
+              onPressed: _history.canRedo ? _handleRedo : null,
+              tooltip: 'Redo',
+            ),
+
+            // Export & Share Button
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.md, left: AppSpacing.xs),
+              child: ElevatedButton(
+                onPressed: _isExporting ? null : _exportAndShareCanvas,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,
+                  foregroundColor: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  minimumSize: const Size(60, 36),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded, size: 14),
-              ],
+                child: _isExporting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Share'),
+              ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const TackIcon(TackIcons.undo, size: 20),
-            onPressed: () {},
-            tooltip: 'Undo',
-          ),
-          IconButton(
-            icon: const TackIcon(TackIcons.redo, size: 20),
-            onPressed: () {},
-            tooltip: 'Redo',
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.md, left: AppSpacing.xs),
-            child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Flowchart diagram ready to share!'),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedSm),
+        body: Stack(
+          children: [
+            // Infinite/Bounded Interactive Canvas
+            InteractiveViewer(
+              transformationController: _transformationController,
+              boundaryMargin: const EdgeInsets.all(1000),
+              minScale: 0.3,
+              maxScale: 3.0,
+              // When dragging a node, disable pan to eliminate gesture conflict
+              panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode,
+              child: GestureDetector(
+                onTapUp: (details) => _handleCanvasTap(details.localPosition),
+                onDoubleTapDown: (details) {
+                  final tap = details.localPosition;
+                  for (final edge in _edges) {
+                    final from = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.fromNodeId, orElse: () => null);
+                    final to = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.toNodeId, orElse: () => null);
+                    if (from == null || to == null) continue;
+
+                    final ports = _resolveEdgePorts(edge, from, to);
+                    final start = ports.start;
+                    final end = ports.end;
+
+                    final midY = (start.dy + end.dy) / 2;
+                    final d1 = _distToSegment(tap, start, Offset(start.dx, midY));
+                    final d2 = _distToSegment(tap, Offset(start.dx, midY), Offset(end.dx, midY));
+                    final d3 = _distToSegment(tap, Offset(end.dx, midY), end);
+
+                    if (math.min(d1, math.min(d2, d3)) <= 22.0) {
+                      _showEdgeEditDialog(edge);
+                      return;
+                    }
+                  }
+                },
+                child: RepaintBoundary(
+                  key: _repaintBoundaryKey,
+                  child: SizedBox(
+                    width: 1400,
+                    height: 1400,
+                    child: CustomPaint(
+                      painter: _CanvasGridAndEdgesPainter(
+                        nodes: _nodes,
+                        edges: _edges,
+                        selectedEdgeId: _selectedEdgeId,
+                        showGrid: _showGrid,
+                        isDark: isDark,
+                      ),
+                      child: Stack(
+                        children: [
+                          ..._nodes.map((node) => _buildNodeWidget(node, isDark)),
+                          if (_selectedNodeId != null) _buildSelectedNodeCapsule(isDark),
+                        ],
+                      ),
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,
-                foregroundColor: isDark ? AppColors.darkBackground : AppColors.lightSurface,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                minimumSize: const Size(60, 36),
-              ),
-              child: const Text('Share'),
-            ),
-          ),
-        ],
-      ),
-
-      body: Stack(
-        children: [
-          // Infinite/Bounded Interactive Canvas
-          InteractiveViewer(
-            transformationController: _transformationController,
-            boundaryMargin: const EdgeInsets.all(1000),
-            minScale: 0.3,
-            maxScale: 3.0,
-            panEnabled: _activeTool == 'pan' || _activeTool == 'select',
-            child: SizedBox(
-              width: 1400,
-              height: 1400,
-              child: CustomPaint(
-                painter: _CanvasGridAndEdgesPainter(
-                  nodes: _nodes,
-                  edges: _edges,
-                  showGrid: _showGrid,
-                  isDark: isDark,
-                ),
-                child: Stack(
-                  children: _nodes.map((node) => _buildNodeWidget(node, isDark)).toList(),
                 ),
               ),
             ),
-          ),
 
-          // Top Node Shapes Palette (Screenshot 4)
-          Positioned(
-            top: AppSpacing.md,
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            child: _buildTopNodePalette(isDark),
-          ),
+            // Top Connecting Mode Banner Indicator
+            if (_connectingFromNodeId != null)
+              Positioned(
+                top: 70,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentOrange,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.link_rounded, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Tap target node to connect',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => setState(() => _connectingFromNodeId = null),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
-          // Left Tool Rail (Screenshot 4)
-          Positioned(
-            left: AppSpacing.md,
-            top: 90,
-            child: _buildLeftToolRail(isDark),
-          ),
+            // Top Node Shapes Palette
+            Positioned(
+              top: AppSpacing.md,
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              child: _buildTopNodePalette(isDark),
+            ),
 
-          // Right Zoom Controls (+, -, fit) (Screenshot 4)
-          Positioned(
-            right: AppSpacing.md,
-            top: 90,
-            child: _buildRightZoomControls(isDark),
-          ),
+            // Left Tool Rail
+            Positioned(
+              left: AppSpacing.md,
+              top: 90,
+              child: _buildLeftToolRail(isDark),
+            ),
 
-          // Bottom Minimap & Controls Bar (Screenshot 4)
-          Positioned(
-            bottom: AppSpacing.lg,
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            child: _buildBottomControlsBar(isDark),
-          ),
-        ],
+            // Right Zoom Controls (+, -, fit)
+            Positioned(
+              right: AppSpacing.md,
+              top: 90,
+              child: _buildRightZoomControls(isDark),
+            ),
+
+            // Bottom Controls Bar (Minimap & Zoom)
+            Positioned(
+              bottom: AppSpacing.lg,
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              child: _buildBottomControlsBar(isDark),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  // ================= UI Builder Methods =================
 
   // Top Node Palette: Start/End, Process, Decision, I/O, Connector
   Widget _buildTopNodePalette(bool isDark) {
@@ -314,15 +849,15 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
     );
   }
 
-  // Left Tool Rail (Select, Pan, Line, Text, Sticky, Image)
+  // Left Tool Rail
   Widget _buildLeftToolRail(bool isDark) {
     final tools = [
-      (id: 'select', icon: TackIcons.cursor),
-      (id: 'pan', icon: TackIcons.hand),
-      (id: 'connect', icon: TackIcons.flow),
-      (id: 'text', icon: TackIcons.notes),
-      (id: 'sticky', icon: TackIcons.sticky),
-      (id: 'image', icon: TackIcons.photo),
+      (id: 'select', icon: TackIcons.cursor, tooltip: 'Select & Move'),
+      (id: 'pan', icon: TackIcons.hand, tooltip: 'Pan Canvas'),
+      (id: 'connect', icon: TackIcons.flow, tooltip: 'Connect Nodes'),
+      (id: 'text', icon: TackIcons.notes, tooltip: 'Tap to Add Text'),
+      (id: 'sticky', icon: TackIcons.sticky, tooltip: 'Tap to Add Sticky Note'),
+      (id: 'image', icon: TackIcons.photo, tooltip: 'Insert Image'),
     ];
 
     return Container(
@@ -337,28 +872,36 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
         mainAxisSize: MainAxisSize.min,
         children: tools.map((tool) {
           final isSelected = _activeTool == tool.id;
-          return IconButton(
-            icon: TackIcon(
-              tool.icon,
-              color: isSelected
-                  ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
-                  : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-              size: 20,
+          return Tooltip(
+            message: tool.tooltip,
+            child: IconButton(
+              icon: TackIcon(
+                tool.icon,
+                color: isSelected
+                    ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
+                    : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                size: 20,
+              ),
+              style: isSelected
+                  ? IconButton.styleFrom(
+                      backgroundColor: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+                    )
+                  : null,
+              onPressed: () {
+                if (tool.id == 'image') {
+                  _pickAndInsertImage();
+                } else {
+                  setState(() => _activeTool = tool.id);
+                }
+              },
             ),
-            style: isSelected
-                ? IconButton.styleFrom(
-                    backgroundColor: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-                  )
-                : null,
-            onPressed: () => setState(() => _activeTool = tool.id),
           );
         }).toList(),
       ),
     );
   }
 
-
-  // Right Zoom Controls (+, -, fit)
+  // Right Zoom Controls
   Widget _buildRightZoomControls(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -392,20 +935,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
             },
             tooltip: 'Zoom Out',
           ),
-
-
-
         ],
       ),
     );
   }
 
-  // Bottom Controls Bar (Minimap, Grid switch, Zoom percentage)
+  // Bottom Controls Bar
   Widget _buildBottomControlsBar(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Minimap thumbnail placeholder
+        // Minimap
         Container(
           width: 58,
           height: 48,
@@ -424,7 +964,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           ),
         ),
 
-        // Controls Box (Grid toggle + Zoom percentage)
+        // Grid switch + scale
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
           decoration: BoxDecoration(
@@ -458,17 +998,139 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
     );
   }
 
+  // Floating Context Actions Capsule Anchored Above/Below Selected Node
+  Widget _buildSelectedNodeCapsule(bool isDark) {
+    final node = _nodes.cast<CanvasNode?>().firstWhere(
+          (n) => n?.id == _selectedNodeId,
+          orElse: () => null,
+        );
+    if (node == null) return const SizedBox.shrink();
+
+    // If node is near top border, place capsule below it to avoid clipping
+    final bool placeBelow = node.y < 56;
+    final capsuleTop = placeBelow
+        ? (node.y + node.height + 8).clamp(8.0, 1340.0)
+        : (node.y - 48).clamp(8.0, 1340.0);
+    final capsuleLeft = (node.x + (node.width / 2) - 100).clamp(8.0, 1200.0);
+
+    return Positioned(
+      left: capsuleLeft,
+      top: capsuleTop,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E2028) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF383C4A) : const Color(0xFF191A23),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Color Swatch Picker Popup
+              PopupMenuButton<String>(
+                tooltip: 'Change Color',
+                offset: Offset(0, placeBelow ? 40 : -50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: isDark ? AppColors.darkSurface : Colors.white,
+                itemBuilder: (context) {
+                  return AppColors.presetPalettes.map((palette) {
+                    return PopupMenuItem<String>(
+                      value: palette.id,
+                      height: 36,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: palette.lightColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black26, width: 1),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(palette.name, style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
+                onSelected: _changeNodeColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppColors.getPaletteById(node.paletteId).lightColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? Colors.white38 : Colors.black26, width: 1.2),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Edit Label Button (Pencil Icon)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                tooltip: 'Edit Label',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () => _editNodeText(node),
+              ),
+
+              // 3. Duplicate Button
+              IconButton(
+                icon: const TackIcon(TackIcons.copy, size: 16),
+                tooltip: 'Duplicate (+20, +20)',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: _duplicateSelectedNode,
+              ),
+
+              // 4. Delete Node Button
+              IconButton(
+                icon: const TackIcon(TackIcons.trash, size: 16, color: AppColors.error),
+                tooltip: 'Delete Node',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: _deleteSelectedNode,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // Interactive Flowchart Node Rendering
   Widget _buildNodeWidget(CanvasNode node, bool isDark) {
     final palette = AppColors.getPaletteById(node.paletteId);
     final isSelected = _selectedNodeId == node.id;
+    final isConnectingSource = _connectingFromNodeId == node.id;
 
     Color fillColor = palette.softBackground;
-    Color strokeColor = palette.lightColor;
+    Color strokeColor = isConnectingSource
+        ? AppColors.accentOrange
+        : isSelected
+            ? AppColors.accentOrange
+            : palette.lightColor;
 
     if (isDark) {
       fillColor = palette.darkColor.withValues(alpha: 0.6);
-      strokeColor = palette.lightColor;
+      strokeColor = isConnectingSource || isSelected ? AppColors.accentOrange : palette.lightColor;
     }
 
     Widget shapeContent;
@@ -480,7 +1142,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           decoration: BoxDecoration(
             color: fillColor,
             borderRadius: BorderRadius.circular(node.height / 2),
-            border: Border.all(color: strokeColor, width: isSelected ? 2.5 : 1.5),
+            border: Border.all(
+              color: strokeColor,
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -502,13 +1167,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
             alignment: Alignment.center,
             children: [
               Transform.rotate(
-                angle: 0.785398, // 45 degrees for diamond
+                angle: 0.785398, // 45 degrees
                 child: Container(
                   width: node.height * 0.85,
                   height: node.height * 0.85,
                   decoration: BoxDecoration(
                     color: fillColor,
-                    border: Border.all(color: strokeColor, width: isSelected ? 2.5 : 1.5),
+                    border: Border.all(
+                      color: strokeColor,
+                      width: isConnectingSource || isSelected ? 2.5 : 1.5,
+                    ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -539,7 +1207,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
             decoration: BoxDecoration(
               color: fillColor,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: strokeColor, width: isSelected ? 2.5 : 1.5),
+              border: Border.all(
+                color: strokeColor,
+                width: isConnectingSource || isSelected ? 2.5 : 1.5,
+              ),
             ),
             alignment: Alignment.center,
             child: Transform(
@@ -558,6 +1229,89 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
         );
         break;
 
+      case CanvasNodeType.sticky:
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: palette.lightColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isConnectingSource
+                  ? AppColors.accentOrange
+                  : isSelected
+                      ? AppColors.accentOrange
+                      : strokeColor,
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(2, 4),
+              ),
+            ],
+          ),
+          child: Text(
+            node.text,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+              color: Color(0xFF191A23),
+              height: 1.3,
+            ),
+          ),
+        );
+        break;
+
+      case CanvasNodeType.textOnly:
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? fillColor.withValues(alpha: 0.5) : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: isConnectingSource || isSelected
+                ? Border.all(color: AppColors.accentOrange, width: 1.5)
+                : null,
+          ),
+          alignment: Alignment.centerLeft,
+          child: Text(
+            node.text,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+        );
+        break;
+
+      case CanvasNodeType.image:
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isConnectingSource || isSelected ? AppColors.accentOrange : strokeColor,
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: node.imagePath != null && File(node.imagePath!).existsSync()
+                ? Image.file(File(node.imagePath!), fit: BoxFit.cover)
+                : Container(
+                    color: fillColor,
+                    child: const Center(child: Icon(Icons.image_outlined, size: 32)),
+                  ),
+          ),
+        );
+        break;
+
       case CanvasNodeType.process:
       default:
         shapeContent = Container(
@@ -566,7 +1320,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           decoration: BoxDecoration(
             color: fillColor,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: strokeColor, width: isSelected ? 2.5 : 1.5),
+            border: Border.all(
+              color: strokeColor,
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -587,16 +1344,41 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
       top: node.y,
       child: GestureDetector(
         onTap: () {
+          _canvasFocusNode.requestFocus();
           setState(() {
             _selectedNodeId = node.id;
+            _selectedEdgeId = null;
+
             if (_activeTool == 'connect') {
               if (_connectingFromNodeId == null) {
                 _connectingFromNodeId = node.id;
               } else if (_connectingFromNodeId != node.id) {
+                // Intelligent port selection based on relative node positions
+                final fromNode = _nodes.firstWhere((n) => n.id == _connectingFromNodeId);
+                String fromPort = 'bottom';
+                String toPort = 'top';
+
+                if (node.y + node.height < fromNode.y) {
+                  fromPort = 'top';
+                  toPort = 'bottom';
+                } else if (node.y > fromNode.y + fromNode.height) {
+                  fromPort = 'bottom';
+                  toPort = 'top';
+                } else if (node.x > fromNode.x) {
+                  fromPort = 'right';
+                  toPort = 'left';
+                } else {
+                  fromPort = 'left';
+                  toPort = 'right';
+                }
+
+                _history.recordSnapshot(_nodes, _edges);
                 _edges.add(CanvasEdge(
                   id: 'edge_${DateTime.now().millisecondsSinceEpoch}',
                   fromNodeId: _connectingFromNodeId!,
                   toNodeId: node.id,
+                  fromPort: fromPort,
+                  toPort: toPort,
                 ));
                 _connectingFromNodeId = null;
                 _saveCanvasState();
@@ -605,6 +1387,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
           });
         },
         onDoubleTap: () => _editNodeText(node),
+        onPanStart: (_) {
+          // Disable InteractiveViewer pan so gestures don't conflict
+          setState(() => _isDraggingNode = true);
+          _history.recordSnapshot(_nodes, _edges);
+        },
         onPanUpdate: (details) {
           setState(() {
             final index = _nodes.indexWhere((n) => n.id == node.id);
@@ -616,7 +1403,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
             }
           });
         },
-        onPanEnd: (_) => _saveCanvasState(),
+        onPanEnd: (_) {
+          setState(() => _isDraggingNode = false);
+          _saveCanvasState();
+        },
+        onPanCancel: () {
+          setState(() => _isDraggingNode = false);
+        },
         child: shapeContent,
       ),
     );
@@ -627,12 +1420,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> {
 class _CanvasGridAndEdgesPainter extends CustomPainter {
   final List<CanvasNode> nodes;
   final List<CanvasEdge> edges;
+  final String? selectedEdgeId;
   final bool showGrid;
   final bool isDark;
 
   _CanvasGridAndEdgesPainter({
     required this.nodes,
     required this.edges,
+    this.selectedEdgeId,
     required this.showGrid,
     required this.isDark,
   });
@@ -654,16 +1449,22 @@ class _CanvasGridAndEdgesPainter extends CustomPainter {
     }
 
     // 2. Draw connector lines & arrows
-    final linePaint = Paint()
-      ..color = isDark ? Colors.white70 : const Color(0xFF1E293B)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final arrowPaint = Paint()
-      ..color = isDark ? Colors.white70 : const Color(0xFF1E293B)
-      ..style = PaintingStyle.fill;
-
     for (final edge in edges) {
+      final isSelected = edge.id == selectedEdgeId;
+
+      final linePaint = Paint()
+        ..color = isSelected
+            ? AppColors.accentOrange
+            : (isDark ? Colors.white70 : const Color(0xFF1E293B))
+        ..strokeWidth = isSelected ? 3.5 : 2.0
+        ..style = PaintingStyle.stroke;
+
+      final arrowPaint = Paint()
+        ..color = isSelected
+            ? AppColors.accentOrange
+            : (isDark ? Colors.white70 : const Color(0xFF1E293B))
+        ..style = PaintingStyle.fill;
+
       final from = nodes.cast<CanvasNode?>().firstWhere(
             (n) => n?.id == edge.fromNodeId,
             orElse: () => null,
@@ -678,8 +1479,15 @@ class _CanvasGridAndEdgesPainter extends CustomPainter {
       Offset start = from.bottomPort;
       Offset end = to.topPort;
 
+      if (edge.fromPort == 'top') start = from.topPort;
+      if (edge.fromPort == 'bottom') start = from.bottomPort;
+      if (edge.fromPort == 'left') start = from.leftPort;
       if (edge.fromPort == 'right') start = from.rightPort;
+
+      if (edge.toPort == 'top') end = to.topPort;
+      if (edge.toPort == 'bottom') end = to.bottomPort;
       if (edge.toPort == 'left') end = to.leftPort;
+      if (edge.toPort == 'right') end = to.rightPort;
 
       final path = Path();
       path.moveTo(start.dx, start.dy);

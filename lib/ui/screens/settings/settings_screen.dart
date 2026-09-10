@@ -34,8 +34,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                ClipOval(
                   child: Image.asset(
                     'icon.png',
                     width: 56,

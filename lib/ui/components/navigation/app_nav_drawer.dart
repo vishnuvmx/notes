@@ -46,13 +46,10 @@ class AppNavDrawer extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-                      borderRadius: AppSpacing.roundedMd,
+                      shape: BoxShape.circle,
                       boxShadow: isDark ? AppSpacing.softShadowDark : AppSpacing.softShadowLight,
                     ),
-                    padding: const EdgeInsets.all(4),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                    child: ClipOval(
                       child: Image.asset(
                         'icon.png',
                         fit: BoxFit.cover,
@@ -73,7 +70,7 @@ class AppNavDrawer extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Tactile notes & canvas',
+                          'Your tactile brain garden 🌱',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                           ),
@@ -97,7 +94,7 @@ class AppNavDrawer extends StatelessWidget {
                     context,
                     icon: TackIcons.gridView,
                     title: 'All Notes',
-                    badgeCount: workspace.items.length,
+                    badgeCount: workspace.rawItems.length,
                     onTap: () {
                       Navigator.of(context).pop();
                       workspace.setCategory(null);

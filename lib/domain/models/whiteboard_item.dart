@@ -9,7 +9,8 @@ enum CanvasNodeType {
   inputOutput,  // Parallelogram
   connector,    // Small circle
   sticky,       // Sticky note shape
-  textOnly;     // Floating text
+  textOnly,     // Floating text
+  image;        // Pinned/draggable image node
 
   String get label {
     switch (this) {
@@ -27,6 +28,8 @@ enum CanvasNodeType {
         return 'Sticky Note';
       case CanvasNodeType.textOnly:
         return 'Text';
+      case CanvasNodeType.image:
+        return 'Image';
     }
   }
 }
@@ -42,6 +45,7 @@ class CanvasNode {
   final double width;
   final double height;
   final String paletteId;
+  final String? imagePath;
 
   const CanvasNode({
     required this.id,
@@ -52,6 +56,7 @@ class CanvasNode {
     this.width = 140,
     this.height = 64,
     this.paletteId = 'peach',
+    this.imagePath,
   });
 
   CanvasNode copyWith({
@@ -62,6 +67,7 @@ class CanvasNode {
     double? width,
     double? height,
     String? paletteId,
+    String? imagePath,
   }) {
     return CanvasNode(
       id: id,
@@ -72,6 +78,7 @@ class CanvasNode {
       width: width ?? this.width,
       height: height ?? this.height,
       paletteId: paletteId ?? this.paletteId,
+      imagePath: imagePath ?? this.imagePath,
     );
   }
 
@@ -91,6 +98,7 @@ class CanvasNode {
       'width': width,
       'height': height,
       'paletteId': paletteId,
+      'imagePath': imagePath,
     };
   }
 
@@ -107,6 +115,7 @@ class CanvasNode {
       width: (json['width'] as num?)?.toDouble() ?? 140.0,
       height: (json['height'] as num?)?.toDouble() ?? 64.0,
       paletteId: json['paletteId'] as String? ?? 'peach',
+      imagePath: json['imagePath'] as String?,
     );
   }
 }

@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:notes/main.dart';
 import 'package:notes/ui/screens/home/home_screen.dart';
 import 'package:notes/ui/components/cards/smart_note_list_card.dart';
-import 'package:notes/ui/components/cards/clipboard_card.dart';
-import 'package:notes/ui/components/inputs/category_filter_pills.dart';
 import 'package:notes/ui/screens/splash/splash_screen.dart';
 import 'package:notes/domain/models/base_item.dart';
 import 'package:notes/data/repositories/workspace_repo_impl.dart';
@@ -55,7 +53,7 @@ void main() {
   });
 
   testWidgets('SmartNoteListCard renders title and summary', (WidgetTester tester) async {
-    final note = MockInitialData.getInitialItems().first;
+    final note = MockInitialData.getInitialItems().firstWhere((i) => i.id == 'note_01');
     final repository = LocalStorageWorkspaceRepository(initialItems: [note]);
     final workspaceProvider = WorkspaceProvider(repository);
 
@@ -82,7 +80,7 @@ void main() {
     expect(find.text('01'), findsOneWidget);
   });
 
-  testWidgets('HomeScreen renders feed, categories, and bottom navigation', (WidgetTester tester) async {
+  testWidgets('HomeScreen renders Your Notes headline, filter pills, and neo-pop cards', (WidgetTester tester) async {
     final repository = LocalStorageWorkspaceRepository(initialItems: MockInitialData.getInitialItems());
     final workspaceProvider = WorkspaceProvider(repository);
     await workspaceProvider.loadItems();
@@ -101,13 +99,11 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify all parts of HomeScreen are rendered and visible!
-    expect(find.text('Hey Tack'), findsOneWidget);
-    expect(find.text('All'), findsOneWidget);
-    expect(find.text('How to Build Trust on Your Website'), findsOneWidget);
-    expect(find.text('Flutter Clean Architecture Snippet'), findsOneWidget);
-    expect(find.text('01'), findsOneWidget);
-    expect(find.byType(ClipboardCard), findsWidgets);
+    // Verify all parts of redesigned HomeScreen are rendered and visible!
+    expect(find.text('Your Notes'), findsOneWidget);
+    expect(find.text('#Personal'), findsOneWidget);
+    expect(find.text('Personal'), findsWidgets);
+    expect(find.text('Yes, created all notes on same day 😐'), findsOneWidget);
   });
 
   testWidgets('TackApp launches with SplashScreen and slides up to HomeScreen', (WidgetTester tester) async {
@@ -133,19 +129,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
 
-    // Verify main screen is visible
-    expect(find.text('Hey Tack'), findsOneWidget);
-    expect(find.text('How to Build Trust on Your Website'), findsOneWidget);
+    // Verify main screen is visible with neo-pop header
+    expect(find.text('Your Notes'), findsOneWidget);
+    expect(find.text('#Personal'), findsOneWidget);
 
-    // Tap 'Notes' category pill
-    await tester.tap(find.descendant(of: find.byType(CategoryFilterPills), matching: find.text('Notes')));
+    // Tap '#work' tag pill
+    await tester.tap(find.text('#work'));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(workspaceProvider.selectedCategory, ItemType.note);
-
-    // Tap 'Sticky' category pill
-    await tester.tap(find.descendant(of: find.byType(CategoryFilterPills), matching: find.text('Sticky')));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(workspaceProvider.selectedCategory, ItemType.sticky);
+    expect(workspaceProvider.selectedTag, '#work');
 
     // Tap 'Clipboard' bottom nav destination
     await tester.tap(find.byKey(const ValueKey('nav_item_4')));

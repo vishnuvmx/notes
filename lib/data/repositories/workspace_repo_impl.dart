@@ -8,7 +8,7 @@ import '../mock/mock_initial_data.dart';
 
 /// Workspace repository implementing IWorkspaceRepository with persistent SharedPreferences storage.
 class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
-  static const String _storageKey = 'tack_workspace_items_v1';
+  static const String _storageKey = 'tack_workspace_items_v2';
   final List<BaseWorkspaceItem> _items = [];
   bool _isInitialized = false;
 

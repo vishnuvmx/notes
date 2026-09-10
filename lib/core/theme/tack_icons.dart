@@ -39,6 +39,10 @@ class TackIcons {
   static const HeroIcons settings = HeroIcons.cog6Tooth;
   static const HeroIcons sun = HeroIcons.sun;
   static const HeroIcons moon = HeroIcons.moon;
+  static const HeroIcons user = HeroIcons.user;
+  static const HeroIcons notification = HeroIcons.bell;
+  static const HeroIcons chevronDown = HeroIcons.chevronDown;
+  static const HeroIcons tag = HeroIcons.tag;
 
   // Whiteboard shapes & tools
   static const HeroIcons play = HeroIcons.play;

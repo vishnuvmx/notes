@@ -17,7 +17,6 @@ import 'ui/screens/editor/note_editor_screen.dart';
 import 'ui/screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'ui/screens/folders/folder_view_screen.dart';
 import 'ui/screens/settings/settings_screen.dart';
-import 'ui/screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +59,7 @@ class TackApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProv.themeMode,
-      home: const SplashScreen(nextScreen: TackRootNavigator()),
+      home: const TackRootNavigator(),
     );
   }
 }

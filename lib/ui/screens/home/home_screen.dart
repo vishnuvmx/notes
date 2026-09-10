@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/clipboard_item.dart';
@@ -8,8 +12,7 @@ import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
-import '../../components/cards/smart_note_list_card.dart';
-import '../../components/cards/bento_workspace_card.dart';
+import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
@@ -17,7 +20,7 @@ import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
 
 /// Main Home Dashboard Screen for Tack.
-/// Offers both Pinterest / Givingli-style Bento Feed and Tactile Push-Pin List View.
+/// Features the Playful Neo-Pop / Soft Neo-Brutalist design matching the Dribbble reference.
 class HomeScreen extends StatefulWidget {
   final Function(BaseWorkspaceItem item)? onOpenItem;
   final VoidCallback? onOpenFavorites;
@@ -79,9 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
     final items = workspace.items;
     final currentNavIndex = _calculateNavIndex(workspace.selectedCategory);
+
+    final headlineColor = isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23);
+    final borderColor = isDark ? const Color(0xFF323642) : const Color(0xFF191A23);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -118,11 +126,66 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.sm),
           ],
 
-          // Pill Filter Tabs (Wallpaper / Avatar / Upload style)
+          // 1. "Your Notes" Headline + Rounded Rect [+] Quick Add Button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Your Notes',
+                  style: AppTypography.sectionHeadline(
+                    color: headlineColor,
+                    fontSize: 34,
+                  ),
+                ),
+
+                // Tactile [+] Button with dark border matching reference
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _openCreateSheet(defaultType: workspace.selectedCategory);
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252833) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor, width: 1.6),
+                        boxShadow: isDark
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: const Color(0xFF191A23).withValues(alpha: 0.08),
+                                  blurRadius: 0,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                      ),
+                      child: Center(
+                        child: TackIcon(
+                          TackIcons.plus,
+                          size: 22,
+                          color: isDark ? Colors.white : const Color(0xFF191A23),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. Folder Dropdown + View Switcher + Tag Filter Pills
           const CategoryFilterPills(),
           const SizedBox(height: AppSpacing.md),
 
-          // Main Feed: Pinterest Bento-Box vs Tactile Note List
+          // 3. Main Notes Feed: 2-Column Neo-Pop Grid vs List View
           Expanded(
             child: workspace.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -130,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? _buildEmptyState(workspace)
                     : workspace.viewMode == HomeViewMode.notebook
                         ? _buildTactileListView(items)
-                        : _buildBentoFeedView(items),
+                        : _buildNeoGridFeedView(items),
           ),
         ],
       ),
@@ -142,76 +205,54 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Tactile Push-Pin Note List View (Screenshot 2)
-  Widget _buildTactileListView(List<BaseWorkspaceItem> items) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+  /// 2-Column Neo-Pop Pastel Grid View matching Reference Mockup
+  Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 13,
+        crossAxisSpacing: 13,
+        childAspectRatio: 0.82,
+      ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-
-        if (item is ClipboardItem) {
-          return ClipboardCard(
-            item: item,
-            onTap: () => widget.onOpenItem?.call(item),
-          );
-        }
-
-        return SmartNoteListCard(
+        return NeoNoteCard(
           item: item,
-          index: index,
+          isGrid: true,
           onTap: () => widget.onOpenItem?.call(item),
         );
       },
     );
   }
 
-  /// Givingli / Pinterest Bento-Box Feed View (Screenshot 3 & 4)
-  Widget _buildBentoFeedView(List<BaseWorkspaceItem> items) {
+  /// Tactile List View
+  Widget _buildTactileListView(List<BaseWorkspaceItem> items) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-      itemCount: _calculateBentoRowCount(items.length),
-      itemBuilder: (context, rowIndex) {
-        // First item or every 4th row is a Hero full-width Bento Card
-        final startIndex = _getBentoStartIndex(rowIndex);
-        final isHeroRow = (rowIndex % 3 == 0) && (startIndex < items.length);
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
 
-        if (isHeroRow || startIndex + 1 >= items.length) {
-          final item = items[startIndex];
+        if (item is ClipboardItem) {
           return Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: BentoWorkspaceCard(
+            child: ClipboardCard(
               item: item,
-              isHero: true,
               onTap: () => widget.onOpenItem?.call(item),
             ),
           );
         }
 
-        // 2-Column paired bento cards
-        final item1 = items[startIndex];
-        final item2 = items[startIndex + 1];
-
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: BentoWorkspaceCard(
-                    item: item1,
-                    onTap: () => widget.onOpenItem?.call(item1),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: BentoWorkspaceCard(
-                    item: item2,
-                    onTap: () => widget.onOpenItem?.call(item2),
-                  ),
-                ),
-              ],
+          child: SizedBox(
+            height: 155,
+            child: NeoNoteCard(
+              item: item,
+              isGrid: false,
+              onTap: () => widget.onOpenItem?.call(item),
             ),
           ),
         );
@@ -219,43 +260,54 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  int _calculateBentoRowCount(int totalItems) {
-    if (totalItems == 0) return 0;
-    int count = 0;
-    int itemsPlaced = 0;
-    while (itemsPlaced < totalItems) {
-      if (count % 3 == 0) {
-        itemsPlaced += 1;
-      } else {
-        itemsPlaced += 2;
-      }
-      count++;
-    }
-    return count;
-  }
-
-  int _getBentoStartIndex(int targetRow) {
-    int index = 0;
-    for (int r = 0; r < targetRow; r++) {
-      if (r % 3 == 0) {
-        index += 1;
-      } else {
-        index += 2;
-      }
-    }
-    return index;
-  }
-
   Widget _buildEmptyState(WorkspaceProvider workspace) {
-    final catName = workspace.selectedCategory?.label ?? 'items';
+    final cat = workspace.selectedCategory;
+    final tag = workspace.selectedTag;
+
+    String title;
+    String subtitle;
+    String actionLabel;
+    HeroIcons icon;
+
+    if (workspace.searchQuery.isNotEmpty) {
+      title = 'Nothing found';
+      subtitle = 'No matches for "${workspace.searchQuery}". Try a different word! 🔍';
+      actionLabel = 'Clear Search';
+      icon = TackIcons.search;
+    } else if (cat == ItemType.whiteboard) {
+      title = 'Blank Canvas';
+      subtitle = 'Sketch flowcharts, mindmaps & quick visual notes! 🎨';
+      actionLabel = 'New Whiteboard';
+      icon = TackIcons.whiteboard;
+    } else if (cat == ItemType.clipboard) {
+      title = 'Clipboard is Cozy';
+      subtitle = 'Save code snippets, quotes, or copied thoughts here 📋';
+      actionLabel = 'New Clip';
+      icon = TackIcons.clipboard;
+    } else if (tag != null && tag != '#All' && tag != 'All') {
+      title = 'No $tag notes yet';
+      subtitle = 'Create a note with this tag or tap (+) to get started ✨';
+      actionLabel = 'Create Note';
+      icon = TackIcons.notes;
+    } else {
+      title = 'Your Space is Clean & Cozy';
+      subtitle = 'Tap (+) below to scribble your first note or doodle ✨';
+      actionLabel = 'Create Note';
+      icon = TackIcons.notes;
+    }
+
     return EmptyStateWidget(
-      icon: TackIcons.notes,
-      title: 'No $catName found',
-      subtitle: workspace.searchQuery.isNotEmpty
-          ? 'No matching items for "${workspace.searchQuery}"'
-          : 'Tap (+) below to create your first $catName.',
-      actionLabel: 'Create New $catName',
-      onAction: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      actionLabel: actionLabel,
+      onAction: workspace.searchQuery.isNotEmpty
+          ? () {
+              setState(() => _isSearching = false);
+              workspace.setSearchQuery('');
+            }
+          : () => _openCreateSheet(defaultType: workspace.selectedCategory),
     );
   }
 }
+

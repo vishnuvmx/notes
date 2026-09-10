@@ -9,6 +9,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../domain/models/sticky_note.dart';
+import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
 import '../../components/inputs/rich_note_content_view.dart';
@@ -42,7 +43,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _titleController = TextEditingController(text: widget.item.title);
     final initialContent = widget.item is TextNote
         ? (widget.item as TextNote).content
-        : (widget.item is StickyNote ? (widget.item as StickyNote).content : '');
+        : (widget.item is StickyNote
+            ? (widget.item as StickyNote).content
+            : (widget.item is ClipboardItem ? (widget.item as ClipboardItem).clipText : ''));
     _contentController = TextEditingController(text: initialContent);
     _paletteId = widget.item.paletteId;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
@@ -76,6 +79,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       updated = (widget.item as StickyNote).copyWith(
         title: title.isEmpty ? 'Untitled Sticky' : title,
         content: content,
+        paletteId: _paletteId,
+        updatedAt: DateTime.now(),
+      );
+    } else if (widget.item is ClipboardItem) {
+      updated = (widget.item as ClipboardItem).copyWith(
+        title: title.isEmpty ? 'Untitled Clip' : title,
+        clipText: content,
         paletteId: _paletteId,
         updatedAt: DateTime.now(),
       );
@@ -472,6 +482,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           height: 1.2,
                         ),
                       ),
+                    const SizedBox(height: 4),
+
+                    // Ordinal Date Stamp (Mockup detail screen: "4th Jan 2050")
+                    Text(
+                      DateFormatter.formatOrdinalDate(widget.item.updatedAt),
+                      style: AppTypography.cardDateStyle(
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.sm),
 
                     // Dynamic Tag Chips Bar
