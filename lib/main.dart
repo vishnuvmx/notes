@@ -69,25 +69,25 @@ class TackApp extends StatelessWidget {
 class TackRootNavigator extends StatelessWidget {
   const TackRootNavigator({super.key});
 
+  static Route<T> _buildTactileRoute<T>(Widget page) {
+    return MaterialPageRoute<T>(
+      builder: (context) => page,
+    );
+  }
+
   void _openItemDetail(BuildContext context, BaseWorkspaceItem item) {
     if (item is WhiteboardCanvasItem) {
       Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => WhiteboardCanvasScreen(item: item),
-        ),
+        _buildTactileRoute(WhiteboardCanvasScreen(item: item)),
       );
     } else if (item is TextNote || item is StickyNote) {
       Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => NoteEditorScreen(item: item),
-        ),
+        _buildTactileRoute(NoteEditorScreen(item: item)),
       );
     } else if (item is ClipboardItem) {
       // Open clipboard item in editor as well
       Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => NoteEditorScreen(item: item),
-        ),
+        _buildTactileRoute(NoteEditorScreen(item: item)),
       );
     }
   }
@@ -98,8 +98,8 @@ class TackRootNavigator extends StatelessWidget {
       onOpenItem: (item) => _openItemDetail(context, item),
       onOpenFavorites: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => FolderViewScreen(
+          _buildTactileRoute(
+            FolderViewScreen(
               folderType: FolderType.favorites,
               onOpenItem: (item) => _openItemDetail(context, item),
             ),
@@ -108,8 +108,8 @@ class TackRootNavigator extends StatelessWidget {
       },
       onOpenArchive: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => FolderViewScreen(
+          _buildTactileRoute(
+            FolderViewScreen(
               folderType: FolderType.archive,
               onOpenItem: (item) => _openItemDetail(context, item),
             ),
@@ -118,8 +118,8 @@ class TackRootNavigator extends StatelessWidget {
       },
       onOpenTrash: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => FolderViewScreen(
+          _buildTactileRoute(
+            FolderViewScreen(
               folderType: FolderType.trash,
               onOpenItem: (item) => _openItemDetail(context, item),
             ),
@@ -128,9 +128,7 @@ class TackRootNavigator extends StatelessWidget {
       },
       onOpenSettings: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const SettingsScreen(),
-          ),
+          _buildTactileRoute(const SettingsScreen()),
         );
       },
     );

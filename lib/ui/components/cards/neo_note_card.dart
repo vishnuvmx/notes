@@ -13,7 +13,7 @@ import '../../../domain/models/clipboard_item.dart';
 /// Playful Neo-Pop / Soft Neo-Brutalist Card matching the reference mockup.
 /// Features a crisp 1.6px dark stroke border, flat curated pastel fills,
 /// bold title, "4th Jan 2050" date stamp, snippet preview, and bottom glyph.
-class NeoNoteCard extends StatelessWidget {
+class NeoNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
   final bool isGrid;
@@ -26,9 +26,16 @@ class NeoNoteCard extends StatelessWidget {
   });
 
   @override
+  State<NeoNoteCard> createState() => _NeoNoteCardState();
+}
+
+class _NeoNoteCardState extends State<NeoNoteCard> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = AppColors.getPaletteById(item.paletteId);
+    final palette = AppColors.getPaletteById(widget.item.paletteId);
     final cardBg = palette.resolveCardColor(isDark);
 
     // Neo-pop high contrast dark stroke
@@ -44,75 +51,87 @@ class NeoNoteCard extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.88)
         : const Color(0xFF232530).withValues(alpha: 0.85);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: borderColor, width: 1.6),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: const Color(0xFF191A23).withValues(alpha: 0.08),
-                  blurRadius: 0,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Bold Note Title
-                Text(
-                  item.title,
-                  style: AppTypography.cardTitleStyle(
-                    color: titleColor,
-                    fontSize: isGrid ? 15.5 : 17,
+    return AnimatedScale(
+      scale: _isPressed ? 0.965 : 1.0,
+      duration: const Duration(milliseconds: 130),
+      curve: Curves.easeOutCubic,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 130),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: borderColor, width: 1.5),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF191A23).withValues(alpha: _isPressed ? 0.03 : 0.08),
+                    blurRadius: 0,
+                    offset: Offset(0, _isPressed ? 1 : 3),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-
-                // 2. Ordinal Date Stamp (e.g., "4th Jan 2050")
-                Text(
-                  DateFormatter.formatOrdinalDate(item.updatedAt),
-                  style: AppTypography.cardDateStyle(
-                    color: dateColor,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 3. Clamped Snippet / Preview
-                Expanded(
-                  child: Text(
-                    item.getSummary(),
-                    style: AppTypography.cardSnippetStyle(
-                      color: snippetColor,
-                      fontSize: 11.8,
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(26),
+          child: InkWell(
+            onTapDown: (_) {
+              HapticFeedback.selectionClick();
+              setState(() => _isPressed = true);
+            },
+            onTapCancel: () => setState(() => _isPressed = false),
+            onTap: () {
+              setState(() => _isPressed = false);
+              HapticFeedback.mediumImpact();
+              widget.onTap();
+            },
+            borderRadius: BorderRadius.circular(26),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Bold Note Title
+                  Text(
+                    widget.item.title,
+                    style: AppTypography.cardTitleStyle(
+                      color: titleColor,
+                      fontSize: widget.isGrid ? 15.5 : 17,
                     ),
-                    maxLines: isGrid ? 4 : 2,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                  const SizedBox(height: 3),
 
-                const SizedBox(height: 8),
+                  // 2. Ordinal Date Stamp (e.g., "4th Jan 2050")
+                  Text(
+                    DateFormatter.formatOrdinalDate(widget.item.updatedAt),
+                    style: AppTypography.cardDateStyle(
+                      color: dateColor,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
 
-                // 4. Bottom Glyph / Badge
-                _buildBottomGlyph(context, isDark, titleColor, borderColor),
-              ],
+                  // 3. Clamped Snippet / Preview
+                  Expanded(
+                    child: Text(
+                      widget.item.getSummary(),
+                      style: AppTypography.cardSnippetStyle(
+                        color: snippetColor,
+                        fontSize: 11.8,
+                      ),
+                      maxLines: widget.isGrid ? 4 : 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // 4. Bottom Glyph / Badge
+                  _buildBottomGlyph(context, isDark, titleColor, borderColor),
+                ],
+              ),
             ),
           ),
         ),
@@ -128,14 +147,14 @@ class NeoNoteCard extends StatelessWidget {
     Color borderColor,
   ) {
     HeroIcons icon = TackIcons.notes;
-    if (item is WhiteboardCanvasItem) {
+    if (widget.item is WhiteboardCanvasItem) {
       icon = TackIcons.whiteboard;
-    } else if (item is ClipboardItem) {
+    } else if (widget.item is ClipboardItem) {
       icon = TackIcons.clipboard;
-    } else if (item is TextNote) {
-      final note = item as TextNote;
+    } else if (widget.item is TextNote) {
+      final note = widget.item as TextNote;
       if (note.tags.any((t) => t.toLowerCase().contains('fitness') || t.toLowerCase().contains('sport'))) {
-        icon = HeroIcons.sparkles;
+        icon = HeroIcons.bolt;
       } else if (note.tags.any((t) => t.toLowerCase().contains('work'))) {
         icon = HeroIcons.briefcase;
       } else if (note.tags.any((t) => t.toLowerCase().contains('personal'))) {
@@ -164,7 +183,7 @@ class NeoNoteCard extends StatelessWidget {
             ),
           ),
         ),
-        if (item.isFavorite)
+        if (widget.item.isFavorite)
           HeroIcon(
             HeroIcons.star,
             style: HeroIconStyle.solid,

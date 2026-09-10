@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -6,9 +7,9 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/sticky_note.dart';
 
-/// Tactile, playful-professional Sticky Note Card matching reference (Screenshot 2).
-/// Features a cute 3D push-pin tack, clean pastel surface, and uncluttered layout.
-class StickyNoteCard extends StatelessWidget {
+/// Tactile, playful-professional Sticky Note Card matching reference.
+/// Features iOS-style press depression, subtle spring physics, haptics, and a 3D push-pin tack.
+class StickyNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
 
@@ -19,58 +20,78 @@ class StickyNoteCard extends StatelessWidget {
   });
 
   @override
+  State<StickyNoteCard> createState() => _StickyNoteCardState();
+}
+
+class _StickyNoteCardState extends State<StickyNoteCard> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = AppColors.getPaletteById(item.paletteId);
+    final palette = AppColors.getPaletteById(widget.item.paletteId);
     final cardBgColor = palette.resolveCardColor(isDark);
     final pinColor = palette.pinColor;
 
-    final double rotation = item is StickyNote
-        ? (item as StickyNote).rotationAngle
+    final double rotation = widget.item is StickyNote
+        ? (widget.item as StickyNote).rotationAngle
         : 0.0;
 
     return Transform.rotate(
       angle: rotation,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          // Main Sticky Card
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: cardBgColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.45)
-                      : cardBgColor.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                  spreadRadius: -2,
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-              child: InkWell(
-                onTap: onTap,
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOutCubic,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            // Main Sticky Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg + 4, AppSpacing.md, AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Card Body
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title
-                          Text(
-                            item.title,
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.45)
+                        : cardBgColor.withValues(alpha: _isPressed ? 0.15 : 0.35),
+                    blurRadius: _isPressed ? 10 : 18,
+                    offset: Offset(0, _isPressed ? 3 : 8),
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTapDown: (_) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _isPressed = true);
+                  },
+                  onTapCancel: () => setState(() => _isPressed = false),
+                  onTap: () {
+                    setState(() => _isPressed = false);
+                    HapticFeedback.mediumImpact();
+                    widget.onTap();
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg + 4, AppSpacing.md, AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Card Body
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+                            Text(
+                              widget.item.title,
                             style: TextStyle(
                               fontFamily: AppTypography.fontFamily,
                               fontSize: 15.5,
@@ -85,7 +106,7 @@ class StickyNoteCard extends StatelessWidget {
 
                           // Summary
                           Text(
-                            item.getSummary(),
+                            widget.item.getSummary(),
                             style: TextStyle(
                               fontFamily: AppTypography.fontFamily,
                               fontSize: 12.5,
@@ -104,7 +125,7 @@ class StickyNoteCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          DateFormatter.formatTimestamp(item.updatedAt),
+                          DateFormatter.formatTimestamp(widget.item.updatedAt),
                           style: TextStyle(
                             fontFamily: AppTypography.fontFamily,
                             fontSize: 10.5,

@@ -148,28 +148,32 @@ class CategoryFilterPills extends StatelessWidget {
                     workspace.setSelectedTag(tag);
                   },
                   borderRadius: BorderRadius.circular(14),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      // Active is vibrant Lime Zing, inactive is surface fill
-                      color: isSelected
-                          ? activeLime
-                          : (isDark ? AppColors.darkSurface : Colors.white),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderColor, width: 1.5),
-                      boxShadow: isSelected && !isDark
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF191A23).withValues(alpha: 0.1),
-                                blurRadius: 0,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
+                  child: AnimatedScale(
+                    scale: isSelected ? 1.04 : 1.0,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        // Active is vibrant Lime Zing, inactive is surface fill
+                        color: isSelected
+                            ? activeLime
+                            : (isDark ? AppColors.darkSurface : Colors.white),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor, width: 1.5),
+                        boxShadow: isSelected && !isDark
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF191A23).withValues(alpha: 0.1),
+                                  blurRadius: 0,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
                         tag,
                         style: TextStyle(
                           fontFamily: AppTypography.fontFamily,

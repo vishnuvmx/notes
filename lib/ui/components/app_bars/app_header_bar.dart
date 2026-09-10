@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -47,7 +48,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           // Cute Tack Mascot Avatar button (opens drawer)
           GestureDetector(
-            onTap: onOpenDrawer,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onOpenDrawer();
+            },
             child: Container(
               width: 38,
               height: 38,
@@ -103,7 +107,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         // Search Button
         IconButton(
-          onPressed: onToggleSearch,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onToggleSearch();
+          },
           icon: TackIcon(
             isSearching ? TackIcons.close : TackIcons.search,
             size: 22,
@@ -122,6 +129,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
           children: [
             IconButton(
               onPressed: () {
+                HapticFeedback.lightImpact();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('No new notifications'),
@@ -162,7 +170,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
 
         // Quick Theme Toggle
         IconButton(
-          onPressed: () => themeProv.toggleTheme(context),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            themeProv.toggleTheme(context);
+          },
           icon: TackIcon(
             isDark ? TackIcons.sun : TackIcons.moon,
             size: 20,

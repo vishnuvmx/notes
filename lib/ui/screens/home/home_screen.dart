@@ -142,40 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 // Tactile [+] Button with dark border matching reference
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      _openCreateSheet(defaultType: workspace.selectedCategory);
-                    },
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF252833) : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: borderColor, width: 1.6),
-                        boxShadow: isDark
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: const Color(0xFF191A23).withValues(alpha: 0.08),
-                                  blurRadius: 0,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                      ),
-                      child: Center(
-                        child: TackIcon(
-                          TackIcons.plus,
-                          size: 22,
-                          color: isDark ? Colors.white : const Color(0xFF191A23),
-                        ),
-                      ),
-                    ),
-                  ),
+                _QuickAddButton(
+                  isDark: isDark,
+                  borderColor: borderColor,
+                  onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
                 ),
               ],
             ),
@@ -185,15 +155,43 @@ class _HomeScreenState extends State<HomeScreen> {
           const CategoryFilterPills(),
           const SizedBox(height: AppSpacing.md),
 
-          // 3. Main Notes Feed: 2-Column Neo-Pop Grid vs List View
+          // 3. Main Notes Feed: 2-Column Neo-Pop Grid vs List View with fluid transition
           Expanded(
-            child: workspace.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : items.isEmpty
-                    ? _buildEmptyState(workspace)
-                    : workspace.viewMode == HomeViewMode.notebook
-                        ? _buildTactileListView(items)
-                        : _buildNeoGridFeedView(items),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 0.03),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.97, end: 1.0).animate(
+                      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+              child: workspace.isLoading
+                  ? const Center(key: ValueKey('loading'), child: CircularProgressIndicator())
+                  : items.isEmpty
+                      ? KeyedSubtree(
+                          key: ValueKey('empty_${workspace.selectedCategory}_${workspace.selectedTag}'),
+                          child: _buildEmptyState(workspace),
+                        )
+                      : workspace.viewMode == HomeViewMode.notebook
+                          ? KeyedSubtree(
+                              key: const ValueKey('list_view'),
+                              child: _buildTactileListView(items),
+                            )
+                          : KeyedSubtree(
+                              key: const ValueKey('grid_view'),
+                              child: _buildNeoGridFeedView(items),
+                            ),
+            ),
           ),
         ],
       ),
@@ -205,25 +203,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 2-Column Neo-Pop Pastel Grid View matching Reference Mockup
+  /// Staggered Neo-Pop Feed matching Reference Mockup (Offset columns instead of rigid matrix)
   Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
-    return GridView.builder(
+    final leftItems = <BaseWorkspaceItem>[];
+    final rightItems = <BaseWorkspaceItem>[];
+
+    for (int i = 0; i < items.length; i++) {
+      if (i.isEven) {
+        leftItems.add(items[i]);
+      } else {
+        rightItems.add(items[i]);
+      }
+    }
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 13,
-        crossAxisSpacing: 13,
-        childAspectRatio: 0.82,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Column 1 (Starts at top)
+          Expanded(
+            child: Column(
+              children: [
+                for (int i = 0; i < leftItems.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Transform.rotate(
+                      angle: i.isEven ? -0.012 : 0.008,
+                      child: SizedBox(
+                        height: 206,
+                        child: NeoNoteCard(
+                          item: leftItems[i],
+                          isGrid: true,
+                          onTap: () => widget.onOpenItem?.call(leftItems[i]),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 13),
+          // Column 2 (Staggered offset downwards like reference image)
+          Expanded(
+            child: Column(
+              children: [
+                const SizedBox(height: 48), // Stagger offset matching mockup!
+                for (int i = 0; i < rightItems.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Transform.rotate(
+                      angle: i.isEven ? 0.014 : -0.010,
+                      child: SizedBox(
+                        height: 206,
+                        child: NeoNoteCard(
+                          item: rightItems[i],
+                          isGrid: true,
+                          onTap: () => widget.onOpenItem?.call(rightItems[i]),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return NeoNoteCard(
-          item: item,
-          isGrid: true,
-          onTap: () => widget.onOpenItem?.call(item),
-        );
-      },
     );
   }
 
@@ -307,6 +353,71 @@ class _HomeScreenState extends State<HomeScreen> {
               workspace.setSearchQuery('');
             }
           : () => _openCreateSheet(defaultType: workspace.selectedCategory),
+    );
+  }
+}
+
+class _QuickAddButton extends StatefulWidget {
+  final bool isDark;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  const _QuickAddButton({
+    required this.isDark,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_QuickAddButton> createState() => _QuickAddButtonState();
+}
+
+class _QuickAddButtonState extends State<_QuickAddButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        HapticFeedback.selectionClick();
+        setState(() => _pressed = true);
+      },
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: widget.isDark ? const Color(0xFF252833) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: widget.borderColor, width: 1.6),
+            boxShadow: widget.isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF191A23).withValues(alpha: _pressed ? 0.02 : 0.08),
+                      blurRadius: 0,
+                      offset: Offset(0, _pressed ? 1 : 2),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: TackIcon(
+              TackIcons.plus,
+              size: 22,
+              color: widget.isDark ? Colors.white : const Color(0xFF191A23),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

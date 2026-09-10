@@ -58,21 +58,72 @@ class EditorFormattingToolbar extends StatelessWidget {
             );
           }
 
-          return IconButton(
-            icon: Icon(
-              item.icon,
-              size: 20,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            ),
-            tooltip: item.label,
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              onFormatAction?.call(item.action);
-            },
+          return _ToolbarButton(
+            icon: item.icon!,
+            label: item.label,
+            isDark: isDark,
+            onTap: () => onFormatAction?.call(item.action),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ToolbarButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  State<_ToolbarButton> createState() => _ToolbarButtonState();
+}
+
+class _ToolbarButtonState extends State<_ToolbarButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) {
+          HapticFeedback.selectionClick();
+          setState(() => _pressed = true);
+        },
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _pressed ? 0.84 : 1.0,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+          child: Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _pressed
+                  ? (widget.isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              widget.icon,
+              size: 20,
+              color: widget.isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+        ),
       ),
     );
   }

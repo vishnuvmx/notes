@@ -11,7 +11,7 @@ class TackIcons {
   // Navigation
   static const HeroIcons home = HeroIcons.home;
   static const HeroIcons notes = HeroIcons.documentText;
-  static const HeroIcons sticky = HeroIcons.sparkles;
+  static const HeroIcons sticky = HeroIcons.bookmark;
   static const HeroIcons whiteboard = HeroIcons.pencilSquare;
   static const HeroIcons clipboard = HeroIcons.clipboardDocumentList;
   static const HeroIcons plus = HeroIcons.plus;

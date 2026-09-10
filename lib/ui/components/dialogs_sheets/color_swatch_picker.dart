@@ -35,39 +35,45 @@ class ColorSwatchPicker extends StatelessWidget {
               HapticFeedback.selectionClick();
               onPaletteSelected(palette.id);
             },
-            child: AnimatedContainer(
-              duration: AppSpacing.fastAnim,
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: palette.resolveCardColor(isDark),
-                border: Border.all(
-                  color: isSelected
-                      ? (isDark ? Colors.white : AppColors.primaryDark)
-                      : Colors.transparent,
-                  width: isSelected ? 2.5 : 0,
+            child: AnimatedScale(
+              scale: isSelected ? 1.14 : 1.0,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutBack,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: palette.resolveCardColor(isDark),
+                  border: Border.all(
+                    color: isSelected
+                        ? (isDark ? Colors.white : AppColors.primaryDark)
+                        : Colors.transparent,
+                    width: isSelected ? 2.5 : 0,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: palette.lightColor.withValues(alpha: 0.5),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [],
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: palette.lightColor.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                child: isSelected
+                    ? const Center(
+                        child: TackIcon(
+                          TackIcons.check,
+                          size: 20,
+                          color: Colors.white,
+                          style: HeroIconStyle.solid,
                         ),
-                      ]
-                    : [],
+                      )
+                    : null,
               ),
-              child: isSelected
-                  ? const Center(
-                      child: TackIcon(
-                        TackIcons.check,
-                        size: 20,
-                        color: Colors.white,
-                        style: HeroIconStyle.solid,
-                      ),
-                    )
-                  : null,
             ),
           );
         },

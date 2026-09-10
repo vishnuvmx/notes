@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -8,14 +9,15 @@ import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 import 'color_swatch_picker.dart';
 
-/// Modern Android Bottom Sheet for creating a new Note, Sticky, Whiteboard, or Clipboard item.
-/// Replaces the centered desktop dialog with an ergonomic mobile bottom sheet.
+/// Modern iOS-styled Bottom Sheet for creating a new Note, Sticky, Whiteboard, or Clipboard item.
+/// Features ergonomic mobile bottom sheet layout with smooth haptics and microinteractions.
 class CreateItemSheet extends StatefulWidget {
   final ItemType? defaultType;
 
   const CreateItemSheet({super.key, this.defaultType});
 
   static Future<BaseWorkspaceItem?> show(BuildContext context, {ItemType? defaultType}) {
+    HapticFeedback.mediumImpact();
     return showModalBottomSheet<BaseWorkspaceItem>(
       context: context,
       isScrollControlled: true,
@@ -57,6 +59,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   }
 
   void _handleCreate() async {
+    HapticFeedback.mediumImpact();
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     final workspace = context.read<WorkspaceProvider>();
@@ -148,6 +151,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                       selected: isSelected,
                       onSelected: (selected) {
                         if (selected) {
+                          HapticFeedback.selectionClick();
                           setState(() => _selectedType = type);
                         }
                       },

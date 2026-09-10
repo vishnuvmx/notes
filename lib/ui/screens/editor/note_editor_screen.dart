@@ -128,6 +128,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             onPressed: () {
               final newTag = tagCtrl.text.trim().replaceAll('#', '');
               if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+                HapticFeedback.lightImpact();
                 setState(() => _tags.add(newTag));
                 _saveNote();
               }
@@ -141,6 +142,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _removeTag(String tag) {
+    HapticFeedback.selectionClick();
     setState(() => _tags.remove(tag));
     _saveNote();
   }
@@ -314,7 +316,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: const TackIcon(TackIcons.back, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(context).pop();
+          },
           tooltip: 'Back',
         ),
         title: Container(
@@ -364,7 +369,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           IconButton(
             icon: const TackIcon(TackIcons.palette, size: 20),
             tooltip: 'Colors',
-            onPressed: _showColorPicker,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showColorPicker();
+            },
           ),
 
           // Overflow menu (Favorite, Share, Trash)

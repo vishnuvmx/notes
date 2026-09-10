@@ -87,15 +87,6 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
-                  title: const Text('System Default'),
-                  leading: const TackIcon(TackIcons.settings, size: 22),
-                  trailing: themeProv.themeMode == ThemeMode.system
-                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
-                      : null,
-                  onTap: () => themeProv.setThemeMode(ThemeMode.system),
-                ),
-                const Divider(),
-                ListTile(
                   title: const Text('Light Mode'),
                   leading: const TackIcon(TackIcons.sun, size: 22),
                   trailing: themeProv.themeMode == ThemeMode.light
@@ -111,6 +102,15 @@ class SettingsScreen extends StatelessWidget {
                       ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
                       : null,
                   onTap: () => themeProv.setThemeMode(ThemeMode.dark),
+                ),
+                const Divider(),
+                ListTile(
+                  title: const Text('System Default'),
+                  leading: const TackIcon(TackIcons.settings, size: 22),
+                  trailing: themeProv.themeMode == ThemeMode.system
+                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
+                      : null,
+                  onTap: () => themeProv.setThemeMode(ThemeMode.system),
                 ),
               ],
             ),
