@@ -70,7 +70,7 @@ class EditorFormattingToolbar extends StatelessWidget {
   }
 }
 
-class _ToolbarButton extends StatefulWidget {
+class _ToolbarButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -84,43 +84,28 @@ class _ToolbarButton extends StatefulWidget {
   });
 
   @override
-  State<_ToolbarButton> createState() => _ToolbarButtonState();
-}
-
-class _ToolbarButtonState extends State<_ToolbarButton> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: widget.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) {
-          HapticFeedback.selectionClick();
-          setState(() => _pressed = true);
-        },
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _pressed ? 0.84 : 1.0,
-          duration: const Duration(milliseconds: 110),
-          curve: Curves.easeOutCubic,
-          child: Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _pressed
-                  ? (widget.isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              widget.icon,
-              size: 20,
-              color: widget.isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+      message: label,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                size: 20,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
             ),
           ),
         ),

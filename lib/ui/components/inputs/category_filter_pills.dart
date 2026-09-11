@@ -188,8 +188,9 @@ class CategoryFilterPills extends StatelessWidget {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            );
+          },
           ),
         ),
       ],

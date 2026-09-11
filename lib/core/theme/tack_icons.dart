@@ -26,6 +26,8 @@ class TackIcons {
   static const HeroIcons more = HeroIcons.ellipsisVertical;
   static const HeroIcons share = HeroIcons.share;
   static const HeroIcons copy = HeroIcons.clipboardDocument;
+  static const HeroIcons exportData = HeroIcons.arrowUpTray;
+  static const HeroIcons importData = HeroIcons.arrowDownTray;
   static const HeroIcons undo = HeroIcons.arrowUturnLeft;
   static const HeroIcons redo = HeroIcons.arrowUturnRight;
   static const HeroIcons palette = HeroIcons.swatch;

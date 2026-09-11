@@ -50,7 +50,7 @@ class EmptyStateWidget extends StatelessWidget {
                 child: ClipOval(
                   child: Image.asset(
                     'icon.png',
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (_, _, _) => Container(
                       color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
                       child: Center(

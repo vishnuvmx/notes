@@ -52,6 +52,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _pasteFromClipboard() async {
+    HapticFeedback.mediumImpact();
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (!mounted) return;
+    if (text != null && text.isNotEmpty) {
+      final workspace = context.read<WorkspaceProvider>();
+      final item = await workspace.saveClipboardSnippet(text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved "${item.title}" from clipboard'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () => widget.onOpenItem?.call(item),
+            ),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('System clipboard is currently empty'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   void _handleBottomNavTap(int index) {
     final workspace = context.read<WorkspaceProvider>();
 
@@ -153,6 +183,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // 2. Folder Dropdown + View Switcher + Tag Filter Pills
           const CategoryFilterPills(),
+          if (workspace.selectedCategory == ItemType.clipboard) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: InkWell(
+                onTap: _pasteFromClipboard,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurface : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                    boxShadow: AppSpacing.floatingControlShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      const TackIcon(TackIcons.clipboard, size: 18, color: AppColors.accentAmber),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Save from System Clipboard',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: headlineColor,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.pastelAmberLight.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.paste_rounded, size: 14, color: AppColors.accentAmber),
+                            SizedBox(width: 4),
+                            Text(
+                              'Paste',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.accentAmber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
 
           // 3. Main Notes Feed: 2-Column Neo-Pop Grid vs List View with fluid transition
@@ -317,27 +404,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (workspace.searchQuery.isNotEmpty) {
       title = 'Nothing found';
-      subtitle = 'No matches for "${workspace.searchQuery}". Try a different word! 🔍';
+      subtitle = 'No matches for "${workspace.searchQuery}". Try a different term.';
       actionLabel = 'Clear Search';
       icon = TackIcons.search;
     } else if (cat == ItemType.whiteboard) {
-      title = 'Blank Canvas';
-      subtitle = 'Sketch flowcharts, mindmaps & quick visual notes! 🎨';
+      title = 'No Whiteboards Yet';
+      subtitle = 'Create diagrams, mindmaps, and visual workflows.';
       actionLabel = 'New Whiteboard';
       icon = TackIcons.whiteboard;
     } else if (cat == ItemType.clipboard) {
-      title = 'Clipboard is Cozy';
-      subtitle = 'Save code snippets, quotes, or copied thoughts here 📋';
-      actionLabel = 'New Clip';
+      title = 'No Clips Yet';
+      subtitle = 'Save code snippets, text excerpts, and copied links.';
+      actionLabel = 'Paste from Clipboard';
       icon = TackIcons.clipboard;
     } else if (tag != null && tag != '#All' && tag != 'All') {
       title = 'No $tag notes yet';
-      subtitle = 'Create a note with this tag or tap (+) to get started ✨';
+      subtitle = 'Create a note with this tag or tap (+) to add one.';
       actionLabel = 'Create Note';
       icon = TackIcons.notes;
     } else {
-      title = 'Your Space is Clean & Cozy';
-      subtitle = 'Tap (+) below to scribble your first note or doodle ✨';
+      title = 'No Notes Yet';
+      subtitle = 'Tap (+) below to create your first note or board.';
       actionLabel = 'Create Note';
       icon = TackIcons.notes;
     }
@@ -352,7 +439,9 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() => _isSearching = false);
               workspace.setSearchQuery('');
             }
-          : () => _openCreateSheet(defaultType: workspace.selectedCategory),
+          : (cat == ItemType.clipboard
+              ? () => _pasteFromClipboard()
+              : () => _openCreateSheet(defaultType: workspace.selectedCategory)),
     );
   }
 }

@@ -265,18 +265,44 @@ class RichNoteContentView extends StatelessWidget {
 
   Widget _buildRichTextSpans(String text, bool isDark, ThemeData theme) {
     final spans = <InlineSpan>[];
-    final words = text.split(' ');
+    final pattern = RegExp(
+      r'(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
+      dotAll: false,
+    );
 
-    for (int i = 0; i < words.length; i++) {
-      final word = words[i];
+    int lastIndex = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start)));
+      }
 
-      // Hashtag detection (#Design, #Marketing)
-      if (word.startsWith('#') && word.length > 1) {
+      final matched = match.group(0)!;
+      if (matched.startsWith('**') && matched.endsWith('**') && matched.length >= 4) {
+        spans.add(TextSpan(
+          text: matched.substring(2, matched.length - 2),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ));
+      } else if (matched.startsWith('*') && matched.endsWith('*') && matched.length >= 2) {
+        spans.add(TextSpan(
+          text: matched.substring(1, matched.length - 1),
+          style: const TextStyle(fontStyle: FontStyle.italic),
+        ));
+      } else if (matched.startsWith('~~') && matched.endsWith('~~') && matched.length >= 4) {
+        spans.add(TextSpan(
+          text: matched.substring(2, matched.length - 2),
+          style: const TextStyle(decoration: TextDecoration.lineThrough),
+        ));
+      } else if (matched.startsWith('<u>') && matched.endsWith('</u>') && matched.length >= 7) {
+        spans.add(TextSpan(
+          text: matched.substring(3, matched.length - 4),
+          style: const TextStyle(decoration: TextDecoration.underline),
+        ));
+      } else if (matched.startsWith('#') && matched.length > 1) {
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Container(
-              margin: const EdgeInsets.only(right: 4),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelLavenderSoft,
@@ -287,7 +313,7 @@ class RichNoteContentView extends StatelessWidget {
                 ),
               ),
               child: Text(
-                word,
+                matched,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -297,27 +323,15 @@ class RichNoteContentView extends StatelessWidget {
             ),
           ),
         );
-      }
-      // Bold Markdown (**text**)
-      else if (word.startsWith('**') && word.endsWith('**') && word.length > 4) {
-        spans.add(
-          TextSpan(
-            text: '${word.substring(2, word.length - 2)} ',
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-        );
-      }
-      // Italic Markdown (*text*)
-      else if (word.startsWith('*') && word.endsWith('*') && word.length > 2) {
-        spans.add(
-          TextSpan(
-            text: '${word.substring(1, word.length - 1)} ',
-            style: const TextStyle(fontStyle: FontStyle.italic),
-          ),
-        );
       } else {
-        spans.add(TextSpan(text: '$word '));
+        spans.add(TextSpan(text: matched));
       }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(lastIndex)));
     }
 
     return RichText(

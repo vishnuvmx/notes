@@ -54,9 +54,17 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
             }
           }
         }
+        // Clean out any legacy placeholder mockups or old emoji-laden seed items from prior builds
+        _items.removeWhere((item) =>
+            item.id.startsWith('mockup_') ||
+            item.title.contains('mockup') ||
+            item.title.contains('dumb dumb') ||
+            item.title.contains('🌱') ||
+            item.title.contains('📌') ||
+            item.title.contains('🎨'));
       }
       
-      // If storage was empty or no items parsed, initialize with curated initial data
+      // If storage was empty or legacy items cleaned out, initialize with curated initial data
       if (_items.isEmpty) {
         _items.clear();
         _items.addAll(MockInitialData.getInitialItems());

@@ -170,7 +170,35 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                 }).toList(),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+
+            if (_selectedType == ItemType.clipboard) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.paste_rounded, size: 14, color: AppColors.accentAmber),
+                  label: const Text('Paste from System Clipboard'),
+                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentAmber),
+                  backgroundColor: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelAmberSoft,
+                  onPressed: () async {
+                    HapticFeedback.selectionClick();
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    final text = data?.text?.trim();
+                    if (text != null && text.isNotEmpty) {
+                      final firstLine = text.split('\n').first.trim();
+                      setState(() {
+                        if (_titleController.text.isEmpty) {
+                          _titleController.text = firstLine.length > 28 ? '${firstLine.substring(0, 28)}...' : firstLine;
+                        }
+                        _contentController.text = text;
+                      });
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.sm),
 
             // Title Input
             TextField(

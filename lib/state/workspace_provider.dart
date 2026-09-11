@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../domain/interfaces/i_workspace_repo.dart';
 import '../domain/models/base_item.dart';
@@ -5,6 +6,7 @@ import '../domain/models/text_note.dart';
 import '../domain/models/sticky_note.dart';
 import '../domain/models/whiteboard_item.dart';
 import '../domain/models/clipboard_item.dart';
+import '../domain/models/item_serializer.dart';
 
 /// Supported Home view styles
 enum HomeViewMode {
@@ -244,5 +246,82 @@ class WorkspaceProvider extends ChangeNotifier {
 
     await saveItem(newItem);
     return newItem;
+  }
+
+  /// Save a snippet directly from the system clipboard
+  Future<ClipboardItem> saveClipboardSnippet(String text, {String? source}) async {
+    final now = DateTime.now();
+    final clean = text.trim();
+    final firstLine = clean.split('\n').first.trim();
+    final title = firstLine.length > 32
+        ? '${firstLine.substring(0, 32)}...'
+        : (firstLine.isEmpty ? 'Clipboard Snippet' : firstLine);
+
+    final newItem = ClipboardItem(
+      id: 'clip_${now.millisecondsSinceEpoch}',
+      title: title,
+      clipText: clean,
+      createdAt: now,
+      updatedAt: now,
+      paletteId: 'amber',
+      sourceApp: source ?? 'System Clipboard',
+    );
+
+    await saveItem(newItem);
+    return newItem;
+  }
+
+  // Workspace Statistics
+  int get totalActiveNotesCount => _items.where((i) => i.type == ItemType.note).length;
+  int get totalStickiesCount => _items.where((i) => i.type == ItemType.sticky).length;
+  int get totalWhiteboardsCount => _items.where((i) => i.type == ItemType.whiteboard).length;
+  int get totalClipsCount => _items.where((i) => i.type == ItemType.clipboard).length;
+
+  /// Export workspace state as formatted JSON backup string.
+  String exportWorkspaceJson() {
+    final Map<String, dynamic> exportData = {
+      'app': 'Tack',
+      'version': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'itemCounts': {
+        'total': _items.length,
+        'notes': totalActiveNotesCount,
+        'stickies': totalStickiesCount,
+        'whiteboards': totalWhiteboardsCount,
+        'clips': totalClipsCount,
+      },
+      'items': _items.map((item) => item.toJson()).toList(),
+    };
+    return const JsonEncoder.withIndent('  ').convert(exportData);
+  }
+
+  /// Restore workspace items from a JSON backup string.
+  /// Supports Tack export bundle format or raw list of item JSON objects.
+  Future<int> importWorkspaceJson(String jsonStr) async {
+    final dynamic decoded = jsonDecode(jsonStr);
+    List<dynamic> itemsList;
+    if (decoded is Map<String, dynamic> && decoded.containsKey('items')) {
+      itemsList = decoded['items'] as List<dynamic>;
+    } else if (decoded is List<dynamic>) {
+      itemsList = decoded;
+    } else {
+      throw const FormatException('Invalid backup structure. Expected Tack backup bundle or item list.');
+    }
+
+    int importedCount = 0;
+    for (final raw in itemsList) {
+      if (raw is Map<String, dynamic>) {
+        final item = ItemSerializer.fromJson(raw);
+        if (item != null) {
+          await _repository.saveItem(item);
+          importedCount++;
+        }
+      }
+    }
+
+    if (importedCount > 0) {
+      await loadItems();
+    }
+    return importedCount;
   }
 }

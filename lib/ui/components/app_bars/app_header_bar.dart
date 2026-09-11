@@ -57,19 +57,18 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: borderColor, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: borderColor.withValues(alpha: 0.08),
+                    color: borderColor.withValues(alpha: 0.12),
                     offset: const Offset(0, 2),
-                    blurRadius: 0,
+                    blurRadius: 4,
                   ),
                 ],
               ),
               child: ClipOval(
                 child: Image.asset(
                   'icon.png',
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => TackIcon(
                     TackIcons.user,
                     size: 20,
@@ -91,7 +90,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 children: [
                   TextSpan(
-                    text: '$userName ✨',
+                    text: userName,
                     style: AppTypography.welcomeUsernameStyle(
                       color: iconColor,
                     ),
@@ -121,51 +120,6 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             minimumSize: const Size(40, 40),
             padding: EdgeInsets.zero,
           ),
-        ),
-
-        // Notification Bell with Badge
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No new notifications'),
-                    duration: Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              icon: TackIcon(
-                TackIcons.notification,
-                size: 22,
-                color: iconColor,
-              ),
-              tooltip: 'Notifications',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(40, 40),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-            Positioned(
-              top: 10,
-              right: 11,
-              child: Container(
-                width: 7.5,
-                height: 7.5,
-                decoration: BoxDecoration(
-                  color: AppColors.pastelRoseLight,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
 
         // Quick Theme Toggle

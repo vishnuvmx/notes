@@ -29,7 +29,8 @@ class NoteEditorScreen extends StatefulWidget {
 
 class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final TextEditingController _titleController;
-  late final TextEditingController _contentController;
+  late final MarkdownTextEditingController _contentController;
+  final FocusNode _contentFocusNode = FocusNode();
   late String _paletteId;
   late List<String> _tags;
 
@@ -46,7 +47,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         : (widget.item is StickyNote
             ? (widget.item as StickyNote).content
             : (widget.item is ClipboardItem ? (widget.item as ClipboardItem).clipText : ''));
-    _contentController = TextEditingController(text: initialContent);
+    _contentController = MarkdownTextEditingController(text: initialContent);
     _paletteId = widget.item.paletteId;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
 
@@ -58,6 +59,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _contentFocusNode.dispose();
     super.dispose();
   }
 
@@ -149,63 +151,115 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _applyFormatting(String action) {
     final text = _contentController.text;
-    final selection = _contentController.selection;
+    TextSelection selection = _contentController.selection;
 
-    if (!selection.isValid) return;
+    if (!selection.isValid || selection.start < 0) {
+      selection = TextSelection.collapsed(offset: text.length);
+    }
 
     final selectedText = selection.textInside(text);
     final before = selection.textBefore(text);
     final after = selection.textAfter(text);
     String newText = text;
-    int cursorOffset = selection.end;
+    int newCursorStart = selection.start;
+    int newCursorEnd = selection.end;
 
     switch (action) {
       case 'bold':
-        newText = '$before**$selectedText**$after';
-        cursorOffset += 4;
+        if (selectedText.isNotEmpty) {
+          newText = '$before**$selectedText**$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart + selectedText.length;
+        } else {
+          newText = '$before****$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart;
+        }
         break;
       case 'italic':
-        newText = '$before*$selectedText*$after';
-        cursorOffset += 2;
+        if (selectedText.isNotEmpty) {
+          newText = '$before*$selectedText*$after';
+          newCursorStart = before.length + 1;
+          newCursorEnd = newCursorStart + selectedText.length;
+        } else {
+          newText = '$before**$after';
+          newCursorStart = before.length + 1;
+          newCursorEnd = newCursorStart;
+        }
         break;
       case 'underline':
-        newText = '$before<u>$selectedText</u>$after';
-        cursorOffset += 7;
+        if (selectedText.isNotEmpty) {
+          newText = '$before<u>$selectedText</u>$after';
+          newCursorStart = before.length + 3;
+          newCursorEnd = newCursorStart + selectedText.length;
+        } else {
+          newText = '$before<u></u>$after';
+          newCursorStart = before.length + 3;
+          newCursorEnd = newCursorStart;
+        }
         break;
       case 'strikethrough':
-        newText = '$before~~$selectedText~~$after';
-        cursorOffset += 4;
+        if (selectedText.isNotEmpty) {
+          newText = '$before~~$selectedText~~$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart + selectedText.length;
+        } else {
+          newText = '$before~~~~$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart;
+        }
         break;
       case 'bullet':
-        newText = '$before\n• $selectedText$after';
-        cursorOffset += 3;
+        final prefix = (before.isEmpty || before.endsWith('\n')) ? '• ' : '\n• ';
+        newText = '$before$prefix$selectedText$after';
+        newCursorStart = before.length + prefix.length + selectedText.length;
+        newCursorEnd = newCursorStart;
         break;
       case 'numbered':
-        newText = '$before\n1. $selectedText$after';
-        cursorOffset += 4;
+        final prefix = (before.isEmpty || before.endsWith('\n')) ? '1. ' : '\n1. ';
+        newText = '$before$prefix$selectedText$after';
+        newCursorStart = before.length + prefix.length + selectedText.length;
+        newCursorEnd = newCursorStart;
         break;
       case 'checkbox':
-        newText = '$before\n[ ] $selectedText$after';
-        cursorOffset += 5;
+        final prefix = (before.isEmpty || before.endsWith('\n')) ? '[ ] ' : '\n[ ] ';
+        newText = '$before$prefix$selectedText$after';
+        newCursorStart = before.length + prefix.length + selectedText.length;
+        newCursorEnd = newCursorStart;
         break;
       case 'quote':
-        newText = '$before\n> $selectedText$after';
-        cursorOffset += 3;
+        final prefix = (before.isEmpty || before.endsWith('\n')) ? '> ' : '\n> ';
+        newText = '$before$prefix$selectedText$after';
+        newCursorStart = before.length + prefix.length + selectedText.length;
+        newCursorEnd = newCursorStart;
         break;
       case 'link':
-        newText = '$before[$selectedText](url)$after';
-        cursorOffset += 7;
+        if (selectedText.isNotEmpty) {
+          newText = '$before[$selectedText](https://)$after';
+          newCursorStart = before.length + selectedText.length + 3;
+          newCursorEnd = newCursorStart + 8;
+        } else {
+          newText = '$before[title](https://)$after';
+          newCursorStart = before.length + 1;
+          newCursorEnd = before.length + 6;
+        }
         break;
       case 'image':
-        newText = '$before\n![image](url)$after';
-        cursorOffset += 14;
+        newText = '$before\n![Image](https://)$after';
+        newCursorStart = before.length + 11;
+        newCursorEnd = newCursorStart + 8;
         break;
     }
 
     _contentController.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorOffset.clamp(0, newText.length)),
+      selection: TextSelection(
+        baseOffset: newCursorStart.clamp(0, newText.length),
+        extentOffset: newCursorEnd.clamp(0, newText.length),
+      ),
     );
+
+    _contentFocusNode.requestFocus();
   }
 
   void _showColorPicker() {
@@ -540,6 +594,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     if (_isEditingMode)
                       TextField(
                         controller: _contentController,
+                        focusNode: _contentFocusNode,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           height: 1.55,
                           fontSize: 16,
@@ -597,5 +652,81 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Syntax-highlighted text controller that renders bold, italic, strikethrough, underline, and tags inside the editor TextField.
+class MarkdownTextEditingController extends TextEditingController {
+  MarkdownTextEditingController({super.text});
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final text = this.text;
+    if (text.isEmpty) {
+      return TextSpan(text: '', style: style);
+    }
+
+    final spans = <TextSpan>[];
+    final pattern = RegExp(
+      r'(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
+      dotAll: false,
+    );
+
+    int lastMatchEnd = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: style,
+        ));
+      }
+
+      final matchedText = match.group(0)!;
+      if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(fontWeight: FontWeight.bold),
+        ));
+      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(fontStyle: FontStyle.italic),
+        ));
+      } else if (matchedText.startsWith('~~') && matchedText.endsWith('~~') && matchedText.length >= 4) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(decoration: TextDecoration.lineThrough),
+        ));
+      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(decoration: TextDecoration.underline),
+        ));
+      } else if (matchedText.startsWith('#')) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(
+            color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+            fontWeight: FontWeight.w700,
+          ),
+        ));
+      } else {
+        spans.add(TextSpan(text: matchedText, style: style));
+      }
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastMatchEnd), style: style));
+    }
+
+    return TextSpan(children: spans, style: style);
   }
 }

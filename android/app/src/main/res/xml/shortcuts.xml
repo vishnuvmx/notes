@@ -1,0 +1,24 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_note"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_new_note_short"
+        android:shortcutLongLabel="@string/shortcut_new_note_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.notes"
+            android:targetClass="com.example.notes.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="new_whiteboard"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_new_board_short"
+        android:shortcutLongLabel="@string/shortcut_new_board_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.notes"
+            android:targetClass="com.example.notes.MainActivity" />
+    </shortcut>
+</shortcuts>

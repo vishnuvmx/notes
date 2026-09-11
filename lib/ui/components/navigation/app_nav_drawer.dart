@@ -52,7 +52,7 @@ class AppNavDrawer extends StatelessWidget {
                     child: ClipOval(
                       child: Image.asset(
                         'icon.png',
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (_, _, _) => const TackIcon(TackIcons.pin),
                       ),
                     ),
@@ -70,7 +70,7 @@ class AppNavDrawer extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Your tactile brain garden 🌱',
+                          'Tactile notes & boards',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                           ),

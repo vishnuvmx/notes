@@ -76,6 +76,7 @@ class WhiteboardCanvasScreen extends StatefulWidget {
 }
 
 class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with SingleTickerProviderStateMixin {
+  static const double _canvasSize = 6000.0;
   late List<CanvasNode> _nodes;
   late List<CanvasEdge> _edges;
   final TransformationController _transformationController = TransformationController();
@@ -153,6 +154,26 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     _cameraAnimController.forward(from: 0.0);
   }
 
+  void _zoomCanvas(double factor) {
+    final size = MediaQuery.sizeOf(context);
+    final focalPoint = Offset(size.width / 2, (size.height - 100) / 2);
+    final matrix = _transformationController.value.clone();
+
+    final translation = matrix.getTranslation();
+    final currentScale = matrix.getMaxScaleOnAxis();
+    final newScale = (currentScale * factor).clamp(0.15, 3.5);
+    final effectiveFactor = newScale / currentScale;
+
+    final newTransX = focalPoint.dx - (focalPoint.dx - translation.x) * effectiveFactor;
+    final newTransY = focalPoint.dy - (focalPoint.dy - translation.y) * effectiveFactor;
+
+    final target = Matrix4.identity()
+      ..translate(newTransX, newTransY)
+      ..scale(newScale, newScale, 1.0);
+
+    _animateCanvasToMatrix(target);
+  }
+
   void _saveCanvasState() {
     final workspace = context.read<WorkspaceProvider>();
     final updated = widget.item.copyWith(
@@ -225,8 +246,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
     }
 
-    final double x = position?.dx ?? 120.0;
-    final double y = position?.dy ?? (100.0 + (_nodes.length * 40.0 % 300));
     final double width = shapeType == CanvasNodeType.decision
         ? 140
         : shapeType == CanvasNodeType.sticky
@@ -244,12 +263,31 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     ? 42
                     : 52;
 
+    double x;
+    double y;
+    if (position != null) {
+      x = position.dx;
+      y = position.dy;
+    } else {
+      final size = MediaQuery.sizeOf(context);
+      final centerScreen = Offset(size.width / 2, (size.height - 100) / 2);
+      final inverse = Matrix4.tryInvert(_transformationController.value);
+      if (inverse != null) {
+        final transformed = MatrixUtils.transformPoint(inverse, centerScreen);
+        x = transformed.dx - (width / 2);
+        y = transformed.dy - (height / 2);
+      } else {
+        x = (_canvasSize / 2) - (width / 2);
+        y = (_canvasSize / 2) - (height / 2);
+      }
+    }
+
     final newNode = CanvasNode(
       id: _generateUniqueId('node'),
       text: shapeType == CanvasNodeType.image ? '' : shapeType.label,
       shapeType: shapeType,
-      x: x.clamp(0.0, 1200.0),
-      y: y.clamp(0.0, 1200.0),
+      x: x.clamp(0.0, _canvasSize - width),
+      y: y.clamp(0.0, _canvasSize - height),
       width: width,
       height: height,
       paletteId: paletteId,
@@ -448,8 +486,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       final group = levelGroups[lvl] ?? [n.id];
       final indexInGroup = group.indexOf(n.id);
 
-      final newX = (startX + (lvl * colSpacing)).clamp(0.0, 2400.0);
-      final newY = (startY + (indexInGroup * rowSpacing)).clamp(0.0, 2400.0);
+      final newX = (startX + (lvl * colSpacing)).clamp(0.0, _canvasSize - 200.0);
+      final newY = (startY + (indexInGroup * rowSpacing)).clamp(0.0, _canvasSize - 200.0);
 
       updatedNodes.add(n.copyWith(x: newX, y: newY));
     }
@@ -476,10 +514,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
   }
 
-  /// Automatically fits and centers all flowchart nodes in the mobile viewport
+  /// Automatically fits and centers all flowchart nodes in the viewport
   void _fitCanvasToContent() {
     if (_nodes.isEmpty) {
-      _transformationController.value = Matrix4.identity();
+      final size = MediaQuery.sizeOf(context);
+      final transX = (size.width / 2) - (_canvasSize / 2);
+      final transY = (size.height / 2) - (_canvasSize / 2);
+      _animateCanvasToMatrix(Matrix4.identity()..translate(transX, transY));
       return;
     }
     double minX = _nodes.first.x;
@@ -494,14 +535,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       maxY = math.max(maxY, node.y + node.height);
     }
 
-    const padding = 70.0;
-    final contentW = (maxX - minX) + (padding * 2);
-    final contentH = (maxY - minY) + (padding * 2);
+    const padding = 80.0;
+    final contentW = math.max((maxX - minX) + (padding * 2), 100.0);
+    final contentH = math.max((maxY - minY) + (padding * 2), 100.0);
 
     final size = MediaQuery.sizeOf(context);
     final scaleX = size.width / contentW;
     final scaleY = (size.height - 220) / contentH;
-    final fitScale = math.min(scaleX, scaleY).clamp(0.35, 1.6);
+    final fitScale = math.min(scaleX, scaleY).clamp(0.2, 1.8);
 
     final centerScreenX = size.width / 2;
     final centerScreenY = (size.height - 100) / 2;
@@ -788,10 +829,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         }
 
         const pad = 40.0;
-        final cropL = (minX - pad).clamp(0.0, 2600.0);
-        final cropT = (minY - pad).clamp(0.0, 2600.0);
-        final cropR = (maxX + pad).clamp(0.0, 2600.0);
-        final cropB = (maxY + pad).clamp(0.0, 2600.0);
+        final cropL = (minX - pad).clamp(0.0, _canvasSize);
+        final cropT = (minY - pad).clamp(0.0, _canvasSize);
+        final cropR = (maxX + pad).clamp(0.0, _canvasSize);
+        final cropB = (maxY + pad).clamp(0.0, _canvasSize);
         final cropW = cropR - cropL;
         final cropH = cropB - cropT;
 
@@ -944,9 +985,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Infinite/Bounded Interactive Canvas
             InteractiveViewer(
               transformationController: _transformationController,
-              boundaryMargin: const EdgeInsets.all(1600),
-              minScale: 0.25,
+              boundaryMargin: const EdgeInsets.all(3000),
+              minScale: 0.15,
               maxScale: 3.5,
+              constrained: false,
               // When dragging a node, disable pan to eliminate gesture conflict
               panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode,
               child: GestureDetector(
@@ -977,8 +1019,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 child: RepaintBoundary(
                   key: _repaintBoundaryKey,
                   child: SizedBox(
-                    width: 2600,
-                    height: 2600,
+                    width: _canvasSize,
+                    height: _canvasSize,
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -1336,8 +1378,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             icon: const Icon(Icons.remove_rounded, size: 18),
             onPressed: () {
               HapticFeedback.selectionClick();
-              final matrix = _transformationController.value.clone()..scaleByDouble(0.8, 0.8, 1.0, 1.0);
-              _animateCanvasToMatrix(matrix);
+              _zoomCanvas(0.8);
             },
             visualDensity: VisualDensity.compact,
             tooltip: 'Zoom Out',
@@ -1349,8 +1390,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               return InkWell(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  final matrix = Matrix4.identity();
-                  _animateCanvasToMatrix(matrix);
+                  _fitCanvasToContent();
                 },
                 borderRadius: BorderRadius.circular(4),
                 child: Padding(
@@ -1368,8 +1408,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             icon: const Icon(Icons.add_rounded, size: 18),
             onPressed: () {
               HapticFeedback.selectionClick();
-              final matrix = _transformationController.value.clone()..scaleByDouble(1.25, 1.25, 1.0, 1.0);
-              _animateCanvasToMatrix(matrix);
+              _zoomCanvas(1.25);
             },
             visualDensity: VisualDensity.compact,
             tooltip: 'Zoom In',
@@ -1390,9 +1429,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     // If node is near top border, place capsule below it to avoid clipping
     final bool placeBelow = node.y < 56;
     final capsuleTop = placeBelow
-        ? (node.y + node.height + 8).clamp(8.0, 2500.0)
-        : (node.y - 48).clamp(8.0, 2500.0);
-    final capsuleLeft = (node.x + (node.width / 2) - 100).clamp(8.0, 2500.0);
+        ? (node.y + node.height + 8).clamp(8.0, _canvasSize - 100.0)
+        : (node.y - 48).clamp(8.0, _canvasSize - 100.0);
+    final capsuleLeft = (node.x + (node.width / 2) - 100).clamp(8.0, _canvasSize - 100.0);
 
     return Positioned(
       left: capsuleLeft,
@@ -1922,8 +1961,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             final index = _nodes.indexWhere((n) => n.id == node.id);
             if (index >= 0) {
               _nodes[index] = _nodes[index].copyWith(
-                x: (_nodes[index].x + details.delta.dx).clamp(0.0, 2400.0),
-                y: (_nodes[index].y + details.delta.dy).clamp(0.0, 2400.0),
+                x: (_nodes[index].x + details.delta.dx).clamp(0.0, _canvasSize - node.width),
+                y: (_nodes[index].y + details.delta.dy).clamp(0.0, _canvasSize - node.height),
               );
             }
           });
@@ -2033,15 +2072,18 @@ class _CanvasGridPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (!showGrid) return;
     final dotPaint = Paint()
-      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.07)
-      ..strokeWidth = 1.5;
+      ..color = isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.08)
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
 
-    const spacing = 24.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 0.9, dotPaint);
+    const spacing = 28.0;
+    final points = <Offset>[];
+    for (double x = 0; x <= size.width; x += spacing) {
+      for (double y = 0; y <= size.height; y += spacing) {
+        points.add(Offset(x, y));
       }
     }
+    canvas.drawPoints(ui.PointMode.points, points, dotPaint);
   }
 
   @override
