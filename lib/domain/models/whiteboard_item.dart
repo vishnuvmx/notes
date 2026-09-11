@@ -264,11 +264,11 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
       isArchived: json['isArchived'] as bool? ?? false,
       isTrash: json['isTrash'] as bool? ?? false,
       nodes: (json['nodes'] as List<dynamic>?)
-              ?.map((n) => CanvasNode.fromJson(n as Map<String, dynamic>))
+              ?.map((n) => CanvasNode.fromJson(Map<String, dynamic>.from(n as Map)))
               .toList() ??
           [],
       edges: (json['edges'] as List<dynamic>?)
-              ?.map((e) => CanvasEdge.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => CanvasEdge.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList() ??
           [],
       zoomScale: (json['zoomScale'] as num?)?.toDouble() ?? 1.0,

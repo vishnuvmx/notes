@@ -25,13 +25,15 @@ class SettingsScreen extends StatelessWidget {
       final file = File('${tempDir.path}/tack_backup_$timestamp.json');
       await file.writeAsString(jsonStr);
 
-      await SharePlus.instance.shareXFiles(
+      // ignore: deprecated_member_use
+      await Share.shareXFiles(
         [XFile(file.path, mimeType: 'application/json')],
         subject: 'Tack Workspace Backup',
       );
     } catch (e) {
       // Fallback to text share if file system write fails
-      await SharePlus.instance.share(
+      // ignore: deprecated_member_use
+      await Share.share(
         jsonStr,
         subject: 'Tack Workspace Backup',
       );

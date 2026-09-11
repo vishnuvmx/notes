@@ -77,9 +77,11 @@ class RichNoteContentView extends StatelessWidget {
     if (line.startsWith('# ')) {
       return Padding(
         padding: const EdgeInsets.only(top: 14, bottom: 6),
-        child: Text(
+        child: _buildRichTextSpans(
           line.substring(2),
-          style: theme.textTheme.headlineMedium?.copyWith(
+          isDark,
+          theme,
+          baseStyle: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
           ),
@@ -91,9 +93,11 @@ class RichNoteContentView extends StatelessWidget {
     if (line.startsWith('## ')) {
       return Padding(
         padding: const EdgeInsets.only(top: 12, bottom: 4),
-        child: Text(
+        child: _buildRichTextSpans(
           line.substring(3),
-          style: theme.textTheme.titleLarge?.copyWith(
+          isDark,
+          theme,
+          baseStyle: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: -0.4,
           ),
@@ -105,9 +109,11 @@ class RichNoteContentView extends StatelessWidget {
     if (line.startsWith('### ')) {
       return Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 4),
-        child: Text(
+        child: _buildRichTextSpans(
           line.substring(4),
-          style: theme.textTheme.titleMedium?.copyWith(
+          isDark,
+          theme,
+          baseStyle: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
           ),
@@ -164,9 +170,11 @@ class RichNoteContentView extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Text(
+                  child: _buildRichTextSpans(
                     taskText,
-                    style: theme.textTheme.bodyLarge?.copyWith(
+                    isDark,
+                    theme,
+                    baseStyle: theme.textTheme.bodyLarge?.copyWith(
                       decoration: isChecked ? TextDecoration.lineThrough : null,
                       color: isChecked
                           ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
@@ -194,9 +202,11 @@ class RichNoteContentView extends StatelessWidget {
             left: BorderSide(color: AppColors.pastelPeachLight, width: 3.5),
           ),
         ),
-        child: Text(
+        child: _buildRichTextSpans(
           line.substring(2),
-          style: theme.textTheme.bodyMedium?.copyWith(
+          isDark,
+          theme,
+          baseStyle: theme.textTheme.bodyMedium?.copyWith(
             fontStyle: FontStyle.italic,
             height: 1.45,
             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
@@ -263,39 +273,75 @@ class RichNoteContentView extends StatelessWidget {
     );
   }
 
-  Widget _buildRichTextSpans(String text, bool isDark, ThemeData theme) {
+  Widget _buildRichTextSpans(
+    String text,
+    bool isDark,
+    ThemeData theme, {
+    TextStyle? baseStyle,
+  }) {
     final spans = <InlineSpan>[];
+    final defaultStyle = baseStyle ??
+        theme.textTheme.bodyLarge?.copyWith(
+          height: 1.5,
+          fontSize: 15,
+          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          fontFamily: AppTypography.fontFamily,
+        );
+
     final pattern = RegExp(
-      r'(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
+      r'(==.*?==)|(\*\*.*?\*\*)|(__.*?__)|(\*.*?\*)|(_.*?_)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
       dotAll: false,
     );
 
     int lastIndex = 0;
     for (final match in pattern.allMatches(text)) {
       if (match.start > lastIndex) {
-        spans.add(TextSpan(text: text.substring(lastIndex, match.start)));
+        spans.add(TextSpan(
+          text: text.substring(lastIndex, match.start),
+          style: defaultStyle,
+        ));
       }
 
       final matched = match.group(0)!;
-      if (matched.startsWith('**') && matched.endsWith('**') && matched.length >= 4) {
+      if (matched.startsWith('==') && matched.endsWith('==') && matched.length >= 4) {
         spans.add(TextSpan(
           text: matched.substring(2, matched.length - 2),
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: defaultStyle?.copyWith(
+            backgroundColor: isDark
+                ? AppColors.pastelAmberLight.withValues(alpha: 0.35)
+                : AppColors.pastelYellowLight.withValues(alpha: 0.6),
+            fontWeight: FontWeight.w600,
+          ),
         ));
-      } else if (matched.startsWith('*') && matched.endsWith('*') && matched.length >= 2) {
-        spans.add(TextSpan(
-          text: matched.substring(1, matched.length - 1),
-          style: const TextStyle(fontStyle: FontStyle.italic),
-        ));
-      } else if (matched.startsWith('~~') && matched.endsWith('~~') && matched.length >= 4) {
+      } else if (matched.startsWith('**') && matched.endsWith('**') && matched.length >= 4) {
         spans.add(TextSpan(
           text: matched.substring(2, matched.length - 2),
-          style: const TextStyle(decoration: TextDecoration.lineThrough),
+          style: defaultStyle?.copyWith(fontWeight: FontWeight.w800),
+        ));
+      } else if (matched.startsWith('__') && matched.endsWith('__') && matched.length >= 4) {
+        spans.add(TextSpan(
+          text: matched.substring(2, matched.length - 2),
+          style: defaultStyle?.copyWith(decoration: TextDecoration.underline),
         ));
       } else if (matched.startsWith('<u>') && matched.endsWith('</u>') && matched.length >= 7) {
         spans.add(TextSpan(
           text: matched.substring(3, matched.length - 4),
-          style: const TextStyle(decoration: TextDecoration.underline),
+          style: defaultStyle?.copyWith(decoration: TextDecoration.underline),
+        ));
+      } else if (matched.startsWith('*') && matched.endsWith('*') && matched.length >= 2) {
+        spans.add(TextSpan(
+          text: matched.substring(1, matched.length - 1),
+          style: defaultStyle?.copyWith(fontStyle: FontStyle.italic),
+        ));
+      } else if (matched.startsWith('_') && matched.endsWith('_') && matched.length >= 2) {
+        spans.add(TextSpan(
+          text: matched.substring(1, matched.length - 1),
+          style: defaultStyle?.copyWith(fontStyle: FontStyle.italic),
+        ));
+      } else if (matched.startsWith('~~') && matched.endsWith('~~') && matched.length >= 4) {
+        spans.add(TextSpan(
+          text: matched.substring(2, matched.length - 2),
+          style: defaultStyle?.copyWith(decoration: TextDecoration.lineThrough),
         ));
       } else if (matched.startsWith('#') && matched.length > 1) {
         spans.add(
@@ -324,24 +370,22 @@ class RichNoteContentView extends StatelessWidget {
           ),
         );
       } else {
-        spans.add(TextSpan(text: matched));
+        spans.add(TextSpan(text: matched, style: defaultStyle));
       }
 
       lastIndex = match.end;
     }
 
     if (lastIndex < text.length) {
-      spans.add(TextSpan(text: text.substring(lastIndex)));
+      spans.add(TextSpan(
+        text: text.substring(lastIndex),
+        style: defaultStyle,
+      ));
     }
 
     return RichText(
       text: TextSpan(
-        style: theme.textTheme.bodyLarge?.copyWith(
-          height: 1.5,
-          fontSize: 15,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          fontFamily: AppTypography.fontFamily,
-        ),
+        style: defaultStyle,
         children: spans,
       ),
     );

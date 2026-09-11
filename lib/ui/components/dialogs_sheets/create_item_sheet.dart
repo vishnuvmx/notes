@@ -22,6 +22,7 @@ class CreateItemSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateItemSheet(defaultType: defaultType),
     );
@@ -176,7 +177,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: ActionChip(
-                  avatar: const Icon(Icons.paste_rounded, size: 14, color: AppColors.accentAmber),
+                  avatar: const TackIcon(TackIcons.clipboard, size: 14, color: AppColors.accentAmber),
                   label: const Text('Paste from System Clipboard'),
                   labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentAmber),
                   backgroundColor: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelAmberSoft,
@@ -200,29 +201,117 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
             ],
             const SizedBox(height: AppSpacing.sm),
 
-            // Title Input
+            // Title Input (Enhanced UI)
             TextField(
               controller: _titleController,
               autofocus: true,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
               decoration: InputDecoration(
                 labelText: 'Title',
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
                 hintText: 'e.g. My Important Thought...',
-                floatingLabelBehavior: FloatingLabelBehavior.always,
+                hintStyle: TextStyle(
+                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  fontSize: 14,
+                ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TackIcon(
+                    TackIcons.whiteboard,
+                    size: 18,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1E2026) : const Color(0xFFF3F5F8),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                    width: 1.2,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                    width: 1.2,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white : AppColors.primaryDark,
+                    width: 1.8,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // Optional Quick Content Input for Sticky / Note
+            // Optional Quick Content Input for Sticky / Note (Enhanced UI)
             if (_selectedType != ItemType.whiteboard) ...[
               TextField(
                 controller: _contentController,
                 maxLines: 3,
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  height: 1.4,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Snippet / Content',
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
                   hintText: 'Write down quick notes or thoughts...',
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  hintStyle: TextStyle(
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 32),
+                    child: TackIcon(
+                      TackIcons.notes,
+                      size: 18,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1E2026) : const Color(0xFFF3F5F8),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                      width: 1.2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                      width: 1.2,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.white : AppColors.primaryDark,
+                      width: 1.8,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),

@@ -167,27 +167,16 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor.withValues(alpha: 0.4), width: 1.2),
-          ),
-          child: Center(
-            child: HeroIcon(
-              icon,
-              size: 14,
-              color: textColor,
-            ),
-          ),
+        HeroIcon(
+          icon,
+          size: 20,
+          color: textColor.withValues(alpha: 0.85),
         ),
         if (widget.item.isFavorite)
           HeroIcon(
             HeroIcons.star,
             style: HeroIconStyle.solid,
-            size: 15,
+            size: 16,
             color: isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23),
           ),
       ],

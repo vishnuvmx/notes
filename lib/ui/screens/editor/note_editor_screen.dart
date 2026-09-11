@@ -31,10 +31,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final TextEditingController _titleController;
   late final MarkdownTextEditingController _contentController;
   final FocusNode _contentFocusNode = FocusNode();
+  final TextEditingController _newTagController = TextEditingController();
   late String _paletteId;
   late List<String> _tags;
 
   bool _isEditingMode = true;
+  bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
 
@@ -59,8 +61,27 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _newTagController.dispose();
     _contentFocusNode.dispose();
     super.dispose();
+  }
+
+  void _submitNewTag() {
+    final newTag = _newTagController.text.trim().replaceAll('#', '');
+    if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+      HapticFeedback.lightImpact();
+      setState(() {
+        _tags.add(newTag);
+        _newTagController.clear();
+        _isAddingTag = false;
+      });
+      _saveNote();
+    } else {
+      setState(() {
+        _newTagController.clear();
+        _isAddingTag = false;
+      });
+    }
   }
 
   void _onTextChanged() {
@@ -107,42 +128,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
-  void _addTagDialog() {
-    final tagCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Tag'),
-        content: TextField(
-          controller: tagCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Design, Marketing, Strategy',
-            prefixText: '# ',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newTag = tagCtrl.text.trim().replaceAll('#', '');
-              if (newTag.isNotEmpty && !_tags.contains(newTag)) {
-                HapticFeedback.lightImpact();
-                setState(() => _tags.add(newTag));
-                _saveNote();
-              }
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Add Tag'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _removeTag(String tag) {
     HapticFeedback.selectionClick();
     setState(() => _tags.remove(tag));
@@ -165,6 +150,29 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     int newCursorEnd = selection.end;
 
     switch (action) {
+      case 'h1':
+        final prefixH1 = (before.isEmpty || before.endsWith('\n')) ? '# ' : '\n# ';
+        newText = '$before$prefixH1$selectedText$after';
+        newCursorStart = before.length + prefixH1.length + selectedText.length;
+        newCursorEnd = newCursorStart;
+        break;
+      case 'h2':
+        final prefixH2 = (before.isEmpty || before.endsWith('\n')) ? '## ' : '\n## ';
+        newText = '$before$prefixH2$selectedText$after';
+        newCursorStart = before.length + prefixH2.length + selectedText.length;
+        newCursorEnd = newCursorStart;
+        break;
+      case 'highlight':
+        if (selectedText.isNotEmpty) {
+          newText = '$before==$selectedText==$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart + selectedText.length;
+        } else {
+          newText = '$before====$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart;
+        }
+        break;
       case 'bold':
         if (selectedText.isNotEmpty) {
           newText = '$before**$selectedText**$after';
@@ -361,7 +369,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final content = _contentController.text;
     final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
     final wordCount = content.trim().isEmpty ? 0 : content.trim().split(RegExp(r'\s+')).length;
-    final lineCount = content.isEmpty ? 1 : content.split('\n').length;
     final readTime = ((wordCount / 180).ceil()).clamp(1, 60);
 
     return Scaffold(
@@ -394,7 +401,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
               const SizedBox(width: 5),
               Text(
-                _isSaving ? 'Saving' : 'Saved',
+                _isSaving ? 'Saving' : 'Saved  •  $wordCount words',
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
@@ -578,14 +585,67 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           ),
                         ),
                         if (_isEditingMode)
-                          ActionChip(
-                            avatar: const TackIcon(TackIcons.plus, size: 14),
-                            label: const Text('Add Tag'),
-                            labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                            visualDensity: VisualDensity.compact,
-                            shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                            onPressed: _addTagDialog,
-                          ),
+                          if (_isAddingTag)
+                            Container(
+                              height: 28,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkSurfaceAlt : Colors.white,
+                                borderRadius: AppSpacing.roundedPill,
+                                border: Border.all(color: AppColors.accentAmber, width: 1.4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    '#',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.accentAmber,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  SizedBox(
+                                    width: 76,
+                                    child: TextField(
+                                      controller: _newTagController,
+                                      autofocus: true,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                                      ),
+                                      decoration: const InputDecoration(
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        border: InputBorder.none,
+                                        hintText: 'tag...',
+                                      ),
+                                      onSubmitted: (_) => _submitNewTag(),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: _submitNewTag,
+                                    child: const TackIcon(TackIcons.check, size: 14, color: AppColors.accentAmber),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () => setState(() => _isAddingTag = false),
+                                    child: const TackIcon(TackIcons.close, size: 13, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ActionChip(
+                              avatar: const TackIcon(TackIcons.plus, size: 14),
+                              label: const Text('Add Tag'),
+                              labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              visualDensity: VisualDensity.compact,
+                              shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
+                              onPressed: () => setState(() => _isAddingTag = true),
+                            ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -610,7 +670,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           contentPadding: EdgeInsets.zero,
                         ),
                       )
-                    else
+                    else ...[
                       RichNoteContentView(
                         content: _contentController.text,
                         onContentChanged: (newContent) {
@@ -618,36 +678,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           _saveNote();
                         },
                       ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Center(
+                        child: Text(
+                          'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
+                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
 
             // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
-            if (_isEditingMode)
+            if (_isEditingMode) ...[
               EditorFormattingToolbar(onFormatAction: _applyFormatting),
-
-            // Bottom Status Metadata Line
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : Colors.white.withValues(alpha: 0.8),
-                border: Border(top: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}',
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
-                  ),
-                  Text(
-                    'Letters: $letterCount   Words: $wordCount   Line: ${lineCount.toString().padLeft(2, '0')}',
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
+              const SizedBox(height: 4),
+            ],
           ],
         ),
       ),
@@ -674,7 +722,7 @@ class MarkdownTextEditingController extends TextEditingController {
 
     final spans = <TextSpan>[];
     final pattern = RegExp(
-      r'(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
+      r'(==.*?==)|(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
       dotAll: false,
     );
 
@@ -688,7 +736,17 @@ class MarkdownTextEditingController extends TextEditingController {
       }
 
       final matchedText = match.group(0)!;
-      if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
+      if (matchedText.startsWith('==') && matchedText.endsWith('==') && matchedText.length >= 4) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(
+            backgroundColor: isDark
+                ? AppColors.pastelAmberLight.withValues(alpha: 0.35)
+                : AppColors.pastelYellowLight.withValues(alpha: 0.6),
+            fontWeight: FontWeight.w600,
+          ),
+        ));
+      } else if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
         spans.add(TextSpan(
           text: matchedText,
           style: style?.copyWith(fontWeight: FontWeight.bold),

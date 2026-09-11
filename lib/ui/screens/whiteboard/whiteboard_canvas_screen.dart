@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -791,11 +795,186 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
   }
 
-  // ================= 5. Share & Export PNG =================
-  Future<void> _exportAndShareCanvas() async {
+  // ================= 5. Share & Multi-Format Export Pipeline (PNG, JPG, PDF) =================
+
+  Future<Uint8List> _renderCanvasToPngBytes({double pixelRatio = 2.0}) async {
+    // 1. Calculate content bounding box across all nodes
+    double minX = 0;
+    double minY = 0;
+    double maxX = 800;
+    double maxY = 600;
+
+    if (_nodes.isNotEmpty) {
+      minX = _nodes.first.x;
+      maxX = _nodes.first.x + _nodes.first.width;
+      minY = _nodes.first.y;
+      maxY = _nodes.first.y + _nodes.first.height;
+
+      for (final node in _nodes) {
+        minX = math.min(minX, node.x);
+        maxX = math.max(maxX, node.x + node.width);
+        minY = math.min(minY, node.y);
+        maxY = math.max(maxY, node.y + node.height);
+      }
+    }
+
+    const double padding = 60.0;
+    final double contentW = (maxX - minX) + (padding * 2);
+    final double contentH = (maxY - minY) + (padding * 2);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, contentW * pixelRatio, contentH * pixelRatio));
+    canvas.scale(pixelRatio, pixelRatio);
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Draw solid canvas background
+    final bgPaint = Paint()..color = isDark ? const Color(0xFF121316) : Colors.white;
+    canvas.drawRect(Rect.fromLTWH(0, 0, contentW, contentH), bgPaint);
+
+    // Draw subtle grid if enabled
+    if (_showGrid) {
+      final gridPaint = Paint()
+        ..color = isDark ? const Color(0xFF252730) : const Color(0xFFE2E8F0)
+        ..strokeWidth = 1.0;
+      const step = 28.0;
+      for (double x = 0; x <= contentW; x += step) {
+        canvas.drawLine(Offset(x, 0), Offset(x, contentH), gridPaint);
+      }
+      for (double y = 0; y <= contentH; y += step) {
+        canvas.drawLine(Offset(0, y), Offset(contentW, y), gridPaint);
+      }
+    }
+
+    // Offset canvas so all nodes align with margin
+    canvas.save();
+    canvas.translate(padding - minX, padding - minY);
+
+    // Draw connector edges & arrows
+    final edgesPainter = _CanvasEdgesPainter(
+      nodes: _nodes,
+      edges: _edges,
+      selectedEdgeId: null,
+      isDark: isDark,
+    );
+    edgesPainter.paint(canvas, Size(_canvasSize, _canvasSize));
+
+    // Draw each flowchart node
+    for (final node in _nodes) {
+      _drawNodeOnCanvas(canvas, node, isDark);
+    }
+
+    canvas.restore();
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage((contentW * pixelRatio).toInt(), (contentH * pixelRatio).toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) {
+      throw Exception('Failed to generate canvas image bytes');
+    }
+    return byteData.buffer.asUint8List();
+  }
+
+  void _drawNodeOnCanvas(Canvas canvas, CanvasNode node, bool isDark) {
+    final palette = AppColors.getPaletteById(node.paletteId);
+    final Color fillColor = isDark ? palette.darkColor.withValues(alpha: 0.6) : palette.softBackground;
+    final Color strokeColor = palette.lightColor;
+
+    final fillPaint = Paint()..color = fillColor..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = strokeColor
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final rect = Rect.fromLTWH(node.x, node.y, node.width, node.height);
+
+    switch (node.shapeType) {
+      case CanvasNodeType.startEnd:
+        final rrect = RRect.fromRectAndRadius(rect, Radius.circular(node.height / 2));
+        canvas.drawRRect(rrect, fillPaint);
+        canvas.drawRRect(rrect, strokePaint);
+        break;
+
+      case CanvasNodeType.decision:
+        final path = Path()
+          ..moveTo(node.x + node.width / 2, node.y)
+          ..lineTo(node.x + node.width, node.y + node.height / 2)
+          ..lineTo(node.x + node.width / 2, node.y + node.height)
+          ..lineTo(node.x, node.y + node.height / 2)
+          ..close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case CanvasNodeType.inputOutput:
+        const slant = 14.0;
+        final path = Path()
+          ..moveTo(node.x + slant, node.y)
+          ..lineTo(node.x + node.width, node.y)
+          ..lineTo(node.x + node.width - slant, node.y + node.height)
+          ..lineTo(node.x, node.y + node.height)
+          ..close();
+        canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case CanvasNodeType.sticky:
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+        canvas.drawRRect(rrect, fillPaint);
+        canvas.drawRRect(rrect, strokePaint);
+        break;
+
+      case CanvasNodeType.connector:
+        canvas.drawCircle(Offset(node.x + node.width / 2, node.y + node.height / 2), node.width / 2, fillPaint);
+        canvas.drawCircle(Offset(node.x + node.width / 2, node.y + node.height / 2), node.width / 2, strokePaint);
+        break;
+
+      case CanvasNodeType.textOnly:
+        break;
+
+      case CanvasNodeType.image:
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(10));
+        canvas.drawRRect(rrect, fillPaint);
+        canvas.drawRRect(rrect, strokePaint);
+        break;
+
+      case CanvasNodeType.process:
+      default:
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+        canvas.drawRRect(rrect, fillPaint);
+        canvas.drawRRect(rrect, strokePaint);
+        break;
+    }
+
+    if (node.text.isNotEmpty && node.shapeType != CanvasNodeType.image) {
+      final textSpan = TextSpan(
+        text: node.text,
+        style: TextStyle(
+          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          fontSize: node.shapeType == CanvasNodeType.decision ? 12 : 13,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+        maxLines: node.shapeType == CanvasNodeType.sticky ? 4 : 2,
+        ellipsis: '...',
+      );
+      textPainter.layout(maxWidth: math.max(node.width - 16, 20));
+      final textOffset = Offset(
+        node.x + (node.width - textPainter.width) / 2,
+        node.y + (node.height - textPainter.height) / 2,
+      );
+      textPainter.paint(canvas, textOffset);
+    }
+  }
+
+  Future<void> _exportCanvas(String format, {bool isPrint = false}) async {
     if (_isExporting) return;
 
-    // Deselect active node/edge so highlight capsule doesn't get captured
     if (_selectedNodeId != null || _selectedEdgeId != null) {
       setState(() {
         _selectedNodeId = null;
@@ -807,61 +986,74 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     setState(() => _isExporting = true);
 
     try {
-      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('Canvas render boundary not ready');
-      }
-
-      final ui.Image fullImage = await boundary.toImage(pixelRatio: 2.0);
-      ui.Image exportImage = fullImage;
-
-      // Crop to content bounding box if nodes exist
-      if (_nodes.isNotEmpty) {
-        double minX = _nodes.first.x;
-        double maxX = _nodes.first.x + _nodes.first.width;
-        double minY = _nodes.first.y;
-        double maxY = _nodes.first.y + _nodes.first.height;
-        for (final node in _nodes) {
-          minX = math.min(minX, node.x);
-          maxX = math.max(maxX, node.x + node.width);
-          minY = math.min(minY, node.y);
-          maxY = math.max(maxY, node.y + node.height);
-        }
-
-        const pad = 40.0;
-        final cropL = (minX - pad).clamp(0.0, _canvasSize);
-        final cropT = (minY - pad).clamp(0.0, _canvasSize);
-        final cropR = (maxX + pad).clamp(0.0, _canvasSize);
-        final cropB = (maxY + pad).clamp(0.0, _canvasSize);
-        final cropW = cropR - cropL;
-        final cropH = cropB - cropT;
-
-        if (cropW > 20 && cropH > 20) {
-          final recorder = ui.PictureRecorder();
-          final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, cropW * 2.0, cropH * 2.0));
-          final srcRect = Rect.fromLTWH(cropL * 2.0, cropT * 2.0, cropW * 2.0, cropH * 2.0);
-          final dstRect = Rect.fromLTWH(0, 0, cropW * 2.0, cropH * 2.0);
-          canvas.drawImageRect(fullImage, srcRect, dstRect, Paint());
-          exportImage = await recorder.endRecording().toImage((cropW * 2.0).toInt(), (cropH * 2.0).toInt());
-        }
-      }
-
-      final ByteData? byteData = await exportImage.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) {
-        throw Exception('Failed to generate PNG bytes');
-      }
-
+      final pngBytes = await _renderCanvasToPngBytes(pixelRatio: 2.0);
       final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = await File(filePath).create();
-      await file.writeAsBytes(byteData.buffer.asUint8List());
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: '${widget.item.title} Flowchart',
-        ),
-      );
+      if (format == 'pdf') {
+        final doc = pw.Document();
+        final pdfImage = pw.MemoryImage(pngBytes);
+        doc.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4.landscape,
+            build: (pw.Context context) {
+              return pw.FullPage(
+                ignoreMargins: false,
+                child: pw.Center(
+                  child: pw.Image(pdfImage, fit: pw.BoxFit.contain),
+                ),
+              );
+            },
+          ),
+        );
+
+        final pdfBytes = await doc.save();
+
+        if (isPrint) {
+          await Printing.layoutPdf(
+            onLayout: (format) async => pdfBytes,
+            name: '${widget.item.title}.pdf',
+          );
+        } else {
+          final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_$timestamp.pdf';
+          final file = await File(filePath).create();
+          await file.writeAsBytes(pdfBytes);
+
+          await SharePlus.instance.share(
+            ShareParams(
+              files: [XFile(file.path)],
+              text: '${widget.item.title} PDF Diagram',
+            ),
+          );
+        }
+      } else if (format == 'jpg') {
+        final decoded = img.decodeImage(pngBytes);
+        if (decoded == null) throw Exception('Failed to decode image');
+        final jpgBytes = img.encodeJpg(decoded, quality: 92);
+
+        final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_$timestamp.jpg';
+        final file = await File(filePath).create();
+        await file.writeAsBytes(jpgBytes);
+
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: '${widget.item.title} JPG Image',
+          ),
+        );
+      } else {
+        // PNG export
+        final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_$timestamp.png';
+        final file = await File(filePath).create();
+        await file.writeAsBytes(pngBytes);
+
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: '${widget.item.title} PNG Diagram',
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -876,6 +1068,126 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         setState(() => _isExporting = false);
       }
     }
+  }
+
+  void _showExportBottomSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
+      ),
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      builder: (ctx) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Export Whiteboard',
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Export full diagram across all canvas coordinates',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.pastelCyanLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.image_rounded, color: Colors.white, size: 20),
+                  ),
+                  title: const Text('PNG Image (Lossless High-Res)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Pixel-perfect diagram with transparent background'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _exportCanvas('png');
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.pastelAmberLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.photo_rounded, color: Colors.white, size: 20),
+                  ),
+                  title: const Text('JPEG Image (Compressed)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Standard photo format with solid background'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _exportCanvas('jpg');
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.pastelCoralLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 20),
+                  ),
+                  title: const Text('PDF Document (Vector & Print)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Paginated landscape PDF ready for presentation or printing'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.print_rounded, size: 20),
+                        tooltip: 'Print / Save PDF',
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _exportCanvas('pdf', isPrint: true);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.share_rounded, size: 20),
+                        tooltip: 'Share PDF',
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _exportCanvas('pdf', isPrint: false);
+                        },
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _exportCanvas('pdf', isPrint: false);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -912,18 +1224,26 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             onPressed: () => Navigator.of(context).pop(),
           ),
           title: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.item.title,
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Whiteboard',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  Flexible(
+                    child: Text(
+                      'Whiteboard',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const Icon(Icons.keyboard_arrow_down_rounded, size: 14),
@@ -962,7 +1282,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.md, left: AppSpacing.xs),
               child: ElevatedButton(
-                onPressed: _isExporting ? null : _exportAndShareCanvas,
+                onPressed: _isExporting ? null : _showExportBottomSheet,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,
                   foregroundColor: isDark ? AppColors.darkBackground : AppColors.lightSurface,
@@ -975,7 +1295,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Share'),
+                    : const Text('Export'),
               ),
             ),
           ],
@@ -1038,13 +1358,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                             ),
                           ),
                         ),
-                        ..._nodes.map((node) => RepaintBoundary(
-                              key: ValueKey(node.id),
-                              child: _buildNodeWidget(node, isDark),
-                            )),
-                        if (_selectedNodeId != null) ...[
+                        ..._nodes.map((node) => _buildNodeWidget(node, isDark)),
+                        if (_selectedNodeId != null && _nodes.any((n) => n.id == _selectedNodeId)) ...[
                           _buildSelectedNodeCapsule(isDark),
-                          _buildNodeBranchHandles(isDark),
+                          ..._buildNodeBranchHandles(isDark),
                         ],
                       ],
                     ),
@@ -1565,12 +1882,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   // Quick-Branch (+) Handles on the Cardinal Ports of Selected Node (omitting ports with existing edges)
-  Widget _buildNodeBranchHandles(bool isDark) {
+  List<Widget> _buildNodeBranchHandles(bool isDark) {
     final node = _nodes.cast<CanvasNode?>().firstWhere(
           (n) => n?.id == _selectedNodeId,
           orElse: () => null,
         );
-    if (node == null) return const SizedBox.shrink();
+    if (node == null) return const [];
 
     final hasRightEdge = _edges.any((e) =>
         (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'right') ||
@@ -1585,54 +1902,52 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'top') ||
         (e.toNodeId == node.id && (e.toPort ?? 'top') == 'top'));
 
-    return Stack(
-      children: [
-        if (!hasRightEdge)
-          Positioned(
-            left: node.x + node.width + 6,
-            top: node.y + (node.height / 2) - 13,
-            child: _buildBranchHandleIcon(
-              icon: Icons.add_rounded,
-              tooltip: 'Branch Right',
-              isDark: isDark,
-              onTap: () => _branchFromNode(node, 'right'),
-            ),
+    return [
+      if (!hasRightEdge)
+        Positioned(
+          left: node.x + node.width + 6,
+          top: node.y + (node.height / 2) - 13,
+          child: _buildBranchHandleIcon(
+            icon: Icons.add_rounded,
+            tooltip: 'Branch Right',
+            isDark: isDark,
+            onTap: () => _branchFromNode(node, 'right'),
           ),
-        if (!hasBottomEdge)
-          Positioned(
-            left: node.x + (node.width / 2) - 13,
-            top: node.y + node.height + 6,
-            child: _buildBranchHandleIcon(
-              icon: Icons.add_rounded,
-              tooltip: 'Branch Down',
-              isDark: isDark,
-              onTap: () => _branchFromNode(node, 'bottom'),
-            ),
+        ),
+      if (!hasBottomEdge)
+        Positioned(
+          left: node.x + (node.width / 2) - 13,
+          top: node.y + node.height + 6,
+          child: _buildBranchHandleIcon(
+            icon: Icons.add_rounded,
+            tooltip: 'Branch Down',
+            isDark: isDark,
+            onTap: () => _branchFromNode(node, 'bottom'),
           ),
-        if (!hasLeftEdge)
-          Positioned(
-            left: node.x - 32,
-            top: node.y + (node.height / 2) - 13,
-            child: _buildBranchHandleIcon(
-              icon: Icons.add_rounded,
-              tooltip: 'Branch Left',
-              isDark: isDark,
-              onTap: () => _branchFromNode(node, 'left'),
-            ),
+        ),
+      if (!hasLeftEdge)
+        Positioned(
+          left: node.x - 32,
+          top: node.y + (node.height / 2) - 13,
+          child: _buildBranchHandleIcon(
+            icon: Icons.add_rounded,
+            tooltip: 'Branch Left',
+            isDark: isDark,
+            onTap: () => _branchFromNode(node, 'left'),
           ),
-        if (!hasTopEdge)
-          Positioned(
-            left: node.x + (node.width / 2) - 13,
-            top: node.y - 32,
-            child: _buildBranchHandleIcon(
-              icon: Icons.add_rounded,
-              tooltip: 'Branch Up',
-              isDark: isDark,
-              onTap: () => _branchFromNode(node, 'top'),
-            ),
+        ),
+      if (!hasTopEdge)
+        Positioned(
+          left: node.x + (node.width / 2) - 13,
+          top: node.y - 32,
+          child: _buildBranchHandleIcon(
+            icon: Icons.add_rounded,
+            tooltip: 'Branch Up',
+            isDark: isDark,
+            onTap: () => _branchFromNode(node, 'top'),
           ),
-      ],
-    );
+        ),
+    ];
   }
 
   Widget _buildBranchHandleIcon({
@@ -1904,9 +2219,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
 
     return Positioned(
+      key: ValueKey(node.id),
       left: node.x,
       top: node.y,
-      child: GestureDetector(
+      child: RepaintBoundary(
+        child: GestureDetector(
         onTap: () {
           _canvasFocusNode.requestFocus();
           setState(() {
@@ -1975,6 +2292,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           setState(() => _isDraggingNode = false);
         },
         child: shapeContent,
+      ),
       ),
     );
   }

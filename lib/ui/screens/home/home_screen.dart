@@ -13,6 +13,7 @@ import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/cards/neo_note_card.dart';
+import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
@@ -57,16 +58,34 @@ class _HomeScreenState extends State<HomeScreen> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (text != null && text.isNotEmpty) {
       final workspace = context.read<WorkspaceProvider>();
       final item = await workspace.saveClipboardSnippet(text);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Saved "${item.title}" from clipboard'),
+            content: Row(
+              children: [
+                const TackIcon(TackIcons.check, size: 18, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Saved "${item.title}" from clipboard',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+            backgroundColor: isDark ? const Color(0xFF1E2026) : const Color(0xFF191A23),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            duration: const Duration(seconds: 3),
             action: SnackBarAction(
               label: 'Open',
+              textColor: AppColors.accentAmber,
               onPressed: () => widget.onOpenItem?.call(item),
             ),
           ),
@@ -74,9 +93,19 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('System clipboard is currently empty'),
+        SnackBar(
+          content: const Row(
+            children: [
+              TackIcon(TackIcons.clipboard, size: 18, color: Colors.white),
+              SizedBox(width: 10),
+              Text('System clipboard is currently empty', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ),
           behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+          backgroundColor: isDark ? const Color(0xFF1E2026) : const Color(0xFF191A23),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -163,11 +192,15 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  'Your Notes',
-                  style: AppTypography.sectionHeadline(
-                    color: headlineColor,
-                    fontSize: 34,
+                Expanded(
+                  child: Text(
+                    'Your Notes',
+                    style: AppTypography.sectionHeadline(
+                      color: headlineColor,
+                      fontSize: 34,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
 
@@ -221,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.paste_rounded, size: 14, color: AppColors.accentAmber),
+                            TackIcon(TackIcons.clipboard, size: 14, color: AppColors.accentAmber),
                             SizedBox(width: 4),
                             Text(
                               'Paste',
@@ -242,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
           const SizedBox(height: AppSpacing.md),
 
-          // 3. Main Notes Feed: 2-Column Neo-Pop Grid vs List View with fluid transition
+          // 3. Main Notes Feed: Neo-Pop Grid Feed
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 260),
@@ -269,15 +302,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           key: ValueKey('empty_${workspace.selectedCategory}_${workspace.selectedTag}'),
                           child: _buildEmptyState(workspace),
                         )
-                      : workspace.viewMode == HomeViewMode.notebook
-                          ? KeyedSubtree(
-                              key: const ValueKey('list_view'),
-                              child: _buildTactileListView(items),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey('grid_view'),
-                              child: _buildNeoGridFeedView(items),
-                            ),
+                      : KeyedSubtree(
+                          key: const ValueKey('grid_view'),
+                          child: _buildNeoGridFeedView(items),
+                        ),
             ),
           ),
         ],
@@ -315,11 +343,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 for (int i = 0; i < leftItems.length; i++)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Transform.rotate(
-                      angle: i.isEven ? -0.012 : 0.008,
+                      angle: i.isEven ? -0.035 : -0.022,
                       child: SizedBox(
-                        height: 206,
+                        height: 218,
                         child: NeoNoteCard(
                           item: leftItems[i],
                           isGrid: true,
@@ -331,19 +359,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 14),
           // Column 2 (Staggered offset downwards like reference image)
           Expanded(
             child: Column(
               children: [
-                const SizedBox(height: 48), // Stagger offset matching mockup!
+                const SizedBox(height: 38), // Stagger offset matching mockup!
                 for (int i = 0; i < rightItems.length; i++)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Transform.rotate(
-                      angle: i.isEven ? 0.014 : -0.010,
+                      angle: i.isEven ? 0.028 : 0.032,
                       child: SizedBox(
-                        height: 206,
+                        height: 218,
                         child: NeoNoteCard(
                           item: rightItems[i],
                           isGrid: true,
@@ -379,14 +407,11 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: SizedBox(
-            height: 155,
-            child: NeoNoteCard(
-              item: item,
-              isGrid: false,
-              onTap: () => widget.onOpenItem?.call(item),
-            ),
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: SmartNoteListCard(
+            item: item,
+            index: index,
+            onTap: () => widget.onOpenItem?.call(item),
           ),
         );
       },
