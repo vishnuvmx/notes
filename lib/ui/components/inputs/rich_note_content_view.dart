@@ -344,31 +344,79 @@ class RichNoteContentView extends StatelessWidget {
           style: defaultStyle?.copyWith(decoration: TextDecoration.lineThrough),
         ));
       } else if (matched.startsWith('#') && matched.length > 1) {
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelLavenderSoft,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isDark ? AppColors.pastelLavenderLight.withValues(alpha: 0.4) : AppColors.pastelLavenderLight,
-                  width: 1,
+        final hexColor = AppColors.tryParseHexColor(matched);
+        if (hexColor != null) {
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: hexColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: hexColor.withValues(alpha: 0.8),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Text(
-                matched,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: hexColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.25),
+                          width: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      matched,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
+                        color: isDark ? Colors.white : const Color(0xFF18191F),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        );
+          );
+        } else {
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelLavenderSoft,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isDark ? AppColors.pastelLavenderLight.withValues(alpha: 0.4) : AppColors.pastelLavenderLight,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  matched,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
       } else {
         spans.add(TextSpan(text: matched, style: defaultStyle));
       }

@@ -54,6 +54,9 @@ class TackIcons {
   static const HeroIcons cursor = HeroIcons.cursorArrowRays;
   static const HeroIcons hand = HeroIcons.handRaised;
   static const HeroIcons photo = HeroIcons.photo;
+  static const HeroIcons minus = HeroIcons.minus;
+  static const HeroIcons pencil = HeroIcons.pencil;
+  static const HeroIcons link = HeroIcons.link;
   static const HeroIcons pin = HeroIcons.mapPin;
 }
 

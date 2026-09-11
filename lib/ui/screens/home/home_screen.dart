@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -13,7 +14,6 @@ import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/cards/neo_note_card.dart';
-import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
@@ -45,6 +45,45 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSearching = false;
+  late final ScrollController _scrollController;
+  bool _isBarsVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.offset <= 12) {
+      if (!_isBarsVisible) {
+        setState(() => _isBarsVisible = true);
+      }
+    }
+  }
+
+  String _getHeadlineTitle(ItemType? category) {
+    switch (category) {
+      case null:
+        return 'Your Files';
+      case ItemType.note:
+        return 'Your Notes';
+      case ItemType.whiteboard:
+        return 'Your Boards';
+      case ItemType.clipboard:
+        return 'Your Saves';
+      case ItemType.sticky:
+        return 'Your Stickies';
+    }
+  }
 
   void _openCreateSheet({ItemType? defaultType}) async {
     final newItem = await CreateItemSheet.show(context, defaultType: defaultType);
@@ -64,64 +103,176 @@ class _HomeScreenState extends State<HomeScreen> {
       final workspace = context.read<WorkspaceProvider>();
       final item = await workspace.saveClipboardSnippet(text);
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            elevation: 10,
+            backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
+                width: 1.2,
+              ),
+            ),
+            duration: const Duration(seconds: 4),
             content: Row(
               children: [
-                const TackIcon(TackIcons.check, size: 18, color: Colors.white),
-                const SizedBox(width: 10),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: TackIcon(TackIcons.check, size: 18, color: AppColors.success),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Saved "${item.title}" from clipboard',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Saved to Notes',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    widget.onOpenItem?.call(item);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentAmber,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Open',
+                      style: TextStyle(
+                        color: Color(0xFF191A23),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-            backgroundColor: isDark ? const Color(0xFF1E2026) : const Color(0xFF191A23),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'Open',
-              textColor: AppColors.accentAmber,
-              onPressed: () => widget.onOpenItem?.call(item),
             ),
           ),
         );
       }
     } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          elevation: 10,
+          backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
+              width: 1.2,
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+          content: Row(
             children: [
-              TackIcon(TackIcons.clipboard, size: 18, color: Colors.white),
-              SizedBox(width: 10),
-              Text('System clipboard is currently empty', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.accentAmber.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: TackIcon(TackIcons.clipboard, size: 18, color: AppColors.accentAmber),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'System Clipboard is Empty',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Copy text from any app to save it here',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-          backgroundColor: isDark ? const Color(0xFF1E2026) : const Color(0xFF191A23),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          duration: const Duration(seconds: 2),
         ),
       );
     }
   }
 
   void _handleBottomNavTap(int index) {
+    if (!_isBarsVisible) {
+      setState(() => _isBarsVisible = true);
+    }
     final workspace = context.read<WorkspaceProvider>();
 
-    if (index == 0) {
-      workspace.setCategory(null);
-    } else if (index == 1) {
-      workspace.setCategory(ItemType.note);
-    } else if (index == 3) {
-      workspace.setCategory(ItemType.whiteboard);
-    } else if (index == 4) {
-      workspace.setCategory(ItemType.clipboard);
+    switch (index) {
+      case 0:
+        workspace.setCategory(null);
+        break;
+      case 1:
+        workspace.setCategory(ItemType.note);
+        break;
+      case 2:
+        _openCreateSheet();
+        break;
+      case 3:
+        workspace.setCategory(ItemType.whiteboard);
+        break;
+      case 4:
+        workspace.setCategory(ItemType.clipboard);
+        break;
     }
   }
 
@@ -148,10 +299,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentNavIndex = _calculateNavIndex(workspace.selectedCategory);
 
     final headlineColor = isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23);
-    final borderColor = isDark ? const Color(0xFF323642) : const Color(0xFF191A23);
+    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
 
     return Scaffold(
       key: _scaffoldKey,
+      extendBody: true,
       drawer: AppNavDrawer(
         onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
         onOpenArchive: widget.onOpenArchive,
@@ -171,155 +323,253 @@ class _HomeScreenState extends State<HomeScreen> {
         isSearching: _isSearching,
         onQuickCreate: () => _openCreateSheet(),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          // Animated Search Bar
-          if (_isSearching) ...[
-            SmartSearchBar(
-              onClose: () {
-                setState(() => _isSearching = false);
-                workspace.setSearchQuery('');
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-
-          // 1. "Your Notes" Headline + Rounded Rect [+] Quick Add Button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Your Notes',
-                    style: AppTypography.sectionHeadline(
-                      color: headlineColor,
-                      fontSize: 34,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Animated Search Bar
+              if (_isSearching) ...[
+                SmartSearchBar(
+                  onClose: () {
+                    setState(() => _isSearching = false);
+                    workspace.setSearchQuery('');
+                  },
                 ),
-
-                // Tactile [+] Button with dark border matching reference
-                _QuickAddButton(
-                  isDark: isDark,
-                  borderColor: borderColor,
-                  onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
-                ),
+                const SizedBox(height: AppSpacing.sm),
               ],
-            ),
-          ),
 
-          // 2. Folder Dropdown + View Switcher + Tag Filter Pills
-          const CategoryFilterPills(),
-          if (workspace.selectedCategory == ItemType.clipboard) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: InkWell(
-                onTap: _pasteFromClipboard,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                    boxShadow: AppSpacing.floatingControlShadow,
-                  ),
-                  child: Row(
-                    children: [
-                      const TackIcon(TackIcons.clipboard, size: 18, color: AppColors.accentAmber),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Save from System Clipboard',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: headlineColor,
+              // Collapsible Top Section ("Your Files" / "Your Notes" + Folder Dropdown + Filter Pills)
+              ClipRect(
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOutCubic,
+                  alignment: Alignment.bottomCenter,
+                  heightFactor: _isBarsVisible ? 1.0 : 0.0,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: _isBarsVisible ? 1.0 : 0.0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 1. Headline + Rounded Rect [+] Quick Add Button
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _getHeadlineTitle(workspace.selectedCategory),
+                                  style: AppTypography.sectionHeadline(
+                                    color: headlineColor,
+                                    fontSize: 34,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+
+                              // Tactile [+] Button with dark border matching reference
+                              _QuickAddButton(
+                                isDark: isDark,
+                                borderColor: borderColor,
+                                onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.pastelAmberLight.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(8),
+
+                        // 2. Folder Dropdown + View Switcher + Tag Filter Pills
+                        const CategoryFilterPills(),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 3. Main Notes Feed: Neo-Pop Grid Feed with scroll listener
+              Expanded(
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.direction == ScrollDirection.reverse) {
+                      if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 24) {
+                        setState(() => _isBarsVisible = false);
+                      }
+                    } else if (notification.direction == ScrollDirection.forward) {
+                      if (!_isBarsVisible) {
+                        setState(() => _isBarsVisible = true);
+                      }
+                    }
+                    return false;
+                  },
+                  child: workspace.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : items.isEmpty
+                          ? _buildEmptyState(workspace)
+                          : _buildNeoGridFeedView(items),
+                ),
+              ),
+            ],
+          ),
+
+          // Floating Bottom Popup Dock for Clipboard Category
+          if (workspace.selectedCategory == ItemType.clipboard)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: _isBarsVisible ? 12 : -88,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _isBarsVisible ? 1.0 : 0.0,
+                child: _buildClipboardBottomDock(isDark),
+              ),
+            ),
+        ],
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        offset: _isBarsVisible ? Offset.zero : const Offset(0, 1.25),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          opacity: _isBarsVisible ? 1.0 : 0.0,
+          child: SmartBottomNavBar(
+            currentIndex: currentNavIndex,
+            onTap: _handleBottomNavTap,
+            onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Floating bottom dock for quick paste when viewing Clipboard category
+  Widget _buildClipboardBottomDock(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13141B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFF191A23),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.6)
+                : const Color(0xFF191A23).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _pasteFromClipboard,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.accentAmber.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Center(
+                    child: TackIcon(
+                      TackIcons.clipboard,
+                      size: 20,
+                      color: AppColors.accentAmber,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Save from Clipboard',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                          letterSpacing: -0.3,
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TackIcon(TackIcons.clipboard, size: 14, color: AppColors.accentAmber),
-                            SizedBox(width: 4),
-                            Text(
-                              'Paste',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.accentAmber,
-                              ),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Tap to import copied snippet',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-
-          // 3. Main Notes Feed: Neo-Pop Grid Feed
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.03),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.97, end: 1.0).animate(
-                      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-                    ),
-                    child: child,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentAmber.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                );
-              },
-              child: workspace.isLoading
-                  ? const Center(key: ValueKey('loading'), child: CircularProgressIndicator())
-                  : items.isEmpty
-                      ? KeyedSubtree(
-                          key: ValueKey('empty_${workspace.selectedCategory}_${workspace.selectedTag}'),
-                          child: _buildEmptyState(workspace),
-                        )
-                      : KeyedSubtree(
-                          key: const ValueKey('grid_view'),
-                          child: _buildNeoGridFeedView(items),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(
+                        TackIcons.copy,
+                        size: 14,
+                        color: Color(0xFF191A23),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Paste',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF191A23),
+                          letterSpacing: -0.2,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: SmartBottomNavBar(
-        currentIndex: currentNavIndex,
-        onTap: _handleBottomNavTap,
-        onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+        ),
       ),
     );
   }
 
   /// Staggered Neo-Pop Feed matching Reference Mockup (Offset columns instead of rigid matrix)
   Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
+    final isClipboard = context.watch<WorkspaceProvider>().selectedCategory == ItemType.clipboard;
     final leftItems = <BaseWorkspaceItem>[];
     final rightItems = <BaseWorkspaceItem>[];
 
@@ -332,8 +582,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return SingleChildScrollView(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        isClipboard ? 110 : 88,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -388,35 +644,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Tactile List View
-  Widget _buildTactileListView(List<BaseWorkspaceItem> items) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-
-        if (item is ClipboardItem) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: ClipboardCard(
-              item: item,
-              onTap: () => widget.onOpenItem?.call(item),
-            ),
-          );
-        }
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: SmartNoteListCard(
-            item: item,
-            index: index,
-            onTap: () => widget.onOpenItem?.call(item),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildEmptyState(WorkspaceProvider workspace) {
     final cat = workspace.selectedCategory;
@@ -510,7 +737,7 @@ class _QuickAddButtonState extends State<_QuickAddButton> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: widget.isDark ? const Color(0xFF252833) : Colors.white,
+            color: widget.isDark ? AppColors.darkSurface : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: widget.borderColor, width: 1.6),
             boxShadow: widget.isDark
@@ -527,7 +754,7 @@ class _QuickAddButtonState extends State<_QuickAddButton> {
             child: TackIcon(
               TackIcons.plus,
               size: 22,
-              color: widget.isDark ? Colors.white : const Color(0xFF191A23),
+              color: widget.isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
             ),
           ),
         ),

@@ -111,12 +111,35 @@ class _ClipboardCardState extends State<ClipboardCard> {
                         onPressed: () {
                           HapticFeedback.mediumImpact();
                           Clipboard.setData(ClipboardData(text: widget.item.clipText));
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('Copied to clipboard!'),
-                              duration: const Duration(seconds: 1),
+                              elevation: 10,
+                              backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
+                                  width: 1.2,
+                                ),
+                              ),
+                              duration: const Duration(seconds: 2),
+                              content: const Row(
+                                children: [
+                                  TackIcon(TackIcons.checkCircle, size: 18, color: AppColors.success),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Copied to clipboard',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },

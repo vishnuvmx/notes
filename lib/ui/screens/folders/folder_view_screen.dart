@@ -6,7 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
-import '../../components/cards/smart_note_list_card.dart';
+import '../../components/cards/neo_note_card.dart';
 import '../../components/feedback/empty_state_widget.dart';
 
 enum FolderType {
@@ -106,15 +106,39 @@ class FolderViewScreen extends StatelessWidget {
 
                 if (folderType == FolderType.trash) {
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                      borderRadius: AppSpacing.roundedMd,
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF323642) : const Color(0xFF191A23),
+                        width: 1.5,
+                      ),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFF191A23).withValues(alpha: 0.06),
+                                blurRadius: 0,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                     ),
                     child: ListTile(
-                      title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text(item.getSummary(), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      title: Text(
+                        item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        item.getSummary(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                          fontSize: 13,
+                        ),
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -134,10 +158,16 @@ class FolderViewScreen extends StatelessWidget {
                   );
                 }
 
-                return SmartNoteListCard(
-                  item: item,
-                  index: index,
-                  onTap: () => onOpenItem?.call(item),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
+                  child: SizedBox(
+                    height: 145,
+                    child: NeoNoteCard(
+                      item: item,
+                      onTap: () => onOpenItem?.call(item),
+                      isGrid: false,
+                    ),
+                  ),
                 );
               },
             ),

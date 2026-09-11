@@ -42,8 +42,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   void initState() {
     super.initState();
     _titleController = TextEditingController();
-    _contentController = TextEditingController();
-    _selectedType = widget.defaultType ?? ItemType.note;
+    final initial = widget.defaultType ?? ItemType.note;
+    _selectedType = (initial == ItemType.clipboard) ? ItemType.note : initial;
 
     if (_selectedType == ItemType.sticky) {
       _selectedPaletteId = 'amber';
@@ -139,11 +139,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Item Type Selector Chips
+            // Item Type Selector Chips (Notes, Sticky, Whiteboard)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ItemType.values.map((type) {
+                children: [ItemType.note, ItemType.sticky, ItemType.whiteboard].map((type) {
                   final isSelected = _selectedType == type;
                   return Padding(
                     padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -172,34 +172,6 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-
-            if (_selectedType == ItemType.clipboard) ...[
-              Align(
-                alignment: Alignment.centerLeft,
-                child: ActionChip(
-                  avatar: const TackIcon(TackIcons.clipboard, size: 14, color: AppColors.accentAmber),
-                  label: const Text('Paste from System Clipboard'),
-                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentAmber),
-                  backgroundColor: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelAmberSoft,
-                  onPressed: () async {
-                    HapticFeedback.selectionClick();
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    final text = data?.text?.trim();
-                    if (text != null && text.isNotEmpty) {
-                      final firstLine = text.split('\n').first.trim();
-                      setState(() {
-                        if (_titleController.text.isEmpty) {
-                          _titleController.text = firstLine.length > 28 ? '${firstLine.substring(0, 28)}...' : firstLine;
-                        }
-                        _contentController.text = text;
-                      });
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            const SizedBox(height: AppSpacing.sm),
 
             // Title Input (Enhanced UI)
             TextField(

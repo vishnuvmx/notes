@@ -21,8 +21,10 @@ class ColorSwatchPicker extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
-      height: 48,
+      height: 58,
       child: ListView.separated(
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         scrollDirection: Axis.horizontal,
         itemCount: AppColors.presetPalettes.length,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
@@ -46,12 +48,12 @@ class ColorSwatchPicker extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: palette.resolveCardColor(isDark),
+                  color: isDark ? palette.lightColor : palette.resolveCardColor(isDark),
                   border: Border.all(
                     color: isSelected
                         ? (isDark ? Colors.white : AppColors.primaryDark)
-                        : Colors.transparent,
-                    width: isSelected ? 2.5 : 0,
+                        : (isDark ? AppColors.darkBorder : Colors.transparent),
+                    width: isSelected ? 2.5 : (isDark ? 1.0 : 0),
                   ),
                   boxShadow: isSelected
                       ? [
@@ -64,11 +66,11 @@ class ColorSwatchPicker extends StatelessWidget {
                       : [],
                 ),
                 child: isSelected
-                    ? const Center(
+                    ? Center(
                         child: TackIcon(
                           TackIcons.check,
                           size: 20,
-                          color: Colors.white,
+                          color: isDark ? const Color(0xFF191A23) : Colors.white,
                           style: HeroIconStyle.solid,
                         ),
                       )

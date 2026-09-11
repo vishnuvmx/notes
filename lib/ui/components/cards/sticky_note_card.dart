@@ -53,10 +53,13 @@ class _StickyNoteCardState extends State<StickyNoteCard> {
               decoration: BoxDecoration(
                 color: cardBgColor,
                 borderRadius: BorderRadius.circular(20),
+                border: isDark
+                    ? Border.all(color: palette.lightColor.withValues(alpha: 0.35), width: 1.2)
+                    : null,
                 boxShadow: [
                   BoxShadow(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.45)
+                        ? palette.lightColor.withValues(alpha: _isPressed ? 0.05 : 0.10)
                         : cardBgColor.withValues(alpha: _isPressed ? 0.15 : 0.35),
                     blurRadius: _isPressed ? 10 : 18,
                     offset: Offset(0, _isPressed ? 3 : 8),
@@ -131,7 +134,7 @@ class _StickyNoteCardState extends State<StickyNoteCard> {
                             fontSize: 10.5,
                             fontWeight: FontWeight.w500,
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.6)
+                                ? palette.lightColor.withValues(alpha: 0.75)
                                 : const Color(0xFF4A4E69).withValues(alpha: 0.75),
                           ),
                         ),

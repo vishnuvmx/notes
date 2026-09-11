@@ -36,7 +36,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     final themeProv = context.watch<ThemeProvider>();
 
     final iconColor = isDark ? Colors.white : const Color(0xFF191A23);
-    final borderColor = isDark ? const Color(0xFF323642) : const Color(0xFF191A23);
+    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
 
     return AppBar(
       elevation: 0,

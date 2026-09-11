@@ -20,7 +20,7 @@ class CategoryFilterPills extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
 
-    final borderColor = isDark ? const Color(0xFF323642) : const Color(0xFF191A23);
+    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
     final activeLime = AppColors.pastelLimeLight; // Signature #D5F06A
 
     final availableTags = workspace.availableTags;
@@ -60,7 +60,7 @@ class CategoryFilterPills extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF252833) : const Color(0xFFF1F3F7),
+                color: isDark ? AppColors.darkSurface : const Color(0xFFF1F3F7),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: borderColor, width: 1.4),
               ),
@@ -74,14 +74,14 @@ class CategoryFilterPills extends StatelessWidget {
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,
-                      color: isDark ? Colors.white : const Color(0xFF191A23),
+                      color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
                     ),
                   ),
                   const SizedBox(width: 6),
                   TackIcon(
                     TackIcons.chevronDown,
                     size: 15,
-                    color: isDark ? Colors.white : const Color(0xFF191A23),
+                    color: isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23),
                   ),
                 ],
               ),
@@ -104,50 +104,44 @@ class CategoryFilterPills extends StatelessWidget {
               final tag = availableTags[index];
               final isSelected = tag.toLowerCase() == selectedTag.toLowerCase();
 
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    workspace.setSelectedTag(tag);
-                  },
-                  borderRadius: BorderRadius.circular(14),
-                  child: AnimatedScale(
-                    scale: isSelected ? 1.04 : 1.0,
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutBack,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  workspace.setSelectedTag(tag);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? activeLime
+                        : (isDark ? AppColors.darkSurface : Colors.white),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected && isDark ? activeLime : borderColor,
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected && !isDark
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF191A23).withValues(alpha: 0.1),
+                              blurRadius: 0,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        letterSpacing: -0.2,
                         color: isSelected
-                            ? activeLime
-                            : (isDark ? AppColors.darkSurface : Colors.white),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: borderColor, width: 1.5),
-                        boxShadow: isSelected && !isDark
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFF191A23).withValues(alpha: 0.1),
-                                  blurRadius: 0,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            letterSpacing: -0.2,
-                            color: isSelected
-                                ? const Color(0xFF191A23)
-                                : (isDark ? Colors.white : const Color(0xFF191A23)),
-                          ),
-                        ),
+                            ? const Color(0xFF191A23)
+                            : (isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23)),
                       ),
                     ),
                   ),
@@ -169,7 +163,7 @@ class CategoryFilterPills extends StatelessWidget {
           fontFamily: AppTypography.fontFamily,
           fontSize: 13.5,
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : const Color(0xFF191A23),
+          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
         ),
       ),
     );

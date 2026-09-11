@@ -38,17 +38,17 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     final palette = AppColors.getPaletteById(widget.item.paletteId);
     final cardBg = palette.resolveCardColor(isDark);
 
-    // Neo-pop high contrast dark stroke
+    // Neo-pop stroke: In OLED dark mode, use a luminous stroke tinted by the card's pastel
     final borderColor = isDark
-        ? const Color(0xFF323642)
+        ? palette.lightColor.withValues(alpha: 0.45)
         : const Color(0xFF191A23);
 
     final titleColor = isDark ? Colors.white : const Color(0xFF191A23);
     final dateColor = isDark
-        ? Colors.white.withValues(alpha: 0.75)
+        ? palette.lightColor.withValues(alpha: 0.90)
         : const Color(0xFF383B46).withValues(alpha: 0.85);
     final snippetColor = isDark
-        ? Colors.white.withValues(alpha: 0.88)
+        ? const Color(0xFFE2E4EC)
         : const Color(0xFF232530).withValues(alpha: 0.85);
 
     return AnimatedScale(
@@ -62,7 +62,13 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: borderColor, width: 1.5),
           boxShadow: isDark
-              ? null
+              ? [
+                  BoxShadow(
+                    color: palette.lightColor.withValues(alpha: _isPressed ? 0.05 : 0.09),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : [
                   BoxShadow(
                     color: const Color(0xFF191A23).withValues(alpha: _isPressed ? 0.03 : 0.08),
@@ -129,7 +135,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                   const SizedBox(height: 8),
 
                   // 4. Bottom Glyph / Badge
-                  _buildBottomGlyph(context, isDark, titleColor, borderColor),
+                  _buildBottomGlyph(context, isDark, titleColor, borderColor, palette.lightColor),
                 ],
               ),
             ),
@@ -145,6 +151,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     bool isDark,
     Color textColor,
     Color borderColor,
+    Color accentColor,
   ) {
     HeroIcons icon = TackIcons.notes;
     if (widget.item is WhiteboardCanvasItem) {
@@ -170,7 +177,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
         HeroIcon(
           icon,
           size: 20,
-          color: textColor.withValues(alpha: 0.85),
+          color: isDark ? accentColor : textColor.withValues(alpha: 0.85),
         ),
         if (widget.item.isFavorite)
           HeroIcon(

@@ -20,14 +20,14 @@ class AppColors {
   static const Color lightTextSecondary = Color(0xFF5E6272);
   static const Color lightTextMuted = Color(0xFF969BAA);
 
-  // Dark surfaces (Rich charcoal, deep tones)
-  static const Color darkBackground = Color(0xFF121316);
-  static const Color darkSurface = Color(0xFF1B1C22);
-  static const Color darkSurfaceAlt = Color(0xFF24262E);
-  static const Color darkBorder = Color(0xFF2B2E37);
-  static const Color darkTextPrimary = Color(0xFFF5F6F9);
-  static const Color darkTextSecondary = Color(0xFF9FA4B4);
-  static const Color darkTextMuted = Color(0xFF686D7D);
+  // Dark surfaces (OLED Pitch Black & Deep Velvety Surfaces)
+  static const Color darkBackground = Color(0xFF000000); // True OLED pitch black
+  static const Color darkSurface = Color(0xFF0E0F13);    // Subtle elevation off pitch black
+  static const Color darkSurfaceAlt = Color(0xFF171820); // Elevated nested controls, search, inputs
+  static const Color darkBorder = Color(0xFF232634);     // Crisp hairline separation against OLED black
+  static const Color darkTextPrimary = Color(0xFFF7F8FA);
+  static const Color darkTextSecondary = Color(0xFFA1A6B7);
+  static const Color darkTextMuted = Color(0xFF6B7184);
 
   // Status & Feedback
   static const Color success = Color(0xFF10B981);
@@ -38,49 +38,49 @@ class AppColors {
   // ================= 8 Curated Pastels (Exact Reference Hex) =================
   // 1. FFC661 - Warm Amber
   static const Color pastelAmberLight = Color(0xFFFFC661);
-  static const Color pastelAmberDark = Color(0xFF5A4112);
+  static const Color pastelAmberDark = Color(0xFF261D0A); // Rich nocturnal amber
   static const Color pastelAmberSoft = Color(0xFFFFF9EC);
 
   // 2. F3916A - Sunset Peach
   static const Color pastelPeachLight = Color(0xFFF3916A);
-  static const Color pastelPeachDark = Color(0xFF5C2B18);
+  static const Color pastelPeachDark = Color(0xFF2A160E); // Deep velvety peach
   static const Color pastelPeachSoft = Color(0xFFFFF2EB);
 
   // 3. F0906A - Terracotta Coral
   static const Color pastelTerracottaLight = Color(0xFFF0906A);
-  static const Color pastelTerracottaDark = Color(0xFF5C2A18);
+  static const Color pastelTerracottaDark = Color(0xFF2A150D); // Deep terracotta
   static const Color pastelTerracottaSoft = Color(0xFFFFF1EB);
 
   // 4. F7C167 - Sun Yellow
   static const Color pastelYellowLight = Color(0xFFF7C167);
-  static const Color pastelYellowDark = Color(0xFF5C4314);
+  static const Color pastelYellowDark = Color(0xFF261C08); // Deep nocturnal gold
   static const Color pastelYellowSoft = Color(0xFFFFF8EC);
 
   // 5. A88FE3 - Soft Lavender
   static const Color pastelLavenderLight = Color(0xFFA88FE3);
-  static const Color pastelLavenderDark = Color(0xFF3C2C64);
+  static const Color pastelLavenderDark = Color(0xFF1E1432); // Deep midnight lavender
   static const Color pastelLavenderSoft = Color(0xFFF4EFFF);
 
   // 6. F56767 - Coral Rose
   static const Color pastelRoseLight = Color(0xFFF56767);
-  static const Color pastelRoseDark = Color(0xFF5D1D1D);
+  static const Color pastelRoseDark = Color(0xFF2C1016); // Deep crimson rose
   static const Color pastelRoseSoft = Color(0xFFFFEFEF);
   static const Color pastelCoralLight = pastelRoseLight;
   static const Color pastelCoralDark = pastelRoseDark;
 
   // 7. 26BBD9 - Cyan Breeze
   static const Color pastelCyanLight = Color(0xFF26BBD9);
-  static const Color pastelCyanDark = Color(0xFF0C4652);
+  static const Color pastelCyanDark = Color(0xFF0A222A); // Deep oceanic cyan
   static const Color pastelCyanSoft = Color(0xFFE6F9FC);
 
   // 8. D5F06A - Lime Zing
   static const Color pastelLimeLight = Color(0xFFD5F06A);
-  static const Color pastelLimeDark = Color(0xFF465410);
+  static const Color pastelLimeDark = Color(0xFF172408); // Deep citrus lime
   static const Color pastelLimeSoft = Color(0xFFF8FDE8);
 
   // Fallback slate for neutrals
   static const Color pastelSlateLight = Color(0xFFE2E8F0);
-  static const Color pastelSlateDark = Color(0xFF2D3748);
+  static const Color pastelSlateDark = Color(0xFF141720); // Deep midnight slate
   static const Color pastelSlateSoft = Color(0xFFF8FAFC);
 
   /// List of the 8 preset pastel color palettes exactly matching reference
@@ -177,6 +177,29 @@ class AppColors {
       }
     }
     return presetPalettes[0];
+  }
+
+  /// Parses a hex color string like #565656, #ff8f6b, #fff, or #80565656.
+  /// Returns null if the text is not a valid 3, 6, or 8 digit hex color code.
+  static Color? tryParseHexColor(String? text) {
+    if (text == null || !text.startsWith('#')) return null;
+    final hex = text.substring(1).trim();
+    if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(hex)) return null;
+
+    if (hex.length == 3) {
+      final r = hex[0];
+      final g = hex[1];
+      final b = hex[2];
+      final val = int.tryParse('$r$r$g$g$b$b', radix: 16);
+      if (val != null) return Color(0xFF000000 | val);
+    } else if (hex.length == 6) {
+      final val = int.tryParse(hex, radix: 16);
+      if (val != null) return Color(0xFF000000 | val);
+    } else if (hex.length == 8) {
+      final val = int.tryParse(hex, radix: 16);
+      if (val != null) return Color(val);
+    }
+    return null;
   }
 }
 

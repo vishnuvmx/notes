@@ -15,7 +15,8 @@ class AppTheme {
       platform: TargetPlatform.android,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
       brightness: Brightness.light,
@@ -133,6 +134,17 @@ class AppTheme {
         showDragHandle: true,
         dragHandleColor: AppColors.lightBorder,
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.lightSurface,
+        elevation: 16,
+        shadowColor: const Color(0xFF191A23).withValues(alpha: 0.14),
+        surfaceTintColor: Colors.transparent,
+        position: PopupMenuPosition.under,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.lightBorder, width: 1.2),
+        ),
+      ),
     );
   }
 
@@ -143,7 +155,8 @@ class AppTheme {
       platform: TargetPlatform.android,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
       brightness: Brightness.dark,
@@ -171,6 +184,8 @@ class AppTheme {
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: AppColors.darkBackground,
+          systemNavigationBarIconBrightness: Brightness.light,
         ),
         titleTextStyle: AppTypography.darkTextTheme.headlineSmall,
       ),
@@ -260,6 +275,17 @@ class AppTheme {
         ),
         showDragHandle: true,
         dragHandleColor: AppColors.darkBorder,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.darkSurface,
+        elevation: 16,
+        shadowColor: Colors.black.withValues(alpha: 0.55),
+        surfaceTintColor: Colors.transparent,
+        position: PopupMenuPosition.under,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.darkBorder, width: 1.2),
+        ),
       ),
     );
   }

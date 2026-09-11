@@ -36,10 +36,10 @@ class SmartBottomNavBar extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: (isDark ? AppColors.darkSurface : Colors.white).withValues(alpha: 0.85),
+            color: (isDark ? const Color(0xFF000000) : Colors.white).withValues(alpha: 0.88),
             border: Border(
               top: BorderSide(
-                color: isDark ? AppColors.darkBorder.withValues(alpha: 0.6) : AppColors.lightBorder,
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                 width: 0.8,
               ),
             ),

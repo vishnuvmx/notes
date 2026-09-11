@@ -9,6 +9,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../state/workspace_provider.dart';
+import '../dialogs_sheets/ios_menu_button.dart';
 
 /// Tactile, unbloated Note List Card matching reference design (Screenshot 2).
 /// Features clean index number, crisp typography, and uncluttered layout.
@@ -133,14 +134,11 @@ class SmartNoteListCard extends StatelessWidget {
                   ),
                 ),
 
-                // Sleek Context Menu
-                PopupMenuButton<String>(
-                  icon: TackIcon(
-                    TackIcons.more,
-                    size: 18,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                // iOS-Style Context Menu
+                IosThreeDotMenu<String>(
+                  size: 32,
+                  icon: HeroIcons.ellipsisHorizontal,
+                  iconColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   onSelected: (value) {
                     if (value == 'favorite') {
                       workspace.toggleFavorite(item.id);
@@ -150,41 +148,24 @@ class SmartNoteListCard extends StatelessWidget {
                       workspace.moveToTrash(item.id);
                     }
                   },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
+                  items: [
+                    IosMenuItem(
                       value: 'favorite',
-                      child: Row(
-                        children: [
-                          TackIcon(
-                            TackIcons.star,
-                            size: 18,
-                            color: AppColors.accentAmber,
-                            style: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(item.isFavorite ? 'Unfavorite' : 'Favorite'),
-                        ],
-                      ),
+                      title: item.isFavorite ? 'Unfavorite' : 'Favorite',
+                      icon: TackIcons.star,
+                      iconStyle: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
+                      iconColor: AppColors.accentAmber,
                     ),
-                    PopupMenuItem(
+                    IosMenuItem(
                       value: 'archive',
-                      child: Row(
-                        children: [
-                          const TackIcon(TackIcons.archive, size: 18),
-                          const SizedBox(width: 8),
-                          Text(item.isArchived ? 'Unarchive' : 'Archive'),
-                        ],
-                      ),
+                      title: item.isArchived ? 'Unarchive' : 'Archive',
+                      icon: TackIcons.archive,
                     ),
-                    const PopupMenuItem(
+                    const IosMenuItem(
                       value: 'trash',
-                      child: Row(
-                        children: [
-                          TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
-                          SizedBox(width: 8),
-                          Text('Move to Trash', style: TextStyle(color: AppColors.error)),
-                        ],
-                      ),
+                      title: 'Move to Trash',
+                      icon: TackIcons.trash,
+                      isDestructive: true,
                     ),
                   ],
                 ),

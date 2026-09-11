@@ -22,7 +22,8 @@ class MockInitialData {
             '[ ] Tap (+) below to create a note or sticky\n'
             '[ ] Apply **bold**, *italics*, and <u>underline</u> formatting\n'
             '[ ] Build a diagram on the whiteboard canvas\n'
-            '[ ] Open Clipboard tab to store copied snippets\n\n'
+            '### Color Hex Codes\n'
+            'Type any hex code like #565656, #FF8F6B, or #1BA5BA to preview its color tint directly in the text.\n\n'
             '> "Clarity begins with structured notes."\n\n'
             '#welcome #guide #notes',
         createdAt: now.subtract(const Duration(minutes: 5)),

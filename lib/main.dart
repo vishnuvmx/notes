@@ -70,7 +70,7 @@ class TackRootNavigator extends StatelessWidget {
   const TackRootNavigator({super.key});
 
   static Route<T> _buildTactileRoute<T>(Widget page) {
-    return MaterialPageRoute<T>(
+    return CupertinoPageRoute<T>(
       builder: (context) => page,
     );
   }

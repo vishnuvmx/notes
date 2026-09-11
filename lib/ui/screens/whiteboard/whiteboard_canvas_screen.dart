@@ -329,7 +329,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   void _duplicateSelectedNode() {
     if (_selectedNodeId == null) return;
-    final original = _nodes.firstWhere((n) => n.id == _selectedNodeId!);
+    final original = _nodes.cast<CanvasNode?>().firstWhere(
+          (n) => n?.id == _selectedNodeId,
+          orElse: () => null,
+        );
+    if (original == null) return;
     _history.recordSnapshot(_nodes, _edges);
     HapticFeedback.lightImpact();
 
@@ -1089,17 +1093,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
                 Text(
                   'Export Whiteboard',
                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -1119,7 +1112,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       color: AppColors.pastelCyanLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.image_rounded, color: Colors.white, size: 20),
+                    child: const TackIcon(TackIcons.photo, color: Colors.white, size: 20),
                   ),
                   title: const Text('PNG Image (Lossless High-Res)', style: TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: const Text('Pixel-perfect diagram with transparent background'),
@@ -1135,7 +1128,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       color: AppColors.pastelAmberLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.photo_rounded, color: Colors.white, size: 20),
+                    child: const TackIcon(TackIcons.photo, color: Colors.white, size: 20),
                   ),
                   title: const Text('JPEG Image (Compressed)', style: TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: const Text('Standard photo format with solid background'),
@@ -1151,7 +1144,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       color: AppColors.pastelCoralLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 20),
+                    child: const TackIcon(TackIcons.notes, color: Colors.white, size: 20),
                   ),
                   title: const Text('PDF Document (Vector & Print)', style: TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: const Text('Paginated landscape PDF ready for presentation or printing'),
@@ -1159,7 +1152,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.print_rounded, size: 20),
+                        icon: const TackIcon(TackIcons.exportData, size: 20),
                         tooltip: 'Print / Save PDF',
                         onPressed: () {
                           Navigator.of(ctx).pop();
@@ -1167,7 +1160,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.share_rounded, size: 20),
+                        icon: const TackIcon(TackIcons.share, size: 20),
                         tooltip: 'Share PDF',
                         onPressed: () {
                           Navigator.of(ctx).pop();
@@ -1246,7 +1239,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Icon(Icons.keyboard_arrow_down_rounded, size: 14),
+                  const TackIcon(TackIcons.chevronDown, size: 14),
                 ],
               ),
             ],
@@ -1393,7 +1386,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.link_rounded, color: Colors.white, size: 18),
+                        const TackIcon(TackIcons.link, color: Colors.white, size: 18),
                         const SizedBox(width: 8),
                         const Text(
                           'Tap target node to connect',
@@ -1402,7 +1395,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         const SizedBox(width: 10),
                         GestureDetector(
                           onTap: () => setState(() => _connectingFromNodeId = null),
-                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          child: const TackIcon(TackIcons.close, color: Colors.white, size: 18),
                         ),
                       ],
                     ),
@@ -1563,12 +1556,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   // Left Tool Rail (Slim & ergonomic context icons)
   Widget _buildLeftToolRail(bool isDark) {
     final tools = [
-      (id: 'select', icon: Icons.near_me_rounded, tooltip: 'Select & Move Shapes'),
-      (id: 'pan', icon: Icons.pan_tool_rounded, tooltip: 'Pan Canvas'),
-      (id: 'connect', icon: Icons.alt_route_rounded, tooltip: 'Connect Nodes with Arrows'),
-      (id: 'sticky', icon: Icons.sticky_note_2_outlined, tooltip: 'Add Sticky Note'),
-      (id: 'text', icon: Icons.title_rounded, tooltip: 'Add Text Label'),
-      (id: 'image', icon: Icons.add_photo_alternate_outlined, tooltip: 'Insert Image'),
+      (id: 'select', icon: TackIcons.cursor, tooltip: 'Select & Move Shapes'),
+      (id: 'pan', icon: TackIcons.hand, tooltip: 'Pan Canvas'),
+      (id: 'connect', icon: TackIcons.flow, tooltip: 'Connect Nodes with Arrows'),
+      (id: 'sticky', icon: TackIcons.sticky, tooltip: 'Add Sticky Note'),
+      (id: 'text', icon: TackIcons.notes, tooltip: 'Add Text Label'),
+      (id: 'image', icon: TackIcons.photo, tooltip: 'Insert Image'),
     ];
 
     return Container(
@@ -1612,7 +1605,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       : null,
                 ),
                 child: Center(
-                  child: Icon(
+                  child: TackIcon(
                     tool.icon,
                     size: 20,
                     color: isSelected
@@ -1645,9 +1638,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           Tooltip(
             message: _showGrid ? 'Hide Grid' : 'Show Grid',
             child: IconButton(
-              icon: Icon(
-                _showGrid ? Icons.grid_on_rounded : Icons.grid_off_rounded,
-                size: 19,
+              icon: TackIcon(
+                TackIcons.gridView,
+                size: 18,
                 color: _showGrid ? AppColors.accentAmber : (isDark ? Colors.white54 : Colors.black45),
               ),
               onPressed: () {
@@ -1663,11 +1656,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
             margin: const EdgeInsets.symmetric(horizontal: 2),
           ),
-          // Auto-align flowchart (context icon: account_tree_rounded)
+          // Auto-align flowchart (context icon: TackIcons.flow)
           Tooltip(
             message: 'Auto-Align Flowchart',
             child: IconButton(
-              icon: const Icon(Icons.account_tree_rounded, size: 19, color: AppColors.accentAmber),
+              icon: const TackIcon(TackIcons.flow, size: 18, color: AppColors.accentAmber),
               onPressed: _autoArrangeFlowchart,
               visualDensity: VisualDensity.compact,
             ),
@@ -1676,7 +1669,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           Tooltip(
             message: 'Fit to View',
             child: IconButton(
-              icon: const Icon(Icons.fit_screen_rounded, size: 19),
+              icon: const TackIcon(TackIcons.diamond, size: 18),
               onPressed: () {
                 HapticFeedback.lightImpact();
                 _fitCanvasToContent();
@@ -1692,7 +1685,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
           // Zoom out
           IconButton(
-            icon: const Icon(Icons.remove_rounded, size: 18),
+            icon: const TackIcon(TackIcons.minus, size: 16),
             onPressed: () {
               HapticFeedback.selectionClick();
               _zoomCanvas(0.8);
@@ -1722,7 +1715,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
           // Zoom in
           IconButton(
-            icon: const Icon(Icons.add_rounded, size: 18),
+            icon: const TackIcon(TackIcons.plus, size: 16),
             onPressed: () {
               HapticFeedback.selectionClick();
               _zoomCanvas(1.25);
@@ -1842,7 +1835,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
                 // 2. Edit Text Action
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  icon: const TackIcon(TackIcons.pencil, size: 16),
                   tooltip: 'Edit Text',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -1852,7 +1845,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
                 // 3. Connect From Node Action
                 IconButton(
-                  icon: const Icon(Icons.link_rounded, size: 18),
+                  icon: const TackIcon(TackIcons.link, size: 16),
                   tooltip: 'Connect to another node',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -1867,7 +1860,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
                 // 4. Delete Action
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                  icon: const TackIcon(TackIcons.trash, size: 16, color: AppColors.error),
                   tooltip: 'Delete Node',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -1995,10 +1988,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 ],
               ),
               child: const Center(
-                child: Icon(
-                  Icons.add_rounded,
-                  size: 18,
+                child: TackIcon(
+                  TackIcons.plus,
+                  size: 14,
                   color: Color(0xFF191A23),
+                  style: HeroIconStyle.solid,
                 ),
               ),
             ),
@@ -2185,7 +2179,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 ? Image.file(File(node.imagePath!), fit: BoxFit.cover)
                 : Container(
                     color: fillColor,
-                    child: const Center(child: Icon(Icons.image_outlined, size: 32)),
+                    child: const Center(child: TackIcon(TackIcons.photo, size: 32)),
                   ),
           ),
         );
@@ -2233,9 +2227,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             if (_activeTool == 'connect') {
               if (_connectingFromNodeId == null) {
                 _connectingFromNodeId = node.id;
-              } else if (_connectingFromNodeId != node.id) {
-                // Intelligent port selection based on relative node positions
-                final fromNode = _nodes.firstWhere((n) => n.id == _connectingFromNodeId);
+              } else if (_connectingFromNodeId != null && _connectingFromNodeId != node.id) {
+                final fromId = _connectingFromNodeId!;
+                final fromNode = _nodes.cast<CanvasNode?>().firstWhere(
+                      (n) => n?.id == fromId,
+                      orElse: () => null,
+                    );
+                if (fromNode == null) {
+                  _connectingFromNodeId = null;
+                  return;
+                }
                 String fromPort = 'bottom';
                 String toPort = 'top';
 
@@ -2520,6 +2521,7 @@ class _CanvasEdgesPainter extends CustomPainter {
       if (toPort == 'right') end = to.rightPort;
 
       final waypoints = computeWaypoints(start, fromPort, end, toPort);
+      if (waypoints.length < 2) continue;
 
       // 1. Draw origin connection dot
       canvas.drawCircle(start, 3.2, arrowPaint);

@@ -12,6 +12,7 @@ import '../../../domain/models/sticky_note.dart';
 import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
+import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 
@@ -437,58 +438,45 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             },
           ),
 
-          // Overflow menu (Favorite, Share, Trash)
-          PopupMenuButton<String>(
-            icon: const TackIcon(TackIcons.more, size: 20),
-            shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-            onSelected: (val) {
-              if (val == 'favorite') {
-                workspace.toggleFavorite(widget.item.id);
-                setState(() {});
-              } else if (val == 'share') {
-                _showShareExportSheet();
-              } else if (val == 'trash') {
-                workspace.moveToTrash(widget.item.id);
-                Navigator.of(context).pop();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'favorite',
-                child: Row(
-                  children: [
-                    TackIcon(
-                      TackIcons.star,
-                      size: 18,
-                      color: widget.item.isFavorite ? AppColors.accentAmber : null,
-                      style: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(widget.item.isFavorite ? 'Unfavorite' : 'Favorite'),
-                  ],
+          // iOS-Style Overflow Menu (Favorite, Share, Trash)
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: IosThreeDotMenu<String>(
+              size: 36,
+              icon: HeroIcons.ellipsisHorizontal,
+              iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              onSelected: (val) {
+                if (val == 'favorite') {
+                  workspace.toggleFavorite(widget.item.id);
+                  setState(() {});
+                } else if (val == 'share') {
+                  _showShareExportSheet();
+                } else if (val == 'trash') {
+                  workspace.moveToTrash(widget.item.id);
+                  Navigator.of(context).pop();
+                }
+              },
+              items: [
+                IosMenuItem(
+                  value: 'favorite',
+                  title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
+                  icon: TackIcons.star,
+                  iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
+                  iconColor: AppColors.accentAmber,
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'share',
-                child: Row(
-                  children: [
-                    TackIcon(TackIcons.share, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export & Share'),
-                  ],
+                const IosMenuItem(
+                  value: 'share',
+                  title: 'Export & Share',
+                  icon: TackIcons.share,
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'trash',
-                child: Row(
-                  children: [
-                    TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
-                    SizedBox(width: 8),
-                    Text('Delete Note', style: TextStyle(color: AppColors.error)),
-                  ],
+                const IosMenuItem(
+                  value: 'trash',
+                  title: 'Delete Note',
+                  icon: TackIcons.trash,
+                  isDestructive: true,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -688,13 +676,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Center(
-                        child: Text(
-                          'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -706,6 +687,32 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               EditorFormattingToolbar(onFormatAction: _applyFormatting),
               const SizedBox(height: 4),
             ],
+
+            // Always-at-bottom Status Footer (Last edited & Char count)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? AppColors.darkBorder.withValues(alpha: 0.5) : AppColors.lightBorder.withValues(alpha: 0.6),
+                    width: 0.8,
+                  ),
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.2,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -808,13 +815,28 @@ class MarkdownTextEditingController extends TextEditingController {
         ));
         spans.add(TextSpan(text: '~~', style: delimiterStyle));
       } else if (matchedText.startsWith('#')) {
-        spans.add(TextSpan(
-          text: matchedText,
-          style: style?.copyWith(
-            color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
-            fontWeight: FontWeight.w700,
-          ),
-        ));
+        final hexColor = AppColors.tryParseHexColor(matchedText);
+        if (hexColor != null) {
+          final luminance = hexColor.computeLuminance();
+          final textColor = luminance > 0.55 ? const Color(0xFF191A23) : Colors.white;
+          spans.add(TextSpan(
+            text: matchedText,
+            style: style?.copyWith(
+              backgroundColor: hexColor.withValues(alpha: 0.5),
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'monospace',
+            ),
+          ));
+        } else {
+          spans.add(TextSpan(
+            text: matchedText,
+            style: style?.copyWith(
+              color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+              fontWeight: FontWeight.w700,
+            ),
+          ));
+        }
       } else {
         spans.add(TextSpan(text: matchedText, style: style));
       }
