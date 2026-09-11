@@ -23,7 +23,14 @@ class StickyNote extends BaseWorkspaceItem {
   @override
   String getSummary() {
     if (content.trim().isEmpty) return title;
-    final snippet = content.trim().replaceAll('\n', ' ');
+    final snippet = content
+        .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'\[[ xX]\]'), '')
+        .replaceAll(RegExp(r'[*_~=`]+'), '')
+        .replaceAll(RegExp(r'</?[a-zA-Z0-9]+>'), '')
+        .replaceAll('\n', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     return snippet.length > 80 ? '${snippet.substring(0, 80)}...' : snippet;
   }
 

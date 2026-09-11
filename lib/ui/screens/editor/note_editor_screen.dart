@@ -50,6 +50,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ? (widget.item as StickyNote).content
             : (widget.item is ClipboardItem ? (widget.item as ClipboardItem).clipText : ''));
     _contentController = MarkdownTextEditingController(text: initialContent);
+    _isEditingMode = initialContent.trim().isEmpty;
     _paletteId = widget.item.paletteId;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
 
@@ -197,12 +198,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         break;
       case 'underline':
         if (selectedText.isNotEmpty) {
-          newText = '$before<u>$selectedText</u>$after';
-          newCursorStart = before.length + 3;
+          newText = '${before}__${selectedText}__$after';
+          newCursorStart = before.length + 2;
           newCursorEnd = newCursorStart + selectedText.length;
         } else {
-          newText = '$before<u></u>$after';
-          newCursorStart = before.length + 3;
+          newText = '${before}____$after';
+          newCursorStart = before.length + 2;
           newCursorEnd = newCursorStart;
         }
         break;
@@ -671,12 +672,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       )
                     else ...[
-                      RichNoteContentView(
-                        content: _contentController.text,
-                        onContentChanged: (newContent) {
-                          _contentController.text = newContent;
-                          _saveNote();
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () {
+                          setState(() => _isEditingMode = true);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _contentFocusNode.requestFocus();
+                          });
                         },
+                        child: RichNoteContentView(
+                          content: _contentController.text,
+                          onContentChanged: (newContent) {
+                            _contentController.text = newContent;
+                            _saveNote();
+                          },
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       Center(
@@ -722,8 +732,15 @@ class MarkdownTextEditingController extends TextEditingController {
 
     final spans = <TextSpan>[];
     final pattern = RegExp(
-      r'(==.*?==)|(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
+      r'(==.*?==)|(\*\*.*?\*\*)|(__.*?__)|(\*.*?\*)|(_.*?_)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
       dotAll: false,
+    );
+
+    final delimiterStyle = style?.copyWith(
+      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.28),
+      fontWeight: FontWeight.normal,
+      fontStyle: FontStyle.normal,
+      decoration: TextDecoration.none,
     );
 
     int lastMatchEnd = 0;
@@ -737,8 +754,9 @@ class MarkdownTextEditingController extends TextEditingController {
 
       final matchedText = match.group(0)!;
       if (matchedText.startsWith('==') && matchedText.endsWith('==') && matchedText.length >= 4) {
+        spans.add(TextSpan(text: '==', style: delimiterStyle));
         spans.add(TextSpan(
-          text: matchedText,
+          text: matchedText.substring(2, matchedText.length - 2),
           style: style?.copyWith(
             backgroundColor: isDark
                 ? AppColors.pastelAmberLight.withValues(alpha: 0.35)
@@ -746,26 +764,49 @@ class MarkdownTextEditingController extends TextEditingController {
             fontWeight: FontWeight.w600,
           ),
         ));
+        spans.add(TextSpan(text: '==', style: delimiterStyle));
       } else if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
+        spans.add(TextSpan(text: '**', style: delimiterStyle));
         spans.add(TextSpan(
-          text: matchedText,
+          text: matchedText.substring(2, matchedText.length - 2),
           style: style?.copyWith(fontWeight: FontWeight.bold),
         ));
-      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
+        spans.add(TextSpan(text: '**', style: delimiterStyle));
+      } else if (matchedText.startsWith('__') && matchedText.endsWith('__') && matchedText.length >= 4) {
+        spans.add(TextSpan(text: '__', style: delimiterStyle));
         spans.add(TextSpan(
-          text: matchedText,
-          style: style?.copyWith(fontStyle: FontStyle.italic),
-        ));
-      } else if (matchedText.startsWith('~~') && matchedText.endsWith('~~') && matchedText.length >= 4) {
-        spans.add(TextSpan(
-          text: matchedText,
-          style: style?.copyWith(decoration: TextDecoration.lineThrough),
-        ));
-      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
-        spans.add(TextSpan(
-          text: matchedText,
+          text: matchedText.substring(2, matchedText.length - 2),
           style: style?.copyWith(decoration: TextDecoration.underline),
         ));
+        spans.add(TextSpan(text: '__', style: delimiterStyle));
+      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
+        spans.add(TextSpan(text: '<u>', style: delimiterStyle));
+        spans.add(TextSpan(
+          text: matchedText.substring(3, matchedText.length - 4),
+          style: style?.copyWith(decoration: TextDecoration.underline),
+        ));
+        spans.add(TextSpan(text: '</u>', style: delimiterStyle));
+      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
+        spans.add(TextSpan(text: '*', style: delimiterStyle));
+        spans.add(TextSpan(
+          text: matchedText.substring(1, matchedText.length - 1),
+          style: style?.copyWith(fontStyle: FontStyle.italic),
+        ));
+        spans.add(TextSpan(text: '*', style: delimiterStyle));
+      } else if (matchedText.startsWith('_') && matchedText.endsWith('_') && matchedText.length >= 2) {
+        spans.add(TextSpan(text: '_', style: delimiterStyle));
+        spans.add(TextSpan(
+          text: matchedText.substring(1, matchedText.length - 1),
+          style: style?.copyWith(fontStyle: FontStyle.italic),
+        ));
+        spans.add(TextSpan(text: '_', style: delimiterStyle));
+      } else if (matchedText.startsWith('~~') && matchedText.endsWith('~~') && matchedText.length >= 4) {
+        spans.add(TextSpan(text: '~~', style: delimiterStyle));
+        spans.add(TextSpan(
+          text: matchedText.substring(2, matchedText.length - 2),
+          style: style?.copyWith(decoration: TextDecoration.lineThrough),
+        ));
+        spans.add(TextSpan(text: '~~', style: delimiterStyle));
       } else if (matchedText.startsWith('#')) {
         spans.add(TextSpan(
           text: matchedText,

@@ -35,8 +35,15 @@ class TextNote extends BaseWorkspaceItem {
   @override
   String getSummary() {
     if (content.trim().isEmpty) return 'Empty note';
-    final firstLines = content.trim().replaceAll('\n', ' ');
-    return firstLines.length > 90 ? '${firstLines.substring(0, 90)}...' : firstLines;
+    final cleaned = content
+        .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'\[[ xX]\]'), '')
+        .replaceAll(RegExp(r'[*_~=`]+'), '')
+        .replaceAll(RegExp(r'</?[a-zA-Z0-9]+>'), '')
+        .replaceAll('\n', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return cleaned.length > 90 ? '${cleaned.substring(0, 90)}...' : cleaned;
   }
 
   @override
