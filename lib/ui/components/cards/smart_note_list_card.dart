@@ -137,7 +137,7 @@ class SmartNoteListCard extends StatelessWidget {
                 // iOS-Style Context Menu
                 IosThreeDotMenu<String>(
                   size: 32,
-                  icon: HeroIcons.ellipsisHorizontal,
+                  icon: TackIcons.more,
                   iconColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   onSelected: (value) {
                     if (value == 'favorite') {

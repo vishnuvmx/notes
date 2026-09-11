@@ -11,7 +11,6 @@ import '../../../domain/models/base_item.dart';
 import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
-import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/clipboard_card.dart';
@@ -328,17 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Animated Search Bar
-              if (_isSearching) ...[
-                SmartSearchBar(
-                  onClose: () {
-                    setState(() => _isSearching = false);
-                    workspace.setSearchQuery('');
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-
               // Collapsible Top Section ("Your Files" / "Your Notes" + Folder Dropdown + Filter Pills)
               ClipRect(
                 child: AnimatedAlign(
@@ -382,9 +370,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
 
-                        // 2. Folder Dropdown + View Switcher + Tag Filter Pills
-                        const CategoryFilterPills(),
-                        const SizedBox(height: AppSpacing.md),
+                        // 2. Folder Dropdown + Tag Filter Pills (Only shown for Notes / All)
+                        if (workspace.selectedCategory != ItemType.whiteboard &&
+                            workspace.selectedCategory != ItemType.clipboard) ...[
+                          const CategoryFilterPills(),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                       ],
                     ),
                   ),
@@ -423,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
               curve: Curves.easeOutCubic,
               left: AppSpacing.lg,
               right: AppSpacing.lg,
-              bottom: _isBarsVisible ? 12 : -88,
+              bottom: _isBarsVisible ? (76 + MediaQuery.paddingOf(context).bottom) : -120,
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 180),
                 opacity: _isBarsVisible ? 1.0 : 0.0,

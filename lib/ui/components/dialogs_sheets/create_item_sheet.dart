@@ -42,6 +42,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   void initState() {
     super.initState();
     _titleController = TextEditingController();
+    _contentController = TextEditingController();
     final initial = widget.defaultType ?? ItemType.note;
     _selectedType = (initial == ItemType.clipboard) ? ItemType.note : initial;
 
@@ -65,8 +66,12 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final content = _contentController.text.trim();
     final workspace = context.read<WorkspaceProvider>();
 
+    final defaultTitle = _selectedType == ItemType.note
+        ? 'Untitled Note'
+        : (_selectedType == ItemType.sticky ? 'New Sticky' : 'New Whiteboard');
+
     final item = await workspace.createQuickItem(
-      title: title.isEmpty ? 'Untitled ${_selectedType.label}' : title,
+      title: title.isEmpty ? defaultTitle : title,
       type: _selectedType,
       paletteId: _selectedPaletteId,
       content: content,
@@ -153,7 +158,14 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                       onSelected: (selected) {
                         if (selected) {
                           HapticFeedback.selectionClick();
-                          setState(() => _selectedType = type);
+                          setState(() {
+                            _selectedType = type;
+                            if (type == ItemType.sticky && _selectedPaletteId == 'peach') {
+                              _selectedPaletteId = 'amber';
+                            } else if (type == ItemType.whiteboard && _selectedPaletteId == 'peach') {
+                              _selectedPaletteId = 'cyan';
+                            }
+                          });
                         }
                       },
                       selectedColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,
@@ -188,7 +200,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   fontSize: 13,
                   color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                 ),
-                hintText: 'e.g. My Important Thought...',
+                hintText: _selectedType == ItemType.note
+                    ? 'e.g. Meeting Notes, Ideas...'
+                    : (_selectedType == ItemType.sticky
+                        ? 'e.g. Call dentist, Grocery list...'
+                        : 'e.g. System Flowchart, Architecture...'),
                 hintStyle: TextStyle(
                   color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   fontSize: 14,
@@ -196,7 +212,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                 prefixIcon: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TackIcon(
-                    TackIcons.whiteboard,
+                    _selectedType == ItemType.whiteboard
+                        ? TackIcons.whiteboard
+                        : (_selectedType == ItemType.sticky ? TackIcons.star : TackIcons.notes),
                     size: 18,
                     color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   ),

@@ -84,9 +84,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     // Verify all export format options are presented
-    expect(find.text('Export Whiteboard'), findsOneWidget);
-    expect(find.text('PNG Image (Lossless High-Res)'), findsOneWidget);
-    expect(find.text('JPEG Image (Compressed)'), findsOneWidget);
-    expect(find.text('PDF Document (Vector & Print)'), findsOneWidget);
+    expect(find.text('Export settings'), findsOneWidget);
+    expect(find.text('PNG'), findsOneWidget);
+    expect(find.text('JPG'), findsOneWidget);
+    expect(find.text('PDF'), findsOneWidget);
   });
 }

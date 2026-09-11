@@ -153,7 +153,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     Color borderColor,
     Color accentColor,
   ) {
-    HeroIcons icon = TackIcons.notes;
+    IconData icon = TackIcons.notes;
     if (widget.item is WhiteboardCanvasItem) {
       icon = TackIcons.whiteboard;
     } else if (widget.item is ClipboardItem) {
@@ -161,28 +161,27 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     } else if (widget.item is TextNote) {
       final note = widget.item as TextNote;
       if (note.tags.any((t) => t.toLowerCase().contains('fitness') || t.toLowerCase().contains('sport'))) {
-        icon = HeroIcons.bolt;
+        icon = Icons.bolt_rounded;
       } else if (note.tags.any((t) => t.toLowerCase().contains('work'))) {
-        icon = HeroIcons.briefcase;
+        icon = Icons.work_rounded;
       } else if (note.tags.any((t) => t.toLowerCase().contains('personal'))) {
-        icon = HeroIcons.user;
+        icon = Icons.face_rounded;
       } else {
-        icon = HeroIcons.pencilSquare;
+        icon = Icons.edit_note_rounded;
       }
     }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        HeroIcon(
+        TackIcon(
           icon,
           size: 20,
           color: isDark ? accentColor : textColor.withValues(alpha: 0.85),
         ),
         if (widget.item.isFavorite)
-          HeroIcon(
-            HeroIcons.star,
-            style: HeroIconStyle.solid,
+          TackIcon(
+            TackIcons.star,
             size: 16,
             color: isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23),
           ),

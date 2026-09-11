@@ -402,12 +402,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
               ),
               const SizedBox(width: 5),
-              Text(
-                _isSaving ? 'Saving' : 'Saved  •  $wordCount words',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                  letterSpacing: -0.2,
+              Flexible(
+                child: Text(
+                  _isSaving ? 'Saving' : 'Saved • ${wordCount}w',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ],
@@ -443,7 +447,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             padding: const EdgeInsets.only(right: 6),
             child: IosThreeDotMenu<String>(
               size: 36,
-              icon: HeroIcons.ellipsisHorizontal,
+              icon: TackIcons.more,
               iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               onSelected: (val) {
                 if (val == 'favorite') {

@@ -82,7 +82,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Your Notes'), findsOneWidget);
+    expect(find.text('Your Files'), findsOneWidget);
     expect(find.text('Welcome to Tack'), findsOneWidget);
   });
 
@@ -110,7 +110,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     // Verify main screen is visible with neo-pop header
-    expect(find.text('Your Notes'), findsOneWidget);
+    expect(find.text('Your Files'), findsOneWidget);
 
     // Tap 'Clipboard' bottom nav destination
     await tester.tap(find.byKey(const ValueKey('nav_item_4')));

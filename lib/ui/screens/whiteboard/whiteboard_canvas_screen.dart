@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -98,8 +99,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   String? _connectingFromNodeId;
   bool _isDraggingNode = false;
   bool _showGrid = true;
+  double _gridOpacity = 0.18;
+  bool _showGridOpacitySlider = false;
   final ValueNotifier<double> _scaleNotifier = ValueNotifier<double>(1.0);
   bool _isExporting = false;
+  int _activePointers = 0;
 
   int _uniqueIdCounter = 0;
   String _generateUniqueId(String prefix) {
@@ -107,11 +111,55 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     return '${prefix}_${DateTime.now().microsecondsSinceEpoch}_$_uniqueIdCounter';
   }
 
+  void _loadGridOpacity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getDouble('whiteboard_grid_opacity');
+      if (saved != null && mounted) {
+        setState(() => _gridOpacity = saved.clamp(0.04, 0.50));
+      }
+    } catch (_) {}
+  }
+
+  void _saveGridOpacity(double val) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('whiteboard_grid_opacity', val);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadGridOpacity();
     _nodes = List.from(widget.item.nodes);
     _edges = List.from(widget.item.edges);
+
+    // Auto-migrate legacy whiteboards whose starter nodes were placed at (120, 50)
+    // so they are centered at (3000, 3000) with 3000px of space in every direction
+    if (_nodes.isNotEmpty) {
+      double minX = _nodes.first.x;
+      double maxX = _nodes.first.x + _nodes.first.width;
+      double minY = _nodes.first.y;
+      double maxY = _nodes.first.y + _nodes.first.height;
+      for (final n in _nodes) {
+        minX = math.min(minX, n.x);
+        maxX = math.max(maxX, n.x + n.width);
+        minY = math.min(minY, n.y);
+        maxY = math.max(maxY, n.y + n.height);
+      }
+      final contentCenterX = (minX + maxX) / 2;
+      final contentCenterY = (minY + maxY) / 2;
+      if (contentCenterX < 600 || contentCenterY < 600) {
+        final shiftX = (_canvasSize / 2) - contentCenterX;
+        final shiftY = (_canvasSize / 2) - contentCenterY;
+        _nodes = _nodes.map((n) => n.copyWith(
+          x: (n.x + shiftX).clamp(0.0, _canvasSize - n.width),
+          y: (n.y + shiftY).clamp(0.0, _canvasSize - n.height),
+        )).toList();
+        _saveCanvasState();
+      }
+    }
 
     _cameraAnimController = AnimationController(
       vsync: this,
@@ -130,7 +178,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _nodes.isNotEmpty) {
+      if (mounted) {
         _fitCanvasToContent();
       }
     });
@@ -339,8 +387,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     final cloned = original.copyWith(
       text: original.text,
-      x: (original.x + 20).clamp(0.0, 1200.0),
-      y: (original.y + 20).clamp(0.0, 1200.0),
+      x: (original.x + 20).clamp(0.0, _canvasSize - original.width),
+      y: (original.y + 20).clamp(0.0, _canvasSize - original.height),
     );
     final newNode = CanvasNode(
       id: _generateUniqueId('node'),
@@ -435,74 +483,243 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     _history.recordSnapshot(_nodes, _edges);
     HapticFeedback.mediumImpact();
 
-    // 1. Build adjacency and in-degrees
-    final inDegree = <String, int>{for (var n in _nodes) n.id: 0};
-    final adj = <String, List<String>>{for (var n in _nodes) n.id: []};
+    // 1. Build adjacency maps
+    final nodeMap = {for (var n in _nodes) n.id: n};
+    final outEdges = <String, List<String>>{for (var n in _nodes) n.id: []};
+    final inEdges = <String, List<String>>{for (var n in _nodes) n.id: []};
 
     for (final e in _edges) {
-      if (inDegree.containsKey(e.toNodeId) && adj.containsKey(e.fromNodeId)) {
-        inDegree[e.toNodeId] = (inDegree[e.toNodeId] ?? 0) + 1;
-        adj[e.fromNodeId]!.add(e.toNodeId);
+      if (nodeMap.containsKey(e.fromNodeId) && nodeMap.containsKey(e.toNodeId)) {
+        outEdges[e.fromNodeId]!.add(e.toNodeId);
+        inEdges[e.toNodeId]!.add(e.fromNodeId);
       }
     }
 
-    // 2. Identify root nodes
-    final roots = _nodes.where((n) => (inDegree[n.id] ?? 0) == 0).map((n) => n.id).toList();
-    if (roots.isEmpty && _nodes.isNotEmpty) {
-      roots.add(_nodes.first.id);
+    // 2. Cycle-safe DAG detection: identify back-edges using DFS
+    // Flowcharts often contain feedback/retry loops. Cycle back-edges must not cause infinite loops.
+    final visited = <String>{};
+    final inStack = <String>{};
+    final backEdges = <(String, String)>{};
+
+    void dfs(String u) {
+      visited.add(u);
+      inStack.add(u);
+      for (final v in outEdges[u] ?? []) {
+        if (inStack.contains(v)) {
+          backEdges.add((u, v));
+        } else if (!visited.contains(v)) {
+          dfs(v);
+        }
+      }
+      inStack.remove(u);
     }
 
-    // 3. Layer assignment via BFS
-    final levels = <String, int>{};
-    final queue = <String>[...roots];
-    for (final r in roots) {
-      levels[r] = 0;
+    final allRoots = _nodes.where((n) => inEdges[n.id]!.isEmpty).map((n) => n.id).toList();
+    for (final r in allRoots) {
+      if (!visited.contains(r)) dfs(r);
+    }
+    for (final n in _nodes) {
+      if (!visited.contains(n.id)) dfs(n.id);
     }
 
-    while (queue.isNotEmpty) {
-      final curr = queue.removeAt(0);
-      final currLevel = levels[curr] ?? 0;
+    // 3. Build pure DAG adjacency excluding back-edges
+    final dagOut = <String, List<String>>{for (var n in _nodes) n.id: []};
+    final dagInDegree = <String, int>{for (var n in _nodes) n.id: 0};
 
-      for (final neighbor in (adj[curr] ?? [])) {
-        if (!levels.containsKey(neighbor) || (levels[neighbor]! < currLevel + 1)) {
-          levels[neighbor] = currLevel + 1;
-          queue.add(neighbor);
+    for (final e in _edges) {
+      if (nodeMap.containsKey(e.fromNodeId) && nodeMap.containsKey(e.toNodeId)) {
+        if (!backEdges.contains((e.fromNodeId, e.toNodeId))) {
+          dagOut[e.fromNodeId]!.add(e.toNodeId);
+          dagInDegree[e.toNodeId] = (dagInDegree[e.toNodeId] ?? 0) + 1;
         }
       }
     }
 
-    // Assign any unvisited nodes to level 0
+    // 4. Topological longest-path layering via Kahn's algorithm
+    final levels = <String, int>{};
+    final queue = <String>[];
+    for (final n in _nodes) {
+      if (dagInDegree[n.id] == 0) {
+        queue.add(n.id);
+        levels[n.id] = 0;
+      }
+    }
+
+    if (queue.isEmpty && _nodes.isNotEmpty) {
+      queue.add(_nodes.first.id);
+      levels[_nodes.first.id] = 0;
+    }
+
+    final remainingInDegree = Map<String, int>.from(dagInDegree);
+    int safetyCounter = 0;
+    final maxSteps = _nodes.length * 3;
+
+    while (queue.isNotEmpty && safetyCounter < maxSteps) {
+      safetyCounter++;
+      final curr = queue.removeAt(0);
+      final currLvl = levels[curr] ?? 0;
+
+      for (final next in dagOut[curr] ?? []) {
+        final newLvl = math.max(levels[next] ?? 0, currLvl + 1);
+        levels[next] = newLvl;
+
+        remainingInDegree[next] = (remainingInDegree[next] ?? 1) - 1;
+        if (remainingInDegree[next]! <= 0 && !queue.contains(next)) {
+          queue.add(next);
+        }
+      }
+    }
+
     for (final n in _nodes) {
       levels.putIfAbsent(n.id, () => 0);
     }
 
-    // 4. Group nodes by level
+    // 5. Group nodes by level
     final levelGroups = <int, List<String>>{};
     levels.forEach((nodeId, lvl) {
       levelGroups.putIfAbsent(lvl, () => []).add(nodeId);
     });
 
-    // 5. Position nodes neatly in horizontal flowchart layout (Left-to-Right)
-    const double startX = 60.0;
-    const double startY = 80.0;
-    const double colSpacing = 220.0;
-    const double rowSpacing = 110.0;
+    final sortedLevels = levelGroups.keys.toList()..sort();
 
-    final updatedNodes = <CanvasNode>[];
-    for (final n in _nodes) {
-      final lvl = levels[n.id] ?? 0;
-      final group = levelGroups[lvl] ?? [n.id];
-      final indexInGroup = group.indexOf(n.id);
+    // 6. Barycenter heuristic: sort nodes within each column by average parent position to minimize crossings
+    final nodeIndexInLevel = <String, double>{};
+    for (final lvl in sortedLevels) {
+      final group = levelGroups[lvl]!;
+      if (lvl > 0) {
+        group.sort((a, b) {
+          final parentsA = inEdges[a] ?? [];
+          final parentsB = inEdges[b] ?? [];
 
-      final newX = (startX + (lvl * colSpacing)).clamp(0.0, _canvasSize - 200.0);
-      final newY = (startY + (indexInGroup * rowSpacing)).clamp(0.0, _canvasSize - 200.0);
-
-      updatedNodes.add(n.copyWith(x: newX, y: newY));
+          double scoreA = 0;
+          if (parentsA.isNotEmpty) {
+            final valid = parentsA.where((p) => nodeIndexInLevel.containsKey(p)).toList();
+            if (valid.isNotEmpty) {
+              scoreA = valid.map((p) => nodeIndexInLevel[p]!).reduce((v, e) => v + e) / valid.length;
+            }
+          }
+          double scoreB = 0;
+          if (parentsB.isNotEmpty) {
+            final valid = parentsB.where((p) => nodeIndexInLevel.containsKey(p)).toList();
+            if (valid.isNotEmpty) {
+              scoreB = valid.map((p) => nodeIndexInLevel[p]!).reduce((v, e) => v + e) / valid.length;
+            }
+          }
+          return scoreA.compareTo(scoreB);
+        });
+      }
+      for (int i = 0; i < group.length; i++) {
+        nodeIndexInLevel[group[i]] = i.toDouble();
+      }
     }
 
-    // 6. Update edge ports for horizontal flow
+    // 7. Dynamic dimensions and spacing (no node overlaps)
+    const double colGap = 84.0;
+    const double rowGap = 44.0;
+
+    final colWidths = <int, double>{};
+    final colHeights = <int, double>{};
+
+    for (final lvl in sortedLevels) {
+      final group = levelGroups[lvl]!;
+      double maxW = 0;
+      double totalH = 0;
+      for (int i = 0; i < group.length; i++) {
+        final node = nodeMap[group[i]]!;
+        maxW = math.max(maxW, node.width);
+        totalH += node.height;
+        if (i < group.length - 1) totalH += rowGap;
+      }
+      colWidths[lvl] = math.max(maxW, 140.0);
+      colHeights[lvl] = totalH;
+    }
+
+    double totalGraphWidth = 0;
+    for (int i = 0; i < sortedLevels.length; i++) {
+      totalGraphWidth += colWidths[sortedLevels[i]]!;
+      if (i < sortedLevels.length - 1) totalGraphWidth += colGap;
+    }
+
+    // 8. Place nodes symmetrically centered in the EXACT location where the user's design is right now
+    double currentMinX = _nodes.first.x;
+    double currentMaxX = _nodes.first.x + _nodes.first.width;
+    double currentMinY = _nodes.first.y;
+    double currentMaxY = _nodes.first.y + _nodes.first.height;
+    for (final n in _nodes) {
+      currentMinX = math.min(currentMinX, n.x);
+      currentMaxX = math.max(currentMaxX, n.x + n.width);
+      currentMinY = math.min(currentMinY, n.y);
+      currentMaxY = math.max(currentMaxY, n.y + n.height);
+    }
+    final currentCenterX = (currentMinX + currentMaxX) / 2;
+    final currentCenterY = (currentMinY + currentMaxY) / 2;
+
+    double maxTotalHeight = 0;
+    for (final h in colHeights.values) {
+      maxTotalHeight = math.max(maxTotalHeight, h);
+    }
+
+    final targetCenterX = currentCenterX.clamp(totalGraphWidth / 2 + 50.0, _canvasSize - totalGraphWidth / 2 - 50.0);
+    final targetCenterY = currentCenterY.clamp(maxTotalHeight / 2 + 50.0, _canvasSize - maxTotalHeight / 2 - 50.0);
+
+    final startX = targetCenterX - (totalGraphWidth / 2);
+    final centerY = targetCenterY;
+
+    final updatedNodes = <CanvasNode>[];
+    double currentX = startX;
+
+    for (final lvl in sortedLevels) {
+      final group = levelGroups[lvl]!;
+      final colH = colHeights[lvl] ?? 0;
+      final colW = colWidths[lvl] ?? 140;
+      double currentY = centerY - (colH / 2);
+
+      for (final nodeId in group) {
+        final node = nodeMap[nodeId]!;
+        final nodeX = currentX + ((colW - node.width) / 2);
+        final nodeY = currentY;
+
+        updatedNodes.add(node.copyWith(
+          x: nodeX.clamp(0.0, _canvasSize - node.width),
+          y: nodeY.clamp(0.0, _canvasSize - node.height),
+        ));
+
+        currentY += node.height + rowGap;
+      }
+
+      currentX += colW + colGap;
+    }
+
+    final updatedNodeMap = {for (var n in updatedNodes) n.id: n};
+
+    // 9. Intelligent geometric edge port assignment
     final updatedEdges = _edges.map((e) {
-      return e.copyWith(fromPort: 'right', toPort: 'left');
+      final from = updatedNodeMap[e.fromNodeId];
+      final to = updatedNodeMap[e.toNodeId];
+      if (from == null || to == null) return e;
+
+      final fromLvl = levels[from.id] ?? 0;
+      final toLvl = levels[to.id] ?? 0;
+
+      if (toLvl > fromLvl) {
+        // Forward flow
+        return e.copyWith(fromPort: 'right', toPort: 'left');
+      } else if (toLvl == fromLvl) {
+        // Same column
+        if (from.y < to.y) {
+          return e.copyWith(fromPort: 'bottom', toPort: 'top');
+        } else {
+          return e.copyWith(fromPort: 'top', toPort: 'bottom');
+        }
+      } else {
+        // Backward / loopback: route cleanly around bottom or top
+        final avgY = (from.y + to.y) / 2;
+        if (avgY > centerY) {
+          return e.copyWith(fromPort: 'bottom', toPort: 'bottom');
+        } else {
+          return e.copyWith(fromPort: 'top', toPort: 'top');
+        }
+      }
     }).toList();
 
     setState(() {
@@ -515,7 +732,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Flowchart auto-arranged neatly'),
+        content: Text('Flowchart auto-arranged neatly in place'),
         duration: Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
@@ -524,8 +741,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   /// Automatically fits and centers all flowchart nodes in the viewport
   void _fitCanvasToContent() {
+    final size = MediaQuery.sizeOf(context);
     if (_nodes.isEmpty) {
-      final size = MediaQuery.sizeOf(context);
       final transX = (size.width / 2) - (_canvasSize / 2);
       final transY = (size.height / 2) - (_canvasSize / 2);
       _animateCanvasToMatrix(Matrix4.identity()..translate(transX, transY));
@@ -543,17 +760,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       maxY = math.max(maxY, node.y + node.height);
     }
 
-    const padding = 80.0;
-    final contentW = math.max((maxX - minX) + (padding * 2), 100.0);
-    final contentH = math.max((maxY - minY) + (padding * 2), 100.0);
+    const padding = 120.0;
+    final contentW = math.max((maxX - minX) + (padding * 2), 220.0);
+    final contentH = math.max((maxY - minY) + (padding * 2), 220.0);
 
-    final size = MediaQuery.sizeOf(context);
     final scaleX = size.width / contentW;
     final scaleY = (size.height - 220) / contentH;
-    final fitScale = math.min(scaleX, scaleY).clamp(0.2, 1.8);
+    final fitScale = math.min(scaleX, scaleY).clamp(0.4, 1.15);
 
     final centerScreenX = size.width / 2;
-    final centerScreenY = (size.height - 100) / 2;
+    final centerScreenY = (size.height - 80) / 2;
     final centerContentX = (minX + maxX) / 2;
     final centerContentY = (minY + maxY) / 2;
 
@@ -801,7 +1017,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   // ================= 5. Share & Multi-Format Export Pipeline (PNG, JPG, PDF) =================
 
-  Future<Uint8List> _renderCanvasToPngBytes({double pixelRatio = 2.0}) async {
+  Future<Uint8List> _renderCanvasToPngBytes({
+    double pixelRatio = 2.0,
+    bool transparentBg = false,
+    String bgOption = 'dots',
+  }) async {
     // 1. Calculate content bounding box across all nodes
     double minX = 0;
     double minY = 0;
@@ -833,21 +1053,55 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Draw solid canvas background
-    final bgPaint = Paint()..color = isDark ? const Color(0xFF121316) : Colors.white;
-    canvas.drawRect(Rect.fromLTWH(0, 0, contentW, contentH), bgPaint);
-
-    // Draw subtle grid if enabled
-    if (_showGrid) {
-      final gridPaint = Paint()
-        ..color = isDark ? const Color(0xFF252730) : const Color(0xFFE2E8F0)
-        ..strokeWidth = 1.0;
-      const step = 28.0;
-      for (double x = 0; x <= contentW; x += step) {
-        canvas.drawLine(Offset(x, 0), Offset(x, contentH), gridPaint);
+    // Draw background only if not transparent
+    if (!transparentBg) {
+      Color solidBg;
+      switch (bgOption) {
+        case 'white':
+          solidBg = Colors.white;
+          break;
+        case 'dark':
+          solidBg = const Color(0xFF0F1015);
+          break;
+        case 'theme':
+        case 'dots':
+        case 'grid':
+        default:
+          solidBg = isDark ? const Color(0xFF121316) : Colors.white;
+          break;
       }
-      for (double y = 0; y <= contentH; y += step) {
-        canvas.drawLine(Offset(0, y), Offset(contentW, y), gridPaint);
+
+      final bgPaint = Paint()..color = solidBg;
+      canvas.drawRect(Rect.fromLTWH(0, 0, contentW, contentH), bgPaint);
+
+      if (bgOption == 'dots') {
+        final isWhiteOrLight = solidBg == Colors.white || (!isDark && bgOption != 'dark');
+        final dotPaint = Paint()
+          ..color = isWhiteOrLight
+              ? Colors.black.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.10)
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round;
+        const step = 28.0;
+        final points = <Offset>[];
+        for (double x = 0; x <= contentW; x += step) {
+          for (double y = 0; y <= contentH; y += step) {
+            points.add(Offset(x, y));
+          }
+        }
+        canvas.drawPoints(ui.PointMode.points, points, dotPaint);
+      } else if (bgOption == 'grid') {
+        final isWhiteOrLight = solidBg == Colors.white || (!isDark && bgOption != 'dark');
+        final gridPaint = Paint()
+          ..color = isWhiteOrLight ? const Color(0xFFE2E8F0) : const Color(0xFF252730)
+          ..strokeWidth = 1.0;
+        const step = 28.0;
+        for (double x = 0; x <= contentW; x += step) {
+          canvas.drawLine(Offset(x, 0), Offset(x, contentH), gridPaint);
+        }
+        for (double y = 0; y <= contentH; y += step) {
+          canvas.drawLine(Offset(0, y), Offset(contentW, y), gridPaint);
+        }
       }
     }
 
@@ -944,7 +1198,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
 
       case CanvasNodeType.process:
-      default:
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
         canvas.drawRRect(rrect, fillPaint);
         canvas.drawRRect(rrect, strokePaint);
@@ -976,7 +1229,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
   }
 
-  Future<void> _exportCanvas(String format, {bool isPrint = false}) async {
+  Future<void> _exportCanvas({
+    required String format,
+    required double qualityScale,
+    required bool transparentBg,
+    required String bgOption,
+    bool isPrint = false,
+  }) async {
     if (_isExporting) return;
 
     if (_selectedNodeId != null || _selectedEdgeId != null) {
@@ -990,7 +1249,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     setState(() => _isExporting = true);
 
     try {
-      final pngBytes = await _renderCanvasToPngBytes(pixelRatio: 2.0);
+      // Transparency is strictly allowed for PNG
+      final isActuallyTransparent = (format == 'png') && transparentBg;
+
+      final pngBytes = await _renderCanvasToPngBytes(
+        pixelRatio: qualityScale,
+        transparentBg: isActuallyTransparent,
+        bgOption: bgOption,
+      );
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
@@ -1026,14 +1292,15 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           await SharePlus.instance.share(
             ShareParams(
               files: [XFile(file.path)],
-              text: '${widget.item.title} PDF Diagram',
+              text: '${widget.item.title} PDF Document',
             ),
           );
         }
       } else if (format == 'jpg') {
         final decoded = img.decodeImage(pngBytes);
         if (decoded == null) throw Exception('Failed to decode image');
-        final jpgBytes = img.encodeJpg(decoded, quality: 92);
+        final int jpgQuality = qualityScale == 1.0 ? 85 : (qualityScale == 2.0 ? 95 : 100);
+        final jpgBytes = img.encodeJpg(decoded, quality: jpgQuality);
 
         final filePath = '${tempDir.path}/whiteboard_${widget.item.id}_$timestamp.jpg';
         final file = await File(filePath).create();
@@ -1078,108 +1345,407 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    String selectedFormat = 'png'; // 'png', 'jpg', 'pdf'
+    double selectedQuality = 2.0; // 1.0, 2.0, 3.0
+    bool isTransparent = false;
+    String selectedBgOption = 'dots'; // 'dots', 'grid', 'theme', 'white', 'dark'
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
       builder: (ctx) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Export Whiteboard',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final activeColor = const Color(0xFF1B8A72);
+            final activeBg = isDark ? const Color(0xFF14332B) : const Color(0xFFE8F5F1);
+            final inactiveBg = isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF8F9FA);
+            final borderColor = isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0);
+            final mutedText = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+            final primaryText = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.lg,
+                  right: AppSpacing.lg,
+                  top: AppSpacing.md,
+                  bottom: MediaQuery.paddingOf(context).bottom + 16,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Export full diagram across all canvas coordinates',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.pastelCyanLight,
-                      borderRadius: BorderRadius.circular(8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: Title and Close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Export settings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: primaryText,
+                          ),
+                        ),
+                        IconButton(
+                          icon: TackIcon(
+                            TackIcons.close,
+                            size: 18,
+                            color: mutedText,
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          visualDensity: VisualDensity.compact,
+                          splashRadius: 18,
+                        ),
+                      ],
                     ),
-                    child: const TackIcon(TackIcons.photo, color: Colors.white, size: 20),
-                  ),
-                  title: const Text('PNG Image (Lossless High-Res)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Pixel-perfect diagram with transparent background'),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _exportCanvas('png');
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.pastelAmberLight,
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 14),
+
+                    // Section 1: Format pills (PNG, JPG, PDF)
+                    Text(
+                      'Format',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: mutedText,
+                      ),
                     ),
-                    child: const TackIcon(TackIcons.photo, color: Colors.white, size: 20),
-                  ),
-                  title: const Text('JPEG Image (Compressed)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Standard photo format with solid background'),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _exportCanvas('jpg');
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.pastelCoralLight,
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildExportPill(
+                          label: 'PNG',
+                          isSelected: selectedFormat == 'png',
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () {
+                            setModalState(() {
+                              selectedFormat = 'png';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _buildExportPill(
+                          label: 'JPG',
+                          isSelected: selectedFormat == 'jpg',
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () {
+                            setModalState(() {
+                              selectedFormat = 'jpg';
+                              isTransparent = false; // JPEG cannot have transparency
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _buildExportPill(
+                          label: 'PDF',
+                          isSelected: selectedFormat == 'pdf',
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () {
+                            setModalState(() {
+                              selectedFormat = 'pdf';
+                              isTransparent = false; // PDF background uses document styling
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                    child: const TackIcon(TackIcons.notes, color: Colors.white, size: 20),
-                  ),
-                  title: const Text('PDF Document (Vector & Print)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Paginated landscape PDF ready for presentation or printing'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const TackIcon(TackIcons.exportData, size: 20),
-                        tooltip: 'Print / Save PDF',
+                    const SizedBox(height: 18),
+
+                    // Section 2: Quality measures (1x, 2x, 3x)
+                    Text(
+                      'Quality',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: mutedText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildExportPill(
+                          label: '1x Standard',
+                          isSelected: selectedQuality == 1.0,
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () => setModalState(() => selectedQuality = 1.0),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildExportPill(
+                          label: '2x High',
+                          isSelected: selectedQuality == 2.0,
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () => setModalState(() => selectedQuality = 2.0),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildExportPill(
+                          label: '3x Ultra',
+                          isSelected: selectedQuality == 3.0,
+                          activeColor: activeColor,
+                          activeBg: activeBg,
+                          inactiveBg: inactiveBg,
+                          borderColor: borderColor,
+                          textColor: primaryText,
+                          onTap: () => setModalState(() => selectedQuality = 3.0),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Section 3: Transparent Background Option (Allowed only in PNG)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'Transparent Background',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: selectedFormat == 'png'
+                                              ? primaryText
+                                              : mutedText.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ),
+                                    if (selectedFormat != 'png') ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'PNG only',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: mutedText,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  selectedFormat == 'png'
+                                      ? 'Export canvas elements without background fill'
+                                      : 'Transparency is not supported in ${selectedFormat.toUpperCase()}',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: mutedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch.adaptive(
+                            value: selectedFormat == 'png' && isTransparent,
+                            onChanged: selectedFormat == 'png'
+                                ? (val) => setModalState(() => isTransparent = val)
+                                : null,
+                            activeThumbColor: activeColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Section 4: Canvas Background Dropdown
+                    Text(
+                      'Canvas Background',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: mutedText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (isTransparent && selectedFormat == 'png')
+                            ? (isDark ? AppColors.darkSurface : const Color(0xFFF1F5F9))
+                            : (isDark ? AppColors.darkSurfaceAlt : Colors.white),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: (isTransparent && selectedFormat == 'png')
+                              ? borderColor.withValues(alpha: 0.5)
+                              : borderColor,
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: (isTransparent && selectedFormat == 'png') ? null : selectedBgOption,
+                          hint: Text(
+                            isTransparent && selectedFormat == 'png'
+                                ? 'Transparent (Background disabled)'
+                                : 'Select canvas background',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: mutedText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          isExpanded: true,
+                          icon: TackIcon(
+                            TackIcons.chevronDown,
+                            size: 16,
+                            color: mutedText,
+                          ),
+                          dropdownColor: isDark ? AppColors.darkSurfaceAlt : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          onChanged: (isTransparent && selectedFormat == 'png')
+                              ? null
+                              : (newVal) {
+                                  if (newVal != null) {
+                                    setModalState(() => selectedBgOption = newVal);
+                                  }
+                                },
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'dots',
+                              child: Text('Checkered dots (Current canvas)', style: TextStyle(fontSize: 13)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'grid',
+                              child: Text('Line grid', style: TextStyle(fontSize: 13)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'theme',
+                              child: Text('Theme solid', style: TextStyle(fontSize: 13)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'white',
+                              child: Text('Pure white', style: TextStyle(fontSize: 13)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'dark',
+                              child: Text('Pitch black', style: TextStyle(fontSize: 13)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Section 5: Direct Export CTA Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(ctx).pop();
-                          _exportCanvas('pdf', isPrint: true);
+                          _exportCanvas(
+                            format: selectedFormat,
+                            qualityScale: selectedQuality,
+                            transparentBg: isTransparent,
+                            bgOption: selectedBgOption,
+                          );
                         },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppColors.lightSurface : const Color(0xFF191A23),
+                          foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Export file',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
                       ),
-                      IconButton(
-                        icon: const TackIcon(TackIcons.share, size: 20),
-                        tooltip: 'Share PDF',
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          _exportCanvas('pdf', isPrint: false);
-                        },
-                      ),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _exportCanvas('pdf', isPrint: false);
-                  },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildExportPill({
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required Color activeBg,
+    required Color inactiveBg,
+    required Color borderColor,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? activeBg : inactiveBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? activeColor : borderColor,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected ? activeColor : textColor,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1295,68 +1861,83 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         ),
         body: Stack(
           children: [
-            // Infinite/Bounded Interactive Canvas
-            InteractiveViewer(
-              transformationController: _transformationController,
-              boundaryMargin: const EdgeInsets.all(3000),
-              minScale: 0.15,
-              maxScale: 3.5,
-              constrained: false,
-              // When dragging a node, disable pan to eliminate gesture conflict
-              panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode,
-              child: GestureDetector(
-                onTapUp: (details) => _handleCanvasTap(details.localPosition),
-                onDoubleTapDown: (details) {
-                  final tap = details.localPosition;
-                  for (final edge in _edges) {
-                    final from = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.fromNodeId, orElse: () => null);
-                    final to = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.toNodeId, orElse: () => null);
-                    if (from == null || to == null) continue;
+            // Infinite/Bounded Interactive Canvas with Multi-Touch Arbiter
+            Listener(
+              onPointerDown: (_) {
+                _activePointers++;
+                if (_activePointers >= 2 && _isDraggingNode) {
+                  // If 2 or more fingers are down, immediately cancel node dragging to let 2-finger pan/zoom take priority
+                  setState(() => _isDraggingNode = false);
+                }
+              },
+              onPointerUp: (_) {
+                _activePointers = math.max(0, _activePointers - 1);
+              },
+              onPointerCancel: (_) {
+                _activePointers = math.max(0, _activePointers - 1);
+              },
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                boundaryMargin: const EdgeInsets.all(3000),
+                minScale: 0.15,
+                maxScale: 3.5,
+                constrained: false,
+                // When dragging a node, disable pan to eliminate gesture conflict
+                panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode,
+                child: GestureDetector(
+                  onTapUp: (details) => _handleCanvasTap(details.localPosition),
+                  onDoubleTapDown: (details) {
+                    final tap = details.localPosition;
+                    for (final edge in _edges) {
+                      final from = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.fromNodeId, orElse: () => null);
+                      final to = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.toNodeId, orElse: () => null);
+                      if (from == null || to == null) continue;
 
-                    final ports = _resolveEdgePorts(edge, from, to);
-                    final waypoints = _CanvasEdgesPainter.computeWaypoints(
-                      ports.start,
-                      edge.fromPort ?? 'bottom',
-                      ports.end,
-                      edge.toPort ?? 'top',
-                    );
+                      final ports = _resolveEdgePorts(edge, from, to);
+                      final waypoints = _CanvasEdgesPainter.computeWaypoints(
+                        ports.start,
+                        edge.fromPort,
+                        ports.end,
+                        edge.toPort,
+                      );
 
-                    for (int i = 0; i < waypoints.length - 1; i++) {
-                      if (_distToSegment(tap, waypoints[i], waypoints[i + 1]) <= 22.0) {
-                        _showEdgeEditDialog(edge);
-                        return;
+                      for (int i = 0; i < waypoints.length - 1; i++) {
+                        if (_distToSegment(tap, waypoints[i], waypoints[i + 1]) <= 22.0) {
+                          _showEdgeEditDialog(edge);
+                          return;
+                        }
                       }
                     }
-                  }
-                },
-                child: RepaintBoundary(
-                  key: _repaintBoundaryKey,
-                  child: SizedBox(
-                    width: _canvasSize,
-                    height: _canvasSize,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: _CanvasGridPainter(showGrid: _showGrid, isDark: isDark),
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: _CanvasEdgesPainter(
-                              nodes: _nodes,
-                              edges: _edges,
-                              selectedEdgeId: _selectedEdgeId,
-                              isDark: isDark,
+                  },
+                  child: RepaintBoundary(
+                    key: _repaintBoundaryKey,
+                    child: SizedBox(
+                      width: _canvasSize,
+                      height: _canvasSize,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _CanvasGridPainter(showGrid: _showGrid, isDark: isDark, opacity: _gridOpacity),
                             ),
                           ),
-                        ),
-                        ..._nodes.map((node) => _buildNodeWidget(node, isDark)),
-                        if (_selectedNodeId != null && _nodes.any((n) => n.id == _selectedNodeId)) ...[
-                          _buildSelectedNodeCapsule(isDark),
-                          ..._buildNodeBranchHandles(isDark),
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _CanvasEdgesPainter(
+                                nodes: _nodes,
+                                edges: _edges,
+                                selectedEdgeId: _selectedEdgeId,
+                                isDark: isDark,
+                              ),
+                            ),
+                          ),
+                          ..._nodes.map((node) => _buildNodeWidget(node, isDark)),
+                          if (_selectedNodeId != null && _nodes.any((n) => n.id == _selectedNodeId)) ...[
+                            _buildSelectedNodeCapsule(isDark),
+                            ..._buildNodeBranchHandles(isDark),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -1417,6 +1998,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               top: 72,
               child: _buildLeftToolRail(isDark),
             ),
+
+            // Floating Grid Opacity Slider Popup (Opens on holding 4-dots grid button)
+            if (_showGridOpacitySlider)
+              Positioned(
+                bottom: AppSpacing.md + 52,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _buildGridOpacitySliderPopup(isDark),
+                ),
+              ),
 
             // Bottom Consolidated Controls Dock (Grid, Auto-Align, Fit, Zoom)
             Positioned(
@@ -1553,15 +2145,15 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
   }
 
-  // Left Tool Rail (Slim & ergonomic context icons)
+  // Left Tool Rail with Figma-inspired icons (Cursor, Hand, Arrow Connector, Sticky Note, Text T, Image)
   Widget _buildLeftToolRail(bool isDark) {
     final tools = [
-      (id: 'select', icon: TackIcons.cursor, tooltip: 'Select & Move Shapes'),
-      (id: 'pan', icon: TackIcons.hand, tooltip: 'Pan Canvas'),
-      (id: 'connect', icon: TackIcons.flow, tooltip: 'Connect Nodes with Arrows'),
-      (id: 'sticky', icon: TackIcons.sticky, tooltip: 'Add Sticky Note'),
-      (id: 'text', icon: TackIcons.notes, tooltip: 'Add Text Label'),
-      (id: 'image', icon: TackIcons.photo, tooltip: 'Insert Image'),
+      (id: 'select', icon: Icons.near_me_rounded, tooltip: 'Select & Move (V)'),
+      (id: 'pan', icon: Icons.pan_tool_rounded, tooltip: 'Pan Canvas (H)'),
+      (id: 'connect', icon: Icons.arrow_right_alt_rounded, tooltip: 'Connect Nodes (L)'),
+      (id: 'sticky', icon: Icons.sticky_note_2_rounded, tooltip: 'Sticky Note (S)'),
+      (id: 'text', icon: Icons.title_rounded, tooltip: 'Text Tool (T)'),
+      (id: 'image', icon: Icons.image_outlined, tooltip: 'Insert Image'),
     ];
 
     return Container(
@@ -1605,7 +2197,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       : null,
                 ),
                 child: Center(
-                  child: TackIcon(
+                  child: Icon(
                     tool.icon,
                     size: 20,
                     color: isSelected
@@ -1621,7 +2213,116 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
   }
 
-  // Consolidated Bottom Controls Bar (Grid, Auto-Align, Fit, Zoom)
+  // Four-dots in 2x2 matrix pattern icon
+  Widget _buildFourDotsIcon({required Color color, double size = 18}) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 3.5,
+                  height: 3.5,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 3.5),
+                Container(
+                  width: 3.5,
+                  height: 3.5,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+              ],
+            ),
+            const SizedBox(height: 3.5),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 3.5,
+                  height: 3.5,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 3.5),
+                Container(
+                  width: 3.5,
+                  height: 3.5,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Floating Grid Opacity Slider Popup (Opens above dock on holding 4-dots grid button)
+  Widget _buildGridOpacitySliderPopup(bool isDark) {
+    return Container(
+      width: 250,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        boxShadow: AppSpacing.floatingControlShadow,
+      ),
+      child: Row(
+        children: [
+          _buildFourDotsIcon(color: isDark ? Colors.white70 : Colors.black87, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            '${(_gridOpacity * 100).toInt()}%',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+              ),
+              child: Slider(
+                value: _gridOpacity,
+                min: 0.04,
+                max: 0.50,
+                activeColor: AppColors.accentAmber,
+                inactiveColor: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                onChanged: (val) {
+                  setState(() => _gridOpacity = val);
+                },
+                onChangeEnd: (val) => _saveGridOpacity(val),
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: () => setState(() => _showGridOpacitySlider = false),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: TackIcon(
+                TackIcons.close,
+                size: 14,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Consolidated Bottom Controls Bar (4-Dots Matrix Grid, Auto-Align, Fit, Zoom)
   Widget _buildBottomControlsBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1634,20 +2335,34 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Grid toggle
+          // 4-Dots Matrix Pattern Button (Tap to toggle grid, Hold for opacity slider)
           Tooltip(
-            message: _showGrid ? 'Hide Grid' : 'Show Grid',
-            child: IconButton(
-              icon: TackIcon(
-                TackIcons.gridView,
-                size: 18,
-                color: _showGrid ? AppColors.accentAmber : (isDark ? Colors.white54 : Colors.black45),
-              ),
-              onPressed: () {
+            message: 'Tap to toggle grid • Hold to adjust opacity',
+            child: InkWell(
+              onTap: () {
                 HapticFeedback.selectionClick();
-                setState(() => _showGrid = !_showGrid);
+                setState(() {
+                  _showGrid = !_showGrid;
+                  if (!_showGrid) _showGridOpacitySlider = false;
+                });
               },
-              visualDensity: VisualDensity.compact,
+              onLongPress: () {
+                HapticFeedback.heavyImpact();
+                setState(() {
+                  _showGrid = true;
+                  _showGridOpacitySlider = !_showGridOpacitySlider;
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: _buildFourDotsIcon(
+                  color: _showGrid
+                      ? AppColors.accentAmber
+                      : (isDark ? Colors.white54 : Colors.black45),
+                  size: 18,
+                ),
+              ),
             ),
           ),
           Container(
@@ -1656,20 +2371,20 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
             margin: const EdgeInsets.symmetric(horizontal: 2),
           ),
-          // Auto-align flowchart (context icon: TackIcons.flow)
+          // Auto-align flowchart in place (Figma layout tree icon)
           Tooltip(
-            message: 'Auto-Align Flowchart',
+            message: 'Auto-Align In Place',
             child: IconButton(
-              icon: const TackIcon(TackIcons.flow, size: 18, color: AppColors.accentAmber),
+              icon: const Icon(Icons.account_tree_rounded, size: 19, color: AppColors.accentAmber),
               onPressed: _autoArrangeFlowchart,
               visualDensity: VisualDensity.compact,
             ),
           ),
-          // Fit whole flowchart to screen
+          // Fit whole flowchart to screen (Figma frame/fit icon)
           Tooltip(
             message: 'Fit to View',
             child: IconButton(
-              icon: const TackIcon(TackIcons.diamond, size: 18),
+              icon: const Icon(Icons.crop_free_rounded, size: 19),
               onPressed: () {
                 HapticFeedback.lightImpact();
                 _fitCanvasToContent();
@@ -1685,7 +2400,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
           // Zoom out
           IconButton(
-            icon: const TackIcon(TackIcons.minus, size: 16),
+            icon: const Icon(Icons.remove_rounded, size: 18),
             onPressed: () {
               HapticFeedback.selectionClick();
               _zoomCanvas(0.8);
@@ -1715,7 +2430,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
           // Zoom in
           IconButton(
-            icon: const TackIcon(TackIcons.plus, size: 16),
+            icon: const Icon(Icons.add_rounded, size: 18),
             onPressed: () {
               HapticFeedback.selectionClick();
               _zoomCanvas(1.25);
@@ -1880,20 +2595,20 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           (n) => n?.id == _selectedNodeId,
           orElse: () => null,
         );
-    if (node == null) return const [];
+    if (node == null || _activeTool == 'pan') return const [];
 
     final hasRightEdge = _edges.any((e) =>
-        (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'right') ||
-        (e.toNodeId == node.id && (e.toPort ?? 'top') == 'right'));
+        (e.fromNodeId == node.id && e.fromPort == 'right') ||
+        (e.toNodeId == node.id && e.toPort == 'right'));
     final hasBottomEdge = _edges.any((e) =>
-        (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'bottom') ||
-        (e.toNodeId == node.id && (e.toPort ?? 'top') == 'bottom'));
+        (e.fromNodeId == node.id && e.fromPort == 'bottom') ||
+        (e.toNodeId == node.id && e.toPort == 'bottom'));
     final hasLeftEdge = _edges.any((e) =>
-        (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'left') ||
-        (e.toNodeId == node.id && (e.toPort ?? 'top') == 'left'));
+        (e.fromNodeId == node.id && e.fromPort == 'left') ||
+        (e.toNodeId == node.id && e.toPort == 'left'));
     final hasTopEdge = _edges.any((e) =>
-        (e.fromNodeId == node.id && (e.fromPort ?? 'bottom') == 'top') ||
-        (e.toNodeId == node.id && (e.toPort ?? 'top') == 'top'));
+        (e.fromNodeId == node.id && e.fromPort == 'top') ||
+        (e.toNodeId == node.id && e.toPort == 'top'));
 
     return [
       if (!hasRightEdge)
@@ -2217,83 +2932,93 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       left: node.x,
       top: node.y,
       child: RepaintBoundary(
-        child: GestureDetector(
-        onTap: () {
-          _canvasFocusNode.requestFocus();
-          setState(() {
-            _selectedNodeId = node.id;
-            _selectedEdgeId = null;
+        child: IgnorePointer(
+          ignoring: _activeTool == 'pan',
+          child: GestureDetector(
+            onTap: () {
+              _canvasFocusNode.requestFocus();
+              setState(() {
+                _selectedNodeId = node.id;
+                _selectedEdgeId = null;
 
-            if (_activeTool == 'connect') {
-              if (_connectingFromNodeId == null) {
-                _connectingFromNodeId = node.id;
-              } else if (_connectingFromNodeId != null && _connectingFromNodeId != node.id) {
-                final fromId = _connectingFromNodeId!;
-                final fromNode = _nodes.cast<CanvasNode?>().firstWhere(
-                      (n) => n?.id == fromId,
-                      orElse: () => null,
-                    );
-                if (fromNode == null) {
-                  _connectingFromNodeId = null;
-                  return;
+                if (_activeTool == 'connect') {
+                  if (_connectingFromNodeId == null) {
+                    _connectingFromNodeId = node.id;
+                  } else if (_connectingFromNodeId != null && _connectingFromNodeId != node.id) {
+                    final fromId = _connectingFromNodeId!;
+                    final fromNode = _nodes.cast<CanvasNode?>().firstWhere(
+                          (n) => n?.id == fromId,
+                          orElse: () => null,
+                        );
+                    if (fromNode == null) {
+                      _connectingFromNodeId = null;
+                      return;
+                    }
+                    String fromPort = 'bottom';
+                    String toPort = 'top';
+
+                    if (node.y + node.height < fromNode.y) {
+                      fromPort = 'top';
+                      toPort = 'bottom';
+                    } else if (node.y > fromNode.y + fromNode.height) {
+                      fromPort = 'bottom';
+                      toPort = 'top';
+                    } else if (node.x > fromNode.x) {
+                      fromPort = 'right';
+                      toPort = 'left';
+                    } else {
+                      fromPort = 'left';
+                      toPort = 'right';
+                    }
+
+                    _history.recordSnapshot(_nodes, _edges);
+                    _edges.add(CanvasEdge(
+                      id: _generateUniqueId('edge'),
+                      fromNodeId: _connectingFromNodeId!,
+                      toNodeId: node.id,
+                      fromPort: fromPort,
+                      toPort: toPort,
+                    ));
+                    _connectingFromNodeId = null;
+                    _saveCanvasState();
+                  }
                 }
-                String fromPort = 'bottom';
-                String toPort = 'top';
-
-                if (node.y + node.height < fromNode.y) {
-                  fromPort = 'top';
-                  toPort = 'bottom';
-                } else if (node.y > fromNode.y + fromNode.height) {
-                  fromPort = 'bottom';
-                  toPort = 'top';
-                } else if (node.x > fromNode.x) {
-                  fromPort = 'right';
-                  toPort = 'left';
-                } else {
-                  fromPort = 'left';
-                  toPort = 'right';
+              });
+            },
+            onDoubleTap: () => _editNodeText(node),
+            onPanStart: (_) {
+              if (_activeTool == 'pan' || _activePointers >= 2) return;
+              // Disable InteractiveViewer pan so gestures don't conflict
+              setState(() => _isDraggingNode = true);
+              _history.recordSnapshot(_nodes, _edges);
+            },
+            onPanUpdate: (details) {
+              if (_activePointers >= 2 || _activeTool == 'pan') {
+                if (_isDraggingNode) {
+                  setState(() => _isDraggingNode = false);
                 }
-
-                _history.recordSnapshot(_nodes, _edges);
-                _edges.add(CanvasEdge(
-                  id: _generateUniqueId('edge'),
-                  fromNodeId: _connectingFromNodeId!,
-                  toNodeId: node.id,
-                  fromPort: fromPort,
-                  toPort: toPort,
-                ));
-                _connectingFromNodeId = null;
-                _saveCanvasState();
+                return;
               }
-            }
-          });
-        },
-        onDoubleTap: () => _editNodeText(node),
-        onPanStart: (_) {
-          // Disable InteractiveViewer pan so gestures don't conflict
-          setState(() => _isDraggingNode = true);
-          _history.recordSnapshot(_nodes, _edges);
-        },
-        onPanUpdate: (details) {
-          setState(() {
-            final index = _nodes.indexWhere((n) => n.id == node.id);
-            if (index >= 0) {
-              _nodes[index] = _nodes[index].copyWith(
-                x: (_nodes[index].x + details.delta.dx).clamp(0.0, _canvasSize - node.width),
-                y: (_nodes[index].y + details.delta.dy).clamp(0.0, _canvasSize - node.height),
-              );
-            }
-          });
-        },
-        onPanEnd: (_) {
-          setState(() => _isDraggingNode = false);
-          _saveCanvasState();
-        },
-        onPanCancel: () {
-          setState(() => _isDraggingNode = false);
-        },
-        child: shapeContent,
-      ),
+              setState(() {
+                final index = _nodes.indexWhere((n) => n.id == node.id);
+                if (index >= 0) {
+                  _nodes[index] = _nodes[index].copyWith(
+                    x: (_nodes[index].x + details.delta.dx).clamp(0.0, _canvasSize - node.width),
+                    y: (_nodes[index].y + details.delta.dy).clamp(0.0, _canvasSize - node.height),
+                  );
+                }
+              });
+            },
+            onPanEnd: (_) {
+              setState(() => _isDraggingNode = false);
+              _saveCanvasState();
+            },
+            onPanCancel: () {
+              setState(() => _isDraggingNode = false);
+            },
+            child: shapeContent,
+          ),
+        ),
       ),
     );
   }
@@ -2380,19 +3105,24 @@ class _ParallelogramPainter extends CustomPainter {
       oldDelegate.strokeWidth != strokeWidth;
 }
 
-/// Canvas Grid Painter
+/// Canvas Grid Painter with Dynamic Dot Opacity
 class _CanvasGridPainter extends CustomPainter {
   final bool showGrid;
   final bool isDark;
+  final double opacity;
 
-  _CanvasGridPainter({required this.showGrid, required this.isDark});
+  _CanvasGridPainter({
+    required this.showGrid,
+    required this.isDark,
+    this.opacity = 0.18,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (!showGrid) return;
     final dotPaint = Paint()
-      ..color = isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.08)
-      ..strokeWidth = 1.8
+      ..color = (isDark ? Colors.white : Colors.black).withValues(alpha: opacity)
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
     const spacing = 28.0;
@@ -2407,7 +3137,9 @@ class _CanvasGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CanvasGridPainter oldDelegate) =>
-      oldDelegate.showGrid != showGrid || oldDelegate.isDark != isDark;
+      oldDelegate.showGrid != showGrid ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.opacity != opacity;
 }
 
 /// Canvas Flowchart Connector Lines & Arrows Painter
@@ -2434,7 +3166,39 @@ class _CanvasEdgesPainter extends CustomPainter {
       return [start, end];
     }
 
-    if ((fromPort == 'bottom' && toPort == 'top') || (fromPort == 'top' && toPort == 'bottom')) {
+    if (fromPort == 'bottom' && toPort == 'bottom') {
+      final detourY = math.max(start.dy, end.dy) + 36.0;
+      return [
+        start,
+        Offset(start.dx, detourY),
+        Offset(end.dx, detourY),
+        end,
+      ];
+    } else if (fromPort == 'top' && toPort == 'top') {
+      final detourY = math.min(start.dy, end.dy) - 36.0;
+      return [
+        start,
+        Offset(start.dx, detourY),
+        Offset(end.dx, detourY),
+        end,
+      ];
+    } else if (fromPort == 'left' && toPort == 'left') {
+      final detourX = math.min(start.dx, end.dx) - 36.0;
+      return [
+        start,
+        Offset(detourX, start.dy),
+        Offset(detourX, end.dy),
+        end,
+      ];
+    } else if (fromPort == 'right' && toPort == 'right') {
+      final detourX = math.max(start.dx, end.dx) + 36.0;
+      return [
+        start,
+        Offset(detourX, start.dy),
+        Offset(detourX, end.dy),
+        end,
+      ];
+    } else if ((fromPort == 'bottom' && toPort == 'top') || (fromPort == 'top' && toPort == 'bottom')) {
       final midY = (start.dy + end.dy) / 2;
       return [
         start,
@@ -2443,6 +3207,18 @@ class _CanvasEdgesPainter extends CustomPainter {
         end,
       ];
     } else if ((fromPort == 'right' && toPort == 'left') || (fromPort == 'left' && toPort == 'right')) {
+      // If right-to-left is going backwards horizontally
+      if (fromPort == 'right' && start.dx >= end.dx) {
+        final detourY = math.max(start.dy, end.dy) + 36.0;
+        return [
+          start,
+          Offset(start.dx + 20.0, start.dy),
+          Offset(start.dx + 20.0, detourY),
+          Offset(end.dx - 20.0, detourY),
+          Offset(end.dx - 20.0, end.dy),
+          end,
+        ];
+      }
       final midX = (start.dx + end.dx) / 2;
       return [
         start,
@@ -2507,8 +3283,8 @@ class _CanvasEdgesPainter extends CustomPainter {
       Offset start = from.bottomPort;
       Offset end = to.topPort;
 
-      final fromPort = edge.fromPort ?? 'bottom';
-      final toPort = edge.toPort ?? 'top';
+      final fromPort = edge.fromPort;
+      final toPort = edge.toPort;
 
       if (fromPort == 'top') start = from.topPort;
       if (fromPort == 'bottom') start = from.bottomPort;

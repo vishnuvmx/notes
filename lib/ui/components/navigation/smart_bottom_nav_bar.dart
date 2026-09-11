@@ -74,7 +74,7 @@ class SmartBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ({HeroIcons icon, String label, int index}) item, bool isDark) {
+  Widget _buildNavItem(BuildContext context, ({IconData icon, String label, int index}) item, bool isDark) {
     final isSelected = currentIndex == item.index;
     final activeColor = isDark ? AppColors.primaryLight : AppColors.primaryDark;
     final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;

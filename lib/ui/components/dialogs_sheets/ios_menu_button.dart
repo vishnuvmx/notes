@@ -9,8 +9,8 @@ import '../../../core/theme/tack_icons.dart';
 class IosMenuItem<T> {
   final T value;
   final String title;
-  final HeroIcons icon;
-  final HeroIconStyle iconStyle;
+  final IconData icon;
+  final dynamic iconStyle;
   final Color? iconColor;
   final bool isDestructive;
 
@@ -18,7 +18,7 @@ class IosMenuItem<T> {
     required this.value,
     required this.title,
     required this.icon,
-    this.iconStyle = HeroIconStyle.outline,
+    this.iconStyle,
     this.iconColor,
     this.isDestructive = false,
   });
@@ -34,7 +34,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
   final List<IosMenuItem<T>> items;
   final ValueChanged<T> onSelected;
   final double size;
-  final HeroIcons icon;
+  final IconData icon;
   final Color? iconColor;
   final String tooltip;
 
@@ -43,7 +43,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
     required this.items,
     required this.onSelected,
     this.size = 36,
-    this.icon = HeroIcons.ellipsisHorizontal,
+    this.icon = Icons.more_horiz_rounded,
     this.iconColor,
     this.tooltip = 'More options',
   });
