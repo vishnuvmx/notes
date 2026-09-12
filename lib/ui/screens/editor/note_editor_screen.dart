@@ -115,12 +115,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         updatedAt: DateTime.now(),
       );
     } else {
+      final currentNote = widget.item is TextNote ? (widget.item as TextNote) : null;
       updated = (widget.item as TextNote).copyWith(
         title: title.isEmpty ? 'Untitled Note' : title,
         content: content,
         tags: _tags,
         paletteId: _paletteId,
         updatedAt: DateTime.now(),
+        sourceApp: currentNote?.sourceApp,
       );
     }
 
@@ -377,45 +379,61 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const TackIcon(TackIcons.back, size: 22),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            Navigator.of(context).pop();
-          },
-          tooltip: 'Back',
-        ),
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.9),
-            borderRadius: AppSpacing.roundedPill,
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TackIcon(
-                _isSaving ? TackIcons.undo : TackIcons.checkCircle,
-                size: 14,
-                color: _isSaving ? AppColors.accentAmber : AppColors.success,
-                style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  _isSaving ? 'Saving' : 'Saved • ${wordCount}w',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    letterSpacing: -0.2,
-                  ),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: AppSpacing.md,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const TackIcon(TackIcons.back, size: 22),
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                Navigator.of(context).pop();
+              },
+              tooltip: 'Back',
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.9),
+                  borderRadius: AppSpacing.roundedPill,
+                  border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TackIcon(
+                      _isSaving ? TackIcons.undo : TackIcons.checkCircle,
+                      size: 14,
+                      color: _isSaving ? AppColors.accentAmber : AppColors.success,
+                      style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        _isSaving ? 'Saving' : 'Saved • ${wordCount}w',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         actions: [
           // Edit / Read View Mode Switcher
@@ -486,14 +504,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Scrollable Note Document
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     // Reader Mode Banner Indicator
                     if (!_isEditingMode)
                       Container(
@@ -508,9 +529,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           children: [
                             const TackIcon(TackIcons.notes, size: 14, color: AppColors.accentAmber),
                             const SizedBox(width: 6),
-                            Text(
-                              'Reader Mode  •  $readTime min read',
-                              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                            Flexible(
+                              child: Text(
+                                'Reader Mode  •  $readTime min read',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                             ),
                           ],
                         ),
@@ -554,6 +579,46 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         fontSize: 13,
                       ),
                     ),
+                    if (widget.item is TextNote && (widget.item as TextNote).sourceApp != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkSurfaceAlt
+                                  : AppColors.lightSurfaceAlt,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TackIcon(
+                                  TackIcons.notes,
+                                  size: 12,
+                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Saved from ${(widget.item as TextNote).sourceApp}',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
 
                     // Dynamic Tag Chips Bar
@@ -685,6 +750,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 ),
               ),
             ),
+          ),
 
             // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
             if (_isEditingMode) ...[

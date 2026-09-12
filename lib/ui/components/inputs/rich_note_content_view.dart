@@ -44,24 +44,30 @@ class RichNoteContentView extends StatelessWidget {
     final lines = content.split('\n');
 
     if (content.trim().isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-        child: Text(
-          'No content yet. Switch to edit mode to write...',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontStyle: FontStyle.italic,
-            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+      return SizedBox(
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          child: Text(
+            'No content yet. Switch to edit mode to write...',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontStyle: FontStyle.italic,
+              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+            ),
           ),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(lines.length, (index) {
-        final line = lines[index];
-        return _buildLineWidget(context, line, index, isDark);
-      }),
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(lines.length, (index) {
+          final line = lines[index];
+          return _buildLineWidget(context, line, index, isDark);
+        }),
+      ),
     );
   }
 

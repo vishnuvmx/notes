@@ -114,31 +114,50 @@ class _ClipboardCardState extends State<ClipboardCard> {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              elevation: 10,
-                              backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
                               behavior: SnackBarBehavior.floating,
-                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(
-                                  color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
-                                  width: 1.2,
-                                ),
-                              ),
-                              duration: const Duration(seconds: 2),
-                              content: const Row(
-                                children: [
-                                  TackIcon(TackIcons.checkCircle, size: 18, color: AppColors.success),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Copied to clipboard',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
+                              margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
+                              padding: EdgeInsets.zero,
+                              duration: const Duration(milliseconds: 1600),
+                              content: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.darkCard : Colors.white,
+                                    borderRadius: AppSpacing.roundedPill,
+                                    border: Border.all(
+                                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                      width: 1,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDark
+                                            ? Colors.black.withValues(alpha: 0.4)
+                                            : const Color(0xFF191A23).withValues(alpha: 0.08),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const TackIcon(TackIcons.checkCircle, size: 16, color: AppColors.success),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Copied to clipboard',
+                                        style: TextStyle(
+                                          fontFamily: AppTypography.fontFamily,
+                                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           );

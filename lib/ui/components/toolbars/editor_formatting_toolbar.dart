@@ -12,7 +12,7 @@ sealed class ToolbarActionItem {
 }
 
 class IconToolbarItem extends ToolbarActionItem {
-  final HeroIcons icon;
+  final IconData icon;
   const IconToolbarItem({required super.label, required super.action, required this.icon});
 }
 

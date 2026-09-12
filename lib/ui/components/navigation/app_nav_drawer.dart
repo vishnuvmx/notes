@@ -185,10 +185,10 @@ class AppNavDrawer extends StatelessWidget {
 
   Widget _buildDrawerTile(
     BuildContext context, {
-    required HeroIcons icon,
+    required IconData icon,
     required String title,
     Color? iconColor,
-    HeroIconStyle style = HeroIconStyle.outline,
+    dynamic style,
     int? badgeCount,
     required VoidCallback onTap,
   }) {

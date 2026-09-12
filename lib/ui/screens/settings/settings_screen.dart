@@ -7,11 +7,12 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
 
-/// Settings & Preferences screen for Tack with cute HeroIcons.
+/// Clean, tactile Settings & Preferences screen matching Tack's design language.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -30,8 +31,7 @@ class SettingsScreen extends StatelessWidget {
         [XFile(file.path, mimeType: 'application/json')],
         subject: 'Tack Workspace Backup',
       );
-    } catch (e) {
-      // Fallback to text share if file system write fails
+    } catch (_) {
       // ignore: deprecated_member_use
       await Share.share(
         jsonStr,
@@ -42,8 +42,7 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _showRestoreDialog(BuildContext context) async {
     final controller = TextEditingController();
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -53,16 +52,16 @@ class SettingsScreen extends StatelessWidget {
             return AlertDialog(
               backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
               shape: RoundedRectangleBorder(
-                borderRadius: AppSpacing.roundedLg,
+                borderRadius: BorderRadius.circular(22),
                 side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
               ),
-              title: Row(
+              title: const Row(
                 children: [
-                  const TackIcon(TackIcons.importData, size: 24, color: AppColors.accentAmber),
-                  const SizedBox(width: AppSpacing.sm),
+                  TackIcon(TackIcons.importData, size: 20, color: AppColors.accentAmber),
+                  SizedBox(width: 8),
                   Text(
                     'Restore Workspace',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
                   ),
                 ],
               ),
@@ -72,20 +71,17 @@ class SettingsScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Paste JSON backup data below to restore your notes, whiteboards, and stickies.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      icon: const TackIcon(TackIcons.clipboard, size: 18),
-                      label: const Text('Paste from Clipboard'),
+                      icon: const TackIcon(TackIcons.clipboard, size: 16),
+                      label: const Text(
+                        'Paste from Clipboard',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                      ),
                       onPressed: () async {
                         final data = await Clipboard.getData(Clipboard.kTextPlain);
                         if (data?.text != null && data!.text!.trim().isNotEmpty) {
@@ -95,24 +91,32 @@ class SettingsScreen extends StatelessWidget {
                         }
                       },
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: controller,
-                      maxLines: 6,
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      maxLines: 5,
+                      style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace'),
                       decoration: InputDecoration(
-                        hintText: '{\n  "app": "Tack",\n  "items": [...]\n}',
+                        hintText: 'Paste backup JSON here...',
                         hintStyle: TextStyle(
                           color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                          fontSize: 12,
+                          fontSize: 11.5,
                         ),
                         filled: true,
                         fillColor: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
                         border: OutlineInputBorder(
-                          borderRadius: AppSpacing.roundedMd,
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
                         ),
-                        contentPadding: const EdgeInsets.all(AppSpacing.md),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.accentAmber, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.all(12),
                       ),
                     ),
                   ],
@@ -130,7 +134,8 @@ class SettingsScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentAmber,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
                   ),
                   onPressed: () => Navigator.of(dialogCtx).pop(true),
                   child: const Text('Restore', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -151,24 +156,24 @@ class SettingsScreen extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully restored $count items into workspace.'),
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              content: Text('Successfully restored $count items.'),
+              backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: AppSpacing.roundedMd,
-                side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B)),
               ),
             ),
           );
         }
-      } catch (e) {
+      } catch (_) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Restore failed: Invalid backup format.'),
-              backgroundColor: AppColors.pastelCoralLight,
+              content: const Text('Restore failed: Invalid backup JSON.'),
+              backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
           );
         }
@@ -176,237 +181,227 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _confirmEmptyTrash(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        ),
+        title: const Text('Empty Trash?', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        content: const Text(
+          'All items in trash will be permanently removed.',
+          style: TextStyle(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Empty', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      HapticFeedback.mediumImpact();
+      await context.read<WorkspaceProvider>().emptyTrash();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeProv = context.watch<ThemeProvider>();
     final workspace = context.watch<WorkspaceProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        leading: IconButton(
+          icon: const TackIcon(TackIcons.back, size: 22),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(context).pop();
+          },
+          tooltip: 'Back',
+        ),
+        title: Text(
+          'Settings',
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+        ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
         children: [
           // App Brand Header Card
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              borderRadius: AppSpacing.roundedLg,
-              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-              boxShadow: isDark ? AppSpacing.softShadowDark : AppSpacing.softShadowLight,
-            ),
-            child: Row(
-              children: [
-                ClipOval(
-                  child: Image.asset(
-                    'icon.png',
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const TackIcon(TackIcons.pin, size: 40),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tack',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Tactile notes, sticky pastels & whiteboard flowchart canvas.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // Workspace Overview Stats
-          Text(
-            'WORKSPACE OVERVIEW',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatBadge(
-                  context,
-                  label: 'Notes',
-                  count: workspace.totalActiveNotesCount,
-                  color: AppColors.pastelPeachLight,
-                  icon: TackIcons.notes,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildStatBadge(
-                  context,
-                  label: 'Stickies',
-                  count: workspace.totalStickiesCount,
-                  color: AppColors.pastelAmberLight,
-                  icon: TackIcons.sticky,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildStatBadge(
-                  context,
-                  label: 'Boards',
-                  count: workspace.totalWhiteboardsCount,
-                  color: AppColors.pastelCyanLight,
-                  icon: TackIcons.whiteboard,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildStatBadge(
-                  context,
-                  label: 'Clips',
-                  count: workspace.totalClipsCount,
-                  color: AppColors.pastelLimeLight,
-                  icon: TackIcons.clipboard,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // Data & Backup Section
-          Text(
-            'DATA & BACKUP',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              borderRadius: AppSpacing.roundedMd,
-              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text('Export Workspace Backup', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Export all items into a JSON backup bundle to keep or transfer.'),
-                  leading: const TackIcon(TackIcons.exportData, size: 22, color: AppColors.accentAmber),
-                  trailing: const TackIcon(TackIcons.share, size: 18),
-                  onTap: () => _exportBackup(context),
-                ),
-                const Divider(),
-                ListTile(
-                  title: const Text('Restore from Backup', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Import or restore items from a JSON backup or clipboard.'),
-                  leading: const TackIcon(TackIcons.importData, size: 22, color: AppColors.pastelCyanLight),
-                  trailing: const TackIcon(TackIcons.chevronDown, size: 18),
-                  onTap: () => _showRestoreDialog(context),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
+          _buildBrandHeader(context, isDark),
+          const SizedBox(height: 22),
 
           // Appearance Section
-          Text(
-            'APPEARANCE',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
+          _buildSectionLabel('APPEARANCE', isDark),
+          const SizedBox(height: 8),
+          _buildThemeSegmentedControl(context, themeProv, isDark),
+          const SizedBox(height: 22),
+
+          // Workspace Overview Stats
+          _buildSectionLabel('WORKSPACE OVERVIEW', isDark),
+          const SizedBox(height: 8),
+          _buildWorkspaceStats(context, workspace, isDark),
+          const SizedBox(height: 22),
+
+          // Data & Storage Section
+          _buildSectionLabel('DATA & STORAGE', isDark),
+          const SizedBox(height: 8),
+          _buildDataSection(context, workspace, isDark),
+          const SizedBox(height: 32),
+
+          // Clean subtle footer
+          Center(
+            child: Text(
+              'Tack • Made with tactile care',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 12,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildSectionLabel(String text, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandHeader(BuildContext context, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : const Color(0xFF191A23).withValues(alpha: 0.03),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
           Container(
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              borderRadius: AppSpacing.roundedMd,
-              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 1,
+              ),
             ),
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text('Light Mode'),
-                  leading: const TackIcon(TackIcons.sun, size: 22),
-                  trailing: themeProv.themeMode == ThemeMode.light
-                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
-                      : null,
-                  onTap: () => themeProv.setThemeMode(ThemeMode.light),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(
+              'icon.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+                child: const Center(
+                  child: TackIcon(TackIcons.pin, size: 22, color: AppColors.accentAmber),
                 ),
-                const Divider(),
-                ListTile(
-                  title: const Text('Dark Mode'),
-                  leading: const TackIcon(TackIcons.moon, size: 22),
-                  trailing: themeProv.themeMode == ThemeMode.dark
-                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
-                      : null,
-                  onTap: () => themeProv.setThemeMode(ThemeMode.dark),
-                ),
-                const Divider(),
-                ListTile(
-                  title: const Text('System Default'),
-                  leading: const TackIcon(TackIcons.settings, size: 22),
-                  trailing: themeProv.themeMode == ThemeMode.system
-                      ? const TackIcon(TackIcons.check, size: 18, color: AppColors.accentAmber, style: HeroIconStyle.solid)
-                      : null,
-                  onTap: () => themeProv.setThemeMode(ThemeMode.system),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // Typography & Design Info
-          Text(
-            'DESIGN SYSTEM & ICONS',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              borderRadius: AppSpacing.roundedMd,
-              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            ),
+          const SizedBox(width: 14),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow('Icon Pack', 'HeroIcons (Cute Rounded Aesthetics)'),
-                const SizedBox(height: 8),
-                _buildInfoRow('Font Family', 'DM Sans (-2% letter spacing)'),
-                const SizedBox(height: 8),
-                _buildInfoRow('Color Tokens', '8 Curated Sticky Pastels + Dark Surfacing'),
-                const SizedBox(height: 8),
-                _buildInfoRow('Architecture', 'Clean OOP Domain & Repository Pattern'),
+                Row(
+                  children: [
+                    Text(
+                      'Tack',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'v1.0',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accentAmber,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tactile workspace • Local & offline-first',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 12.5,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -415,57 +410,302 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatBadge(
-    BuildContext context, {
-    required String label,
-    required int count,
-    required Color color,
-    required HeroIcons icon,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildThemeSegmentedControl(BuildContext context, ThemeProvider themeProv, bool isDark) {
+    final modes = [
+      (ThemeMode.light, 'Light', TackIcons.sun),
+      (ThemeMode.system, 'System', TackIcons.settings),
+      (ThemeMode.dark, 'Dark', TackIcons.moon),
+    ];
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.2 : 0.25),
-        borderRadius: AppSpacing.roundedMd,
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withValues(alpha: isDark ? 0.4 : 0.6),
-          width: 1.5,
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
         ),
+      ),
+      child: Row(
+        children: modes.map((entry) {
+          final isSelected = themeProv.themeMode == entry.$1;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                themeProv.setThemeMode(entry.$1);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (isDark ? AppColors.darkSurfaceAlt : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : const Color(0xFF191A23).withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                    : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TackIcon(
+                      entry.$3,
+                      size: 16,
+                      color: isSelected
+                          ? AppColors.accentAmber
+                          : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      entry.$2,
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
+                            : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceStats(BuildContext context, WorkspaceProvider workspace, bool isDark) {
+    final stats = [
+      ('Notes', workspace.totalActiveNotesCount, AppColors.pastelPeachLight, AppColors.pastelPeachDark, TackIcons.notes),
+      ('Stickies', workspace.totalStickiesCount, AppColors.pastelAmberLight, AppColors.pastelAmberDark, TackIcons.sticky),
+      ('Boards', workspace.totalWhiteboardsCount, AppColors.pastelCyanLight, AppColors.pastelCyanDark, TackIcons.whiteboard),
+      ('Clips', workspace.totalClipsCount, AppColors.pastelLimeLight, AppColors.pastelLimeDark, TackIcons.clipboard),
+    ];
+
+    return Row(
+      children: stats.map((stat) {
+        final accent = isDark ? stat.$4 : stat.$3;
+        return Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.25)
+                      : const Color(0xFF191A23).withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: isDark ? 0.35 : 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: TackIcon(stat.$5, size: 14, color: isDark ? stat.$3 : stat.$4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${stat.$2}',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  stat.$1,
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDataSection(BuildContext context, WorkspaceProvider workspace, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : const Color(0xFF191A23).withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          TackIcon(icon, size: 18, color: isDark ? Colors.white : AppColors.lightTextPrimary),
-          const SizedBox(height: 4),
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : AppColors.lightTextPrimary,
-            ),
+          _buildSettingsActionTile(
+            context,
+            icon: TackIcons.exportData,
+            iconColor: AppColors.accentAmber,
+            title: 'Export Backup',
+            subtitle: 'Save JSON bundle',
+            trailing: TackIcons.share,
+            onTap: () => _exportBackup(context),
           ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 52,
+            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
           ),
+          _buildSettingsActionTile(
+            context,
+            icon: TackIcons.importData,
+            iconColor: AppColors.pastelCyanLight,
+            title: 'Restore Backup',
+            subtitle: 'Import JSON or clipboard',
+            trailing: TackIcons.chevronDown,
+            onTap: () => _showRestoreDialog(context),
+          ),
+          if (workspace.trashItems.isNotEmpty) ...[
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 52,
+              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+            ),
+            _buildSettingsActionTile(
+              context,
+              icon: TackIcons.trash,
+              iconColor: AppColors.error,
+              title: 'Empty Trash',
+              subtitle: '${workspace.trashItems.length} items in trash',
+              trailing: TackIcons.close,
+              isDestructive: true,
+              onTap: () => _confirmEmptyTrash(context),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String title, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        Text(value, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
+  Widget _buildSettingsActionTile(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required IconData trailing,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: isDark ? 0.2 : 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: TackIcon(icon, size: 18, color: iconColor),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                        color: isDestructive
+                            ? AppColors.error
+                            : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TackIcon(
+                trailing,
+                size: 16,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
-

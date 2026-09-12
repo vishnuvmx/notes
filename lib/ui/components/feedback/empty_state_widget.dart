@@ -5,7 +5,7 @@ import '../../../core/theme/tack_icons.dart';
 
 /// Playful, soft empty state illustration with cute HeroIcons.
 class EmptyStateWidget extends StatelessWidget {
-  final HeroIcons icon;
+  final IconData icon;
   final String title;
   final String subtitle;
   final String? actionLabel;

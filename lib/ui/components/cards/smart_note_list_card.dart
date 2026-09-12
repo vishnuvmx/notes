@@ -37,7 +37,8 @@ class SmartNoteListCard extends StatelessWidget {
     String metaString = DateFormatter.formatTimestamp(item.updatedAt);
     if (item is TextNote) {
       final note = item as TextNote;
-      metaString = '${note.estimatedMinutes} min read  •  $metaString';
+      final source = note.sourceApp != null ? '  •  from ${note.sourceApp}' : '';
+      metaString = '${note.estimatedMinutes} min read  •  $metaString$source';
     }
 
     return Container(

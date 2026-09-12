@@ -5,6 +5,7 @@ class TextNote extends BaseWorkspaceItem {
   final String content;
   final List<String> tags;
   final int estimatedMinutes;
+  final String? sourceApp;
 
   const TextNote({
     required super.id,
@@ -18,6 +19,7 @@ class TextNote extends BaseWorkspaceItem {
     required this.content,
     this.tags = const [],
     this.estimatedMinutes = 3,
+    this.sourceApp,
   }) : super(type: ItemType.note);
 
   int get letterCount => content.replaceAll(RegExp(r'\s'), '').length;
@@ -66,6 +68,7 @@ class TextNote extends BaseWorkspaceItem {
     String? content,
     List<String>? tags,
     int? estimatedMinutes,
+    String? sourceApp,
   }) {
     return TextNote(
       id: id,
@@ -79,6 +82,7 @@ class TextNote extends BaseWorkspaceItem {
       content: content ?? this.content,
       tags: tags ?? this.tags,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      sourceApp: sourceApp ?? this.sourceApp,
     );
   }
 
@@ -97,6 +101,7 @@ class TextNote extends BaseWorkspaceItem {
       'content': content,
       'tags': tags,
       'estimatedMinutes': estimatedMinutes,
+      'sourceApp': sourceApp,
     };
   }
 
@@ -113,6 +118,7 @@ class TextNote extends BaseWorkspaceItem {
       content: json['content'] as String? ?? '',
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       estimatedMinutes: json['estimatedMinutes'] as int? ?? 3,
+      sourceApp: json['sourceApp'] as String?,
     );
   }
 }

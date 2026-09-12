@@ -98,156 +98,138 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (text != null && text.isNotEmpty) {
-      final workspace = context.read<WorkspaceProvider>();
-      final item = await workspace.saveClipboardSnippet(text);
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            elevation: 10,
-            backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
-                width: 1.2,
+    if (text == null || text.isEmpty) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.clipboard,
+        iconColor: AppColors.accentAmber,
+        message: 'Clipboard is empty',
+      );
+      return;
+    }
+
+    final workspace = context.read<WorkspaceProvider>();
+
+    // Rule 1: Do not add individual numbers (e.g. standalone numbers)
+    if (WorkspaceProvider.isIndividualNumber(text)) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.close,
+        iconColor: AppColors.error,
+        message: 'Numbers are skipped',
+      );
+      return;
+    }
+
+    // Rule 2: Do not add duplicates (if added once, don't add again)
+    if (workspace.isClipboardDuplicate(text)) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.checkCircle,
+        iconColor: AppColors.accentAmber,
+        message: 'Already in clipboard',
+      );
+      return;
+    }
+
+    final item = await workspace.saveClipboardSnippet(text);
+    if (mounted && item != null) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.checkCircle,
+        iconColor: AppColors.success,
+        message: 'Saved to clips',
+        action: GestureDetector(
+          onTap: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            widget.onOpenItem?.call(item);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.accentAmber.withValues(alpha: isDark ? 0.25 : 0.2),
+              borderRadius: AppSpacing.roundedPill,
+            ),
+            child: Text(
+              'Open',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                color: isDark ? AppColors.pastelAmberLight : AppColors.pastelAmberDark,
+                fontWeight: FontWeight.w700,
+                fontSize: 11.5,
               ),
             ),
-            duration: const Duration(seconds: 4),
-            content: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: TackIcon(TackIcons.check, size: 18, color: AppColors.success),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Saved to Notes',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.72),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    widget.onOpenItem?.call(item);
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentAmber,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Open',
-                      style: TextStyle(
-                        color: Color(0xFF191A23),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          elevation: 10,
-          backgroundColor: isDark ? const Color(0xFF14151B) : const Color(0xFF191A23),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: isDark ? AppColors.darkBorder : const Color(0xFF2C2E3B),
-              width: 1.2,
-            ),
-          ),
-          duration: const Duration(seconds: 2),
-          content: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.accentAmber.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: TackIcon(TackIcons.clipboard, size: 18, color: AppColors.accentAmber),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'System Clipboard is Empty',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Copy text from any app to save it here',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         ),
       );
     }
+  }
+
+  void _showClipboardFeedbackSnackBar({
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String message,
+    Widget? action,
+  }) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
+        padding: EdgeInsets.zero,
+        duration: const Duration(milliseconds: 1800),
+        content: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: AppSpacing.roundedPill,
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.4)
+                      : const Color(0xFF191A23).withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TackIcon(icon, size: 16, color: iconColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                if (action != null) ...[
+                  const SizedBox(width: 10),
+                  action,
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _handleBottomNavTap(int index) {
@@ -643,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String title;
     String subtitle;
     String actionLabel;
-    HeroIcons icon;
+    IconData icon;
 
     if (workspace.searchQuery.isNotEmpty) {
       title = 'Nothing found';

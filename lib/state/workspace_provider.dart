@@ -248,10 +248,112 @@ class WorkspaceProvider extends ChangeNotifier {
     return newItem;
   }
 
-  /// Save a snippet directly from the system clipboard
-  Future<ClipboardItem> saveClipboardSnippet(String text, {String? source}) async {
+  /// Generates a concise title from note text or source app name.
+  static String generateNoteTitle(String text, {String? sourceApp}) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      return sourceApp != null && sourceApp.isNotEmpty
+          ? 'Note from $sourceApp'
+          : 'Untitled Note';
+    }
+
+    // Use first line if it's concise
+    final firstLine = trimmed.split('\n').first.trim().replaceAll(RegExp(r'^[#*_\->\s]+'), '');
+    if (firstLine.isNotEmpty && firstLine.length <= 40) {
+      return firstLine;
+    } else if (firstLine.isNotEmpty) {
+      return '${firstLine.substring(0, 37)}...';
+    } else if (sourceApp != null && sourceApp.isNotEmpty) {
+      return 'Note from $sourceApp';
+    }
+    return 'Untitled Note';
+  }
+
+  /// Create and save a new note directly from external selected text (e.g. Android "Save to Tack").
+  /// Preserves the selected text exactly without alterations.
+  /// Handles unsupported apps and empty selections gracefully.
+  Future<TextNote?> createNoteFromExternalText(String text, {String? sourceApp}) async {
+    if (text.trim().isEmpty) return null;
+
     final now = DateTime.now();
+    final id = 'note_${now.millisecondsSinceEpoch}';
+    final title = generateNoteTitle(text, sourceApp: sourceApp);
+
+    final tags = <String>[];
+    if (sourceApp != null && sourceApp.trim().isNotEmpty) {
+      tags.add(sourceApp.trim());
+    }
+
+    final newNote = TextNote(
+      id: id,
+      title: title,
+      content: text, // Preserved exactly as selected
+      createdAt: now,
+      updatedAt: now,
+      paletteId: 'amber',
+      sourceApp: sourceApp,
+      tags: tags,
+    );
+
+    await saveItem(newNote);
+    return newNote;
+  }
+
+  /// Checks if a string represents an individual/standalone number (e.g. "4", "42", "3.14", "+919876543210", "$50", "10%").
+  /// Paragraphs or text containing words/letters are NOT considered individual numbers.
+  static bool isIndividualNumber(String text) {
     final clean = text.trim();
+    if (clean.isEmpty) return false;
+
+    // 1. If it contains any Unicode letters (alphabets in any language),
+    // it contains words or text and is NOT an individual number.
+    if (RegExp(r'\p{L}', unicode: true).hasMatch(clean)) {
+      return false;
+    }
+
+    // 2. Direct numeric check: e.g. "42", "3.14", "-5", "+10"
+    if (num.tryParse(clean) != null) {
+      return true;
+    }
+
+    // 3. Formatted numbers: remove all common number formatting characters
+    // (spaces, commas, dots, plus, minus, parentheses, slashes, percent, currency symbols: $, €, £, ¥, ₹, #)
+    final digitsOnly = clean.replaceAll(RegExp(r'[\s,.\-+()/%$€£¥₹#:]'), '');
+
+    // If it contains at least one digit and NOTHING else after removing formatting symbols:
+    if (digitsOnly.isNotEmpty && RegExp(r'^\d+$').hasMatch(digitsOnly)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Check if a clipboard snippet with the given text already exists in active items
+  bool isClipboardDuplicate(String text) {
+    final clean = text.trim();
+    if (clean.isEmpty) return false;
+    return _items
+        .whereType<ClipboardItem>()
+        .any((item) => item.clipText.trim() == clean);
+  }
+
+  /// Save a snippet directly from the system clipboard.
+  /// Enforces deduplication (never add the same snippet twice) and ignores individual numbers.
+  Future<ClipboardItem?> saveClipboardSnippet(String text, {String? source}) async {
+    final clean = text.trim();
+    if (clean.isEmpty) return null;
+
+    // Rule 1: Do not add if it is an individual number
+    if (isIndividualNumber(clean)) {
+      return null;
+    }
+
+    // Rule 2: Do not add if already present in clipboard history
+    if (isClipboardDuplicate(clean)) {
+      return null;
+    }
+
+    final now = DateTime.now();
     final firstLine = clean.split('\n').first.trim();
     final title = firstLine.length > 32
         ? '${firstLine.substring(0, 32)}...'
