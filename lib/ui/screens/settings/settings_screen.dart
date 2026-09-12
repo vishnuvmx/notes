@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -222,6 +223,140 @@ class SettingsScreen extends StatelessWidget {
       HapticFeedback.mediumImpact();
       await context.read<WorkspaceProvider>().emptyTrash();
     }
+  }
+
+  Future<void> _showServerConfigDialog(BuildContext context) async {
+    final currentUrl = await ApiConfig.getBaseUrl();
+    final defaultUrl = ApiConfig.defaultBaseUrl;
+    final controller = TextEditingController(text: currentUrl);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (!context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        String? testStatus;
+        bool isTesting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+                side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              ),
+              title: const Row(
+                children: [
+                  TackIcon(TackIcons.bolt, size: 20, color: AppColors.accentAmber),
+                  SizedBox(width: 8),
+                  Text('AI Server Connection', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+                ],
+              ),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Default: $defaultUrl\nUse localhost for emulator, local Wi-Fi IP (192.168.x.x:3000) for phone, or production cloud URL.',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                      decoration: InputDecoration(
+                        hintText: defaultUrl,
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          onPressed: isTesting
+                              ? null
+                              : () async {
+                                  setDialogState(() {
+                                    isTesting = true;
+                                    testStatus = 'Testing...';
+                                  });
+                                  final ok = await ApiConfig.checkServerHealth(controller.text.trim());
+                                  setDialogState(() {
+                                    isTesting = false;
+                                    testStatus = ok ? 'Connected successfully!' : 'Connection failed';
+                                  });
+                                },
+                          child: Text(
+                            isTesting ? 'Testing...' : 'Test Connection',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            controller.text = defaultUrl;
+                          },
+                          child: const Text('Reset', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                    if (testStatus != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        testStatus!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: testStatus!.contains('success') ? AppColors.success : AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  child: Text('Cancel', style: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentAmber,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    await ApiConfig.setBaseUrl(controller.text.trim());
+                    if (context.mounted) Navigator.of(dialogCtx).pop();
+                  },
+                  child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -609,6 +744,21 @@ class SettingsScreen extends StatelessWidget {
             subtitle: 'Import JSON or clipboard',
             trailing: TackIcons.chevronDown,
             onTap: () => _showRestoreDialog(context),
+          ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 52,
+            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          ),
+          _buildSettingsActionTile(
+            context,
+            icon: TackIcons.bolt,
+            iconColor: AppColors.accentAmber,
+            title: 'AI Server Connection',
+            subtitle: 'Configure local or cloud URL',
+            trailing: TackIcons.settings,
+            onTap: () => _showServerConfigDialog(context),
           ),
           if (workspace.trashItems.isNotEmpty) ...[
             Divider(

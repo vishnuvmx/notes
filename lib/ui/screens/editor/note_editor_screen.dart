@@ -13,8 +13,10 @@ import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
+import '../../components/dialogs_sheets/smart_actions_sheet.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
+import '../../../domain/services/ai_backend_service.dart';
 
 /// Full-featured Note Editor & Reader Screen (Phase 3).
 /// Includes Reading/Editing mode switcher, live interactive checklists,
@@ -40,6 +42,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
+  bool _isAiProcessing = false;
+  String _aiStatusText = 'Thinking...';
 
   @override
   void initState() {
@@ -138,7 +142,169 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _saveNote();
   }
 
+  Future<void> _openSmartActions() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      _showEditorToast('Write some text before using Smart Actions', isError: true);
+      return;
+    }
+
+    final action = await SmartActionsSheet.show(context);
+    if (action == null || !mounted) return;
+
+    setState(() {
+      _isAiProcessing = true;
+      switch (action) {
+        case SmartActionType.tidy:
+          _aiStatusText = 'Polishing...';
+          break;
+        case SmartActionType.checklist:
+          _aiStatusText = 'Extracting...';
+          break;
+        case SmartActionType.summarize:
+          _aiStatusText = 'Summarizing...';
+          break;
+        case SmartActionType.titleTags:
+          _aiStatusText = 'Categorizing...';
+          break;
+      }
+    });
+
+    try {
+      switch (action) {
+        case SmartActionType.tidy:
+          final cleaned = await AiBackendService.tidyAndPolish(
+            _contentController.text,
+            title: _titleController.text,
+          );
+          if (mounted) {
+            _contentController.text = cleaned;
+            _saveNote();
+            _showEditorToast('Note polished');
+          }
+          break;
+
+        case SmartActionType.checklist:
+          final checklist = await AiBackendService.extractChecklist(
+            _contentController.text,
+            title: _titleController.text,
+          );
+          if (mounted) {
+            final current = _contentController.text.trim();
+            _contentController.text = current.isNotEmpty
+                ? '$current\n\n### Checklist\n$checklist'
+                : checklist;
+            _saveNote();
+            _showEditorToast('Checklist extracted');
+          }
+          break;
+
+        case SmartActionType.summarize:
+          final summary = await AiBackendService.summarize(
+            _contentController.text,
+            title: _titleController.text,
+          );
+          if (mounted) {
+            final current = _contentController.text.trim();
+            _contentController.text = '> **Key Takeaways**\n$summary\n\n$current';
+            _saveNote();
+            _showEditorToast('Summary added');
+          }
+          break;
+
+        case SmartActionType.titleTags:
+          final res = await AiBackendService.suggestTitleAndTags(
+            _contentController.text,
+            title: _titleController.text,
+          );
+          if (mounted) {
+            _titleController.text = res.title;
+            for (final t in res.tags) {
+              if (!_tags.contains(t)) _tags.add(t);
+            }
+            _saveNote();
+            _showEditorToast('Title & tags updated');
+          }
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        _showEditorToast(e.toString().replaceAll('Exception: ', ''), isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isAiProcessing = false);
+      }
+    }
+  }
+
+  void _showEditorToast(String message, {bool isError = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
+        padding: EdgeInsets.zero,
+        duration: const Duration(milliseconds: 2000),
+        content: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: AppSpacing.roundedPill,
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.4)
+                      : const Color(0xFF191A23).withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TackIcon(
+                  isError ? TackIcons.close : TackIcons.checkCircle,
+                  size: 16,
+                  color: isError ? AppColors.error : AppColors.success,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _applyFormatting(String action) {
+    if (action == 'smart_actions') {
+      _openSmartActions();
+      return;
+    }
     final text = _contentController.text;
     TextSelection selection = _contentController.selection;
 
@@ -411,15 +577,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TackIcon(
-                      _isSaving ? TackIcons.undo : TackIcons.checkCircle,
+                      _isAiProcessing
+                          ? TackIcons.bolt
+                          : (_isSaving ? TackIcons.undo : TackIcons.checkCircle),
                       size: 14,
-                      color: _isSaving ? AppColors.accentAmber : AppColors.success,
-                      style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
+                      color: _isAiProcessing
+                          ? AppColors.accentAmber
+                          : (_isSaving ? AppColors.accentAmber : AppColors.success),
+                      style: (_isAiProcessing || _isSaving) ? HeroIconStyle.outline : HeroIconStyle.solid,
                     ),
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        _isSaving ? 'Saving' : 'Saved • ${wordCount}w',
+                        _isAiProcessing
+                            ? _aiStatusText
+                            : (_isSaving ? 'Saving' : 'Saved • ${wordCount}w'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -436,6 +608,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           ],
         ),
         actions: [
+          // Smart Actions Trigger
+          IconButton(
+            icon: const TackIcon(
+              TackIcons.bolt,
+              size: 20,
+              color: AppColors.accentAmber,
+            ),
+            tooltip: 'Smart Actions',
+            onPressed: _isAiProcessing ? null : _openSmartActions,
+          ),
+
           // Edit / Read View Mode Switcher
           IconButton(
             icon: TackIcon(
@@ -468,7 +651,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               icon: TackIcons.more,
               iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               onSelected: (val) {
-                if (val == 'favorite') {
+                if (val == 'smart_actions') {
+                  _openSmartActions();
+                } else if (val == 'favorite') {
                   workspace.toggleFavorite(widget.item.id);
                   setState(() {});
                 } else if (val == 'share') {
@@ -479,6 +664,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 }
               },
               items: [
+                const IosMenuItem(
+                  value: 'smart_actions',
+                  title: 'Smart Actions',
+                  icon: TackIcons.bolt,
+                  iconColor: AppColors.accentAmber,
+                ),
                 IosMenuItem(
                   value: 'favorite',
                   title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
