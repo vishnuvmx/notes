@@ -12,20 +12,22 @@ class AppColors {
   static const Color accentOrange = Color(0xFFF3916A);
 
   // Light surfaces (Soft, tactile, off-white)
-  static const Color lightBackground = Color(0xFFF7F8FA);
+  static const Color lightBackground = Color(0xFFF8F9FA);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceAlt = Color(0xFFEFF1F5);
+  static const Color lightSurfaceAlt = Color(0xFFF1F3F5);
   static const Color lightBorder = Color(0xFFE8EAEF);
-  static const Color lightTextPrimary = Color(0xFF18191F);
+  static const Color lightTextPrimary = Color(0xFF191A23);
   static const Color lightTextSecondary = Color(0xFF5E6272);
   static const Color lightTextMuted = Color(0xFF969BAA);
 
-  // Dark surfaces (OLED Pitch Black & Deep Velvety Surfaces)
-  static const Color darkBackground = Color(0xFF000000); // True OLED pitch black
-  static const Color darkSurface = Color(0xFF0E0F13);    // Subtle elevation off pitch black
-  static const Color darkSurfaceAlt = Color(0xFF171820); // Elevated nested controls, search, inputs
-  static const Color darkBorder = Color(0xFF232634);     // Crisp hairline separation against OLED black
-  static const Color darkTextPrimary = Color(0xFFF7F8FA);
+  // Dark surfaces (Tack Design Spec: #121316 Surface, #1E1F24 Card, #F4F4F6 Text)
+  static const Color darkBackground = Color(0xFF121316);
+  static const Color darkSurface = Color(0xFF121316);
+  static const Color darkSurfaceAlt = Color(0xFF1E1F24);
+  static const Color darkCard = Color(0xFF1E1F24);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color darkBorder = Color(0xFF272930);
+  static const Color darkTextPrimary = Color(0xFFF4F4F6);
   static const Color darkTextSecondary = Color(0xFFA1A6B7);
   static const Color darkTextMuted = Color(0xFF6B7184);
 

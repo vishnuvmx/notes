@@ -7,13 +7,13 @@ import 'app_colors.dart';
 class AppTypography {
   AppTypography._();
 
-  // Primary font family: Plus Jakarta Sans
+  // Primary & display font family: DM Sans per Tack Design Guidelines
   static String get fontFamily =>
-      GoogleFonts.plusJakartaSans().fontFamily ?? 'Plus Jakarta Sans';
+      GoogleFonts.dmSans().fontFamily ?? 'DM Sans';
 
-  // Display font family: Space Grotesk
+  // Display font family
   static String get displayFontFamily =>
-      GoogleFonts.spaceGrotesk().fontFamily ?? 'Space Grotesk';
+      GoogleFonts.dmSans().fontFamily ?? 'DM Sans';
 
   // Letter spacing constant ~-2% (-0.02 * fontSize)
   static double ls(double fontSize) => -(fontSize * 0.02);

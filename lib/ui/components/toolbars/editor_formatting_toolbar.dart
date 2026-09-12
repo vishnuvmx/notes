@@ -100,8 +100,6 @@ class EditorFormattingToolbar extends StatelessWidget {
       customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, height: 1.0, fontFamily: 'serif'),
     ),
     IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.photo),
-    DividerToolbarItem(),
-    IconToolbarItem(label: 'Smart Actions', action: 'smart_actions', icon: TackIcons.bolt),
   ];
 
   @override
