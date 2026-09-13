@@ -7,6 +7,7 @@ import 'package:notes/domain/models/text_note.dart';
 import 'package:notes/domain/models/sticky_note.dart';
 import 'package:notes/state/workspace_provider.dart';
 import 'package:notes/state/theme_provider.dart';
+import 'package:notes/ui/components/inputs/markdown_text_editing_controller.dart';
 import 'package:notes/ui/components/inputs/rich_note_content_view.dart';
 import 'package:notes/ui/screens/editor/note_editor_screen.dart';
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -59,7 +60,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
         duration: const Duration(milliseconds: 130),
         decoration: BoxDecoration(
           color: cardBg,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: AppSpacing.roundedLg,
           border: Border.all(color: borderColor, width: 1.5),
           boxShadow: isDark
               ? [
@@ -79,7 +80,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: AppSpacing.roundedLg,
           child: InkWell(
             onTapDown: (_) {
               HapticFeedback.selectionClick();
@@ -91,7 +92,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
               HapticFeedback.mediumImpact();
               widget.onTap();
             },
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: AppSpacing.roundedLg,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
               child: Column(
@@ -161,13 +162,13 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     } else if (widget.item is TextNote) {
       final note = widget.item as TextNote;
       if (note.tags.any((t) => t.toLowerCase().contains('fitness') || t.toLowerCase().contains('sport'))) {
-        icon = Icons.bolt_rounded;
+        icon = TackIcons.bolt;
       } else if (note.tags.any((t) => t.toLowerCase().contains('work'))) {
-        icon = Icons.work_rounded;
+        icon = TackIcons.briefcase;
       } else if (note.tags.any((t) => t.toLowerCase().contains('personal'))) {
-        icon = Icons.face_rounded;
+        icon = TackIcons.user;
       } else {
-        icon = Icons.edit_note_rounded;
+        icon = TackIcons.notes;
       }
     }
 

@@ -138,40 +138,104 @@ class WorkspaceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save or update an item
+  /// Lookup item across active, favorites, archived, and trash lists
+  BaseWorkspaceItem? getItemById(String id) {
+    for (final item in _items) {
+      if (item.id == id) return item;
+    }
+    for (final item in _favoriteItems) {
+      if (item.id == id) return item;
+    }
+    for (final item in _archivedItems) {
+      if (item.id == id) return item;
+    }
+    for (final item in _trashItems) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
+  /// Save or update an item with optimistic in-memory updates
   Future<void> saveItem(BaseWorkspaceItem item) async {
+    final index = _items.indexWhere((i) => i.id == item.id);
+    if (index != -1) {
+      _items[index] = item;
+    } else if (!item.isTrash && !item.isArchived) {
+      _items.insert(0, item);
+    }
+
+    _favoriteItems.removeWhere((i) => i.id == item.id);
+    if (item.isFavorite && !item.isTrash && !item.isArchived) {
+      _favoriteItems.insert(0, item);
+    }
+
+    _archivedItems.removeWhere((i) => i.id == item.id);
+    if (item.isArchived && !item.isTrash) {
+      _archivedItems.insert(0, item);
+    }
+
+    notifyListeners();
     await _repository.saveItem(item);
-    await loadItems();
   }
 
   /// Toggle favorite status
   Future<void> toggleFavorite(String id) async {
-    await _repository.toggleFavorite(id);
-    await loadItems();
+    final item = getItemById(id);
+    if (item == null) return;
+    final updated = item.copyWith(isFavorite: !item.isFavorite);
+    await saveItem(updated);
   }
 
   /// Soft delete item to trash
   Future<void> moveToTrash(String id) async {
+    final item = getItemById(id);
+    if (item == null) return;
+    final trashed = item.copyWith(isTrash: true);
+    _items.removeWhere((i) => i.id == id);
+    _favoriteItems.removeWhere((i) => i.id == id);
+    _archivedItems.removeWhere((i) => i.id == id);
+    _trashItems.insert(0, trashed);
+    notifyListeners();
     await _repository.moveToTrash(id);
-    await loadItems();
   }
 
   /// Restore item from trash
   Future<void> restoreItem(String id) async {
+    final item = getItemById(id);
+    if (item == null) return;
+    final restored = item.copyWith(isTrash: false);
+    _trashItems.removeWhere((i) => i.id == id);
+    _items.insert(0, restored);
+    if (restored.isFavorite) _favoriteItems.insert(0, restored);
+    if (restored.isArchived) _archivedItems.insert(0, restored);
+    notifyListeners();
     await _repository.restoreItem(id);
-    await loadItems();
   }
 
   /// Toggle archive
   Future<void> toggleArchive(String id) async {
+    final item = getItemById(id);
+    if (item == null) return;
+    final toggled = item.copyWith(isArchived: !item.isArchived);
+    if (toggled.isArchived) {
+      _items.removeWhere((i) => i.id == id);
+      _archivedItems.insert(0, toggled);
+    } else {
+      _archivedItems.removeWhere((i) => i.id == id);
+      _items.insert(0, toggled);
+    }
+    notifyListeners();
     await _repository.toggleArchive(id);
-    await loadItems();
   }
 
   /// Permanent deletion
   Future<void> deletePermanently(String id) async {
+    _trashItems.removeWhere((i) => i.id == id);
+    _items.removeWhere((i) => i.id == id);
+    _favoriteItems.removeWhere((i) => i.id == id);
+    _archivedItems.removeWhere((i) => i.id == id);
+    notifyListeners();
     await _repository.deletePermanently(id);
-    await loadItems();
   }
 
   /// Empty trash bin

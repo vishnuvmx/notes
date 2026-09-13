@@ -199,6 +199,31 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
 
+          // View Mode Switcher (Grid vs Notebook List)
+          IconButton(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              final nextMode = workspace.viewMode == HomeViewMode.stickyGrid
+                  ? HomeViewMode.notebook
+                  : HomeViewMode.stickyGrid;
+              context.read<WorkspaceProvider>().setViewMode(nextMode);
+            },
+            icon: TackIcon(
+              workspace.viewMode == HomeViewMode.stickyGrid
+                  ? TackIcons.listView
+                  : TackIcons.gridView,
+              size: 20,
+              color: iconColor,
+            ),
+            tooltip: workspace.viewMode == HomeViewMode.stickyGrid
+                ? 'Notebook List View'
+                : 'Grid View',
+            style: IconButton.styleFrom(
+              minimumSize: const Size(38, 38),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+
           // Quick Theme Toggle
           IconButton(
             onPressed: () {

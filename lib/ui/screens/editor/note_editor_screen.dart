@@ -13,8 +13,11 @@ import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
+import '../../components/dialogs_sheets/note_statistics_sheet.dart';
+import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
+import '../../../domain/services/note_export_service.dart';
 
 /// Full-featured Note Editor & Reader Screen (Phase 3).
 /// Includes Reading/Editing mode switcher, live interactive checklists,
@@ -286,133 +289,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _showNoteStatisticsSheet() {
-    final text = _contentController.text;
-    final words = text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
-    final chars = text.length;
-    final charsNoSpaces = text.replaceAll(RegExp(r'\s'), '').length;
-    final paragraphs = text.split('\n').where((l) => l.trim().isNotEmpty).length;
-    final readTime = ((words / 180).ceil()).clamp(1, 60);
-
-    final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(text).length;
-    final completedChecklists = RegExp(r'\[[xX]\]').allMatches(text).length;
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Note Statistics',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const TackIcon(TackIcons.close, size: 18),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    _buildStatCard('Words', '$words', isDark),
-                    const SizedBox(width: AppSpacing.sm),
-                    _buildStatCard('Characters', '$chars', isDark),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    _buildStatCard('Chars (no spaces)', '$charsNoSpaces', isDark),
-                    const SizedBox(width: AppSpacing.sm),
-                    _buildStatCard('Paragraphs', '$paragraphs', isDark),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    _buildStatCard('Reading Time', '$readTime min read', isDark),
-                    if (totalChecklists > 0) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      _buildStatCard('Tasks', '$completedChecklists/$totalChecklists done', isDark),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, bool isDark) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-            width: 0.8,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11,
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    NoteStatisticsSheet.show(context, content: _contentController.text);
   }
 
   void _showColorPicker() {
@@ -449,7 +326,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _showShareExportSheet() {
     final title = _titleController.text;
     final content = _contentController.text;
-    final fullDoc = '# $title\n\n$content';
 
     showModalBottomSheet(
       context: context,
@@ -467,8 +343,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ListTile(
               leading: const TackIcon(TackIcons.copy, size: 22),
               title: const Text('Copy Formatted Markdown'),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: fullDoc));
+              onTap: () async {
+                await NoteExportService.copyMarkdown(title: title, content: content, tags: _tags);
+                if (!ctx.mounted || !mounted) return;
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -482,9 +359,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ListTile(
               leading: const TackIcon(TackIcons.notes, size: 22),
               title: const Text('Copy Plain Text'),
-              onTap: () {
-                final plain = '$title\n\n${content.replaceAll(RegExp(r'[*#_~>]'), '')}';
-                Clipboard.setData(ClipboardData(text: plain));
+              onTap: () async {
+                await NoteExportService.copyPlainText(title: title, content: content);
+                if (!ctx.mounted || !mounted) return;
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -968,137 +845,5 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         ),
       ),
     );
-  }
-}
-
-/// Syntax-highlighted text controller that renders bold, italic, strikethrough, underline, and tags inside the editor TextField.
-class MarkdownTextEditingController extends TextEditingController {
-  MarkdownTextEditingController({super.text});
-
-  @override
-  TextSpan buildTextSpan({
-    required BuildContext context,
-    TextStyle? style,
-    required bool withComposing,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final text = this.text;
-    if (text.isEmpty) {
-      return TextSpan(text: '', style: style);
-    }
-
-    final spans = <TextSpan>[];
-    final pattern = RegExp(
-      r'(==.*?==)|(\*\*.*?\*\*)|(__.*?__)|(\*.*?\*)|(_.*?_)|(~~.*?~~)|(<u>.*?</u>)|(#[a-zA-Z0-9_-]+)',
-      dotAll: false,
-    );
-
-    final delimiterStyle = style?.copyWith(
-      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.28),
-      fontWeight: FontWeight.normal,
-      fontStyle: FontStyle.normal,
-      decoration: TextDecoration.none,
-    );
-
-    int lastMatchEnd = 0;
-    for (final match in pattern.allMatches(text)) {
-      if (match.start > lastMatchEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastMatchEnd, match.start),
-          style: style,
-        ));
-      }
-
-      final matchedText = match.group(0)!;
-      if (matchedText.startsWith('==') && matchedText.endsWith('==') && matchedText.length >= 4) {
-        spans.add(TextSpan(text: '==', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(2, matchedText.length - 2),
-          style: style?.copyWith(
-            backgroundColor: isDark
-                ? AppColors.pastelAmberLight.withValues(alpha: 0.35)
-                : AppColors.pastelYellowLight.withValues(alpha: 0.6),
-            fontWeight: FontWeight.w600,
-          ),
-        ));
-        spans.add(TextSpan(text: '==', style: delimiterStyle));
-      } else if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
-        spans.add(TextSpan(text: '**', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(2, matchedText.length - 2),
-          style: style?.copyWith(fontWeight: FontWeight.bold),
-        ));
-        spans.add(TextSpan(text: '**', style: delimiterStyle));
-      } else if (matchedText.startsWith('__') && matchedText.endsWith('__') && matchedText.length >= 4) {
-        spans.add(TextSpan(text: '__', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(2, matchedText.length - 2),
-          style: style?.copyWith(decoration: TextDecoration.underline),
-        ));
-        spans.add(TextSpan(text: '__', style: delimiterStyle));
-      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
-        spans.add(TextSpan(text: '<u>', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(3, matchedText.length - 4),
-          style: style?.copyWith(decoration: TextDecoration.underline),
-        ));
-        spans.add(TextSpan(text: '</u>', style: delimiterStyle));
-      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
-        spans.add(TextSpan(text: '*', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(1, matchedText.length - 1),
-          style: style?.copyWith(fontStyle: FontStyle.italic),
-        ));
-        spans.add(TextSpan(text: '*', style: delimiterStyle));
-      } else if (matchedText.startsWith('_') && matchedText.endsWith('_') && matchedText.length >= 2) {
-        spans.add(TextSpan(text: '_', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(1, matchedText.length - 1),
-          style: style?.copyWith(fontStyle: FontStyle.italic),
-        ));
-        spans.add(TextSpan(text: '_', style: delimiterStyle));
-      } else if (matchedText.startsWith('~~') && matchedText.endsWith('~~') && matchedText.length >= 4) {
-        spans.add(TextSpan(text: '~~', style: delimiterStyle));
-        spans.add(TextSpan(
-          text: matchedText.substring(2, matchedText.length - 2),
-          style: style?.copyWith(decoration: TextDecoration.lineThrough),
-        ));
-        spans.add(TextSpan(text: '~~', style: delimiterStyle));
-      } else if (matchedText.startsWith('#')) {
-        final hexColor = AppColors.tryParseHexColor(matchedText);
-        if (hexColor != null) {
-          final luminance = hexColor.computeLuminance();
-          final textColor = luminance > 0.55 ? const Color(0xFF191A23) : Colors.white;
-          spans.add(TextSpan(
-            text: matchedText,
-            style: style?.copyWith(
-              backgroundColor: hexColor.withValues(alpha: 0.5),
-              color: textColor,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'monospace',
-            ),
-          ));
-        } else {
-          spans.add(TextSpan(
-            text: matchedText,
-            style: style?.copyWith(
-              color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
-              fontWeight: FontWeight.w700,
-            ),
-          ));
-        }
-      } else {
-        spans.add(TextSpan(text: matchedText, style: style));
-      }
-
-      lastMatchEnd = match.end;
-    }
-
-    if (lastMatchEnd < text.length) {
-      spans.add(TextSpan(text: text.substring(lastMatchEnd), style: style));
-    }
-
-    return TextSpan(children: spans, style: style);
   }
 }

@@ -8,10 +8,13 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
+import '../../../domain/models/sticky_note.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/cards/neo_note_card.dart';
+import '../../components/cards/smart_note_list_card.dart';
+import '../../components/cards/sticky_note_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
@@ -381,7 +384,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : items.isEmpty
                           ? _buildEmptyState(workspace)
-                          : _buildNeoGridFeedView(items),
+                          : (workspace.viewMode == HomeViewMode.notebook
+                              ? _buildNotebookFeedView(items, workspace)
+                              : _buildNeoGridFeedView(items)),
                 ),
               ),
             ],
@@ -538,6 +543,47 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCard(BaseWorkspaceItem item) {
+    if (item is StickyNote) {
+      return StickyNoteCard(
+        item: item,
+        onTap: () => widget.onOpenItem?.call(item),
+      );
+    }
+    return NeoNoteCard(
+      item: item,
+      isGrid: true,
+      onTap: () => widget.onOpenItem?.call(item),
+    );
+  }
+
+  /// Clean Notebook List Feed with Spiral Spines and colored index numbers
+  Widget _buildNotebookFeedView(List<BaseWorkspaceItem> items, WorkspaceProvider workspace) {
+    final isClipboard = workspace.selectedCategory == ItemType.clipboard;
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        isClipboard ? 110 : 88,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SmartNoteListCard(
+            item: item,
+            index: index,
+            onTap: () => widget.onOpenItem?.call(item),
+          ),
+        );
+      },
+    );
+  }
+
   /// Staggered Neo-Pop Feed matching Reference Mockup (Offset columns instead of rigid matrix)
   Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
     final isClipboard = context.watch<WorkspaceProvider>().selectedCategory == ItemType.clipboard;
@@ -575,11 +621,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       angle: i.isEven ? -0.035 : -0.022,
                       child: SizedBox(
                         height: 218,
-                        child: NeoNoteCard(
-                          item: leftItems[i],
-                          isGrid: true,
-                          onTap: () => widget.onOpenItem?.call(leftItems[i]),
-                        ),
+                        child: _buildCard(leftItems[i]),
                       ),
                     ),
                   ),
@@ -599,11 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       angle: i.isEven ? 0.028 : 0.032,
                       child: SizedBox(
                         height: 218,
-                        child: NeoNoteCard(
-                          item: rightItems[i],
-                          isGrid: true,
-                          onTap: () => widget.onOpenItem?.call(rightItems[i]),
-                        ),
+                        child: _buildCard(rightItems[i]),
                       ),
                     ),
                   ),
