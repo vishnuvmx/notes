@@ -23,7 +23,6 @@ class WorkspaceProvider extends ChangeNotifier {
     _trashItems = _repository.cachedTrashItems;
     _archivedItems = _repository.cachedArchivedItems;
     _favoriteItems = _repository.cachedFavoriteItems;
-    loadItems();
   }
 
   List<BaseWorkspaceItem> _items = [];
