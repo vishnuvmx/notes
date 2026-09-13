@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:vector_math/vector_math_64.dart' as vmath;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
@@ -220,8 +220,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final newTransY = focalPoint.dy - (focalPoint.dy - translation.y) * effectiveFactor;
 
     final target = Matrix4.identity()
-      ..translate(newTransX, newTransY)
-      ..scale(newScale, newScale, 1.0);
+      ..translateByVector3(vmath.Vector3(newTransX, newTransY, 0.0))
+      ..scaleByVector3(vmath.Vector3(newScale, newScale, 1.0));
 
     _animateCanvasToMatrix(target);
   }
@@ -745,7 +745,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     if (_nodes.isEmpty) {
       final transX = (size.width / 2) - (_canvasSize / 2);
       final transY = (size.height / 2) - (_canvasSize / 2);
-      _animateCanvasToMatrix(Matrix4.identity()..translate(transX, transY));
+      _animateCanvasToMatrix(Matrix4.translationValues(transX, transY, 0.0));
       return;
     }
     double minX = _nodes.first.x;
@@ -777,8 +777,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final transY = centerScreenY - (centerContentY * fitScale);
 
     final matrix = Matrix4.identity()
-      ..translate(transX, transY)
-      ..scale(fitScale, fitScale, 1.0);
+      ..translateByVector3(vmath.Vector3(transX, transY, 0.0))
+      ..scaleByVector3(vmath.Vector3(fitScale, fitScale, 1.0));
 
     _animateCanvasToMatrix(matrix);
   }
@@ -2573,7 +2573,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 ),
                 const SizedBox(width: 4),
 
-                // 4. Delete Action
+                // 4. Duplicate Node Action
+                IconButton(
+                  icon: const TackIcon(TackIcons.copy, size: 16),
+                  tooltip: 'Duplicate Node',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: _duplicateSelectedNode,
+                ),
+                const SizedBox(width: 4),
+
+                // 5. Delete Action
                 IconButton(
                   icon: const TackIcon(TackIcons.trash, size: 16, color: AppColors.error),
                   tooltip: 'Delete Node',
