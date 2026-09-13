@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -38,7 +39,12 @@ class SmartNoteListCard extends StatelessWidget {
     if (item is TextNote) {
       final note = item as TextNote;
       final source = note.sourceApp != null ? '  •  from ${note.sourceApp}' : '';
-      metaString = '${note.estimatedMinutes} min read  •  $metaString$source';
+      final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(note.content).length;
+      final completedChecklists = RegExp(r'\[[xX]\]').allMatches(note.content).length;
+      final taskPart = totalChecklists > 0
+          ? '  •  $completedChecklists/$totalChecklists tasks'
+          : '';
+      metaString = '${note.estimatedMinutes} min read$taskPart  •  $metaString$source';
     }
 
     return Container(
@@ -143,6 +149,16 @@ class SmartNoteListCard extends StatelessWidget {
                   onSelected: (value) {
                     if (value == 'favorite') {
                       workspace.toggleFavorite(item.id);
+                    } else if (value == 'duplicate') {
+                      HapticFeedback.lightImpact();
+                      workspace.duplicateItem(item.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Duplicated "${item.title}"'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     } else if (value == 'archive') {
                       workspace.toggleArchive(item.id);
                     } else if (value == 'trash') {
@@ -156,6 +172,11 @@ class SmartNoteListCard extends StatelessWidget {
                       icon: TackIcons.star,
                       iconStyle: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                       iconColor: AppColors.accentAmber,
+                    ),
+                    const IosMenuItem(
+                      value: 'duplicate',
+                      title: 'Duplicate',
+                      icon: TackIcons.copy,
                     ),
                     IosMenuItem(
                       value: 'archive',

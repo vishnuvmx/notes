@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
-/// Data payload received from Android ACTION_PROCESS_TEXT or ACTION_SEND.
+/// Data payload received from Android ACTION_PROCESS_TEXT, ACTION_SEND, or ACTION_VIEW.
 class IncomingTextData {
   final String text;
+  final String? title;
+  final String? fileName;
   final String? sourceApp;
   final String? packageName;
   final String? action;
 
   const IncomingTextData({
     required this.text,
+    this.title,
+    this.fileName,
     this.sourceApp,
     this.packageName,
     this.action,
@@ -18,6 +22,8 @@ class IncomingTextData {
   factory IncomingTextData.fromMap(Map<dynamic, dynamic> map) {
     return IncomingTextData(
       text: map['text'] as String? ?? '',
+      title: map['title'] as String?,
+      fileName: map['fileName'] as String?,
       sourceApp: map['sourceApp'] as String?,
       packageName: map['packageName'] as String?,
       action: map['action'] as String?,

@@ -99,6 +99,7 @@ class EditorFormattingToolbar extends StatelessWidget {
       display: '”',
       customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, height: 1.0, fontFamily: 'serif'),
     ),
+    IconToolbarItem(label: 'Timestamp', action: 'timestamp', icon: TackIcons.clock),
     IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.photo),
   ];
 

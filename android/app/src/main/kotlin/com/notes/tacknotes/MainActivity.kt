@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -48,24 +49,44 @@ class MainActivity : FlutterActivity() {
         if (intent == null) return
         val action = intent.action ?: return
 
-        if (action == Intent.ACTION_PROCESS_TEXT || action == Intent.ACTION_SEND) {
-            val text: String? = when (action) {
-                Intent.ACTION_PROCESS_TEXT -> {
-                    intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
-                        ?: intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT)
+        if (action == Intent.ACTION_PROCESS_TEXT || action == Intent.ACTION_SEND || action == Intent.ACTION_VIEW) {
+            var text: String? = null
+            var fileName: String? = null
+            var title: String? = null
+
+            when (action) {
+                Intent.ACTION_VIEW -> {
+                    val uri: Uri? = intent.data
+                    if (uri != null) {
+                        fileName = resolveFileName(uri)
+                        text = readFileContent(uri)
+                    }
                 }
                 Intent.ACTION_SEND -> {
-                    if ("text/plain" == intent.type) {
-                        intent.getStringExtra(Intent.EXTRA_TEXT)
+                    @Suppress("DEPRECATION")
+                    val streamUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                    if (streamUri != null) {
+                        fileName = resolveFileName(streamUri)
+                        text = readFileContent(streamUri)
+                    } else {
+                        text = intent.getStringExtra(Intent.EXTRA_TEXT)
                             ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
-                    } else null
+                    }
                 }
-                else -> null
+                Intent.ACTION_PROCESS_TEXT -> {
+                    text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+                        ?: intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT)
+                }
             }
 
-            // Handle empty selections gracefully
+            // Handle empty selections or unreadable files gracefully
             if (text.isNullOrBlank()) {
                 return
+            }
+
+            // Strip extension for a clean note title if opened from a file
+            if (!fileName.isNullOrBlank()) {
+                title = fileName.replace(Regex("\\.(md|markdown|txt)$", RegexOption.IGNORE_CASE), "")
             }
 
             // If launched with ACTION_PROCESS_TEXT and not read-only, ensure original text is preserved
@@ -84,6 +105,8 @@ class MainActivity : FlutterActivity() {
 
             val payload = mapOf(
                 "text" to text,
+                "title" to title,
+                "fileName" to fileName,
                 "sourceApp" to sourceAppName,
                 "packageName" to packageName,
                 "action" to action
@@ -95,6 +118,36 @@ class MainActivity : FlutterActivity() {
             } else {
                 pendingPayload = payload
             }
+        }
+    }
+
+    private fun resolveFileName(uri: Uri): String? {
+        var name: String? = null
+        if (uri.scheme == "content") {
+            try {
+                contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (index >= 0) {
+                            name = cursor.getString(index)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        if (name.isNullOrBlank()) {
+            name = uri.lastPathSegment
+        }
+        return name
+    }
+
+    private fun readFileContent(uri: Uri): String? {
+        return try {
+            contentResolver.openInputStream(uri)?.use { stream ->
+                stream.bufferedReader(Charsets.UTF_8).readText()
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

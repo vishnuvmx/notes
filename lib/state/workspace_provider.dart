@@ -180,6 +180,38 @@ class WorkspaceProvider extends ChangeNotifier {
     await loadItems();
   }
 
+  /// Duplicate an existing item (creates an exact copy with "(Copy)" suffix and saves it)
+  Future<BaseWorkspaceItem?> duplicateItem(String id) async {
+    BaseWorkspaceItem? original;
+    try {
+      original = _items.firstWhere(
+        (item) => item.id == id,
+        orElse: () => _favoriteItems.firstWhere(
+          (item) => item.id == id,
+          orElse: () => _archivedItems.firstWhere(
+            (item) => item.id == id,
+          ),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final json = original.toJson();
+    json['id'] = '${original.type.name}_${now.millisecondsSinceEpoch}';
+    json['title'] = '${original.title} (Copy)';
+    json['createdAt'] = now.toIso8601String();
+    json['updatedAt'] = now.toIso8601String();
+
+    final duplicate = ItemSerializer.fromJson(json);
+    if (duplicate != null) {
+      await saveItem(duplicate);
+      return duplicate;
+    }
+    return null;
+  }
+
   /// Helper factory to quickly create and save a new note
   Future<BaseWorkspaceItem> createQuickItem({
     required String title,
@@ -269,15 +301,20 @@ class WorkspaceProvider extends ChangeNotifier {
     return 'Untitled Note';
   }
 
-  /// Create and save a new note directly from external selected text (e.g. Android "Save to Tack").
-  /// Preserves the selected text exactly without alterations.
-  /// Handles unsupported apps and empty selections gracefully.
-  Future<TextNote?> createNoteFromExternalText(String text, {String? sourceApp}) async {
+  /// Create and save a new note directly from external selected text or imported files (e.g. Android "Save to Tack" / Open Markdown).
+  /// Preserves the content exactly without alterations.
+  Future<TextNote?> createNoteFromExternalText(
+    String text, {
+    String? title,
+    String? sourceApp,
+  }) async {
     if (text.trim().isEmpty) return null;
 
     final now = DateTime.now();
     final id = 'note_${now.millisecondsSinceEpoch}';
-    final title = generateNoteTitle(text, sourceApp: sourceApp);
+    final resolvedTitle = (title != null && title.trim().isNotEmpty)
+        ? title.trim()
+        : generateNoteTitle(text, sourceApp: sourceApp);
 
     final tags = <String>[];
     if (sourceApp != null && sourceApp.trim().isNotEmpty) {
@@ -286,8 +323,8 @@ class WorkspaceProvider extends ChangeNotifier {
 
     final newNote = TextNote(
       id: id,
-      title: title,
-      content: text, // Preserved exactly as selected
+      title: resolvedTitle,
+      content: text, // Preserved exactly as selected or loaded
       createdAt: now,
       updatedAt: now,
       paletteId: 'amber',

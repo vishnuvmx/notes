@@ -261,6 +261,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         newCursorStart = before.length + 11;
         newCursorEnd = newCursorStart + 8;
         break;
+      case 'timestamp':
+        final now = DateTime.now();
+        final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
+        final minute = now.minute.toString().padLeft(2, '0');
+        final period = now.hour >= 12 ? 'PM' : 'AM';
+        final dateStr = DateFormatter.formatOrdinalDate(now);
+        final stamp = '[$dateStr, $hour:$minute $period] ';
+        newText = '$before$stamp$selectedText$after';
+        newCursorStart = before.length + stamp.length + selectedText.length;
+        newCursorEnd = newCursorStart;
+        break;
     }
 
     _contentController.value = TextEditingValue(
@@ -272,6 +283,136 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
 
     _contentFocusNode.requestFocus();
+  }
+
+  void _showNoteStatisticsSheet() {
+    final text = _contentController.text;
+    final words = text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+    final chars = text.length;
+    final charsNoSpaces = text.replaceAll(RegExp(r'\s'), '').length;
+    final paragraphs = text.split('\n').where((l) => l.trim().isNotEmpty).length;
+    final readTime = ((words / 180).ceil()).clamp(1, 60);
+
+    final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(text).length;
+    final completedChecklists = RegExp(r'\[[xX]\]').allMatches(text).length;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Note Statistics',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const TackIcon(TackIcons.close, size: 18),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    _buildStatCard('Words', '$words', isDark),
+                    const SizedBox(width: AppSpacing.sm),
+                    _buildStatCard('Characters', '$chars', isDark),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    _buildStatCard('Chars (no spaces)', '$charsNoSpaces', isDark),
+                    const SizedBox(width: AppSpacing.sm),
+                    _buildStatCard('Paragraphs', '$paragraphs', isDark),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    _buildStatCard('Reading Time', '$readTime min read', isDark),
+                    if (totalChecklists > 0) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildStatCard('Tasks', '$completedChecklists/$totalChecklists done', isDark),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, bool isDark) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+            width: 0.8,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 11,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showColorPicker() {
@@ -375,6 +516,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final wordCount = content.trim().isEmpty ? 0 : content.trim().split(RegExp(r'\s+')).length;
     final readTime = ((wordCount / 180).ceil()).clamp(1, 60);
 
+    final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
+    final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
+    final allChecklistsCompleted = totalChecklists > 0 && completedChecklists == totalChecklists;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -471,6 +616,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 if (val == 'favorite') {
                   workspace.toggleFavorite(widget.item.id);
                   setState(() {});
+                } else if (val == 'duplicate') {
+                  HapticFeedback.lightImpact();
+                  workspace.duplicateItem(widget.item.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Note duplicated!'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 } else if (val == 'share') {
                   _showShareExportSheet();
                 } else if (val == 'trash') {
@@ -485,6 +640,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   icon: TackIcons.star,
                   iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                   iconColor: AppColors.accentAmber,
+                ),
+                const IosMenuItem(
+                  value: 'duplicate',
+                  title: 'Duplicate Note',
+                  icon: TackIcons.copy,
                 ),
                 const IosMenuItem(
                   value: 'share',
@@ -515,29 +675,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                    // Reader Mode Banner Indicator
+                    // Reader Mode Banner Indicator (Tap for detailed note stats)
                     if (!_isEditingMode)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurfaceAlt : Colors.white.withValues(alpha: 0.8),
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const TackIcon(TackIcons.notes, size: 14, color: AppColors.accentAmber),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Reader Mode  •  $readTime min read',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _showNoteStatisticsSheet();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.darkSurfaceAlt : Colors.white.withValues(alpha: 0.8),
+                            borderRadius: AppSpacing.roundedPill,
+                          ),
+                          child: Text(
+                            'Reader Mode  •  $readTime min read',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
 
@@ -571,13 +728,48 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       ),
                     const SizedBox(height: 4),
 
-                    // Ordinal Date Stamp (Mockup detail screen: "4th Jan 2050")
-                    Text(
-                      DateFormatter.formatOrdinalDate(widget.item.updatedAt),
-                      style: AppTypography.cardDateStyle(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontSize: 13,
-                      ),
+                    // Ordinal Date Stamp & Checklist Progress
+                    Row(
+                      children: [
+                        Text(
+                          DateFormatter.formatOrdinalDate(widget.item.updatedAt),
+                          style: AppTypography.cardDateStyle(
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (totalChecklists > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: allChecklistsCompleted
+                                  ? (isDark ? AppColors.pastelLimeLight.withValues(alpha: 0.2) : AppColors.pastelLimeSoft)
+                                  : (isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: allChecklistsCompleted
+                                    ? AppColors.pastelLimeLight
+                                    : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              allChecklistsCompleted
+                                  ? '✓ All done!'
+                                  : '✓ $completedChecklists/$totalChecklists done',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: allChecklistsCompleted
+                                    ? (isDark ? AppColors.pastelLimeLight : const Color(0xFF386616))
+                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (widget.item is TextNote && (widget.item as TextNote).sourceApp != null) ...[
                       const SizedBox(height: 6),
@@ -595,25 +787,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 width: 0.8,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TackIcon(
-                                  TackIcons.notes,
-                                  size: 12,
-                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Saved from ${(widget.item as TextNote).sourceApp}',
-                                  style: TextStyle(
-                                    fontFamily: AppTypography.fontFamily,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              'Saved from ${(widget.item as TextNote).sourceApp}',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
                             ),
                           ),
                         ],

@@ -116,7 +116,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     if (text.isEmpty) {
       if (mounted) {
         _showFeedbackSnackBar(
-          message: 'No text selected',
+          message: 'Empty file or no text selected',
           isError: true,
         );
       }
@@ -126,21 +126,27 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     final workspace = context.read<WorkspaceProvider>();
     final newNote = await workspace.createNoteFromExternalText(
       data.text,
-      sourceApp: data.sourceApp,
+      title: data.title,
+      sourceApp: data.sourceApp ?? data.fileName,
     );
 
     if (newNote != null && mounted) {
       HapticFeedback.mediumImpact();
-      final sourceLabel = data.sourceApp != null && data.sourceApp!.isNotEmpty
-          ? 'from ${data.sourceApp}'
-          : 'from selected text';
+      final String sourceLabel;
+      if (data.fileName != null && data.fileName!.isNotEmpty) {
+        sourceLabel = 'Opened ${data.fileName}';
+      } else if (data.sourceApp != null && data.sourceApp!.isNotEmpty) {
+        sourceLabel = 'Saved from ${data.sourceApp}';
+      } else {
+        sourceLabel = 'Saved from selected text';
+      }
 
       _showFeedbackSnackBar(
-        message: 'Saved $sourceLabel',
+        message: sourceLabel,
         isError: false,
       );
 
-      // Open directly in Note Editor for seamless editing experience
+      // Open directly in Note Editor (which starts in Reader Mode for instant markdown preview)
       _openItemDetail(context, newNote);
     }
   }

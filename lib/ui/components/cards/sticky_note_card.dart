@@ -153,8 +153,9 @@ class _StickyNoteCardState extends State<StickyNoteCard> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPushPin(Color color, bool isDark) {
     return Container(
