@@ -8,6 +8,7 @@ import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/feedback/empty_state_widget.dart';
+import '../../components/dialogs_sheets/note_action_sheet.dart';
 
 enum FolderType {
   favorites,
@@ -165,6 +166,7 @@ class FolderViewScreen extends StatelessWidget {
                     child: NeoNoteCard(
                       item: item,
                       onTap: () => onOpenItem?.call(item),
+                      onLongPress: () => NoteActionSheet.show(context, item: item),
                       isGrid: false,
                     ),
                   ),

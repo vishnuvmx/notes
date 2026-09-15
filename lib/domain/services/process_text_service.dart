@@ -9,6 +9,7 @@ class IncomingTextData {
   final String? sourceApp;
   final String? packageName;
   final String? action;
+  final String? noteId;
 
   const IncomingTextData({
     required this.text,
@@ -17,6 +18,7 @@ class IncomingTextData {
     this.sourceApp,
     this.packageName,
     this.action,
+    this.noteId,
   });
 
   factory IncomingTextData.fromMap(Map<dynamic, dynamic> map) {
@@ -27,10 +29,11 @@ class IncomingTextData {
       sourceApp: map['sourceApp'] as String?,
       packageName: map['packageName'] as String?,
       action: map['action'] as String?,
+      noteId: map['noteId'] as String?,
     );
   }
 
-  bool get isValid => text.trim().isNotEmpty;
+  bool get isValid => text.trim().isNotEmpty || action == 'OPEN_NOTE' || action == 'QUICK_CAPTURE';
 }
 
 /// Service handling incoming text intents from Android system integration

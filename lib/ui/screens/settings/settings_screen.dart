@@ -11,6 +11,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
+import '../../../domain/services/pinned_notification_service.dart';
 
 /// Clean, tactile Settings screen for Tack.
 /// Minimal stationery design language with zero bloat or marketing fluff.
@@ -248,6 +249,56 @@ class SettingsScreen extends StatelessWidget {
           _buildSectionTitle('Theme', isDark),
           const SizedBox(height: 6),
           _buildThemeSelector(context, themeProv, isDark),
+          const SizedBox(height: 20),
+
+          // Android System Integration Section
+          _buildSectionTitle('System & Android', isDark),
+          const SizedBox(height: 6),
+          _buildCardGroup(
+            isDark: isDark,
+            children: [
+              _QuickCaptureSettingsTile(isDark: isDark),
+              _buildDivider(isDark),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    TackIcon(
+                      TackIcons.tag,
+                      size: 18,
+                      color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quick Settings Tile',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Add "Tack Quick Note" in Android notification panel for 1-tap capture anywhere',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 12,
+                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
 
           // Data Management Section
@@ -499,6 +550,79 @@ class SettingsScreen extends StatelessWidget {
       thickness: 1,
       indent: 48,
       color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+    );
+  }
+}
+
+class _QuickCaptureSettingsTile extends StatefulWidget {
+  final bool isDark;
+  const _QuickCaptureSettingsTile({required this.isDark});
+
+  @override
+  State<_QuickCaptureSettingsTile> createState() => _QuickCaptureSettingsTileState();
+}
+
+class _QuickCaptureSettingsTileState extends State<_QuickCaptureSettingsTile> {
+  bool _enabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    PinnedNotificationService.isQuickCaptureEnabled().then((val) {
+      if (mounted) setState(() => _enabled = val);
+    });
+  }
+
+  void _onToggle(bool val) async {
+    HapticFeedback.lightImpact();
+    setState(() => _enabled = val);
+    await PinnedNotificationService.setQuickCaptureEnabled(val);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          TackIcon(
+            TackIcons.notification,
+            size: 18,
+            color: widget.isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Status Bar Quick Capture',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: widget.isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Persistent 1-tap note capture in notification drawer',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 12,
+                    color: widget.isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _enabled,
+            onChanged: _onToggle,
+            activeColor: AppColors.accentCyan,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -15,6 +15,7 @@ class WorkspaceItemCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final HomeViewMode viewMode;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final int index;
   final bool isGrid;
 
@@ -22,6 +23,7 @@ class WorkspaceItemCard extends StatelessWidget {
     super.key,
     required this.item,
     required this.onTap,
+    this.onLongPress,
     this.viewMode = HomeViewMode.stickyGrid,
     this.index = 0,
     this.isGrid = true,
@@ -35,6 +37,7 @@ class WorkspaceItemCard extends StatelessWidget {
         item: item,
         index: index,
         onTap: onTap,
+        onLongPress: onLongPress,
       );
     }
 
@@ -43,6 +46,7 @@ class WorkspaceItemCard extends StatelessWidget {
       return StickyNoteCard(
         item: item,
         onTap: onTap,
+        onLongPress: onLongPress,
       );
     }
 
@@ -58,6 +62,7 @@ class WorkspaceItemCard extends StatelessWidget {
       item: item,
       isGrid: isGrid,
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }

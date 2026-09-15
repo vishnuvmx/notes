@@ -15,6 +15,7 @@ import 'domain/models/sticky_note.dart';
 import 'domain/models/whiteboard_item.dart';
 import 'domain/models/clipboard_item.dart';
 import 'domain/services/process_text_service.dart';
+import 'domain/services/pinned_notification_service.dart';
 import 'state/workspace_provider.dart';
 import 'state/theme_provider.dart';
 
@@ -95,7 +96,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
   }
 
   void _initSystemIntegration() async {
-    // 1. Listen for incoming text when app is running (foreground or background)
+    // 1. Listen for incoming text / actions when app is running (foreground or background)
     ProcessTextService.initialize(
       onTextReceived: (data) {
         if (mounted) {
@@ -104,14 +105,45 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
     );
 
-    // 2. Check if app was launched via "Save to Tack" or SEND intent
+    // 2. Check if app was launched via "Save to Tack", SEND intent, or Quick Capture / Pinned Notification
     final initialData = await ProcessTextService.getInitialText();
     if (initialData != null && mounted) {
       _handleIncomingText(initialData);
     }
+
+    // 3. Ensure persistent Quick Capture notification stays synced if enabled
+    final quickCaptureEnabled = await PinnedNotificationService.isQuickCaptureEnabled();
+    if (quickCaptureEnabled) {
+      await PinnedNotificationService.setQuickCaptureEnabled(true);
+    }
   }
 
   Future<void> _handleIncomingText(IncomingTextData data) async {
+    // 1. Direct open of a status-bar pinned note
+    if (data.action == 'OPEN_NOTE' && data.noteId != null) {
+      final workspace = context.read<WorkspaceProvider>();
+      final item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+      if (item != null && mounted) {
+        HapticFeedback.selectionClick();
+        _openItemDetail(context, item);
+      }
+      return;
+    }
+
+    // 2. Instant 1-tap quick capture from status bar or Quick Settings Tile
+    if (data.action == 'QUICK_CAPTURE') {
+      final workspace = context.read<WorkspaceProvider>();
+      final note = await workspace.createTextNote(
+        title: '',
+        content: '',
+      );
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        _openItemDetail(context, note);
+      }
+      return;
+    }
+
     final text = data.text.trim();
     if (text.isEmpty) {
       if (mounted) {

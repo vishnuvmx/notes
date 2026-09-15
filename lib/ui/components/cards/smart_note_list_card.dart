@@ -18,12 +18,14 @@ class SmartNoteListCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final int index;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const SmartNoteListCard({
     super.key,
     required this.item,
     required this.index,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -72,6 +74,7 @@ class SmartNoteListCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),

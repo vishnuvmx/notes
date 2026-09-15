@@ -18,6 +18,7 @@ import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 import '../../../domain/services/note_export_service.dart';
+import '../../../domain/services/pinned_notification_service.dart';
 
 /// Full-featured Note Editor & Reader Screen (Phase 3).
 /// Includes Reading/Editing mode switcher, live interactive checklists,
@@ -43,6 +44,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
+  bool _isPinnedToStatusBar = false;
 
   @override
   void initState() {
@@ -53,13 +55,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         : (widget.item is StickyNote
             ? (widget.item as StickyNote).content
             : (widget.item is ClipboardItem ? (widget.item as ClipboardItem).clipText : ''));
-    _contentController = MarkdownTextEditingController(text: initialContent);
-    _isEditingMode = initialContent.trim().isEmpty;
     _paletteId = widget.item.paletteId;
+    _contentController = MarkdownTextEditingController(
+      text: initialContent,
+      paletteId: _paletteId,
+    );
+    _isEditingMode = initialContent.trim().isEmpty;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
 
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
+
+    PinnedNotificationService.isNotePinned(widget.item.id).then((pinned) {
+      if (mounted) {
+        setState(() => _isPinnedToStatusBar = pinned);
+      }
+    });
   }
 
   @override
@@ -130,6 +141,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
 
     await workspace.saveItem(updated);
+    if (_isPinnedToStatusBar) {
+      PinnedNotificationService.pinNote(
+        id: widget.item.id,
+        title: title.isEmpty ? 'Pinned Note' : title,
+        content: content,
+        paletteId: _paletteId,
+      );
+    }
     if (mounted) {
       setState(() => _isSaving = false);
     }
@@ -310,7 +329,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ColorSwatchPicker(
                 selectedPaletteId: _paletteId,
                 onPaletteSelected: (id) {
-                  setState(() => _paletteId = id);
+                  setState(() {
+                    _paletteId = id;
+                    _contentController.paletteId = id;
+                  });
                   _saveNote();
                   Navigator.of(context).pop();
                 },
@@ -441,7 +463,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        _isSaving ? 'Saving' : 'Saved • ${wordCount}w',
+                        _isSaving ? 'Saving...' : 'Saved',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -505,6 +527,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   );
                 } else if (val == 'share') {
                   _showShareExportSheet();
+                } else if (val == 'pin_status') {
+                  HapticFeedback.mediumImpact();
+                  final title = _titleController.text.trim();
+                  final content = _contentController.text.trim();
+                  final newPinned = await PinnedNotificationService.togglePinNote(
+                    id: widget.item.id,
+                    title: title.isEmpty ? 'Pinned Note' : title,
+                    content: content,
+                    paletteId: _paletteId,
+                  );
+                  if (mounted) {
+                    setState(() => _isPinnedToStatusBar = newPinned);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          newPinned
+                              ? 'Note pinned to Android status bar!'
+                              : 'Note unpinned from status bar',
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 } else if (val == 'trash') {
                   workspace.moveToTrash(widget.item.id);
                   Navigator.of(context).pop();
@@ -517,6 +563,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   icon: TackIcons.star,
                   iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                   iconColor: AppColors.accentAmber,
+                ),
+                IosMenuItem(
+                  value: 'pin_status',
+                  title: _isPinnedToStatusBar ? 'Unpin from Status Bar' : 'Pin to Status Bar',
+                  icon: TackIcons.tag,
+                  iconColor: _isPinnedToStatusBar ? AppColors.accentCyan : null,
                 ),
                 const IosMenuItem(
                   value: 'duplicate',
@@ -797,6 +849,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         },
                         child: RichNoteContentView(
                           content: _contentController.text,
+                          paletteId: _paletteId,
                           onContentChanged: (newContent) {
                             _contentController.text = newContent;
                             _saveNote();

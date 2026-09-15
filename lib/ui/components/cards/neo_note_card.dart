@@ -17,12 +17,14 @@ import '../../../domain/models/clipboard_item.dart';
 class NeoNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool isGrid;
 
   const NeoNoteCard({
     super.key,
     required this.item,
     required this.onTap,
+    this.onLongPress,
     this.isGrid = true,
   });
 
@@ -92,6 +94,12 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
               HapticFeedback.mediumImpact();
               widget.onTap();
             },
+            onLongPress: widget.onLongPress != null
+                ? () {
+                    setState(() => _isPressed = false);
+                    widget.onLongPress!();
+                  }
+                : null,
             borderRadius: AppSpacing.roundedLg,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),

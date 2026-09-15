@@ -12,11 +12,13 @@ import '../../../domain/models/sticky_note.dart';
 class StickyNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const StickyNoteCard({
     super.key,
     required this.item,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -81,6 +83,12 @@ class _StickyNoteCardState extends State<StickyNoteCard> {
                     HapticFeedback.mediumImpact();
                     widget.onTap();
                   },
+                  onLongPress: widget.onLongPress != null
+                      ? () {
+                          setState(() => _isPressed = false);
+                          widget.onLongPress!();
+                        }
+                      : null,
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg + 4, AppSpacing.md, AppSpacing.md),

@@ -181,6 +181,15 @@ class AppColors {
     return presetPalettes[0];
   }
 
+  /// Returns a translucent highlight background tint for markdown ==highlight==
+  /// adapting to any of the 8 main note color palettes.
+  static Color getHighlightColor(String? paletteId, {required bool isDark}) {
+    final palette = getPaletteById(paletteId);
+    return isDark
+        ? palette.lightColor.withValues(alpha: 0.35)
+        : palette.lightColor.withValues(alpha: 0.48);
+  }
+
   /// Parses a hex color string like #565656, #ff8f6b, #fff, or #80565656.
   /// Returns null if the text is not a valid 3, 6, or 8 digit hex color code.
   static Color? tryParseHexColor(String? text) {

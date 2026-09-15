@@ -1,8 +1,14 @@
 package com.notes.tacknotes
 
 import android.app.Activity
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
@@ -16,6 +22,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannels()
         handleIntent(intent)
     }
 
@@ -35,6 +42,35 @@ class MainActivity : FlutterActivity() {
                     pendingPayload = null
                     result.success(payload)
                 }
+                "pinNote" -> {
+                    val id = call.argument<String>("id") ?: ""
+                    val title = call.argument<String>("title") ?: ""
+                    val content = call.argument<String>("content") ?: ""
+                    val paletteId = call.argument<String>("paletteId")
+                    if (id.isNotEmpty()) {
+                        pinNoteNotification(id, title, content, paletteId)
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARGS", "Note id is required", null)
+                    }
+                }
+                "unpinNote" -> {
+                    val id = call.argument<String>("id") ?: ""
+                    if (id.isNotEmpty()) {
+                        unpinNoteNotification(id)
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARGS", "Note id is required", null)
+                    }
+                }
+                "showQuickCapture" -> {
+                    showQuickCaptureNotification()
+                    result.success(true)
+                }
+                "hideQuickCapture" -> {
+                    hideQuickCaptureNotification()
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -45,9 +81,154 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+
+            val pinnedChannel = NotificationChannel(
+                "tack_pinned_notes",
+                "Pinned Notes",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Notes and stickies pinned to status bar"
+                setShowBadge(true)
+            }
+            notificationManager?.createNotificationChannel(pinnedChannel)
+
+            val quickCaptureChannel = NotificationChannel(
+                "tack_quick_capture",
+                "Quick Capture",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "1-tap quick note capture in status bar"
+                setShowBadge(false)
+            }
+            notificationManager?.createNotificationChannel(quickCaptureChannel)
+        }
+    }
+
+    private fun pinNoteNotification(id: String, title: String, content: String, paletteId: String?) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            action = "com.notes.tacknotes.OPEN_NOTE"
+            putExtra("noteId", id)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openPendingIntent = PendingIntent.getActivity(
+            this,
+            id.hashCode(),
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val unpinIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+            action = "com.notes.tacknotes.UNPIN_NOTE"
+            putExtra("noteId", id)
+        }
+        val unpinPendingIntent = PendingIntent.getBroadcast(
+            this,
+            id.hashCode() + 1,
+            unpinIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, "tack_pinned_notes")
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+
+        val displayTitle = if (title.isBlank()) "Pinned Note" else title
+        val displayContent = if (content.isBlank()) "Tap to open note" else content
+
+        builder.setContentTitle(displayTitle)
+            .setContentText(displayContent)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(openPendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setStyle(Notification.BigTextStyle().bigText(displayContent))
+            .addAction(Notification.Action.Builder(null, "Open", openPendingIntent).build())
+            .addAction(Notification.Action.Builder(null, "Unpin", unpinPendingIntent).build())
+
+        notificationManager.notify(id.hashCode(), builder.build())
+    }
+
+    private fun unpinNoteNotification(id: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(id.hashCode())
+    }
+
+    private fun showQuickCaptureNotification() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val quickIntent = Intent(this, MainActivity::class.java).apply {
+            action = "com.notes.tacknotes.QUICK_CAPTURE"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            7777,
+            quickIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, "tack_quick_capture")
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+
+        builder.setContentTitle("Tack • Quick Capture")
+            .setContentText("Tap to jot down a fast note or checklist")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
+
+        notificationManager.notify(7777, builder.build())
+    }
+
+    private fun hideQuickCaptureNotification() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(7777)
+    }
+
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         val action = intent.action ?: return
+
+        if (action == "com.notes.tacknotes.OPEN_NOTE") {
+            val noteId = intent.getStringExtra("noteId")
+            if (!noteId.isNullOrBlank()) {
+                val payload = mapOf(
+                    "action" to "OPEN_NOTE",
+                    "noteId" to noteId
+                )
+                val channel = methodChannel
+                if (channel != null) {
+                    channel.invokeMethod("onReceiveText", payload)
+                } else {
+                    pendingPayload = payload
+                }
+            }
+            return
+        }
+
+        if (action == "com.notes.tacknotes.QUICK_CAPTURE") {
+            val payload = mapOf(
+                "action" to "QUICK_CAPTURE"
+            )
+            val channel = methodChannel
+            if (channel != null) {
+                channel.invokeMethod("onReceiveText", payload)
+            } else {
+                pendingPayload = payload
+            }
+            return
+        }
 
         if (action == Intent.ACTION_PROCESS_TEXT || action == Intent.ACTION_SEND || action == Intent.ACTION_VIEW) {
             var text: String? = null

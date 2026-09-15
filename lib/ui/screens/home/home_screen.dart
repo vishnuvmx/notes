@@ -19,6 +19,7 @@ import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
+import '../../components/dialogs_sheets/note_action_sheet.dart';
 
 /// Main Home Dashboard Screen for Tack.
 /// Features the Playful Neo-Pop / Soft Neo-Brutalist design matching the Dribbble reference.
@@ -548,12 +549,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return StickyNoteCard(
         item: item,
         onTap: () => widget.onOpenItem?.call(item),
+        onLongPress: () => NoteActionSheet.show(context, item: item),
       );
     }
     return NeoNoteCard(
       item: item,
       isGrid: true,
       onTap: () => widget.onOpenItem?.call(item),
+      onLongPress: () => NoteActionSheet.show(context, item: item),
     );
   }
 
@@ -578,6 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
             item: item,
             index: index,
             onTap: () => widget.onOpenItem?.call(item),
+            onLongPress: () => NoteActionSheet.show(context, item: item),
           ),
         );
       },
