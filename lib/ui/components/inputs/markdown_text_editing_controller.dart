@@ -93,7 +93,7 @@ class MarkdownTextEditingController extends TextEditingController {
         spans.add(TextSpan(
           text: urlText,
           style: style?.copyWith(
-            color: delimiterStyle.color,
+            color: delimiterStyle?.color,
             fontSize: (style?.fontSize ?? 14) * 0.9,
           ),
         ));
@@ -115,7 +115,7 @@ class MarkdownTextEditingController extends TextEditingController {
         spans.add(TextSpan(
           text: urlText,
           style: style?.copyWith(
-            color: delimiterStyle.color,
+            color: delimiterStyle?.color,
             fontSize: (style?.fontSize ?? 14) * 0.9,
           ),
         ));
