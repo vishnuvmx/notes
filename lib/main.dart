@@ -133,8 +133,10 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     // 2. Instant 1-tap quick capture from status bar or Quick Settings Tile
     if (data.action == 'QUICK_CAPTURE') {
       final workspace = context.read<WorkspaceProvider>();
-      final note = await workspace.createTextNote(
+      final note = await workspace.createQuickItem(
         title: '',
+        type: ItemType.note,
+        paletteId: 'peach',
         content: '',
       );
       if (mounted) {

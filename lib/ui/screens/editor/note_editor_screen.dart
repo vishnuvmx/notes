@@ -511,7 +511,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               size: 36,
               icon: TackIcons.more,
               iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              onSelected: (val) {
+              onSelected: (val) async {
                 if (val == 'favorite') {
                   workspace.toggleFavorite(widget.item.id);
                   setState(() {});
@@ -539,7 +539,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   );
                   if (mounted) {
                     setState(() => _isPinnedToStatusBar = newPinned);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(
                         content: Text(
                           newPinned

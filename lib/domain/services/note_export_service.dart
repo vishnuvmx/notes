@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Reusable service for note exporting, formatting, and clipboard operations.
 class NoteExportService {
@@ -52,5 +53,20 @@ class NoteExportService {
   }) async {
     final text = formatPlainText(title: title, content: content);
     await Clipboard.setData(ClipboardData(text: text));
+  }
+
+  /// Shares note content using the system share sheet.
+  static Future<void> shareNote({
+    required String title,
+    required String content,
+    List<String> tags = const [],
+  }) async {
+    final text = formatMarkdown(title: title, content: content, tags: tags);
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: title.isNotEmpty ? title : 'Note from Tack',
+      ),
+    );
   }
 }

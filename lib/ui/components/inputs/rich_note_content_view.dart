@@ -764,7 +764,7 @@ class RichNoteContentView extends StatelessWidget {
                 child: Image.network(
                   url,
                   height: 24,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 18),
+                  errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported, size: 18),
                 ),
               ),
             ),

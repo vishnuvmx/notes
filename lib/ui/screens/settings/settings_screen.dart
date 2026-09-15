@@ -619,7 +619,7 @@ class _QuickCaptureSettingsTileState extends State<_QuickCaptureSettingsTile> {
           Switch.adaptive(
             value: _enabled,
             onChanged: _onToggle,
-            activeColor: AppColors.accentCyan,
+            activeTrackColor: AppColors.accentCyan,
           ),
         ],
       ),
