@@ -10,6 +10,7 @@ class AppColors {
   static const Color primaryLight = Color(0xFFF4F4F6);
   static const Color accentAmber = Color(0xFFFFC661);
   static const Color accentOrange = Color(0xFFF3916A);
+  static const Color accentCyan = Color(0xFF26BBD9);
 
   // Light surfaces (Soft, tactile, off-white)
   static const Color lightBackground = Color(0xFFF8F9FA);
