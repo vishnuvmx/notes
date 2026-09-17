@@ -50,30 +50,44 @@ class _SmartSearchBarState extends State<SmartSearchBar> {
             width: 1,
           ),
         ),
+        alignment: Alignment.center,
         child: TextField(
           controller: _controller,
           autofocus: true,
-          style: theme.textTheme.bodyLarge,
-          onChanged: (val) => workspace.setSearchQuery(val),
+          textAlignVertical: TextAlignVertical.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: 15,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          ),
+          onChanged: (val) {
+            setState(() {});
+            workspace.setSearchQuery(val);
+          },
           decoration: InputDecoration(
+            isDense: true,
             hintText: 'Search notes, stickies, whiteboards...',
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: TackIcon(TackIcons.search, size: 20, color: iconColor),
+            hintStyle: TextStyle(
+              fontSize: 14,
+              color: iconColor,
+              fontWeight: FontWeight.w400,
             ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            prefixIcon: TackIcon(TackIcons.search, size: 18, color: iconColor),
+            suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixIcon: _controller.text.isNotEmpty
                 ? IconButton(
-                    icon: TackIcon(TackIcons.close, size: 18, color: iconColor),
+                    icon: TackIcon(TackIcons.close, size: 16, color: iconColor),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    tooltip: 'Clear',
                     onPressed: () {
                       _controller.clear();
+                      setState(() {});
                       workspace.setSearchQuery('');
                     },
                   )
-                : IconButton(
-                    icon: TackIcon(TackIcons.close, size: 18, color: iconColor),
-                    onPressed: widget.onClose,
-                  ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,

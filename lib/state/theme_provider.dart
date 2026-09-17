@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Theme switcher state provider with persistent storage.
 class ThemeProvider extends ChangeNotifier {
   static const String _themePrefKey = 'app_theme_mode';
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
 
   ThemeProvider({ThemeMode? initialMode}) {
     if (initialMode != null) {
@@ -30,7 +30,7 @@ class ThemeProvider extends ChangeNotifier {
       if (saved == 'dark') return ThemeMode.dark;
       if (saved == 'system') return ThemeMode.system;
     } catch (_) {}
-    return ThemeMode.system;
+    return ThemeMode.light;
   }
 
   Future<void> _loadPersistedTheme() async {

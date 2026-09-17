@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -8,18 +9,20 @@ import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 import 'color_swatch_picker.dart';
 
-/// Modern Android Bottom Sheet for creating a new Note, Sticky, Whiteboard, or Clipboard item.
-/// Replaces the centered desktop dialog with an ergonomic mobile bottom sheet.
+/// Modern iOS-styled Bottom Sheet for creating a new Note, Sticky, Whiteboard, or Clipboard item.
+/// Features ergonomic mobile bottom sheet layout with smooth haptics and microinteractions.
 class CreateItemSheet extends StatefulWidget {
   final ItemType? defaultType;
 
   const CreateItemSheet({super.key, this.defaultType});
 
   static Future<BaseWorkspaceItem?> show(BuildContext context, {ItemType? defaultType}) {
+    HapticFeedback.mediumImpact();
     return showModalBottomSheet<BaseWorkspaceItem>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateItemSheet(defaultType: defaultType),
     );
@@ -40,7 +43,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     super.initState();
     _titleController = TextEditingController();
     _contentController = TextEditingController();
-    _selectedType = widget.defaultType ?? ItemType.note;
+    final initial = widget.defaultType ?? ItemType.note;
+    _selectedType = (initial == ItemType.clipboard) ? ItemType.note : initial;
 
     if (_selectedType == ItemType.sticky) {
       _selectedPaletteId = 'amber';
@@ -57,12 +61,17 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   }
 
   void _handleCreate() async {
+    HapticFeedback.mediumImpact();
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     final workspace = context.read<WorkspaceProvider>();
 
+    final defaultTitle = _selectedType == ItemType.note
+        ? 'Untitled Note'
+        : (_selectedType == ItemType.sticky ? 'New Sticky' : 'New Whiteboard');
+
     final item = await workspace.createQuickItem(
-      title: title.isEmpty ? 'Untitled ${_selectedType.label}' : title,
+      title: title.isEmpty ? defaultTitle : title,
       type: _selectedType,
       paletteId: _selectedPaletteId,
       content: content,
@@ -98,10 +107,12 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           boxShadow: AppSpacing.floatingControlShadow,
         ),
         child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             // Drag Handle
             Center(
               child: Container(
@@ -135,11 +146,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Item Type Selector Chips
+            // Item Type Selector Chips (Notes, Sticky, Whiteboard)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ItemType.values.map((type) {
+                children: [ItemType.note, ItemType.sticky, ItemType.whiteboard].map((type) {
                   final isSelected = _selectedType == type;
                   return Padding(
                     padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -148,7 +159,15 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                       selected: isSelected,
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() => _selectedType = type);
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _selectedType = type;
+                            if (type == ItemType.sticky && _selectedPaletteId == 'peach') {
+                              _selectedPaletteId = 'amber';
+                            } else if (type == ItemType.whiteboard && _selectedPaletteId == 'peach') {
+                              _selectedPaletteId = 'cyan';
+                            }
+                          });
                         }
                       },
                       selectedColor: isDark ? AppColors.lightSurface : AppColors.primaryDark,
@@ -166,31 +185,125 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                 }).toList(),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
 
-            // Title Input
+            // Title Input (Enhanced UI)
             TextField(
               controller: _titleController,
               autofocus: true,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
               decoration: InputDecoration(
                 labelText: 'Title',
-                hintText: 'e.g. My Important Thought...',
-                floatingLabelBehavior: FloatingLabelBehavior.always,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
+                hintText: _selectedType == ItemType.note
+                    ? 'e.g. Meeting Notes, Ideas...'
+                    : (_selectedType == ItemType.sticky
+                        ? 'e.g. Call dentist, Grocery list...'
+                        : 'e.g. System Flowchart, Architecture...'),
+                hintStyle: TextStyle(
+                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  fontSize: 14,
+                ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TackIcon(
+                    _selectedType == ItemType.whiteboard
+                        ? TackIcons.whiteboard
+                        : (_selectedType == ItemType.sticky ? TackIcons.star : TackIcons.notes),
+                    size: 18,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1E2026) : const Color(0xFFF3F5F8),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                    width: 1.2,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                    width: 1.2,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white : AppColors.primaryDark,
+                    width: 1.8,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // Optional Quick Content Input for Sticky / Note
+            // Optional Quick Content Input for Sticky / Note (Enhanced UI)
             if (_selectedType != ItemType.whiteboard) ...[
               TextField(
                 controller: _contentController,
                 maxLines: 3,
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  height: 1.4,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Snippet / Content',
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
                   hintText: 'Write down quick notes or thoughts...',
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  hintStyle: TextStyle(
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 32),
+                    child: TackIcon(
+                      TackIcons.notes,
+                      size: 18,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF1E2026) : const Color(0xFFF3F5F8),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                      width: 1.2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF333742) : const Color(0xFFE2E6EC),
+                      width: 1.2,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.white : AppColors.primaryDark,
+                      width: 1.8,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -234,7 +347,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           ],
         ),
       ),
-      ),
-    );
+    ),
+  ),
+);
   }
 }

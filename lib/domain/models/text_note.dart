@@ -5,6 +5,7 @@ class TextNote extends BaseWorkspaceItem {
   final String content;
   final List<String> tags;
   final int estimatedMinutes;
+  final String? sourceApp;
 
   const TextNote({
     required super.id,
@@ -18,6 +19,7 @@ class TextNote extends BaseWorkspaceItem {
     required this.content,
     this.tags = const [],
     this.estimatedMinutes = 3,
+    this.sourceApp,
   }) : super(type: ItemType.note);
 
   int get letterCount => content.replaceAll(RegExp(r'\s'), '').length;
@@ -35,8 +37,15 @@ class TextNote extends BaseWorkspaceItem {
   @override
   String getSummary() {
     if (content.trim().isEmpty) return 'Empty note';
-    final firstLines = content.trim().replaceAll('\n', ' ');
-    return firstLines.length > 90 ? '${firstLines.substring(0, 90)}...' : firstLines;
+    final cleaned = content
+        .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'\[[ xX]\]'), '')
+        .replaceAll(RegExp(r'[*_~=`]+'), '')
+        .replaceAll(RegExp(r'</?[a-zA-Z0-9]+>'), '')
+        .replaceAll('\n', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return cleaned.length > 90 ? '${cleaned.substring(0, 90)}...' : cleaned;
   }
 
   @override
@@ -59,6 +68,7 @@ class TextNote extends BaseWorkspaceItem {
     String? content,
     List<String>? tags,
     int? estimatedMinutes,
+    String? sourceApp,
   }) {
     return TextNote(
       id: id,
@@ -72,6 +82,7 @@ class TextNote extends BaseWorkspaceItem {
       content: content ?? this.content,
       tags: tags ?? this.tags,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      sourceApp: sourceApp ?? this.sourceApp,
     );
   }
 
@@ -90,6 +101,7 @@ class TextNote extends BaseWorkspaceItem {
       'content': content,
       'tags': tags,
       'estimatedMinutes': estimatedMinutes,
+      'sourceApp': sourceApp,
     };
   }
 
@@ -106,6 +118,7 @@ class TextNote extends BaseWorkspaceItem {
       content: json['content'] as String? ?? '',
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       estimatedMinutes: json['estimatedMinutes'] as int? ?? 3,
+      sourceApp: json['sourceApp'] as String?,
     );
   }
 }

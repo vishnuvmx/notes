@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -9,6 +10,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../state/workspace_provider.dart';
+import '../dialogs_sheets/ios_menu_button.dart';
 
 /// Tactile, unbloated Note List Card matching reference design (Screenshot 2).
 /// Features clean index number, crisp typography, and uncluttered layout.
@@ -16,12 +18,14 @@ class SmartNoteListCard extends StatelessWidget {
   final BaseWorkspaceItem item;
   final int index;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const SmartNoteListCard({
     super.key,
     required this.item,
     required this.index,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -36,7 +40,13 @@ class SmartNoteListCard extends StatelessWidget {
     String metaString = DateFormatter.formatTimestamp(item.updatedAt);
     if (item is TextNote) {
       final note = item as TextNote;
-      metaString = '${note.estimatedMinutes} min read  •  $metaString';
+      final source = note.sourceApp != null ? '  •  from ${note.sourceApp}' : '';
+      final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(note.content).length;
+      final completedChecklists = RegExp(r'\[[xX]\]').allMatches(note.content).length;
+      final taskPart = totalChecklists > 0
+          ? '  •  $completedChecklists/$totalChecklists tasks'
+          : '';
+      metaString = '${note.estimatedMinutes} min read$taskPart  •  $metaString$source';
     }
 
     return Container(
@@ -64,6 +74,7 @@ class SmartNoteListCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -133,58 +144,53 @@ class SmartNoteListCard extends StatelessWidget {
                   ),
                 ),
 
-                // Sleek Context Menu
-                PopupMenuButton<String>(
-                  icon: TackIcon(
-                    TackIcons.more,
-                    size: 18,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                // iOS-Style Context Menu
+                IosThreeDotMenu<String>(
+                  size: 32,
+                  icon: TackIcons.more,
+                  iconColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   onSelected: (value) {
                     if (value == 'favorite') {
                       workspace.toggleFavorite(item.id);
+                    } else if (value == 'duplicate') {
+                      HapticFeedback.lightImpact();
+                      workspace.duplicateItem(item.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Duplicated "${item.title}"'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     } else if (value == 'archive') {
                       workspace.toggleArchive(item.id);
                     } else if (value == 'trash') {
                       workspace.moveToTrash(item.id);
                     }
                   },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
+                  items: [
+                    IosMenuItem(
                       value: 'favorite',
-                      child: Row(
-                        children: [
-                          TackIcon(
-                            TackIcons.star,
-                            size: 18,
-                            color: AppColors.accentAmber,
-                            style: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(item.isFavorite ? 'Unfavorite' : 'Favorite'),
-                        ],
-                      ),
+                      title: item.isFavorite ? 'Unfavorite' : 'Favorite',
+                      icon: TackIcons.star,
+                      iconStyle: item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
+                      iconColor: AppColors.accentAmber,
                     ),
-                    PopupMenuItem(
+                    const IosMenuItem(
+                      value: 'duplicate',
+                      title: 'Duplicate',
+                      icon: TackIcons.copy,
+                    ),
+                    IosMenuItem(
                       value: 'archive',
-                      child: Row(
-                        children: [
-                          const TackIcon(TackIcons.archive, size: 18),
-                          const SizedBox(width: 8),
-                          Text(item.isArchived ? 'Unarchive' : 'Archive'),
-                        ],
-                      ),
+                      title: item.isArchived ? 'Unarchive' : 'Archive',
+                      icon: TackIcons.archive,
                     ),
-                    const PopupMenuItem(
+                    const IosMenuItem(
                       value: 'trash',
-                      child: Row(
-                        children: [
-                          TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
-                          SizedBox(width: 8),
-                          Text('Move to Trash', style: TextStyle(color: AppColors.error)),
-                        ],
-                      ),
+                      title: 'Move to Trash',
+                      icon: TackIcons.trash,
+                      isDestructive: true,
                     ),
                   ],
                 ),

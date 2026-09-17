@@ -1,78 +1,91 @@
 import 'package:flutter/material.dart';
-import 'package:heroicons/heroicons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-export 'package:heroicons/heroicons.dart';
+enum HeroIconStyle { outline, solid }
 
-/// Central Cute & Aesthetic Iconography for Tack using HeroIcons.
-/// Features soft rounded caps, playful weights, and modern outline/solid styles.
+/// Central Minimalist & Modern Iconography for Tack powered by Lucide Icons.
+/// Sleek, consistent stroke weight, subtle rounded corners, zero clunky brutalism or playful slop.
 class TackIcons {
   TackIcons._();
 
-  // Navigation
-  static const HeroIcons home = HeroIcons.home;
-  static const HeroIcons notes = HeroIcons.documentText;
-  static const HeroIcons sticky = HeroIcons.sparkles;
-  static const HeroIcons whiteboard = HeroIcons.pencilSquare;
-  static const HeroIcons clipboard = HeroIcons.clipboardDocumentList;
-  static const HeroIcons plus = HeroIcons.plus;
+  // Navigation (Modern & minimal)
+  static const IconData home = LucideIcons.home;
+  static const IconData notes = LucideIcons.fileText;
+  static const IconData sticky = LucideIcons.stickyNote;
+  static const IconData whiteboard = LucideIcons.penTool;
+  static const IconData clipboard = LucideIcons.clipboardList;
+  static const IconData plus = LucideIcons.plus;
 
   // Actions & Controls
-  static const HeroIcons menu = HeroIcons.bars3BottomLeft;
-  static const HeroIcons search = HeroIcons.magnifyingGlass;
-  static const HeroIcons close = HeroIcons.xMark;
-  static const HeroIcons check = HeroIcons.check;
-  static const HeroIcons checkCircle = HeroIcons.checkCircle;
-  static const HeroIcons back = HeroIcons.arrowLeft;
-  static const HeroIcons more = HeroIcons.ellipsisVertical;
-  static const HeroIcons share = HeroIcons.share;
-  static const HeroIcons copy = HeroIcons.clipboardDocument;
-  static const HeroIcons undo = HeroIcons.arrowUturnLeft;
-  static const HeroIcons redo = HeroIcons.arrowUturnRight;
-  static const HeroIcons palette = HeroIcons.swatch;
+  static const IconData menu = LucideIcons.menu;
+  static const IconData search = LucideIcons.search;
+  static const IconData close = LucideIcons.x;
+  static const IconData check = LucideIcons.check;
+  static const IconData checkCircle = LucideIcons.checkCircle2;
+  static const IconData back = LucideIcons.arrowLeft;
+  static const IconData more = LucideIcons.moreHorizontal;
+  static const IconData share = LucideIcons.share2;
+  static const IconData copy = LucideIcons.copy;
+  static const IconData exportData = LucideIcons.upload;
+  static const IconData importData = LucideIcons.download;
+  static const IconData undo = LucideIcons.undo;
+  static const IconData redo = LucideIcons.redo;
+  static const IconData palette = LucideIcons.palette;
+  static const IconData clock = LucideIcons.clock;
 
   // Views & Folders
-  static const HeroIcons gridView = HeroIcons.squares2x2;
-  static const HeroIcons listView = HeroIcons.queueList;
-  static const HeroIcons star = HeroIcons.star;
-  static const HeroIcons archive = HeroIcons.archiveBox;
-  static const HeroIcons trash = HeroIcons.trash;
-  static const HeroIcons settings = HeroIcons.cog6Tooth;
-  static const HeroIcons sun = HeroIcons.sun;
-  static const HeroIcons moon = HeroIcons.moon;
+  static const IconData gridView = LucideIcons.layoutGrid;
+  static const IconData listView = LucideIcons.list;
+  static const IconData star = LucideIcons.star;
+  static const IconData archive = LucideIcons.archive;
+  static const IconData trash = LucideIcons.trash2;
+  static const IconData settings = LucideIcons.settings;
+  static const IconData sun = LucideIcons.sun;
+  static const IconData moon = LucideIcons.moon;
+  static const IconData user = LucideIcons.user;
+  static const IconData notification = LucideIcons.bell;
+  static const IconData chevronDown = LucideIcons.chevronDown;
+  static const IconData tag = LucideIcons.tag;
 
   // Whiteboard shapes & tools
-  static const HeroIcons play = HeroIcons.play;
-  static const HeroIcons square = HeroIcons.stop;
-  static const HeroIcons diamond = HeroIcons.cube;
-  static const HeroIcons flow = HeroIcons.arrowTrendingUp;
-  static const HeroIcons cursor = HeroIcons.cursorArrowRays;
-  static const HeroIcons hand = HeroIcons.handRaised;
-  static const HeroIcons photo = HeroIcons.photo;
-  static const HeroIcons pin = HeroIcons.mapPin;
+  static const IconData play = LucideIcons.play;
+  static const IconData square = LucideIcons.square;
+  static const IconData diamond = LucideIcons.diamond;
+  static const IconData flow = LucideIcons.gitFork;
+  static const IconData cursor = LucideIcons.mousePointer;
+  static const IconData hand = LucideIcons.hand;
+  static const IconData photo = LucideIcons.image;
+  static const IconData minus = LucideIcons.minus;
+  static const IconData pencil = LucideIcons.pencil;
+  static const IconData link = LucideIcons.link;
+  static const IconData pin = LucideIcons.pin;
+
+  // Tag & category aliases
+  static const IconData bolt = LucideIcons.zap;
+  static const IconData briefcase = LucideIcons.briefcase;
 }
 
-/// Aesthetic HeroIcon builder with consistent sizing and cute styling.
+/// Aesthetic Icon builder with consistent sizing and sleek Lucide styling.
 class TackIcon extends StatelessWidget {
-  final HeroIcons icon;
+  final IconData icon;
   final double size;
   final Color? color;
-  final HeroIconStyle style;
+  final dynamic style;
 
   const TackIcon(
     this.icon, {
     super.key,
-    this.size = 22,
+    this.size = 20,
     this.color,
-    this.style = HeroIconStyle.outline,
+    this.style,
   });
 
   @override
   Widget build(BuildContext context) {
-    return HeroIcon(
+    return Icon(
       icon,
       size: size,
       color: color,
-      style: style,
     );
   }
 }

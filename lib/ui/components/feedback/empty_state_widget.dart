@@ -5,11 +5,12 @@ import '../../../core/theme/tack_icons.dart';
 
 /// Playful, soft empty state illustration with cute HeroIcons.
 class EmptyStateWidget extends StatelessWidget {
-  final HeroIcons icon;
+  final IconData icon;
   final String title;
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final bool showMascot;
 
   const EmptyStateWidget({
     super.key,
@@ -18,6 +19,7 @@ class EmptyStateWidget extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.showMascot = true,
   });
 
   @override
@@ -31,21 +33,53 @@ class EmptyStateWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: TackIcon(
-                  icon,
-                  size: 38,
-                  color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
+            if (showMascot)
+              Container(
+                width: 92,
+                height: 92,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE05D5D).withValues(alpha: isDark ? 0.25 : 0.18),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'icon.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Container(
+                      color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
+                      child: Center(
+                        child: TackIcon(
+                          icon,
+                          size: 40,
+                          color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: TackIcon(
+                    icon,
+                    size: 38,
+                    color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,

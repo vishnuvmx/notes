@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,7 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// 5-Destination Bottom Navigation Bar with cute HeroIcons and elevated center (+) FAB.
+/// 5-Destination Bottom Navigation Bar with iOS frosted blur and microanimations.
 class SmartBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -30,46 +31,50 @@ class SmartBottomNavBar extends StatelessWidget {
       (icon: TackIcons.clipboard, label: 'Clipboard', index: 4),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-            width: 1,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: (isDark ? const Color(0xFF000000) : Colors.white).withValues(alpha: 0.88),
+            border: Border(
+              top: BorderSide(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 0.8,
+              ),
+            ),
           ),
-        ),
-        boxShadow: isDark ? AppSpacing.softShadowDark : AppSpacing.softShadowLight,
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // 1. Home
-              _buildNavItem(context, navItems[0], isDark),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // 1. Home
+                  _buildNavItem(context, navItems[0], isDark),
 
-              // 2. Notes
-              _buildNavItem(context, navItems[1], isDark),
+                  // 2. Notes
+                  _buildNavItem(context, navItems[1], isDark),
 
-              // 3. Center (+) Floating Action Button
-              _buildCenterFab(context, isDark),
+                  // 3. Center (+) Floating Action Button
+                  _buildCenterFab(context, isDark),
 
-              // 4. Whiteboard
-              _buildNavItem(context, navItems[2], isDark),
+                  // 4. Whiteboard
+                  _buildNavItem(context, navItems[2], isDark),
 
-              // 5. Clipboard
-              _buildNavItem(context, navItems[3], isDark),
-            ],
+                  // 5. Clipboard
+                  _buildNavItem(context, navItems[3], isDark),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ({HeroIcons icon, String label, int index}) item, bool isDark) {
+  Widget _buildNavItem(BuildContext context, ({IconData icon, String label, int index}) item, bool isDark) {
     final isSelected = currentIndex == item.index;
     final activeColor = isDark ? AppColors.primaryLight : AppColors.primaryDark;
     final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
@@ -86,20 +91,26 @@ class SmartBottomNavBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TackIcon(
-              item.icon,
-              size: 24,
-              color: isSelected ? activeColor : inactiveColor,
-              style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
+            AnimatedScale(
+              scale: isSelected ? 1.08 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              child: TackIcon(
+                item.icon,
+                size: 24,
+                color: isSelected ? activeColor : inactiveColor,
+                style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
+              ),
             ),
             const SizedBox(height: 3),
-            Text(
-              item.label,
-              style: AppTypography.lightTextTheme.labelSmall?.copyWith(
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 180),
+              style: (AppTypography.lightTextTheme.labelSmall ?? const TextStyle()).copyWith(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? activeColor : inactiveColor,
               ),
+              child: Text(item.label),
             ),
           ],
         ),
@@ -117,9 +128,9 @@ class SmartBottomNavBar extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.white : AppColors.primaryDark).withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: (isDark ? Colors.white : AppColors.primaryDark).withValues(alpha: 0.22),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -129,7 +140,7 @@ class SmartBottomNavBar extends StatelessWidget {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: () {
-            HapticFeedback.lightImpact();
+            HapticFeedback.mediumImpact();
             onFabTap();
           },
           child: Center(

@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
-import '../../../domain/models/clipboard_item.dart';
+import '../../../domain/models/sticky_note.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
-import '../../components/inputs/smart_search_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
+import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/smart_note_list_card.dart';
-import '../../components/cards/bento_workspace_card.dart';
-import '../../components/cards/clipboard_card.dart';
+import '../../components/cards/sticky_note_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
+import '../../components/dialogs_sheets/note_action_sheet.dart';
 
 /// Main Home Dashboard Screen for Tack.
-/// Offers both Pinterest / Givingli-style Bento Feed and Tactile Push-Pin List View.
+/// Features the Playful Neo-Pop / Soft Neo-Brutalist design matching the Dribbble reference.
 class HomeScreen extends StatefulWidget {
   final Function(BaseWorkspaceItem item)? onOpenItem;
   final VoidCallback? onOpenFavorites;
@@ -41,6 +46,45 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSearching = false;
+  late final ScrollController _scrollController;
+  bool _isBarsVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.offset <= 12) {
+      if (!_isBarsVisible) {
+        setState(() => _isBarsVisible = true);
+      }
+    }
+  }
+
+  String _getHeadlineTitle(ItemType? category) {
+    switch (category) {
+      case null:
+        return 'Your Files';
+      case ItemType.note:
+        return 'Your Notes';
+      case ItemType.whiteboard:
+        return 'Your Boards';
+      case ItemType.clipboard:
+        return 'Your Saves';
+      case ItemType.sticky:
+        return 'Your Stickies';
+    }
+  }
 
   void _openCreateSheet({ItemType? defaultType}) async {
     final newItem = await CreateItemSheet.show(context, defaultType: defaultType);
@@ -49,17 +93,169 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _handleBottomNavTap(int index) {
+  Future<void> _pasteFromClipboard() async {
+    HapticFeedback.mediumImpact();
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (text == null || text.isEmpty) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.clipboard,
+        iconColor: AppColors.accentAmber,
+        message: 'Clipboard is empty',
+      );
+      return;
+    }
+
     final workspace = context.read<WorkspaceProvider>();
 
-    if (index == 0) {
-      workspace.setCategory(null);
-    } else if (index == 1) {
-      workspace.setCategory(ItemType.note);
-    } else if (index == 3) {
-      workspace.setCategory(ItemType.whiteboard);
-    } else if (index == 4) {
-      workspace.setCategory(ItemType.clipboard);
+    // Rule 1: Do not add individual numbers (e.g. standalone numbers)
+    if (WorkspaceProvider.isIndividualNumber(text)) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.close,
+        iconColor: AppColors.error,
+        message: 'Numbers are skipped',
+      );
+      return;
+    }
+
+    // Rule 2: Do not add duplicates (if added once, don't add again)
+    if (workspace.isClipboardDuplicate(text)) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.checkCircle,
+        iconColor: AppColors.accentAmber,
+        message: 'Already in clipboard',
+      );
+      return;
+    }
+
+    final item = await workspace.saveClipboardSnippet(text);
+    if (mounted && item != null) {
+      _showClipboardFeedbackSnackBar(
+        isDark: isDark,
+        icon: TackIcons.checkCircle,
+        iconColor: AppColors.success,
+        message: 'Saved to clips',
+        action: GestureDetector(
+          onTap: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            widget.onOpenItem?.call(item);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.accentAmber.withValues(alpha: isDark ? 0.25 : 0.2),
+              borderRadius: AppSpacing.roundedPill,
+            ),
+            child: Text(
+              'Open',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                color: isDark ? AppColors.pastelAmberLight : AppColors.pastelAmberDark,
+                fontWeight: FontWeight.w700,
+                fontSize: 11.5,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showClipboardFeedbackSnackBar({
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String message,
+    Widget? action,
+  }) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
+        padding: EdgeInsets.zero,
+        duration: const Duration(milliseconds: 1800),
+        content: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: AppSpacing.roundedPill,
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.4)
+                      : const Color(0xFF191A23).withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TackIcon(icon, size: 16, color: iconColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                if (action != null) ...[
+                  const SizedBox(width: 10),
+                  action,
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleBottomNavTap(int index) {
+    if (!_isBarsVisible) {
+      setState(() => _isBarsVisible = true);
+    }
+    final workspace = context.read<WorkspaceProvider>();
+
+    switch (index) {
+      case 0:
+        workspace.setCategory(null);
+        break;
+      case 1:
+        workspace.setCategory(ItemType.note);
+        break;
+      case 2:
+        _openCreateSheet();
+        break;
+      case 3:
+        workspace.setCategory(ItemType.whiteboard);
+        break;
+      case 4:
+        workspace.setCategory(ItemType.clipboard);
+        break;
     }
   }
 
@@ -79,12 +275,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
     final items = workspace.items;
     final currentNavIndex = _calculateNavIndex(workspace.selectedCategory);
 
+    final headlineColor = isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23);
+    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
+
     return Scaffold(
       key: _scaffoldKey,
+      extendBody: true,
       drawer: AppNavDrawer(
         onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
         onOpenArchive: widget.onOpenArchive,
@@ -104,158 +306,473 @@ class _HomeScreenState extends State<HomeScreen> {
         isSearching: _isSearching,
         onQuickCreate: () => _openCreateSheet(),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
         children: [
-          // Animated Search Bar
-          if (_isSearching) ...[
-            SmartSearchBar(
-              onClose: () {
-                setState(() => _isSearching = false);
-                workspace.setSearchQuery('');
-              },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Collapsible Top Section ("Your Files" / "Your Notes" + Folder Dropdown + Filter Pills)
+              ClipRect(
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOutCubic,
+                  alignment: Alignment.bottomCenter,
+                  heightFactor: _isBarsVisible ? 1.0 : 0.0,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: _isBarsVisible ? 1.0 : 0.0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 1. Headline + Rounded Rect [+] Quick Add Button
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _getHeadlineTitle(workspace.selectedCategory),
+                                  style: AppTypography.sectionHeadline(
+                                    color: headlineColor,
+                                    fontSize: 34,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+
+                              // Tactile [+] Button with dark border matching reference
+                              _QuickAddButton(
+                                isDark: isDark,
+                                borderColor: borderColor,
+                                onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 2. Folder Dropdown + Tag Filter Pills (Only shown for Notes / All)
+                        if (workspace.selectedCategory != ItemType.whiteboard &&
+                            workspace.selectedCategory != ItemType.clipboard) ...[
+                          const CategoryFilterPills(),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 3. Main Notes Feed: Neo-Pop Grid Feed with scroll listener
+              Expanded(
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.direction == ScrollDirection.reverse) {
+                      if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 24) {
+                        setState(() => _isBarsVisible = false);
+                      }
+                    } else if (notification.direction == ScrollDirection.forward) {
+                      if (!_isBarsVisible) {
+                        setState(() => _isBarsVisible = true);
+                      }
+                    }
+                    return false;
+                  },
+                  child: workspace.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : items.isEmpty
+                          ? _buildEmptyState(workspace)
+                          : (workspace.viewMode == HomeViewMode.notebook
+                              ? _buildNotebookFeedView(items, workspace)
+                              : _buildNeoGridFeedView(items)),
+                ),
+              ),
+            ],
+          ),
+
+          // Floating Bottom Popup Dock for Clipboard Category
+          if (workspace.selectedCategory == ItemType.clipboard)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: _isBarsVisible ? (76 + MediaQuery.paddingOf(context).bottom) : -120,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _isBarsVisible ? 1.0 : 0.0,
+                child: _buildClipboardBottomDock(isDark),
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+        ],
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        offset: _isBarsVisible ? Offset.zero : const Offset(0, 1.25),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          opacity: _isBarsVisible ? 1.0 : 0.0,
+          child: SmartBottomNavBar(
+            currentIndex: currentNavIndex,
+            onTap: _handleBottomNavTap,
+            onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+          ),
+        ),
+      ),
+    );
+  }
 
-          // Pill Filter Tabs (Wallpaper / Avatar / Upload style)
-          const CategoryFilterPills(),
-          const SizedBox(height: AppSpacing.md),
-
-          // Main Feed: Pinterest Bento-Box vs Tactile Note List
-          Expanded(
-            child: workspace.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : items.isEmpty
-                    ? _buildEmptyState(workspace)
-                    : workspace.viewMode == HomeViewMode.notebook
-                        ? _buildTactileListView(items)
-                        : _buildBentoFeedView(items),
+  /// Floating bottom dock for quick paste when viewing Clipboard category
+  Widget _buildClipboardBottomDock(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13141B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFF191A23),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.6)
+                : const Color(0xFF191A23).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      bottomNavigationBar: SmartBottomNavBar(
-        currentIndex: currentNavIndex,
-        onTap: _handleBottomNavTap,
-        onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
-      ),
-    );
-  }
-
-  /// Tactile Push-Pin Note List View (Screenshot 2)
-  Widget _buildTactileListView(List<BaseWorkspaceItem> items) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-
-        if (item is ClipboardItem) {
-          return ClipboardCard(
-            item: item,
-            onTap: () => widget.onOpenItem?.call(item),
-          );
-        }
-
-        return SmartNoteListCard(
-          item: item,
-          index: index,
-          onTap: () => widget.onOpenItem?.call(item),
-        );
-      },
-    );
-  }
-
-  /// Givingli / Pinterest Bento-Box Feed View (Screenshot 3 & 4)
-  Widget _buildBentoFeedView(List<BaseWorkspaceItem> items) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-      itemCount: _calculateBentoRowCount(items.length),
-      itemBuilder: (context, rowIndex) {
-        // First item or every 4th row is a Hero full-width Bento Card
-        final startIndex = _getBentoStartIndex(rowIndex);
-        final isHeroRow = (rowIndex % 3 == 0) && (startIndex < items.length);
-
-        if (isHeroRow || startIndex + 1 >= items.length) {
-          final item = items[startIndex];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: BentoWorkspaceCard(
-              item: item,
-              isHero: true,
-              onTap: () => widget.onOpenItem?.call(item),
-            ),
-          );
-        }
-
-        // 2-Column paired bento cards
-        final item1 = items[startIndex];
-        final item2 = items[startIndex + 1];
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: IntrinsicHeight(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _pasteFromClipboard,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: BentoWorkspaceCard(
-                    item: item1,
-                    onTap: () => widget.onOpenItem?.call(item1),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.accentAmber.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Center(
+                    child: TackIcon(
+                      TackIcons.clipboard,
+                      size: 20,
+                      color: AppColors.accentAmber,
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: BentoWorkspaceCard(
-                    item: item2,
-                    onTap: () => widget.onOpenItem?.call(item2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Save from Clipboard',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Tap to import copied snippet',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentAmber.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(
+                        TackIcons.copy,
+                        size: 14,
+                        color: Color(0xFF191A23),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Paste',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF191A23),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(BaseWorkspaceItem item) {
+    if (item is StickyNote) {
+      return StickyNoteCard(
+        item: item,
+        onTap: () => widget.onOpenItem?.call(item),
+        onLongPress: () => NoteActionSheet.show(context, item: item),
+      );
+    }
+    return NeoNoteCard(
+      item: item,
+      isGrid: true,
+      onTap: () => widget.onOpenItem?.call(item),
+      onLongPress: () => NoteActionSheet.show(context, item: item),
+    );
+  }
+
+  /// Clean Notebook List Feed with Spiral Spines and colored index numbers
+  Widget _buildNotebookFeedView(List<BaseWorkspaceItem> items, WorkspaceProvider workspace) {
+    final isClipboard = workspace.selectedCategory == ItemType.clipboard;
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        isClipboard ? 110 : 88,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SmartNoteListCard(
+            item: item,
+            index: index,
+            onTap: () => widget.onOpenItem?.call(item),
+            onLongPress: () => NoteActionSheet.show(context, item: item),
+          ),
         );
       },
     );
   }
 
-  int _calculateBentoRowCount(int totalItems) {
-    if (totalItems == 0) return 0;
-    int count = 0;
-    int itemsPlaced = 0;
-    while (itemsPlaced < totalItems) {
-      if (count % 3 == 0) {
-        itemsPlaced += 1;
+  /// Staggered Neo-Pop Feed matching Reference Mockup (Offset columns instead of rigid matrix)
+  Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
+    final isClipboard = context.watch<WorkspaceProvider>().selectedCategory == ItemType.clipboard;
+    final leftItems = <BaseWorkspaceItem>[];
+    final rightItems = <BaseWorkspaceItem>[];
+
+    for (int i = 0; i < items.length; i++) {
+      if (i.isEven) {
+        leftItems.add(items[i]);
       } else {
-        itemsPlaced += 2;
+        rightItems.add(items[i]);
       }
-      count++;
     }
-    return count;
+
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        isClipboard ? 110 : 88,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Column 1 (Starts at top)
+          Expanded(
+            child: Column(
+              children: [
+                for (int i = 0; i < leftItems.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Transform.rotate(
+                      angle: i.isEven ? -0.035 : -0.022,
+                      child: SizedBox(
+                        height: 218,
+                        child: _buildCard(leftItems[i]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Column 2 (Staggered offset downwards like reference image)
+          Expanded(
+            child: Column(
+              children: [
+                const SizedBox(height: 38), // Stagger offset matching mockup!
+                for (int i = 0; i < rightItems.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Transform.rotate(
+                      angle: i.isEven ? 0.028 : 0.032,
+                      child: SizedBox(
+                        height: 218,
+                        child: _buildCard(rightItems[i]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  int _getBentoStartIndex(int targetRow) {
-    int index = 0;
-    for (int r = 0; r < targetRow; r++) {
-      if (r % 3 == 0) {
-        index += 1;
-      } else {
-        index += 2;
-      }
-    }
-    return index;
-  }
 
   Widget _buildEmptyState(WorkspaceProvider workspace) {
-    final catName = workspace.selectedCategory?.label ?? 'items';
+    final cat = workspace.selectedCategory;
+    final tag = workspace.selectedTag;
+
+    String title;
+    String subtitle;
+    String actionLabel;
+    IconData icon;
+
+    if (workspace.searchQuery.isNotEmpty) {
+      title = 'Nothing found';
+      subtitle = 'No matches for "${workspace.searchQuery}". Try a different term.';
+      actionLabel = 'Clear Search';
+      icon = TackIcons.search;
+    } else if (cat == ItemType.whiteboard) {
+      title = 'No Whiteboards Yet';
+      subtitle = 'Create diagrams, mindmaps, and visual workflows.';
+      actionLabel = 'New Whiteboard';
+      icon = TackIcons.whiteboard;
+    } else if (cat == ItemType.clipboard) {
+      title = 'No Clips Yet';
+      subtitle = 'Save code snippets, text excerpts, and copied links.';
+      actionLabel = 'Paste from Clipboard';
+      icon = TackIcons.clipboard;
+    } else if (tag != null && tag != '#All' && tag != 'All') {
+      title = 'No $tag notes yet';
+      subtitle = 'Create a note with this tag or tap (+) to add one.';
+      actionLabel = 'Create Note';
+      icon = TackIcons.notes;
+    } else {
+      title = 'No Notes Yet';
+      subtitle = 'Tap (+) below to create your first note or board.';
+      actionLabel = 'Create Note';
+      icon = TackIcons.notes;
+    }
+
     return EmptyStateWidget(
-      icon: TackIcons.notes,
-      title: 'No $catName found',
-      subtitle: workspace.searchQuery.isNotEmpty
-          ? 'No matching items for "${workspace.searchQuery}"'
-          : 'Tap (+) below to create your first $catName.',
-      actionLabel: 'Create New $catName',
-      onAction: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      actionLabel: actionLabel,
+      onAction: workspace.searchQuery.isNotEmpty
+          ? () {
+              setState(() => _isSearching = false);
+              workspace.setSearchQuery('');
+            }
+          : (cat == ItemType.clipboard
+              ? () => _pasteFromClipboard()
+              : () => _openCreateSheet(defaultType: workspace.selectedCategory)),
     );
   }
 }
+
+class _QuickAddButton extends StatefulWidget {
+  final bool isDark;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  const _QuickAddButton({
+    required this.isDark,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_QuickAddButton> createState() => _QuickAddButtonState();
+}
+
+class _QuickAddButtonState extends State<_QuickAddButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        HapticFeedback.selectionClick();
+        setState(() => _pressed = true);
+      },
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: widget.isDark ? AppColors.darkSurface : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: widget.borderColor, width: 1.6),
+            boxShadow: widget.isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF191A23).withValues(alpha: _pressed ? 0.02 : 0.08),
+                      blurRadius: 0,
+                      offset: Offset(0, _pressed ? 1 : 2),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: TackIcon(
+              TackIcons.plus,
+              size: 22,
+              color: widget.isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

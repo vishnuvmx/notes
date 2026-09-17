@@ -51,4 +51,27 @@ class DateFormatter {
     final year = dateTime.year;
     return '$day $month $year';
   }
+
+  /// Formats date with ordinal suffix matching mockup (e.g., "4th Jan 2050")
+  static String formatOrdinalDate(DateTime dateTime) {
+    final day = dateTime.day;
+    final suffix = _getOrdinalSuffix(day);
+    final month = _months[dateTime.month - 1];
+    final year = dateTime.year;
+    return '$day$suffix $month $year';
+  }
+
+  static String _getOrdinalSuffix(int day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
 }

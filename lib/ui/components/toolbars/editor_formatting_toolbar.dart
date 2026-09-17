@@ -2,38 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/tack_icons.dart';
 
-/// Keyboard-docked formatting toolbar matching Screenshot 2.
-/// Includes Bold, Italic, Underline, Strikethrough, Bullet List, Numbered List, Checkbox, Link, Image, and Quote.
+/// Supported item types in the formatting toolbar using OOP sealed hierarchy.
+sealed class ToolbarActionItem {
+  final String label;
+  final String action;
+  const ToolbarActionItem({required this.label, required this.action});
+}
+
+class IconToolbarItem extends ToolbarActionItem {
+  final IconData icon;
+  const IconToolbarItem({required super.label, required super.action, required this.icon});
+}
+
+class TextToolbarItem extends ToolbarActionItem {
+  final String display;
+  final TextStyle? customStyle;
+  const TextToolbarItem({
+    required super.label,
+    required super.action,
+    required this.display,
+    this.customStyle,
+  });
+}
+
+class DividerToolbarItem extends ToolbarActionItem {
+  const DividerToolbarItem() : super(label: '', action: 'divider');
+}
+
+/// Tactile, HeroIcons-aligned formatting toolbar for Tack Note Editor.
+/// Features Heading toggles (H1, H2), Bold, Italic, Pastel Highlighter,
+/// Checklists, Lists, and Quotes without any generic Material icons.
 class EditorFormattingToolbar extends StatelessWidget {
   final Function(String action)? onFormatAction;
 
   const EditorFormattingToolbar({super.key, this.onFormatAction});
 
+  static const List<ToolbarActionItem> tools = [
+    TextToolbarItem(
+      label: 'Heading 1',
+      action: 'h1',
+      display: 'H1',
+      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.5),
+    ),
+    TextToolbarItem(
+      label: 'Heading 2',
+      action: 'h2',
+      display: 'H2',
+      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: -0.5),
+    ),
+    DividerToolbarItem(),
+    TextToolbarItem(
+      label: 'Bold',
+      action: 'bold',
+      display: 'B',
+      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, fontFamily: 'serif'),
+    ),
+    TextToolbarItem(
+      label: 'Italic',
+      action: 'italic',
+      display: 'I',
+      customStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, fontStyle: FontStyle.italic, fontFamily: 'serif'),
+    ),
+    TextToolbarItem(
+      label: 'Underline',
+      action: 'underline',
+      display: 'U',
+      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, decoration: TextDecoration.underline, fontFamily: 'serif'),
+    ),
+    TextToolbarItem(
+      label: 'Strikethrough',
+      action: 'strikethrough',
+      display: 'S',
+      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, decoration: TextDecoration.lineThrough, fontFamily: 'serif'),
+    ),
+    TextToolbarItem(
+      label: 'Highlight',
+      action: 'highlight',
+      display: 'HL',
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 11,
+        color: Color(0xFF5A4112),
+        backgroundColor: Color(0xFFFFC661),
+      ),
+    ),
+    DividerToolbarItem(),
+    IconToolbarItem(label: 'Checkbox', action: 'checkbox', icon: TackIcons.checkCircle),
+    IconToolbarItem(label: 'Bullet List', action: 'bullet', icon: TackIcons.menu),
+    IconToolbarItem(label: 'Numbered List', action: 'numbered', icon: TackIcons.listView),
+    DividerToolbarItem(),
+    TextToolbarItem(
+      label: 'Quote',
+      action: 'quote',
+      display: '”',
+      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, height: 1.0, fontFamily: 'serif'),
+    ),
+    IconToolbarItem(label: 'Timestamp', action: 'timestamp', icon: TackIcons.clock),
+    IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.photo),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final tools = [
-      (icon: Icons.format_bold_rounded, label: 'Bold', action: 'bold'),
-      (icon: Icons.format_italic_rounded, label: 'Italic', action: 'italic'),
-      (icon: Icons.format_underlined_rounded, label: 'Underline', action: 'underline'),
-      (icon: Icons.format_strikethrough_rounded, label: 'Strikethrough', action: 'strikethrough'),
-      (icon: null, label: '|', action: 'divider'),
-      (icon: Icons.format_list_bulleted_rounded, label: 'Bullet List', action: 'bullet'),
-      (icon: Icons.format_list_numbered_rounded, label: 'Numbered List', action: 'numbered'),
-      (icon: Icons.check_box_outlined, label: 'Checkbox', action: 'checkbox'),
-      (icon: null, label: '|', action: 'divider'),
-      (icon: Icons.link_rounded, label: 'Link', action: 'link'),
-      (icon: Icons.image_outlined, label: 'Image', action: 'image'),
-      (icon: Icons.format_quote_rounded, label: 'Quote', action: 'quote'),
-    ];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: AppSpacing.roundedPill,
@@ -49,7 +126,7 @@ class EditorFormattingToolbar extends StatelessWidget {
         itemBuilder: (context, index) {
           final item = tools[index];
 
-          if (item.action == 'divider') {
+          if (item is DividerToolbarItem) {
             return Container(
               width: 1,
               height: 20,
@@ -58,19 +135,42 @@ class EditorFormattingToolbar extends StatelessWidget {
             );
           }
 
-          return IconButton(
-            icon: Icon(
-              item.icon,
-              size: 20,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          return Tooltip(
+            message: item.label,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onFormatAction?.call(item.action);
+                  },
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    child: switch (item) {
+                      IconToolbarItem iconItem => TackIcon(
+                          iconItem.icon,
+                          size: 19,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      TextToolbarItem textItem => Text(
+                          textItem.display,
+                          style: (textItem.customStyle ?? const TextStyle()).copyWith(
+                            color: textItem.action == 'highlight'
+                                ? (isDark ? Colors.black : const Color(0xFF5A4112))
+                                : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                          ),
+                        ),
+                      DividerToolbarItem() => const SizedBox.shrink(),
+                    },
+                  ),
+                ),
+              ),
             ),
-            tooltip: item.label,
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              onFormatAction?.call(item.action);
-            },
           );
         },
       ),

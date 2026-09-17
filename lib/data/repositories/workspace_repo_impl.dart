@@ -3,12 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/interfaces/i_workspace_repo.dart';
 import '../../domain/models/base_item.dart';
+import '../../domain/models/text_note.dart';
+import '../../domain/models/sticky_note.dart';
 import '../../domain/models/item_serializer.dart';
 import '../mock/mock_initial_data.dart';
 
 /// Workspace repository implementing IWorkspaceRepository with persistent SharedPreferences storage.
 class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
-  static const String _storageKey = 'tack_workspace_items_v1';
+  static const String _storageKey = 'tack_workspace_items_v2';
   final List<BaseWorkspaceItem> _items = [];
   bool _isInitialized = false;
 
@@ -54,12 +56,24 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
             }
           }
         }
+        // Clean out any legacy placeholder mockups or old emoji-laden seed items from prior builds
+        _items.removeWhere((item) =>
+            item.id.startsWith('mockup_') ||
+            item.title.contains('mockup') ||
+            item.title.contains('dumb dumb') ||
+            item.title.contains('🌱') ||
+            item.title.contains('📌') ||
+            item.title.contains('🎨'));
+
+        // One-time sanitization and migration of existing notes with legacy HTML tags or empty markdown markers
+        _sanitizeAndMigrateNotes();
       }
       
-      // If storage was empty or no items parsed, initialize with curated initial data
+      // If storage was empty or legacy items cleaned out, initialize with curated initial data
       if (_items.isEmpty) {
         _items.clear();
         _items.addAll(MockInitialData.getInitialItems());
+        _sanitizeAndMigrateNotes();
         await _persistToStorage();
       }
     } catch (_) {
@@ -69,6 +83,46 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     } finally {
       _isInitialized = true;
     }
+  }
+
+  void _sanitizeAndMigrateNotes() {
+    bool hasChanges = false;
+    for (int i = 0; i < _items.length; i++) {
+      final item = _items[i];
+      if (item is TextNote) {
+        final sanitized = _cleanCorruptedMarkdown(item.content);
+        if (sanitized != item.content) {
+          _items[i] = item.copyWith(content: sanitized);
+          hasChanges = true;
+        }
+      } else if (item is StickyNote) {
+        final sanitized = _cleanCorruptedMarkdown(item.content);
+        if (sanitized != item.content) {
+          _items[i] = item.copyWith(content: sanitized);
+          hasChanges = true;
+        }
+      }
+    }
+    if (hasChanges) {
+      _persistToStorage();
+    }
+  }
+
+  String _cleanCorruptedMarkdown(String text) {
+    if (text.isEmpty) return text;
+    // Migrate legacy <u>...</u> into standard markdown __...__
+    var result = text.replaceAllMapped(
+      RegExp(r'<u>(.*?)</u>', caseSensitive: false, dotAll: false),
+      (match) => '__${match.group(1)}__',
+    );
+    // Remove dangling empty formatting artifacts
+    result = result
+        .replaceAll('****', '')
+        .replaceAll('____', '')
+        .replaceAll('~~~~', '')
+        .replaceAll('====', '')
+        .replaceAll('<u></u>', '');
+    return result;
   }
 
   Future<void> _persistToStorage() async {
