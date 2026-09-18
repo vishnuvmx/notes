@@ -18,8 +18,8 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primaryDark,
         onPrimary: AppColors.lightSurface,
-        secondary: AppColors.accentAmber,
-        onSecondary: AppColors.primaryDark,
+        secondary: Color(0xFF1D4ED8),
+       onSecondary: Colors.white,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
         error: AppColors.error,
@@ -76,7 +76,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryDark,
+          foregroundColor: const Color(0xFF1D4ED8), // Deep cobalt blue for readability
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
           shape: RoundedRectangleBorder(
@@ -143,9 +143,9 @@ class AppTheme {
         secondary: AppColors.accentAmber,
         onSecondary: AppColors.darkBackground,
         surface: AppColors.darkSurface,
-        onSurface: AppColors.darkTextPrimary,
-        error: AppColors.error,
-        onError: Colors.white,
+       onSurface: AppColors.darkTextPrimary,
+       error: AppColors.error,
+       onError: Colors.white,
       ),
       textTheme: AppTypography.darkTextTheme,
       fontFamily: AppTypography.fontFamily,
