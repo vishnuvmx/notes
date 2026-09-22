@@ -14,6 +14,13 @@ enum HomeViewMode {
   stickyGrid, // 2-column pastel sticky note card grid
 }
 
+/// Supported note sort orders
+enum NoteSortOrder {
+  recentlyModified, // Newest updatedAt first
+  dateCreated,      // Newest createdAt first
+  titleAZ,          // A to Z alphabetically
+}
+
 /// Default palette used for externally-created items and clipboard snippets.
 const String _kDefaultPaletteId = 'amber';
 
@@ -26,6 +33,7 @@ class WorkspaceProvider extends ChangeNotifier {
     _trashItems = _repository.cachedTrashItems;
     _archivedItems = _repository.cachedArchivedItems;
     _favoriteItems = _repository.cachedFavoriteItems;
+    _applySort();
     _rebuildIndex();
   }
 
@@ -41,6 +49,7 @@ class WorkspaceProvider extends ChangeNotifier {
   ItemType? _selectedCategory; // null = 'All'
   String _searchQuery = '';
   HomeViewMode _viewMode = HomeViewMode.stickyGrid; // Default to 2x2 neo-pop grid
+  NoteSortOrder _sortOrder = NoteSortOrder.recentlyModified;
   String? _selectedTag = '#All'; // Default to show all notes
   String _selectedFolder = 'All Notes';
   bool _isLoading = false;
@@ -71,6 +80,7 @@ class WorkspaceProvider extends ChangeNotifier {
   ItemType? get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
   HomeViewMode get viewMode => _viewMode;
+  NoteSortOrder get sortOrder => _sortOrder;
   String? get selectedTag => _selectedTag;
   String get selectedFolder => _selectedFolder;
   bool get isLoading => _isLoading;
@@ -110,6 +120,7 @@ class WorkspaceProvider extends ChangeNotifier {
     _archivedItems = await _repository.getArchivedItems();
     _favoriteItems = await _repository.getFavoriteItems();
 
+    _applySort();
     _rebuildIndex();
     _cachedAvailableTags = null; // invalidate tag cache
     _isLoading = false;
@@ -152,6 +163,28 @@ class WorkspaceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Change note sort order
+  void setSortOrder(NoteSortOrder order) {
+    if (_sortOrder == order) return;
+    _sortOrder = order;
+    _applySort();
+    notifyListeners();
+  }
+
+  void _applySort() {
+    switch (_sortOrder) {
+      case NoteSortOrder.recentlyModified:
+        _items.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        break;
+      case NoteSortOrder.dateCreated:
+        _items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case NoteSortOrder.titleAZ:
+        _items.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+    }
+  }
+
   /// Lookup item across all lists in O(1) via the ID index
   BaseWorkspaceItem? getItemById(String id) => _itemIndex[id];
 
@@ -174,6 +207,7 @@ class WorkspaceProvider extends ChangeNotifier {
       _archivedItems.insert(0, item);
     }
 
+    _applySort();
     notifyListeners();
     await _repository.saveItem(item);
     _rebuildIndex();

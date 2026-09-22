@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/interfaces/i_workspace_repo.dart';
@@ -272,6 +274,7 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     await _ensureReady();
     _items.removeWhere((item) => item.id == id);
     await _persistToStorage();
+    _sweepOrphanedMedia();
   }
 
   @override
@@ -279,6 +282,48 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     await _ensureReady();
     _items.removeWhere((item) => item.isTrash);
     await _persistToStorage();
+    _sweepOrphanedMedia();
+  }
+
+  /// Background garbage collection: scans for unreferenced media files in shared_media cache and deletes them.
+  Future<void> _sweepOrphanedMedia() async {
+    try {
+      final referencedPaths = <String>{};
+      final imgRegex = RegExp(r'!\[.*?\]\((.*?)\)');
+      for (final item in _items) {
+        String? text;
+        if (item is TextNote) {
+          text = item.content;
+        } else if (item is StickyNote) {
+          text = item.content;
+        }
+        if (text != null && text.isNotEmpty) {
+          for (final match in imgRegex.allMatches(text)) {
+            final path = match.group(1)?.trim();
+            if (path != null && path.isNotEmpty) {
+              referencedPaths.add(path);
+            }
+          }
+        }
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final sharedMediaDir = Directory('${tempDir.path}/shared_media');
+      if (await sharedMediaDir.exists()) {
+        await for (final file in sharedMediaDir.list()) {
+          if (file is File) {
+            if (!referencedPaths.contains(file.path)) {
+              try {
+                await file.delete();
+                debugPrint('[WorkspaceRepo] Deleted orphaned media: ${file.path}');
+              } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[WorkspaceRepo] sweepOrphanedMedia error: $e');
+    }
   }
 }
 

@@ -45,6 +45,8 @@ class TackIcons {
   static const IconData user = LucideIcons.user;
   static const IconData notification = LucideIcons.bell;
   static const IconData chevronDown = LucideIcons.chevronDown;
+  static const IconData chevronUp = LucideIcons.chevronUp;
+  static const IconData edit = LucideIcons.pencil;
   static const IconData tag = LucideIcons.tag;
 
   // Whiteboard shapes & tools

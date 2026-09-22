@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'mermaid/mermaid_diagram_card.dart';
 
 /// Rich Interactive Content View for Tack Notes.
 /// Renders Headings (H1-H6), Blockquotes, Interactive Checklists, Bullet & Numbered Lists,
@@ -83,7 +85,27 @@ class RichNoteContentView extends StatelessWidget {
           j++;
         }
         final code = codeLines.join('\n');
-        widgets.add(_buildFencedCodeBlock(context, lang, code, isDark, theme));
+        final normalizedLang = lang.toLowerCase();
+        final trimmedCode = code.trim().toLowerCase();
+        final isMermaid = normalizedLang == 'mermaid' ||
+            normalizedLang == 'chart' ||
+            normalizedLang == 'graph' ||
+            normalizedLang == 'flowchart' ||
+            normalizedLang == 'pie' ||
+            (normalizedLang.isEmpty &&
+                (trimmedCode.startsWith('graph') ||
+                    trimmedCode.startsWith('flowchart') ||
+                    trimmedCode.startsWith('pie') ||
+                    trimmedCode.startsWith('sequencediagram')));
+
+        if (isMermaid) {
+          widgets.add(MermaidDiagramCard(
+            rawCode: code,
+            paletteId: paletteId,
+          ));
+        } else {
+          widgets.add(_buildFencedCodeBlock(context, lang, code, isDark, theme));
+        }
         i = (j < lines.length) ? j + 1 : j;
         continue;
       }
@@ -129,7 +151,20 @@ class RichNoteContentView extends StatelessWidget {
         continue;
       }
 
-      // 5. Line-based elements (Headings, Checklists, Blockquotes, Lists, Paragraphs)
+      // 5. Blockquotes and GitHub / Antigravity Alerts (> [!NOTE], > [!TIP], etc.)
+      if (trimmed.startsWith('>')) {
+        final quoteLines = <String>[line];
+        int j = i + 1;
+        while (j < lines.length && lines[j].trim().startsWith('>')) {
+          quoteLines.add(lines[j]);
+          j++;
+        }
+        widgets.add(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme));
+        i = j;
+        continue;
+      }
+
+      // 6. Line-based elements (Headings, Checklists, Lists, Paragraphs)
       widgets.add(_buildLineWidget(context, line, i, isDark));
       i++;
     }
@@ -289,33 +324,7 @@ class RichNoteContentView extends StatelessWidget {
 
     // Blockquote (> Quote text or >> Nested Quote)
     if (trimmed.startsWith('>')) {
-      int depth = 0;
-      while (depth < trimmed.length && trimmed[depth] == '>') {
-        depth++;
-      }
-      final quoteText = trimmed.substring(depth).trim();
-      return Container(
-        margin: EdgeInsets.only(top: 6, bottom: 6, left: (depth - 1) * 12.0),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: palette.resolveQuoteBg(isDark),
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(color: palette.resolveQuoteBar(isDark), width: 3.5),
-          ),
-        ),
-        child: _buildRichTextSpans(
-          quoteText,
-          isDark,
-          theme,
-          context: context,
-          baseStyle: theme.textTheme.bodyMedium?.copyWith(
-            fontStyle: FontStyle.italic,
-            height: 1.45,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
-        ),
-      );
+      return _buildBlockquoteOrAlert(context, [line], isDark, theme);
     }
 
     // Numbered item (e.g. 1. item) with indentation
@@ -401,6 +410,156 @@ class RichNoteContentView extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: _buildRichTextSpans(line, isDark, theme, context: context),
+    );
+  }
+
+  Widget _buildBlockquoteOrAlert(
+    BuildContext context,
+    List<String> quoteLines,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    if (quoteLines.isEmpty) return const SizedBox.shrink();
+
+    final firstLine = quoteLines.first.trim();
+    final strippedFirst = firstLine.replaceFirst(RegExp(r'^>+\s*'), '');
+
+    final alertMatch = RegExp(r'^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$', caseSensitive: false)
+        .firstMatch(strippedFirst);
+
+    if (alertMatch != null) {
+      final alertType = alertMatch.group(1)!.toUpperCase();
+      final titleOverride = alertMatch.group(2)?.trim();
+
+      final bodyLines = <String>[];
+      for (int k = 1; k < quoteLines.length; k++) {
+        final l = quoteLines[k].trim();
+        bodyLines.add(l.replaceFirst(RegExp(r'^>+\s*'), ''));
+      }
+      final bodyText = bodyLines.join('\n').trim();
+
+      Color alertColor;
+      IconData alertIcon;
+      switch (alertType) {
+        case 'TIP':
+          alertColor = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
+          alertIcon = LucideIcons.lightbulb;
+          break;
+        case 'IMPORTANT':
+          alertColor = isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
+          alertIcon = LucideIcons.star;
+          break;
+        case 'WARNING':
+          alertColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
+          alertIcon = LucideIcons.alertTriangle;
+          break;
+        case 'CAUTION':
+          alertColor = isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
+          alertIcon = LucideIcons.shieldAlert;
+          break;
+        case 'NOTE':
+        default:
+          alertColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+          alertIcon = LucideIcons.info;
+          break;
+      }
+
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: alertColor.withValues(alpha: isDark ? 0.12 : 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: alertColor.withValues(alpha: isDark ? 0.35 : 0.25),
+            width: 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: alertColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(alertIcon, size: 15, color: alertColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            titleOverride != null && titleOverride.isNotEmpty ? titleOverride : alertType,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: alertColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (bodyText.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildRichTextSpans(
+                          bodyText,
+                          isDark,
+                          theme,
+                          context: context,
+                          baseStyle: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.45,
+                            fontSize: 14,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Standard multi-line blockquote
+    final quoteTexts = <String>[];
+    int minDepth = 99;
+    for (final raw in quoteLines) {
+      final t = raw.trim();
+      int depth = 0;
+      while (depth < t.length && t[depth] == '>') {
+        depth++;
+      }
+      if (depth < minDepth && depth > 0) minDepth = depth;
+      quoteTexts.add(t.substring(depth).trim());
+    }
+    final combinedQuote = quoteTexts.join('\n');
+
+    return Container(
+      margin: EdgeInsets.only(top: 6, bottom: 6, left: (minDepth > 0 ? (minDepth - 1) * 12.0 : 0.0)),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: palette.resolveQuoteBg(isDark),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: palette.resolveQuoteBar(isDark), width: 3.5),
+        ),
+      ),
+      child: _buildRichTextSpans(
+        combinedQuote,
+        isDark,
+        theme,
+        context: context,
+        baseStyle: theme.textTheme.bodyMedium?.copyWith(
+          fontStyle: FontStyle.italic,
+          height: 1.45,
+          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+        ),
+      ),
     );
   }
 

@@ -99,6 +99,14 @@ class EditorFormattingToolbar extends StatelessWidget {
       display: '”',
       customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, height: 1.0, fontFamily: 'serif'),
     ),
+    TextToolbarItem(
+      label: 'Table',
+      action: 'table',
+      display: '⊞',
+      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, height: 1.0),
+    ),
+    IconToolbarItem(label: 'Diagram / Graph', action: 'diagram', icon: TackIcons.flow),
+    IconToolbarItem(label: 'Callout Alert', action: 'alert', icon: TackIcons.bolt),
     IconToolbarItem(label: 'Timestamp', action: 'timestamp', icon: TackIcons.clock),
     IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.photo),
   ];

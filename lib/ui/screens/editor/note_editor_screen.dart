@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -50,6 +51,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isSaving = false;
   Timer? _saveDebounce;
   bool _isPinnedToStatusBar = false;
+
+  // In-Note Find & Replace State
+  bool _isSearching = false;
+  bool _showReplace = false;
+  final TextEditingController _searchQueryController = TextEditingController();
+  final TextEditingController _replaceQueryController = TextEditingController();
+  final List<int> _searchMatches = [];
+  int _currentMatchIndex = 0;
 
   @override
   void initState() {
@@ -132,6 +141,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _contentController.dispose();
     _newTagController.dispose();
     _contentFocusNode.dispose();
+    _searchQueryController.dispose();
+    _replaceQueryController.dispose();
     super.dispose();
   }
 
@@ -341,6 +352,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       case 'image':
         _showImageSourcePicker();
         return;
+      case 'table':
+        final prefixTable = (before.isEmpty || before.endsWith('\n')) ? '' : '\n\n';
+        const tableTemplate = '| Column 1 | Column 2 | Column 3 |\n| :--- | :---: | ---: |\n| Row 1 | Data | 100 |\n| Row 2 | Info | 250 |\n';
+        newText = '$before$prefixTable$tableTemplate$after';
+        newCursorStart = before.length + prefixTable.length + tableTemplate.length;
+        newCursorEnd = newCursorStart;
+        break;
+      case 'diagram':
+        _showDiagramTemplatePicker();
+        return;
+      case 'alert':
+        _showAlertTemplatePicker();
+        return;
       case 'timestamp':
         final now = DateTime.now();
         final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
@@ -407,6 +431,174 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     } catch (e) {
       debugPrint('Error inserting clipboard content: $e');
     }
+  }
+
+  void _insertAtCursor(String insertion) {
+    final text = _contentController.text;
+    final selection = _contentController.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+
+    final before = text.substring(0, start);
+    final after = text.substring(end);
+
+    final prefix = (before.isEmpty || before.endsWith('\n')) ? '' : '\n\n';
+    final suffix = (after.isEmpty || after.startsWith('\n')) ? '' : '\n';
+    final fullText = '$prefix$insertion$suffix';
+
+    final newText = '$before$fullText$after';
+    final newCursor = before.length + fullText.length;
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    _saveNote();
+    _contentFocusNode.requestFocus();
+  }
+
+  void _showDiagramTemplatePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Insert Diagram / Graph',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                leading: const TackIcon(TackIcons.flow, size: 22, color: Color(0xFFFF8F6B)),
+                title: const Text('Flowchart (Top-Down)'),
+                subtitle: const Text('graph TD with decision branches'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('```mermaid\ngraph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -->|Yes| D[Success]\n    C -->|No| E[Retry]\n```\n');
+                },
+              ),
+              ListTile(
+                leading: const TackIcon(TackIcons.play, size: 22, color: Color(0xFF1BA5BA)),
+                title: const Text('Flowchart (Left-to-Right)'),
+                subtitle: const Text('graph LR for pipelines and stages'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('```mermaid\ngraph LR\n    A[Input] --> B[Processing] --> C[Storage] --> D[Output]\n```\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.chartPie, size: 22, color: Color(0xFFB2CD4D)),
+                title: const Text('Pie Chart'),
+                subtitle: const Text('pie title ... with slice values & percentages'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('```mermaid\npie title Project Distribution\n    "Development" : 45\n    "Design" : 25\n    "Testing" : 15\n    "Documentation" : 15\n```\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.arrowRightLeft, size: 22, color: Color(0xFF9D84D6)),
+                title: const Text('Sequence Diagram'),
+                subtitle: const Text('sequenceDiagram with actors and messages'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('```mermaid\nsequenceDiagram\n    User->>App: Request Note\n    App->>Database: Fetch\n    Database-->>App: Return Note\n    App-->>User: Render View\n```\n');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAlertTemplatePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Insert Callout Alert',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                leading: const Icon(LucideIcons.info, size: 22, color: Color(0xFF0284C7)),
+                title: const Text('Note Alert'),
+                subtitle: const Text('> [!NOTE] Informational notice'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('> [!NOTE]\n> Write your important context or informational notice here.\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.lightbulb, size: 22, color: Color(0xFF059669)),
+                title: const Text('Tip Alert'),
+                subtitle: const Text('> [!TIP] Helpful recommendation'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('> [!TIP]\n> Pro-tip: Organize your notes using tags or custom pastel palettes.\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.star, size: 22, color: Color(0xFF7C3AED)),
+                title: const Text('Important Alert'),
+                subtitle: const Text('> [!IMPORTANT] Crucial requirement'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('> [!IMPORTANT]\n> Essential requirement or critical step to keep in mind.\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.alertTriangle, size: 22, color: Color(0xFFD97706)),
+                title: const Text('Warning Alert'),
+                subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('> [!WARNING]\n> Warning: Changes made here cannot be undone once deleted.\n');
+                },
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.shieldAlert, size: 22, color: Color(0xFFDC2626)),
+                title: const Text('Caution Alert'),
+                subtitle: const Text('> [!CAUTION] High-risk action notice'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _insertAtCursor('> [!CAUTION]\n> High-risk action: Proceed with caution.\n');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showImageSourcePicker() {
@@ -558,6 +750,85 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
+  void _onSearchQueryChanged(String query) {
+    _searchMatches.clear();
+    _currentMatchIndex = 0;
+    if (query.trim().isNotEmpty) {
+      final text = _contentController.text.toLowerCase();
+      final q = query.toLowerCase();
+      int startIndex = 0;
+      while ((startIndex = text.indexOf(q, startIndex)) != -1) {
+        _searchMatches.add(startIndex);
+        startIndex += q.length;
+      }
+    }
+    setState(() {});
+    if (_searchMatches.isNotEmpty) {
+      _jumpToMatch(0);
+    }
+  }
+
+  void _jumpToMatch(int index) {
+    if (_searchMatches.isEmpty) return;
+    _currentMatchIndex = index.clamp(0, _searchMatches.length - 1);
+    final matchStart = _searchMatches[_currentMatchIndex];
+    final matchLength = _searchQueryController.text.length;
+    _contentController.selection = TextSelection(
+      baseOffset: matchStart,
+      extentOffset: matchStart + matchLength,
+    );
+    setState(() {});
+  }
+
+  void _nextMatch() {
+    if (_searchMatches.isEmpty) return;
+    final next = (_currentMatchIndex + 1) % _searchMatches.length;
+    _jumpToMatch(next);
+  }
+
+  void _prevMatch() {
+    if (_searchMatches.isEmpty) return;
+    final prev = (_currentMatchIndex - 1 + _searchMatches.length) % _searchMatches.length;
+    _jumpToMatch(prev);
+  }
+
+  void _replaceCurrentMatch() {
+    if (_searchMatches.isEmpty) return;
+    final query = _searchQueryController.text;
+    final replacement = _replaceQueryController.text;
+    final matchStart = _searchMatches[_currentMatchIndex];
+    final text = _contentController.text;
+
+    final newText = text.replaceRange(matchStart, matchStart + query.length, replacement);
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: matchStart + replacement.length),
+    );
+    _saveNote();
+    _onSearchQueryChanged(query);
+  }
+
+  void _replaceAllMatches() {
+    if (_searchMatches.isEmpty) return;
+    final query = _searchQueryController.text;
+    final replacement = _replaceQueryController.text;
+    final text = _contentController.text;
+    final newText = text.replaceAll(query, replacement);
+    _contentController.text = newText;
+    _saveNote();
+    _onSearchQueryChanged(query);
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearching = false;
+      _showReplace = false;
+      _searchMatches.clear();
+      _searchQueryController.clear();
+      _replaceQueryController.clear();
+    });
+  }
+
   void _showShareExportSheet() {
     final title = _titleController.text;
     final content = _contentController.text;
@@ -603,6 +874,50 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     content: Text('Plain text copied to clipboard!'),
                     behavior: SnackBarBehavior.floating,
                   ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const TackIcon(TackIcons.exportData, size: 22),
+              title: const Text('Export as PDF Document'),
+              subtitle: const Text('Formatted stationery PDF layout'),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await NoteExportService.exportPdf(
+                  title: title,
+                  content: content,
+                  tags: _tags,
+                  paletteId: _paletteId,
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const TackIcon(TackIcons.tag, size: 22),
+              title: const Text('Print / Save PDF'),
+              subtitle: const Text('Native Android Print Preview'),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await NoteExportService.printPdf(
+                  title: title,
+                  content: content,
+                  tags: _tags,
+                  paletteId: _paletteId,
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const TackIcon(TackIcons.share, size: 22),
+              title: const Text('Share Note'),
+              subtitle: const Text('System share sheet'),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await NoteExportService.shareNote(
+                  title: title,
+                  content: content,
+                  tags: _tags,
                 );
               },
             ),
@@ -707,6 +1022,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             },
           ),
 
+          // In-Note Find & Replace Trigger
+          IconButton(
+            icon: TackIcon(
+              _isSearching ? TackIcons.close : TackIcons.search,
+              size: 20,
+              color: _isSearching
+                  ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)
+                  : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+            ),
+            tooltip: _isSearching ? 'Close Search' : 'Find & Replace',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              if (_isSearching) {
+                _closeSearch();
+              } else {
+                setState(() => _isSearching = true);
+              }
+            },
+          ),
+
           // Palette trigger
           IconButton(
             icon: const TackIcon(TackIcons.palette, size: 20),
@@ -808,6 +1143,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Docked Find & Replace Bar
+            if (_isSearching)
+              _buildFindAndReplaceBar(isDark: isDark, palette: palette),
+
             // Scrollable Note Document
             Expanded(
               child: SingleChildScrollView(
@@ -1118,6 +1457,179 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFindAndReplaceBar({required bool isDark, required TackColorPalette palette}) {
+    final matchCount = _searchMatches.length;
+    final matchText = _searchQueryController.text.isEmpty
+        ? ''
+        : (matchCount == 0 ? 'No matches' : '${_currentMatchIndex + 1} of $matchCount');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 4),
+              TackIcon(
+                TackIcons.search,
+                size: 16,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchQueryController,
+                  autofocus: true,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: AppTypography.fontFamily,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Find in note...',
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      fontFamily: AppTypography.fontFamily,
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: _onSearchQueryChanged,
+                ),
+              ),
+              if (matchText.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    matchText,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: matchCount > 0
+                          ? (isDark ? AppColors.pastelAmberLight : AppColors.pastelAmberDark)
+                          : AppColors.error,
+                    ),
+                  ),
+                ),
+              IconButton(
+                icon: const TackIcon(TackIcons.chevronUp, size: 16),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                tooltip: 'Previous match',
+                onPressed: matchCount > 0 ? _prevMatch : null,
+              ),
+              IconButton(
+                icon: const TackIcon(TackIcons.chevronDown, size: 16),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                tooltip: 'Next match',
+                onPressed: matchCount > 0 ? _nextMatch : null,
+              ),
+              IconButton(
+                icon: TackIcon(
+                  TackIcons.edit,
+                  size: 16,
+                  color: _showReplace
+                      ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)
+                      : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                ),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                tooltip: 'Toggle Replace',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _showReplace = !_showReplace);
+                },
+              ),
+              IconButton(
+                icon: const TackIcon(TackIcons.close, size: 16),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                tooltip: 'Close',
+                onPressed: _closeSearch,
+              ),
+            ],
+          ),
+          if (_showReplace) ...[
+            const SizedBox(height: 6),
+            Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const SizedBox(width: 4),
+                TackIcon(
+                  TackIcons.redo,
+                  size: 16,
+                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _replaceQueryController,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: AppTypography.fontFamily,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Replace with...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        fontFamily: AppTypography.fontFamily,
+                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                      ),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: matchCount > 0 ? _replaceCurrentMatch : null,
+                  child: const Text('Replace', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 4),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: matchCount > 0 ? _replaceAllMatches : null,
+                  child: const Text('All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

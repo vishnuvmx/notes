@@ -344,11 +344,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
 
-                              // Tactile [+] Button with dark border matching reference
-                              _QuickAddButton(
-                                isDark: isDark,
-                                borderColor: borderColor,
-                                onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Sort Selector Menu
+                                  _SortButton(
+                                    isDark: isDark,
+                                    borderColor: borderColor,
+                                    activeSort: workspace.sortOrder,
+                                    onSelected: (order) {
+                                      HapticFeedback.lightImpact();
+                                      workspace.setSortOrder(order);
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Tactile [+] Button with dark border matching reference
+                                  _QuickAddButton(
+                                    isDark: isDark,
+                                    borderColor: borderColor,
+                                    onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -771,6 +787,105 @@ class _QuickAddButtonState extends State<_QuickAddButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SortButton extends StatelessWidget {
+  final bool isDark;
+  final Color borderColor;
+  final NoteSortOrder activeSort;
+  final ValueChanged<NoteSortOrder> onSelected;
+
+  const _SortButton({
+    required this.isDark,
+    required this.borderColor,
+    required this.activeSort,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<NoteSortOrder>(
+      initialValue: activeSort,
+      onSelected: onSelected,
+      tooltip: 'Sort Notes',
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+      ),
+      color: isDark ? AppColors.darkSurface : Colors.white,
+      elevation: 6,
+      itemBuilder: (context) => [
+        _buildItem(NoteSortOrder.recentlyModified, 'Recently Modified', TackIcons.clock),
+        _buildItem(NoteSortOrder.dateCreated, 'Date Created', TackIcons.notes),
+        _buildItem(NoteSortOrder.titleAZ, 'Title (A–Z)', TackIcons.tag),
+      ],
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: 1.6),
+          boxShadow: isDark
+              ? null
+              : [
+                  const BoxShadow(
+                    color: Color(0xFF191A23),
+                    blurRadius: 0,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TackIcon(
+              TackIcons.listView,
+              size: 17,
+              color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+            ),
+            const SizedBox(width: 4),
+            TackIcon(
+              TackIcons.chevronDown,
+              size: 13,
+              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<NoteSortOrder> _buildItem(NoteSortOrder order, String label, IconData icon) {
+    final isSelected = activeSort == order;
+    return PopupMenuItem<NoteSortOrder>(
+      value: order,
+      child: Row(
+        children: [
+          TackIcon(
+            icon,
+            size: 16,
+            color: isSelected ? AppColors.accentAmber : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected
+                  ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
+                  : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+            ),
+          ),
+          if (isSelected) ...[
+            const Spacer(),
+            const TackIcon(TackIcons.check, size: 14, color: AppColors.accentAmber),
+          ],
+        ],
       ),
     );
   }

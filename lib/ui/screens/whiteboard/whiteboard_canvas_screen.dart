@@ -93,12 +93,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   late AnimationController _cameraAnimController;
   Animation<Matrix4>? _cameraAnimation;
 
-  String _activeTool = 'select'; // 'select', 'pan', 'connect', 'text', 'sticky', 'image'
+  String _activeTool = 'select'; // 'select', 'pan', 'connect', 'text', 'sticky', 'image', 'shapes'
   String? _selectedNodeId;
   String? _selectedEdgeId;
   String? _connectingFromNodeId;
   bool _isDraggingNode = false;
   bool _showGrid = true;
+  bool _snapToGrid = false;
+  bool _showMinimap = false;
+  bool _isZenMode = false;
+  bool _showShapesMenu = false;
   double _gridOpacity = 0.18;
   bool _showGridOpacitySlider = false;
   final ValueNotifier<double> _scaleNotifier = ValueNotifier<double>(1.0);
@@ -420,23 +424,23 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     switch (direction) {
       case 'right':
-        newX = (parent.x + parent.width + 75.0).clamp(0.0, 2400.0);
+        newX = (parent.x + parent.width + 75.0).clamp(0.0, _canvasSize - parent.width);
         newY = parent.y;
         oppositePort = 'left';
         break;
       case 'bottom':
         newX = parent.x;
-        newY = (parent.y + parent.height + 75.0).clamp(0.0, 2400.0);
+        newY = (parent.y + parent.height + 75.0).clamp(0.0, _canvasSize - parent.height);
         oppositePort = 'top';
         break;
       case 'left':
-        newX = (parent.x - parent.width - 75.0).clamp(0.0, 2400.0);
+        newX = (parent.x - parent.width - 75.0).clamp(0.0, _canvasSize - parent.width);
         newY = parent.y;
         oppositePort = 'right';
         break;
       case 'top':
         newX = parent.x;
-        newY = (parent.y - parent.height - 75.0).clamp(0.0, 2400.0);
+        newY = (parent.y - parent.height - 75.0).clamp(0.0, _canvasSize - parent.height);
         oppositePort = 'bottom';
         break;
     }
@@ -3014,14 +3018,31 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               setState(() {
                 final index = _nodes.indexWhere((n) => n.id == node.id);
                 if (index >= 0) {
+                  double rawX = _nodes[index].x + details.delta.dx;
+                  double rawY = _nodes[index].y + details.delta.dy;
+                  if (_snapToGrid) {
+                    rawX = (rawX / 20.0).round() * 20.0;
+                    rawY = (rawY / 20.0).round() * 20.0;
+                  }
                   _nodes[index] = _nodes[index].copyWith(
-                    x: (_nodes[index].x + details.delta.dx).clamp(0.0, _canvasSize - node.width),
-                    y: (_nodes[index].y + details.delta.dy).clamp(0.0, _canvasSize - node.height),
+                    x: rawX.clamp(0.0, _canvasSize - node.width),
+                    y: rawY.clamp(0.0, _canvasSize - node.height),
                   );
                 }
               });
             },
             onPanEnd: (_) {
+              if (_snapToGrid) {
+                final index = _nodes.indexWhere((n) => n.id == node.id);
+                if (index >= 0) {
+                  final snapX = ((_nodes[index].x) / 20.0).round() * 20.0;
+                  final snapY = ((_nodes[index].y) / 20.0).round() * 20.0;
+                  _nodes[index] = _nodes[index].copyWith(
+                    x: snapX.clamp(0.0, _canvasSize - node.width),
+                    y: snapY.clamp(0.0, _canvasSize - node.height),
+                  );
+                }
+              }
               setState(() => _isDraggingNode = false);
               _saveCanvasState();
             },

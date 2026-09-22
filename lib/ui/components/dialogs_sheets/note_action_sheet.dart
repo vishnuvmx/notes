@@ -231,9 +231,9 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
               },
             ),
 
-            // Action: Share & Export
+            // Action: Share Markdown
             _buildActionTile(
-              title: 'Share Note',
+              title: 'Share Markdown',
               isDark: isDark,
               onTap: () {
                 Navigator.of(context).pop();
@@ -243,6 +243,23 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                   title: title,
                   content: content,
                   tags: tags,
+                );
+              },
+            ),
+
+            // Action: Export as PDF
+            _buildActionTile(
+              title: 'Export as PDF',
+              isDark: isDark,
+              onTap: () {
+                Navigator.of(context).pop();
+                final content = _getItemContent();
+                final tags = widget.item is TextNote ? (widget.item as TextNote).tags : <String>[];
+                NoteExportService.exportPdf(
+                  title: title,
+                  content: content,
+                  tags: tags,
+                  paletteId: widget.item.paletteId,
                 );
               },
             ),
