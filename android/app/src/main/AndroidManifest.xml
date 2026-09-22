@@ -4,7 +4,8 @@
         android:label="Tack"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:roundIcon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,13 +36,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="tack" android:host="action" />
             </intent-filter>
-            <!-- Share sheet integration for plain text and markdown -->
+            <!-- Share sheet integration for plain text, markdown, and images -->
             <intent-filter android:label="Save to Tack">
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
                 <data android:mimeType="text/markdown"/>
                 <data android:mimeType="text/x-markdown"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+            <intent-filter android:label="Save to Tack">
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+                <data android:mimeType="text/markdown"/>
+                <data android:mimeType="text/x-markdown"/>
+                <data android:mimeType="image/*"/>
             </intent-filter>
 
             <!-- Open Markdown and text files with Tack (File Manager / Downloads) -->

@@ -55,6 +55,7 @@ class TackIcons {
   static const IconData cursor = LucideIcons.mousePointer;
   static const IconData hand = LucideIcons.hand;
   static const IconData photo = LucideIcons.image;
+  static const IconData camera = LucideIcons.camera;
   static const IconData minus = LucideIcons.minus;
   static const IconData pencil = LucideIcons.pencil;
   static const IconData link = LucideIcons.link;

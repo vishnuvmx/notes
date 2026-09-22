@@ -6,6 +6,7 @@ class IncomingTextData {
   final String text;
   final String? title;
   final String? fileName;
+  final String? imagePath;
   final String? sourceApp;
   final String? packageName;
   final String? action;
@@ -15,6 +16,7 @@ class IncomingTextData {
     required this.text,
     this.title,
     this.fileName,
+    this.imagePath,
     this.sourceApp,
     this.packageName,
     this.action,
@@ -26,6 +28,7 @@ class IncomingTextData {
       text: map['text'] as String? ?? '',
       title: map['title'] as String?,
       fileName: map['fileName'] as String?,
+      imagePath: map['imagePath'] as String?,
       sourceApp: map['sourceApp'] as String?,
       packageName: map['packageName'] as String?,
       action: map['action'] as String?,
@@ -35,6 +38,7 @@ class IncomingTextData {
 
   bool get isValid =>
       text.trim().isNotEmpty ||
+      (imagePath != null && imagePath!.isNotEmpty) ||
       action == 'OPEN_NOTE' ||
       action == 'QUICK_CAPTURE' ||
       action == 'NEW_NOTE' ||

@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide ProcessTextService;
 import 'package:provider/provider.dart';
@@ -82,7 +81,7 @@ class TackRootNavigator extends StatefulWidget {
 
 class _TackRootNavigatorState extends State<TackRootNavigator> {
   static Route<T> _buildTactileRoute<T>(Widget page) {
-    return CupertinoPageRoute<T>(
+    return MaterialPageRoute<T>(
       builder: (context) => page,
     );
   }
@@ -179,19 +178,29 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     }
 
     final text = data.text.trim();
-    if (text.isEmpty) {
+    final hasImage = data.imagePath != null && data.imagePath!.isNotEmpty;
+
+    if (text.isEmpty && !hasImage) {
       if (mounted) {
         _showFeedbackSnackBar(
-          message: 'Empty file or no text selected',
+          message: 'Empty file or no content shared',
           isError: true,
         );
       }
       return;
     }
 
+    final String noteContent;
+    if (hasImage) {
+      final imgTag = '![${data.title ?? 'Image'}](${data.imagePath})';
+      noteContent = text.isNotEmpty ? '$imgTag\n\n$text' : imgTag;
+    } else {
+      noteContent = data.text;
+    }
+
     final workspace = context.read<WorkspaceProvider>();
     final newNote = await workspace.createNoteFromExternalText(
-      data.text,
+      noteContent,
       title: data.title,
       sourceApp: data.sourceApp ?? data.fileName,
     );
@@ -199,7 +208,11 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     if (newNote != null && mounted) {
       HapticFeedback.mediumImpact();
       final String sourceLabel;
-      if (data.fileName != null && data.fileName!.isNotEmpty) {
+      if (hasImage) {
+        sourceLabel = data.sourceApp != null
+            ? 'Saved image from ${data.sourceApp}'
+            : 'Saved image note';
+      } else if (data.fileName != null && data.fileName!.isNotEmpty) {
         sourceLabel = 'Opened ${data.fileName}';
       } else if (data.sourceApp != null && data.sourceApp!.isNotEmpty) {
         sourceLabel = 'Saved from ${data.sourceApp}';

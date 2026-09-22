@@ -14,6 +14,7 @@ import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val channelName = "com.notes.tacknotes/process_text"
@@ -230,10 +231,11 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        if (action == Intent.ACTION_PROCESS_TEXT || action == Intent.ACTION_SEND || action == Intent.ACTION_VIEW) {
+        if (action == Intent.ACTION_PROCESS_TEXT || action == Intent.ACTION_SEND || action == Intent.ACTION_SEND_MULTIPLE || action == Intent.ACTION_VIEW) {
             var text: String? = null
             var fileName: String? = null
             var title: String? = null
+            var imagePath: String? = null
 
             when (action) {
                 Intent.ACTION_VIEW -> {
@@ -263,14 +265,58 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 Intent.ACTION_SEND -> {
+                    // Extract subject/title from Android share sheet (e.g. Chrome / YouTube / Twitter article title)
+                    val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
+                        ?: intent.getStringExtra(Intent.EXTRA_TITLE)
+                    if (!subject.isNullOrBlank()) {
+                        title = subject.trim()
+                    }
+
                     @Suppress("DEPRECATION")
                     val streamUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
-                    if (streamUri != null) {
+                    val mimeType = intent.type ?: ""
+
+                    if (streamUri != null && (mimeType.startsWith("image/") || isImageUri(streamUri))) {
+                        fileName = resolveFileName(streamUri)
+                        imagePath = saveImageToInternal(streamUri, fileName)
+                        text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+                    } else if (streamUri != null) {
                         fileName = resolveFileName(streamUri)
                         text = readFileContent(streamUri)
                     } else {
                         text = intent.getStringExtra(Intent.EXTRA_TEXT)
                             ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+                    }
+                }
+                Intent.ACTION_SEND_MULTIPLE -> {
+                    val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
+                        ?: intent.getStringExtra(Intent.EXTRA_TITLE)
+                    if (!subject.isNullOrBlank()) {
+                        title = subject.trim()
+                    }
+
+                    @Suppress("DEPRECATION")
+                    val streamUris: ArrayList<Uri>? = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+                    if (!streamUris.isNullOrEmpty()) {
+                        val firstUri = streamUris.first()
+                        val mimeType = intent.type ?: ""
+                        if (mimeType.startsWith("image/") || isImageUri(firstUri)) {
+                            fileName = resolveFileName(firstUri)
+                            imagePath = saveImageToInternal(firstUri, fileName)
+                            text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+                        } else {
+                            val sb = StringBuilder()
+                            for (u in streamUris) {
+                                val content = readFileContent(u)
+                                if (!content.isNullOrBlank()) {
+                                    if (sb.isNotEmpty()) sb.append("\n\n---\n\n")
+                                    sb.append(content)
+                                }
+                            }
+                            text = sb.toString()
+                        }
+                    } else {
+                        text = intent.getStringExtra(Intent.EXTRA_TEXT)
                     }
                 }
                 Intent.ACTION_PROCESS_TEXT -> {
@@ -280,17 +326,17 @@ class MainActivity : FlutterActivity() {
             }
 
             // Handle empty selections or unreadable files gracefully
-            if (text.isNullOrBlank()) {
+            if (text.isNullOrBlank() && imagePath.isNullOrBlank()) {
                 return
             }
 
-            // Strip extension for a clean note title if opened from a file
-            if (!fileName.isNullOrBlank()) {
-                title = fileName.replace(Regex("\\.(md|markdown|txt)$", RegexOption.IGNORE_CASE), "")
+            // Strip extension for a clean note title if opened from a file, but preserve subject if present
+            if (title.isNullOrBlank() && !fileName.isNullOrBlank()) {
+                title = fileName.replace(Regex("\\.(md|markdown|txt|png|jpg|jpeg|webp)$", RegexOption.IGNORE_CASE), "")
             }
 
             // If launched with ACTION_PROCESS_TEXT and not read-only, ensure original text is preserved
-            if (action == Intent.ACTION_PROCESS_TEXT) {
+            if (action == Intent.ACTION_PROCESS_TEXT && text != null) {
                 val isReadOnly = intent.getBooleanExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false)
                 if (!isReadOnly) {
                     val resultIntent = Intent().apply {
@@ -304,9 +350,10 @@ class MainActivity : FlutterActivity() {
             val sourceAppName = getAppNameFromPackage(packageName)
 
             val payload = mapOf(
-                "text" to text,
+                "text" to (text ?: ""),
                 "title" to title,
                 "fileName" to fileName,
+                "imagePath" to imagePath,
                 "sourceApp" to sourceAppName,
                 "packageName" to packageName,
                 "action" to action
@@ -386,6 +433,34 @@ class MainActivity : FlutterActivity() {
             pm.getApplicationLabel(appInfo).toString()
         } catch (_: Exception) {
             packageName
+        }
+    }
+
+    private fun isImageUri(uri: Uri): Boolean {
+        val type = contentResolver.getType(uri)
+        if (type?.startsWith("image/") == true) return true
+        val path = uri.path?.lowercase() ?: ""
+        return path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".webp") || path.endsWith(".gif")
+    }
+
+    private fun saveImageToInternal(uri: Uri, suggestedName: String?): String? {
+        return try {
+            val extension = if (suggestedName != null && suggestedName.contains(".")) {
+                suggestedName.substringAfterLast(".", "jpg")
+            } else {
+                "jpg"
+            }
+            val targetDir = File(filesDir, "shared_media").apply { if (!exists()) mkdirs() }
+            val targetFile = File(targetDir, "img_${System.currentTimeMillis()}.$extension")
+            contentResolver.openInputStream(uri)?.use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            targetFile.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

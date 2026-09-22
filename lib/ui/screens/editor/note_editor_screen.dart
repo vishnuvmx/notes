@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -75,9 +78,56 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
+  WorkspaceProvider? _workspace;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _workspace = context.read<WorkspaceProvider>();
+  }
+
+  void _flushSave() {
+    final ws = _workspace;
+    if (ws == null) return;
+    final title = _titleController.text.trim();
+    final content = _contentController.text;
+    final paletteId = _paletteId;
+    final tags = List<String>.from(_tags);
+
+    BaseWorkspaceItem updated;
+    if (widget.item is StickyNote) {
+      updated = (widget.item as StickyNote).copyWith(
+        title: title.isEmpty ? 'Untitled Sticky' : title,
+        content: content,
+        paletteId: paletteId,
+        updatedAt: DateTime.now(),
+      );
+    } else if (widget.item is ClipboardItem) {
+      updated = (widget.item as ClipboardItem).copyWith(
+        title: title.isEmpty ? 'Untitled Clip' : title,
+        clipText: content,
+        paletteId: paletteId,
+        updatedAt: DateTime.now(),
+      );
+    } else {
+      updated = (widget.item as TextNote).copyWith(
+        title: title.isEmpty ? 'Untitled Note' : title,
+        content: content,
+        tags: tags,
+        paletteId: paletteId,
+        updatedAt: DateTime.now(),
+        sourceApp: (widget.item as TextNote).sourceApp,
+      );
+    }
+    ws.saveItem(updated);
+  }
+
   @override
   void dispose() {
-    _saveDebounce?.cancel();
+    if (_saveDebounce?.isActive ?? false) {
+      _saveDebounce?.cancel();
+      _flushSave();
+    }
     _titleController.dispose();
     _contentController.dispose();
     _newTagController.dispose();
@@ -289,10 +339,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         }
         break;
       case 'image':
-        newText = '$before\n![Image](https://)$after';
-        newCursorStart = before.length + 11;
-        newCursorEnd = newCursorStart + 8;
-        break;
+        _showImageSourcePicker();
+        return;
       case 'timestamp':
         final now = DateTime.now();
         final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
@@ -315,6 +363,161 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
 
     _contentFocusNode.requestFocus();
+  }
+
+  void _insertImageMarkdown(String pathOrUrl, {String alt = 'Image'}) {
+    final text = _contentController.text;
+    final selection = _contentController.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+
+    final before = text.substring(0, start);
+    final after = text.substring(end);
+
+    final prefix = (before.isEmpty || before.endsWith('\n')) ? '' : '\n';
+    final suffix = (after.isEmpty || after.startsWith('\n')) ? '' : '\n';
+    final imageMarkdown = '$prefix![$alt]($pathOrUrl)$suffix';
+
+    final newText = '$before$imageMarkdown$after';
+    final newCursor = before.length + imageMarkdown.length;
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    _saveNote();
+    _contentFocusNode.requestFocus();
+  }
+
+  Future<void> _handleInsertedContent(KeyboardInsertedContent insertedContent) async {
+    try {
+      final bytes = insertedContent.data;
+      if (bytes != null && bytes.isNotEmpty) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final imagesDir = Directory('${appDir.path}/note_images');
+        if (!await imagesDir.exists()) {
+          await imagesDir.create(recursive: true);
+        }
+        final ext = insertedContent.mimeType.contains('png') ? 'png' : 'jpg';
+        final file = File('${imagesDir.path}/pasted_${DateTime.now().millisecondsSinceEpoch}.$ext');
+        await file.writeAsBytes(bytes);
+        _insertImageMarkdown(file.path, alt: 'Pasted Image');
+        HapticFeedback.lightImpact();
+      }
+    } catch (e) {
+      debugPrint('Error inserting clipboard content: $e');
+    }
+  }
+
+  void _showImageSourcePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Insert Image',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                leading: const TackIcon(TackIcons.photo, size: 22, color: AppColors.accentCyan),
+                title: const Text('Choose from Gallery'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery);
+                  if (picked != null) {
+                    final appDir = await getApplicationDocumentsDirectory();
+                    final imagesDir = Directory('${appDir.path}/note_images');
+                    if (!await imagesDir.exists()) {
+                      await imagesDir.create(recursive: true);
+                    }
+                    final ext = picked.path.split('.').lastOrNull ?? 'jpg';
+                    final savedFile = File('${imagesDir.path}/img_${DateTime.now().millisecondsSinceEpoch}.$ext');
+                    await File(picked.path).copy(savedFile.path);
+                    _insertImageMarkdown(savedFile.path, alt: 'Gallery Image');
+                  }
+                },
+              ),
+              ListTile(
+                leading: const TackIcon(TackIcons.camera, size: 22, color: AppColors.accentOrange),
+                title: const Text('Take Photo'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.camera);
+                  if (picked != null) {
+                    final appDir = await getApplicationDocumentsDirectory();
+                    final imagesDir = Directory('${appDir.path}/note_images');
+                    if (!await imagesDir.exists()) {
+                      await imagesDir.create(recursive: true);
+                    }
+                    final ext = picked.path.split('.').lastOrNull ?? 'jpg';
+                    final savedFile = File('${imagesDir.path}/photo_${DateTime.now().millisecondsSinceEpoch}.$ext');
+                    await File(picked.path).copy(savedFile.path);
+                    _insertImageMarkdown(savedFile.path, alt: 'Camera Photo');
+                  }
+                },
+              ),
+              ListTile(
+                leading: const TackIcon(TackIcons.link, size: 22, color: AppColors.accentAmber),
+                title: const Text('Insert Image URL'),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showImageUrlDialog();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImageUrlDialog() {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Image Web Link'),
+        content: TextField(
+          controller: urlController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'https://example.com/image.png',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final url = urlController.text.trim();
+              if (url.isNotEmpty) {
+                _insertImageMarkdown(url, alt: 'Web Image');
+              }
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Insert'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNoteStatisticsSheet() {
@@ -833,6 +1036,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       TextField(
                         controller: _contentController,
                         focusNode: _contentFocusNode,
+                        contentInsertionConfiguration: ContentInsertionConfiguration(
+                          allowedMimeTypes: const <String>[
+                            'image/png',
+                            'image/jpeg',
+                            'image/gif',
+                            'image/webp',
+                          ],
+                          onContentInserted: _handleInsertedContent,
+                        ),
                         style: theme.textTheme.bodyLarge?.copyWith(
                           height: 1.55,
                           fontSize: 16,

@@ -24,6 +24,8 @@ class RichNoteContentView extends StatelessWidget {
     this.paletteId,
   });
 
+  TackColorPalette get palette => AppColors.getPaletteById(paletteId);
+
   void _toggleCheckbox(int lineIndex) {
     if (onContentChanged == null) return;
     HapticFeedback.lightImpact();
@@ -120,7 +122,7 @@ class RichNoteContentView extends StatelessWidget {
           child: Divider(
             height: 1,
             thickness: 1.2,
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+            color: palette.resolveTableBorder(isDark),
           ),
         ));
         i++;
@@ -241,12 +243,12 @@ class RichNoteContentView extends StatelessWidget {
                   height: 22,
                   decoration: BoxDecoration(
                     color: isChecked
-                        ? (isDark ? AppColors.pastelLimeLight : AppColors.success)
+                        ? palette.resolveBulletColor(isDark)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isChecked
-                          ? (isDark ? AppColors.pastelLimeLight : AppColors.success)
+                          ? palette.resolveBulletColor(isDark)
                           : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
                       width: 1.8,
                     ),
@@ -296,10 +298,10 @@ class RichNoteContentView extends StatelessWidget {
         margin: EdgeInsets.only(top: 6, bottom: 6, left: (depth - 1) * 12.0),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
+          color: palette.resolveQuoteBg(isDark),
           borderRadius: BorderRadius.circular(8),
-          border: const Border(
-            left: BorderSide(color: AppColors.pastelPeachLight, width: 3.5),
+          border: Border(
+            left: BorderSide(color: palette.resolveQuoteBar(isDark), width: 3.5),
           ),
         ),
         child: _buildRichTextSpans(
@@ -335,7 +337,7 @@ class RichNoteContentView extends StatelessWidget {
                 numPrefix,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.pastelAmberLight : AppColors.accentAmber,
+                  color: palette.resolveNumberPrefix(isDark),
                 ),
               ),
             ),
@@ -353,7 +355,7 @@ class RichNoteContentView extends StatelessWidget {
       final body = bulletMatch.group(3) ?? '';
 
       Widget bulletWidget;
-      final bulletColor = isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark;
+      final bulletColor = palette.resolveBulletColor(isDark);
       if (indent % 3 == 1) {
         bulletWidget = Container(
           width: 6,
@@ -413,10 +415,10 @@ class RichNoteContentView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1B1C22) : const Color(0xFFF4F6F8),
+        color: palette.resolveCodeBlockBg(isDark),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          color: palette.resolveTableBorder(isDark),
           width: 1,
         ),
       ),
@@ -426,7 +428,7 @@ class RichNoteContentView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEAEFF4),
+              color: palette.resolveCodeHeaderBg(isDark),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
             ),
             child: Row(
@@ -434,12 +436,12 @@ class RichNoteContentView extends StatelessWidget {
               children: [
                 Text(
                   langLabel.isEmpty ? 'CODE' : langLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
-                    color: AppColors.accentCyan,
+                    color: palette.resolveCodeAccent(isDark),
                   ),
                 ),
                 InkWell(
@@ -463,7 +465,7 @@ class RichNoteContentView extends StatelessWidget {
                         TackIcon(
                           TackIcons.copy,
                           size: 13,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                          color: palette.resolveCodeAccent(isDark).withValues(alpha: 0.8),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -471,7 +473,7 @@ class RichNoteContentView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            color: palette.resolveCodeAccent(isDark).withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -533,8 +535,8 @@ class RichNoteContentView extends StatelessWidget {
       rows.add(parseCells(lines[i]));
     }
 
-    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final headerBg = isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF0F3F6);
+    final borderColor = palette.resolveTableBorder(isDark);
+    final headerBg = palette.resolveTableHeaderBg(isDark);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -732,10 +734,10 @@ class RichNoteContentView extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF262730) : const Color(0xFFE9ECEF),
+                color: palette.resolveInlineCodeBg(isDark),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  color: palette.resolveTableBorder(isDark),
                   width: 0.8,
                 ),
               ),
@@ -745,7 +747,7 @@ class RichNoteContentView extends StatelessWidget {
                   fontSize: (defaultStyle?.fontSize ?? 15) * 0.88,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+                  color: palette.resolveInlineCodeText(isDark),
                 ),
               ),
             ),
@@ -800,10 +802,10 @@ class RichNoteContentView extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        color: isDark ? AppColors.pastelCyanLight : AppColors.accentCyan,
+                        color: palette.resolveAccentColor(isDark),
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
-                        decorationColor: isDark ? AppColors.pastelCyanLight : AppColors.accentCyan,
+                        decorationColor: palette.resolveAccentColor(isDark),
                         fontSize: defaultStyle?.fontSize,
                       ),
                     ),
@@ -811,7 +813,7 @@ class RichNoteContentView extends StatelessWidget {
                     TackIcon(
                       TackIcons.link,
                       size: 11,
-                      color: isDark ? AppColors.pastelCyanLight : AppColors.accentCyan,
+                      color: palette.resolveAccentColor(isDark),
                     ),
                   ],
                 ),
@@ -929,12 +931,10 @@ class RichNoteContentView extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelLavenderSoft,
+                  color: palette.resolveSoftBackground(isDark),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isDark
-                        ? AppColors.pastelLavenderLight.withValues(alpha: 0.4)
-                        : AppColors.pastelLavenderLight,
+                    color: palette.resolveTableBorder(isDark),
                     width: 1,
                   ),
                 ),
@@ -943,7 +943,7 @@ class RichNoteContentView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+                    color: palette.resolveAccentColor(isDark),
                   ),
                 ),
               ),

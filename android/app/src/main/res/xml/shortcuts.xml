@@ -20,6 +20,7 @@
             android:data="tack://action/new_note"
             android:targetPackage="com.notes.tacknotes"
             android:targetClass="com.notes.tacknotes.MainActivity" />
+        <categories android:name="com.notes.tacknotes.category.SHARE_TARGET" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 
@@ -35,7 +36,17 @@
             android:data="tack://action/new_whiteboard"
             android:targetPackage="com.notes.tacknotes"
             android:targetClass="com.notes.tacknotes.MainActivity" />
+        <categories android:name="com.notes.tacknotes.category.SHARE_TARGET" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
+
+    <!-- Android Direct Share Target: Surfaces Tack in the top share-sheet row -->
+    <share-target android:targetClass="com.notes.tacknotes.MainActivity">
+        <data android:mimeType="text/plain" />
+        <data android:mimeType="text/markdown" />
+        <data android:mimeType="text/x-markdown" />
+        <data android:mimeType="image/*" />
+        <category android:name="com.notes.tacknotes.category.SHARE_TARGET" />
+    </share-target>
 
 </shortcuts>

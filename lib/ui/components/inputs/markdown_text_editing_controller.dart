@@ -26,6 +26,7 @@ class MarkdownTextEditingController extends TextEditingController {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final palette = AppColors.getPaletteById(_paletteId);
     final text = this.text;
     if (text.isEmpty) {
       return TextSpan(text: '', style: style);
@@ -33,7 +34,8 @@ class MarkdownTextEditingController extends TextEditingController {
 
     final spans = <TextSpan>[];
     final pattern = RegExp(
-      r'(`[^`\n]+`)'
+      r'(```[a-zA-Z0-9_-]*)'
+      r'|(`[^`\n]+`)'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
       r'|(==.*?==)'
@@ -64,16 +66,23 @@ class MarkdownTextEditingController extends TextEditingController {
       }
 
       final matchedText = match.group(0)!;
-      if (matchedText.startsWith('`') && matchedText.endsWith('`') && matchedText.length >= 2) {
+      if (matchedText.startsWith('```')) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: style?.copyWith(
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w700,
+            color: palette.resolveCodeAccent(isDark),
+          ),
+        ));
+      } else if (matchedText.startsWith('`') && matchedText.endsWith('`') && matchedText.length >= 2) {
         spans.add(TextSpan(text: '`', style: delimiterStyle));
         spans.add(TextSpan(
           text: matchedText.substring(1, matchedText.length - 1),
           style: style?.copyWith(
             fontFamily: 'monospace',
-            backgroundColor: isDark
-                ? AppColors.darkSurfaceAlt
-                : AppColors.lightBorder.withValues(alpha: 0.6),
-            color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+            backgroundColor: palette.resolveInlineCodeBg(isDark),
+            color: palette.resolveInlineCodeText(isDark),
           ),
         ));
         spans.add(TextSpan(text: '`', style: delimiterStyle));
@@ -106,7 +115,7 @@ class MarkdownTextEditingController extends TextEditingController {
         spans.add(TextSpan(
           text: labelText,
           style: style?.copyWith(
-            color: isDark ? AppColors.pastelCyanLight : AppColors.accentCyan,
+            color: palette.resolveAccentColor(isDark),
             decoration: TextDecoration.underline,
             fontWeight: FontWeight.w600,
           ),
@@ -205,7 +214,7 @@ class MarkdownTextEditingController extends TextEditingController {
           spans.add(TextSpan(
             text: matchedText,
             style: style?.copyWith(
-              color: isDark ? AppColors.pastelLavenderLight : AppColors.pastelLavenderDark,
+              color: palette.resolveAccentColor(isDark),
               fontWeight: FontWeight.w700,
             ),
           ));

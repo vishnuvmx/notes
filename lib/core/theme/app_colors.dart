@@ -239,4 +239,51 @@ class TackColorPalette {
   Color resolveSoftBackground(bool isDarkMode) => isDarkMode ? darkColor.withValues(alpha: 0.35) : softBackground;
   Color resolveTextColor(bool isDarkMode) => isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
   Color resolveAccentColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// High-contrast accent color for bullet points and list indicators.
+  /// Light mode: indexColor (saturated, rich dark version, e.g. royal purple for lavender).
+  /// Dark mode: lightColor (luminous vibrant pastel).
+  Color resolveBulletColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Accent color for ordered numbers (1. 2. 3.)
+  Color resolveNumberPrefix(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Header row background for markdown tables.
+  Color resolveTableHeaderBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.70), AppColors.darkSurfaceAlt)
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.26), const Color(0xFFF3F5F8));
+
+  /// Subtle border color for table grid lines tinted to palette.
+  Color resolveTableBorder(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(lightColor.withValues(alpha: 0.18), AppColors.darkBorder)
+      : Color.alphaBlend(indexColor.withValues(alpha: 0.22), AppColors.lightBorder);
+
+  /// Background for fenced code blocks.
+  Color resolveCodeBlockBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.35), const Color(0xFF18191F))
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.14), const Color(0xFFF7F8FA));
+
+  /// Header bar background for fenced code blocks.
+  Color resolveCodeHeaderBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.55), const Color(0xFF20222B))
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.28), const Color(0xFFEBEFF4));
+
+  /// Code block language tag and copy action accent.
+  Color resolveCodeAccent(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Inline code snippet (`code`) background.
+  Color resolveInlineCodeBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.50), AppColors.darkSurfaceAlt)
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.30), AppColors.lightBorder.withValues(alpha: 0.65));
+
+  /// Inline code snippet text color.
+  Color resolveInlineCodeText(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Left vertical accent border for blockquotes (> text).
+  Color resolveQuoteBar(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Background for blockquotes.
+  Color resolveQuoteBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.40), AppColors.darkSurfaceAlt)
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.20), softBackground);
 }
