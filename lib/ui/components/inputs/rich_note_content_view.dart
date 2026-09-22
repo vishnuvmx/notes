@@ -92,10 +92,13 @@ class RichNoteContentView extends StatelessWidget {
             normalizedLang == 'graph' ||
             normalizedLang == 'flowchart' ||
             normalizedLang == 'pie' ||
+            normalizedLang == 'timeline' ||
+            normalizedLang == 'sequence' ||
             (normalizedLang.isEmpty &&
                 (trimmedCode.startsWith('graph') ||
                     trimmedCode.startsWith('flowchart') ||
                     trimmedCode.startsWith('pie') ||
+                    trimmedCode.startsWith('timeline') ||
                     trimmedCode.startsWith('sequencediagram')));
 
         if (isMermaid) {

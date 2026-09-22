@@ -146,6 +146,23 @@ class AppTheme {
           side: const BorderSide(color: AppColors.lightBorder, width: 1.2),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primaryDark,
+        contentTextStyle: TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.lightSurface,
+          letterSpacing: -0.3,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+        ),
+        elevation: 8,
+        actionTextColor: AppColors.accentAmber,
+      ),
     );
   }
 
@@ -287,6 +304,23 @@ class AppTheme {
           borderRadius: BorderRadius.circular(18),
           side: const BorderSide(color: AppColors.darkBorder, width: 1.2),
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.darkSurfaceAlt,
+        contentTextStyle: TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.darkTextPrimary,
+          letterSpacing: -0.3,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+        ),
+        elevation: 8,
+        actionTextColor: AppColors.accentAmber,
       ),
     );
   }

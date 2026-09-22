@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
@@ -12,6 +13,7 @@ import '../../../domain/models/sticky_note.dart';
 import '../../../domain/services/note_export_service.dart';
 import '../../../domain/services/pinned_notification_service.dart';
 import '../../../state/workspace_provider.dart';
+import '../feedback/tack_toast.dart';
 
 /// Modal bottom sheet triggered on long press of any workspace card.
 /// Provides quick actions for Favorites, Pin to Status Bar, Duplicate, Share, and Delete.
@@ -35,6 +37,8 @@ class NoteActionSheet extends StatefulWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet(
       context: context,
+      showDragHandle: true,
+      useSafeArea: true,
       backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -82,27 +86,14 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
+          AppSpacing.xs,
+          AppSpacing.lg,
           AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Drag handle
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-
             // Note Header Preview
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -171,14 +162,11 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 HapticFeedback.lightImpact();
                 workspace.toggleFavorite(widget.item.id);
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      widget.item.isFavorite ? 'Removed from Favorites' : 'Added to Favorites',
-                    ),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 2),
-                  ),
+                TackToast.show(
+                  context,
+                  message: widget.item.isFavorite ? 'Removed from Favorites' : 'Added to Favorites',
+                  icon: TackIcons.star,
+                  iconColor: widget.item.isFavorite ? AppColors.lightTextMuted : AppColors.accentAmber,
                 );
               },
             ),
@@ -198,16 +186,13 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 );
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        newPinned
-                            ? 'Note pinned to Android status bar!'
-                            : 'Note unpinned from status bar',
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 2),
-                    ),
+                  TackToast.show(
+                    context,
+                    message: newPinned
+                        ? 'Note pinned to Android status bar'
+                        : 'Note unpinned from status bar',
+                    icon: TackIcons.pin,
+                    iconColor: AppColors.accentAmber,
                   );
                 }
               },
@@ -221,12 +206,11 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 HapticFeedback.lightImpact();
                 workspace.duplicateItem(widget.item.id);
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Note duplicated!'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 2),
-                  ),
+                TackToast.show(
+                  context,
+                  message: 'Note duplicated',
+                  icon: TackIcons.copy,
+                  iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                 );
               },
             ),
@@ -275,22 +259,20 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 HapticFeedback.mediumImpact();
                 workspace.moveToTrash(widget.item.id);
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Moved note to trash'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 4),
-                    action: SnackBarAction(
-                      label: 'Undo',
-                      textColor: AppColors.accentAmber,
-                      onPressed: () {
-                        workspace.restoreItem(widget.item.id);
-                      },
-                    ),
-                  ),
+                TackToast.show(
+                  context,
+                  message: 'Moved note to trash',
+                  icon: TackIcons.trash,
+                  iconColor: AppColors.error,
+                  duration: const Duration(seconds: 4),
+                  actionLabel: 'Undo',
+                  onAction: () {
+                    workspace.restoreItem(widget.item.id);
+                  },
                 );
               },
             ),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),

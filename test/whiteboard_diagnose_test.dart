@@ -50,6 +50,12 @@ void main() {
     expect(find.text('Design & Review'), findsOneWidget);
     expect(find.text('Launch & Measure'), findsOneWidget);
 
+    // Open shape popup from ergonomic unified bottom dock
+    final addShapeButton = find.byTooltip('Add Flowchart Shape');
+    expect(addShapeButton, findsOneWidget);
+    await tester.tap(addShapeButton);
+    await tester.pumpAndSettle();
+
     // Verify shape palette is visible and accessible
     expect(find.text('Start / End'), findsWidgets);
     expect(find.text('Process'), findsWidgets);

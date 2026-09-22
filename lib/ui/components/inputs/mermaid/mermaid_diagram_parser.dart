@@ -3,6 +3,7 @@ enum MermaidDiagramType {
   flowchart,
   pie,
   sequence,
+  timeline,
   unsupported,
 }
 
@@ -72,6 +73,19 @@ class MermaidSequenceMessage {
   });
 }
 
+/// Parsed item/period in a timeline diagram.
+class MermaidTimelineItem {
+  final String period;
+  final List<String> events;
+  final String? section;
+
+  const MermaidTimelineItem({
+    required this.period,
+    required this.events,
+    this.section,
+  });
+}
+
 /// Result of parsing a Mermaid code block.
 class ParsedMermaidDiagram {
   final MermaidDiagramType type;
@@ -83,6 +97,7 @@ class ParsedMermaidDiagram {
   final List<MermaidPieSlice> pieSlices;
   final List<String> participants;
   final List<MermaidSequenceMessage> sequenceMessages;
+  final List<MermaidTimelineItem> timelineItems;
   final String? parseError;
 
   const ParsedMermaidDiagram({
@@ -95,6 +110,7 @@ class ParsedMermaidDiagram {
     this.pieSlices = const [],
     this.participants = const [],
     this.sequenceMessages = const [],
+    this.timelineItems = const [],
     this.parseError,
   });
 
@@ -147,6 +163,11 @@ class MermaidDiagramParser {
       return _parseFlowchart(rawCode, lines);
     }
 
+    // 4. Timeline Diagram: timeline ...
+    if (lines.any((l) => l.toLowerCase() == 'timeline' || l.toLowerCase().startsWith('timeline ') || l.toLowerCase().startsWith('timeline\n'))) {
+      return _parseTimeline(rawCode, lines);
+    }
+
     // Fallback: If lines contain '-->' or '---', attempt flowchart parsing
     if (lines.any((l) => l.contains('-->') || l.contains('---') || l.contains('==>'))) {
       return _parseFlowchart(rawCode, lines);
@@ -156,6 +177,76 @@ class MermaidDiagramParser {
       type: MermaidDiagramType.unsupported,
       rawCode: rawCode,
       parseError: 'Unsupported or unrecognized Mermaid diagram type',
+    );
+  }
+
+  static ParsedMermaidDiagram _parseTimeline(String rawCode, List<String> lines) {
+    String? title;
+    String? currentSection;
+    final items = <MermaidTimelineItem>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final lower = line.toLowerCase();
+
+      if (lower == 'timeline') continue;
+
+      if (lower.startsWith('title ')) {
+        title = line.substring(6).trim();
+        continue;
+      }
+
+      if (lower.startsWith('section ')) {
+        currentSection = line.substring(8).trim();
+        continue;
+      }
+
+      if (line.contains(':')) {
+        final colonIdx = line.indexOf(':');
+        final prefix = line.substring(0, colonIdx).trim();
+        final rest = line.substring(colonIdx + 1);
+        final events = rest
+            .split(':')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
+        if (prefix.isNotEmpty) {
+          items.add(MermaidTimelineItem(
+            period: prefix,
+            events: events.isEmpty ? [prefix] : events,
+            section: currentSection,
+          ));
+        } else if (items.isNotEmpty) {
+          final last = items.removeLast();
+          items.add(MermaidTimelineItem(
+            period: last.period,
+            events: [...last.events, ...events],
+            section: last.section,
+          ));
+        }
+      } else if (line.isNotEmpty && !line.startsWith('%%')) {
+        items.add(MermaidTimelineItem(
+          period: line.trim(),
+          events: [line.trim()],
+          section: currentSection,
+        ));
+      }
+    }
+
+    if (items.isEmpty && title == null) {
+      return ParsedMermaidDiagram(
+        type: MermaidDiagramType.unsupported,
+        rawCode: rawCode,
+        parseError: 'No timeline events found',
+      );
+    }
+
+    return ParsedMermaidDiagram(
+      type: MermaidDiagramType.timeline,
+      rawCode: rawCode,
+      title: title,
+      timelineItems: items,
     );
   }
 

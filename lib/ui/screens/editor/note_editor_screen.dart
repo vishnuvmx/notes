@@ -1401,7 +1401,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       )
                     else ...[
                       GestureDetector(
-                        behavior: HitTestBehavior.translucent,
+                        behavior: HitTestBehavior.deferToChild,
                         onTap: () {
                           setState(() => _isEditingMode = true);
                           WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -12,7 +12,7 @@
     <shortcut
         android:shortcutId="new_note"
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_new_note"
+        android:icon="@mipmap/ic_launcher"
         android:shortcutShortLabel="@string/shortcut_new_note_short"
         android:shortcutLongLabel="@string/shortcut_new_note_long">
         <intent
@@ -28,7 +28,7 @@
     <shortcut
         android:shortcutId="new_whiteboard"
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_new_board"
+        android:icon="@mipmap/ic_launcher"
         android:shortcutShortLabel="@string/shortcut_new_board_short"
         android:shortcutLongLabel="@string/shortcut_new_board_long">
         <intent

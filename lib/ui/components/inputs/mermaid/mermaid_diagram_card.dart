@@ -1,18 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../domain/models/whiteboard_item.dart';
-import '../../../../state/workspace_provider.dart';
-import '../../../screens/whiteboard/whiteboard_canvas_screen.dart';
+import '../../../../core/theme/app_typography.dart';
 import 'mermaid_diagram_parser.dart';
 
 /// Card container that visualizes Mermaid graphs and diagrams (Flowcharts,
-/// Pie Charts, Sequence Diagrams) with interactive pan/zoom, theme adaptation,
-/// syntax code toggle, and direct "Open in Whiteboard" bridge.
+/// Pie Charts, Sequence Diagrams, Timelines) with interactive pan/zoom,
+/// theme adaptation, and zero distracting buttons or labels.
 class MermaidDiagramCard extends StatefulWidget {
   final String rawCode;
   final String? paletteId;
@@ -29,7 +24,6 @@ class MermaidDiagramCard extends StatefulWidget {
 
 class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
   late ParsedMermaidDiagram _parsed;
-  bool _showCode = false;
   final TransformationController _transformController = TransformationController();
 
   @override
@@ -54,130 +48,46 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
   TackColorPalette get _palette => AppColors.getPaletteById(widget.paletteId);
 
-  void _copyRawCode() {
-    Clipboard.setData(ClipboardData(text: widget.rawCode));
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Mermaid diagram code copied!'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _openInWhiteboard() {
-    if (_parsed.type != MermaidDiagramType.flowchart || _parsed.nodes.isEmpty) return;
-
-    HapticFeedback.mediumImpact();
-
-    // Map Mermaid nodes to Whiteboard Canvas nodes with coordinates
-    final layout = _computeFlowchartLayout(_parsed, 120, 56, 40, 60);
-    final whiteboardNodes = <CanvasNode>[];
-    final whiteboardEdges = <CanvasEdge>[];
-
-    final paletteNames = ['peach', 'cyan', 'lavender', 'lime', 'amber', 'bubble'];
-
-    for (int i = 0; i < _parsed.nodes.length; i++) {
-      final mNode = _parsed.nodes[i];
-      final pos = layout.positions[mNode.id] ?? Offset(100.0 + (i % 3) * 160.0, 100.0 + (i ~/ 3) * 100.0);
-
-      CanvasNodeType shape;
-      switch (mNode.shape) {
-        case MermaidNodeShape.decision:
-          shape = CanvasNodeType.decision;
-          break;
-        case MermaidNodeShape.pill:
-          shape = CanvasNodeType.startEnd;
-          break;
-        case MermaidNodeShape.circle:
-          shape = CanvasNodeType.connector;
-          break;
-        case MermaidNodeShape.database:
-        case MermaidNodeShape.rounded:
-        case MermaidNodeShape.process:
-          shape = CanvasNodeType.process;
-          break;
-      }
-
-      whiteboardNodes.add(CanvasNode(
-        id: mNode.id,
-        text: mNode.label,
-        shapeType: shape,
-        x: pos.dx + 2500, // Center around Tack's canvas center
-        y: pos.dy + 2500,
-        width: 140,
-        height: 64,
-        paletteId: paletteNames[i % paletteNames.length],
-      ));
-    }
-
-    // Map edges
-    for (int i = 0; i < _parsed.edges.length; i++) {
-      final edge = _parsed.edges[i];
-      whiteboardEdges.add(CanvasEdge(
-        id: 'edge_${edge.fromId}_${edge.toId}_$i',
-        fromNodeId: edge.fromId,
-        toNodeId: edge.toId,
-        label: edge.label,
-        fromPort: _parsed.direction == 'LR' ? 'right' : 'bottom',
-        toPort: _parsed.direction == 'LR' ? 'left' : 'top',
-      ));
-    }
-
-    final now = DateTime.now();
-    final whiteboardItem = WhiteboardCanvasItem(
-      id: 'wb_${now.millisecondsSinceEpoch}',
-      title: _parsed.title ?? 'Diagram Whiteboard',
-      createdAt: now,
-      updatedAt: now,
-      paletteId: widget.paletteId ?? 'cyan',
-      nodes: whiteboardNodes,
-      edges: whiteboardEdges,
-      panOffset: const Offset(-2500.0, -2500.0),
-    );
-
-    // Save to workspace provider so it persists in Whiteboard list
-    try {
-      final provider = Provider.of<WorkspaceProvider>(context, listen: false);
-      provider.saveItem(whiteboardItem);
-    } catch (_) {}
-
-    // Navigate to Whiteboard Canvas
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WhiteboardCanvasScreen(item: whiteboardItem),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    String typeLabel = 'DIAGRAM';
-    IconData typeIcon = LucideIcons.network;
-
-    switch (_parsed.type) {
-      case MermaidDiagramType.flowchart:
-        typeLabel = 'FLOWCHART';
-        typeIcon = LucideIcons.gitFork;
-        break;
-      case MermaidDiagramType.pie:
-        typeLabel = 'PIE CHART';
-        typeIcon = LucideIcons.chartPie;
-        break;
-      case MermaidDiagramType.sequence:
-        typeLabel = 'SEQUENCE';
-        typeIcon = LucideIcons.arrowRightLeft;
-        break;
-      case MermaidDiagramType.unsupported:
-        typeLabel = 'CODE';
-        typeIcon = LucideIcons.code;
-        break;
+    if (!_parsed.isValid) {
+      return _buildRawCodeView(isDark);
     }
 
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        // Absorb tap so interacting with or viewing the diagram never enters note edit mode
+      },
+      onDoubleTap: () {
+        // Absorb double-tap as well
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _palette.resolveTableBorder(isDark),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : const Color(0xFF191A23)).withValues(alpha: isDark ? 0.35 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: _buildDiagramView(isDark),
+      ),
+    );
+  }
+
+  Widget _buildRawCodeView(bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -187,205 +97,18 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           color: _palette.resolveTableBorder(isDark),
           width: 1.2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? Colors.black : Colors.black12).withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1F222A) : const Color(0xFFEFF2F5),
-              border: Border(
-                bottom: BorderSide(
-                  color: _palette.resolveTableBorder(isDark),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  typeIcon,
-                  size: 14,
-                  color: _palette.resolveAccentColor(isDark),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  typeLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                    color: _palette.resolveAccentColor(isDark),
-                  ),
-                ),
-                if (_parsed.title != null) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _parsed.title!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                    ),
-                  ),
-                ] else
-                  const Spacer(),
-
-                // "Open in Whiteboard" Button (Only for flowcharts)
-                if (_parsed.type == MermaidDiagramType.flowchart && !_showCode) ...[
-                  InkWell(
-                    onTap: _openInWhiteboard,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        color: _palette.resolveAccentColor(isDark).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            LucideIcons.penTool,
-                            size: 11,
-                            color: _palette.resolveAccentColor(isDark),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Whiteboard',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _palette.resolveAccentColor(isDark),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-
-                // View Toggle: Diagram / Code
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF282C37) : const Color(0xFFDEE2E6),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildToggleButton(
-                        label: 'Diagram',
-                        isActive: !_showCode,
-                        isDark: isDark,
-                        onTap: () => setState(() => _showCode = false),
-                      ),
-                      _buildToggleButton(
-                        label: 'Code',
-                        isActive: _showCode,
-                        isDark: isDark,
-                        onTap: () => setState(() => _showCode = true),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 6),
-
-                // Copy Code Action
-                InkWell(
-                  onTap: _copyRawCode,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      LucideIcons.copy,
-                      size: 13,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Main Content
-          if (_showCode || !_parsed.isValid)
-            _buildRawCodeView(isDark)
-          else
-            _buildDiagramView(isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton({
-    required String label,
-    required bool isActive,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: isActive
-              ? (isDark ? const Color(0xFF3B4050) : Colors.white)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(12),
+        child: SelectableText(
+          widget.rawCode,
           style: TextStyle(
-            fontSize: 10.5,
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-            color: isActive
-                ? (isDark ? Colors.white : AppColors.lightTextPrimary)
-                : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+            fontFamily: 'monospace',
+            fontSize: 12.5,
+            height: 1.45,
+            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3748),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRawCodeView(bool isDark) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(12),
-      child: SelectableText(
-        widget.rawCode,
-        style: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 12.5,
-          height: 1.45,
-          color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3748),
         ),
       ),
     );
@@ -394,14 +117,59 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
   Widget _buildDiagramView(bool isDark) {
     switch (_parsed.type) {
       case MermaidDiagramType.pie:
-        return MermaidPieWidget(
-          diagram: _parsed,
-          isDark: isDark,
+        return Container(
+          constraints: const BoxConstraints(minHeight: 180, maxHeight: 380),
+          width: double.infinity,
+          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
+          child: InteractiveViewer(
+            transformationController: _transformController,
+            boundaryMargin: const EdgeInsets.all(40),
+            minScale: 0.6,
+            maxScale: 2.5,
+            child: Center(
+              child: MermaidPieWidget(
+                diagram: _parsed,
+                isDark: isDark,
+              ),
+            ),
+          ),
         );
       case MermaidDiagramType.sequence:
-        return MermaidSequenceWidget(
-          diagram: _parsed,
-          isDark: isDark,
+        return Container(
+          constraints: const BoxConstraints(minHeight: 200, maxHeight: 420),
+          width: double.infinity,
+          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
+          child: InteractiveViewer(
+            transformationController: _transformController,
+            boundaryMargin: const EdgeInsets.all(60),
+            minScale: 0.5,
+            maxScale: 2.5,
+            child: Center(
+              child: MermaidSequenceWidget(
+                diagram: _parsed,
+                isDark: isDark,
+              ),
+            ),
+          ),
+        );
+      case MermaidDiagramType.timeline:
+        return Container(
+          constraints: const BoxConstraints(minHeight: 200, maxHeight: 380),
+          width: double.infinity,
+          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
+          child: InteractiveViewer(
+            transformationController: _transformController,
+            boundaryMargin: const EdgeInsets.all(60),
+            minScale: 0.5,
+            maxScale: 2.5,
+            child: Center(
+              child: MermaidTimelineWidget(
+                diagram: _parsed,
+                isDark: isDark,
+                palette: _palette,
+              ),
+            ),
+          ),
         );
       case MermaidDiagramType.flowchart:
         return MermaidFlowchartWidget(
@@ -1106,6 +874,226 @@ class MermaidSequenceWidget extends StatelessWidget {
               else
                 const SizedBox(width: 4),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// 4. TIMELINE DIAGRAM RENDERER
+// -------------------------------------------------------------
+
+class MermaidTimelineWidget extends StatelessWidget {
+  final ParsedMermaidDiagram diagram;
+  final bool isDark;
+  final TackColorPalette palette;
+
+  const MermaidTimelineWidget({
+    super.key,
+    required this.diagram,
+    required this.isDark,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = diagram.timelineItems;
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    const itemWidth = 170.0;
+    const itemGap = 24.0;
+    final totalWidth = items.length * (itemWidth + itemGap) + 60.0;
+    const totalHeight = 320.0;
+
+    final axisColor = palette.resolveAccentColor(isDark).withValues(alpha: 0.35);
+    final dotColor = palette.resolveAccentColor(isDark);
+
+    return SizedBox(
+      width: math.max(totalWidth, 340.0),
+      height: totalHeight,
+      child: Stack(
+        children: [
+          // Title if present
+          if (diagram.title != null)
+            Positioned(
+              left: 20,
+              top: 12,
+              child: Text(
+                diagram.title!,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                ),
+              ),
+            ),
+
+          // Horizontal Axis Line
+          Positioned(
+            left: 30,
+            right: 30,
+            top: 104,
+            height: 3,
+            child: Container(
+              decoration: BoxDecoration(
+                color: axisColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Timeline items
+          for (int i = 0; i < items.length; i++) ...[
+            _buildTimelineColumn(
+              item: items[i],
+              index: i,
+              leftX: 30.0 + i * (itemWidth + itemGap),
+              itemWidth: itemWidth,
+              dotColor: dotColor,
+              isDark: isDark,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineColumn({
+    required MermaidTimelineItem item,
+    required int index,
+    required double leftX,
+    required double itemWidth,
+    required Color dotColor,
+    required bool isDark,
+  }) {
+    return Positioned(
+      left: leftX,
+      top: 40,
+      width: itemWidth,
+      bottom: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Section Tag (if available)
+          if (item.section != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                color: dotColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                item.section!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                  color: dotColor,
+                ),
+              ),
+            ),
+          ] else
+            const SizedBox(height: 18),
+
+          // Period pill (e.g. 2002, Q1, Phase 1)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF222631) : const Color(0xFFEAEFF5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: dotColor.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              item.period,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Axis Connector Node Dot
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? const Color(0xFF13151A) : Colors.white,
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: dotColor.withValues(alpha: 0.35),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Events cards
+          Expanded(
+            child: ListView.separated(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: item.events.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, eIdx) {
+                final event = item.events[eIdx];
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C1F28) : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF2E3342) : const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isDark ? Colors.black : Colors.black12).withValues(alpha: 0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    event,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
