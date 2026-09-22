@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +45,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
+  Timer? _saveDebounce;
   bool _isPinnedToStatusBar = false;
 
   @override
@@ -75,6 +77,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   void dispose() {
+    _saveDebounce?.cancel();
     _titleController.dispose();
     _contentController.dispose();
     _newTagController.dispose();
@@ -103,55 +106,61 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _onTextChanged() {
     setState(() {});
     if (_autoSaveEnabled) {
-      _saveNote();
+      // Debounce: wait 600ms after last keystroke before writing to disk
+      _saveDebounce?.cancel();
+      _saveDebounce = Timer(const Duration(milliseconds: 600), _saveNote);
     }
   }
 
   void _saveNote() async {
+    if (!mounted) return;
     _isSaving = true;
+    // Capture all context-dependent values before the first await
     final workspace = context.read<WorkspaceProvider>();
     final title = _titleController.text.trim();
     final content = _contentController.text;
+    final paletteId = _paletteId;
+    final tags = List<String>.from(_tags);
+    final isPinned = _isPinnedToStatusBar;
 
     BaseWorkspaceItem updated;
     if (widget.item is StickyNote) {
       updated = (widget.item as StickyNote).copyWith(
         title: title.isEmpty ? 'Untitled Sticky' : title,
         content: content,
-        paletteId: _paletteId,
+        paletteId: paletteId,
         updatedAt: DateTime.now(),
       );
     } else if (widget.item is ClipboardItem) {
       updated = (widget.item as ClipboardItem).copyWith(
         title: title.isEmpty ? 'Untitled Clip' : title,
         clipText: content,
-        paletteId: _paletteId,
+        paletteId: paletteId,
         updatedAt: DateTime.now(),
       );
     } else {
-      final currentNote = widget.item is TextNote ? (widget.item as TextNote) : null;
       updated = (widget.item as TextNote).copyWith(
         title: title.isEmpty ? 'Untitled Note' : title,
         content: content,
-        tags: _tags,
-        paletteId: _paletteId,
+        tags: tags,
+        paletteId: paletteId,
         updatedAt: DateTime.now(),
-        sourceApp: currentNote?.sourceApp,
+        sourceApp: (widget.item as TextNote).sourceApp,
       );
     }
 
     await workspace.saveItem(updated);
-    if (_isPinnedToStatusBar) {
+    if (!mounted) return;
+
+    if (isPinned) {
       PinnedNotificationService.pinNote(
         id: widget.item.id,
         title: title.isEmpty ? 'Pinned Note' : title,
         content: content,
-        paletteId: _paletteId,
+        paletteId: paletteId,
       );
     }
-    if (mounted) {
-      setState(() => _isSaving = false);
-    }
+    setState(() => _isSaving = false);
   }
 
   void _removeTag(String tag) {
@@ -244,7 +253,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         }
         break;
       case 'bullet':
-        final prefix = (before.isEmpty || before.endsWith('\n')) ? '• ' : '\n• ';
+        // Use standard Markdown `- ` so exported notes render correctly in all Markdown renderers
+        final prefix = (before.isEmpty || before.endsWith('\n')) ? '- ' : '\n- ';
         newText = '$before$prefix$selectedText$after';
         newCursorStart = before.length + prefix.length + selectedText.length;
         newCursorEnd = newCursorStart;

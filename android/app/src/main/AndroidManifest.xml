@@ -29,6 +29,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep-link scheme for App Shortcut actions (tack://action/new_note, tack://action/new_whiteboard) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tack" android:host="action" />
+            </intent-filter>
             <!-- Share sheet integration for plain text and markdown -->
             <intent-filter android:label="Save to Tack">
                 <action android:name="android.intent.action.SEND"/>

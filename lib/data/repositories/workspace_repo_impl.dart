@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/interfaces/i_workspace_repo.dart';
@@ -130,7 +131,11 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = _items.map((item) => item.toJson()).toList();
       await prefs.setString(_storageKey, jsonEncode(jsonList));
-    } catch (_) {}
+    } catch (e, st) {
+      // Log storage failures so they are visible in debug output.
+      // In production, consider surfacing this to the user via a callback.
+      debugPrint('[WorkspaceRepo] Failed to persist workspace: $e\n$st');
+    }
   }
 
   Future<void> _ensureReady() async {

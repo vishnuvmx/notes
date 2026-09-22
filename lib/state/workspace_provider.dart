@@ -14,6 +14,9 @@ enum HomeViewMode {
   stickyGrid, // 2-column pastel sticky note card grid
 }
 
+/// Default palette used for externally-created items and clipboard snippets.
+const String _kDefaultPaletteId = 'amber';
+
 /// Central state notifier for workspace items, search, filtering, and view mode.
 class WorkspaceProvider extends ChangeNotifier {
   final IWorkspaceRepository _repository;
@@ -23,12 +26,17 @@ class WorkspaceProvider extends ChangeNotifier {
     _trashItems = _repository.cachedTrashItems;
     _archivedItems = _repository.cachedArchivedItems;
     _favoriteItems = _repository.cachedFavoriteItems;
+    _rebuildIndex();
   }
 
   List<BaseWorkspaceItem> _items = [];
   List<BaseWorkspaceItem> _trashItems = [];
   List<BaseWorkspaceItem> _archivedItems = [];
   List<BaseWorkspaceItem> _favoriteItems = [];
+  // O(1) lookup index: kept in sync on every saveItem / delete operation
+  final Map<String, BaseWorkspaceItem> _itemIndex = {};
+  // Cached tag set — rebuilt only when _items changes
+  List<String>? _cachedAvailableTags;
 
   ItemType? _selectedCategory; // null = 'All'
   String _searchQuery = '';
@@ -69,6 +77,11 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Available tags dynamically gathered plus standard tags
   List<String> get availableTags {
+    // Return cached value; rebuilt whenever _items changes (in loadItems/saveItem)
+    return _cachedAvailableTags ??= _computeAvailableTags();
+  }
+
+  List<String> _computeAvailableTags() {
     final tagsSet = <String>{'#All', '#work', '#Personal', '#Fitness'};
     for (final item in _items) {
       if (item is TextNote) {
@@ -97,6 +110,8 @@ class WorkspaceProvider extends ChangeNotifier {
     _archivedItems = await _repository.getArchivedItems();
     _favoriteItems = await _repository.getFavoriteItems();
 
+    _rebuildIndex();
+    _cachedAvailableTags = null; // invalidate tag cache
     _isLoading = false;
     notifyListeners();
   }
@@ -137,22 +152,8 @@ class WorkspaceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lookup item across active, favorites, archived, and trash lists
-  BaseWorkspaceItem? getItemById(String id) {
-    for (final item in _items) {
-      if (item.id == id) return item;
-    }
-    for (final item in _favoriteItems) {
-      if (item.id == id) return item;
-    }
-    for (final item in _archivedItems) {
-      if (item.id == id) return item;
-    }
-    for (final item in _trashItems) {
-      if (item.id == id) return item;
-    }
-    return null;
-  }
+  /// Lookup item across all lists in O(1) via the ID index
+  BaseWorkspaceItem? getItemById(String id) => _itemIndex[id];
 
   /// Save or update an item with optimistic in-memory updates
   Future<void> saveItem(BaseWorkspaceItem item) async {
@@ -175,13 +176,15 @@ class WorkspaceProvider extends ChangeNotifier {
 
     notifyListeners();
     await _repository.saveItem(item);
+    _rebuildIndex();
+    _cachedAvailableTags = null; // invalidate tag cache on any save
   }
 
   /// Toggle favorite status
   Future<void> toggleFavorite(String id) async {
     final item = getItemById(id);
     if (item == null) return;
-    final updated = item.copyWith(isFavorite: !item.isFavorite);
+    final updated = item.copyWith(isFavorite: !item.isFavorite, updatedAt: DateTime.now());
     await saveItem(updated);
   }
 
@@ -215,7 +218,7 @@ class WorkspaceProvider extends ChangeNotifier {
   Future<void> toggleArchive(String id) async {
     final item = getItemById(id);
     if (item == null) return;
-    final toggled = item.copyWith(isArchived: !item.isArchived);
+    final toggled = item.copyWith(isArchived: !item.isArchived, updatedAt: DateTime.now());
     if (toggled.isArchived) {
       _items.removeWhere((i) => i.id == id);
       _archivedItems.insert(0, toggled);
@@ -225,6 +228,7 @@ class WorkspaceProvider extends ChangeNotifier {
     }
     notifyListeners();
     await _repository.toggleArchive(id);
+    _rebuildIndex();
   }
 
   /// Permanent deletion
@@ -233,6 +237,7 @@ class WorkspaceProvider extends ChangeNotifier {
     _items.removeWhere((i) => i.id == id);
     _favoriteItems.removeWhere((i) => i.id == id);
     _archivedItems.removeWhere((i) => i.id == id);
+    _itemIndex.remove(id);
     notifyListeners();
     await _repository.deletePermanently(id);
   }
@@ -245,20 +250,9 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Duplicate an existing item (creates an exact copy with "(Copy)" suffix and saves it)
   Future<BaseWorkspaceItem?> duplicateItem(String id) async {
-    BaseWorkspaceItem? original;
-    try {
-      original = _items.firstWhere(
-        (item) => item.id == id,
-        orElse: () => _favoriteItems.firstWhere(
-          (item) => item.id == id,
-          orElse: () => _archivedItems.firstWhere(
-            (item) => item.id == id,
-          ),
-        ),
-      );
-    } catch (_) {
-      return null;
-    }
+    // Search all lists including trash
+    final original = getItemById(id);
+    if (original == null) return null;
 
     final now = DateTime.now();
     final json = original.toJson();
@@ -390,7 +384,7 @@ class WorkspaceProvider extends ChangeNotifier {
       content: text, // Preserved exactly as selected or loaded
       createdAt: now,
       updatedAt: now,
-      paletteId: 'amber',
+      paletteId: _kDefaultPaletteId,
       sourceApp: sourceApp,
       tags: tags,
     );
@@ -465,7 +459,7 @@ class WorkspaceProvider extends ChangeNotifier {
       clipText: clean,
       createdAt: now,
       updatedAt: now,
-      paletteId: 'amber',
+      paletteId: _kDefaultPaletteId,
       sourceApp: source ?? 'System Clipboard',
     );
 
@@ -515,7 +509,9 @@ class WorkspaceProvider extends ChangeNotifier {
       if (raw is Map<String, dynamic>) {
         final item = ItemSerializer.fromJson(raw);
         if (item != null) {
-          await _repository.saveItem(item);
+          // Sanitize any legacy HTML or corrupted markdown in imported content
+          final sanitized = _sanitizeImportedItem(item);
+          await _repository.saveItem(sanitized);
           importedCount++;
         }
       }
@@ -525,5 +521,50 @@ class WorkspaceProvider extends ChangeNotifier {
       await loadItems();
     }
     return importedCount;
+  }
+
+  /// Sanitizes a single imported item, migrating legacy HTML tags and cleaning
+  /// dangling Markdown artifacts. Mirrors the repo-layer migration logic.
+  BaseWorkspaceItem _sanitizeImportedItem(BaseWorkspaceItem item) {
+    String clean(String text) {
+      if (text.isEmpty) return text;
+      var result = text.replaceAllMapped(
+        RegExp(r'<u>(.*?)</u>', caseSensitive: false),
+        (m) => '__${m.group(1)}__',
+      );
+      result = result
+          .replaceAll('****', '')
+          .replaceAll('____', '')
+          .replaceAll('~~~~', '')
+          .replaceAll('====', '')
+          .replaceAll('<u></u>', '');
+      return result;
+    }
+
+    if (item is TextNote && item.content.isNotEmpty) {
+      final sanitized = clean(item.content);
+      if (sanitized != item.content) return item.copyWith(content: sanitized);
+    } else if (item is StickyNote && item.content.isNotEmpty) {
+      final sanitized = clean(item.content);
+      if (sanitized != item.content) return item.copyWith(content: sanitized);
+    }
+    return item;
+  }
+
+  /// Rebuilds the O(1) item ID index from all current lists.
+  void _rebuildIndex() {
+    _itemIndex.clear();
+    for (final item in _items) {
+      _itemIndex[item.id] = item;
+    }
+    for (final item in _favoriteItems) {
+      _itemIndex[item.id] = item;
+    }
+    for (final item in _archivedItems) {
+      _itemIndex[item.id] = item;
+    }
+    for (final item in _trashItems) {
+      _itemIndex[item.id] = item;
+    }
   }
 }

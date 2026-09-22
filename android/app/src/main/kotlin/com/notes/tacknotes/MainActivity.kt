@@ -239,6 +239,25 @@ class MainActivity : FlutterActivity() {
                 Intent.ACTION_VIEW -> {
                     val uri: Uri? = intent.data
                     if (uri != null) {
+                        // Handle tack:// deep-link shortcuts (long-press app icon)
+                        if (uri.scheme == "tack" && uri.host == "action") {
+                            val shortcutAction = when (uri.path) {
+                                "/new_note" -> "NEW_NOTE"
+                                "/new_whiteboard" -> "NEW_WHITEBOARD"
+                                else -> null
+                            }
+                            if (shortcutAction != null) {
+                                val payload = mapOf("action" to shortcutAction, "text" to "")
+                                val channel = methodChannel
+                                if (channel != null) {
+                                    channel.invokeMethod("onReceiveText", payload)
+                                } else {
+                                    pendingPayload = payload
+                                }
+                            }
+                            return
+                        }
+                        // Regular file open (content:// or file://)
                         fileName = resolveFileName(uri)
                         text = readFileContent(uri)
                     }

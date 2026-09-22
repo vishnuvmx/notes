@@ -2451,11 +2451,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         );
     if (node == null) return const SizedBox.shrink();
 
-    // If node is near top border, place capsule below it to avoid clipping
-    final bool placeBelow = node.y < 56;
+    // If node is near top border, place capsule below it to avoid clipping.
+    // The top branch (+) handle sits at node.y - 32 (28px tall → ends at node.y - 4).
+    // Offset by -72 so the capsule clears the + icon with a comfortable gap.
+    final bool placeBelow = node.y < 80;
     final capsuleTop = placeBelow
         ? (node.y + node.height + 8).clamp(8.0, _canvasSize - 100.0)
-        : (node.y - 48).clamp(8.0, _canvasSize - 100.0);
+        : (node.y - 72).clamp(8.0, _canvasSize - 100.0);
     final capsuleLeft = (node.x + (node.width / 2) - 100).clamp(8.0, _canvasSize - 100.0);
 
     return Positioned(

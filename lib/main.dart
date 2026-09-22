@@ -146,6 +146,38 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       return;
     }
 
+    // 3. App Shortcut → New Note (long-press launcher icon)
+    if (data.action == 'NEW_NOTE') {
+      final workspace = context.read<WorkspaceProvider>();
+      final note = await workspace.createQuickItem(
+        title: '',
+        type: ItemType.note,
+        paletteId: 'peach',
+        content: '',
+      );
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        _openItemDetail(context, note);
+      }
+      return;
+    }
+
+    // 4. App Shortcut → New Whiteboard (long-press launcher icon)
+    if (data.action == 'NEW_WHITEBOARD') {
+      final workspace = context.read<WorkspaceProvider>();
+      final board = await workspace.createQuickItem(
+        title: '',
+        type: ItemType.whiteboard,
+        paletteId: 'lavender',
+        content: '',
+      );
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        _openItemDetail(context, board);
+      }
+      return;
+    }
+
     final text = data.text.trim();
     if (text.isEmpty) {
       if (mounted) {

@@ -94,7 +94,7 @@ class MarkdownTextEditingController extends TextEditingController {
           text: urlText,
           style: style?.copyWith(
             color: delimiterStyle?.color,
-            fontSize: (style?.fontSize ?? 14) * 0.9,
+            fontSize: (style.fontSize ?? 14) * 0.9,
           ),
         ));
         spans.add(TextSpan(text: ')', style: delimiterStyle));
@@ -116,7 +116,7 @@ class MarkdownTextEditingController extends TextEditingController {
           text: urlText,
           style: style?.copyWith(
             color: delimiterStyle?.color,
-            fontSize: (style?.fontSize ?? 14) * 0.9,
+            fontSize: (style.fontSize ?? 14) * 0.9,
           ),
         ));
         spans.add(TextSpan(text: ')', style: delimiterStyle));

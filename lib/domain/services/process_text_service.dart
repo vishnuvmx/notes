@@ -33,7 +33,12 @@ class IncomingTextData {
     );
   }
 
-  bool get isValid => text.trim().isNotEmpty || action == 'OPEN_NOTE' || action == 'QUICK_CAPTURE';
+  bool get isValid =>
+      text.trim().isNotEmpty ||
+      action == 'OPEN_NOTE' ||
+      action == 'QUICK_CAPTURE' ||
+      action == 'NEW_NOTE' ||
+      action == 'NEW_WHITEBOARD';
 }
 
 /// Service handling incoming text intents from Android system integration

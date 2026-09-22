@@ -1,24 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android App Shortcuts (long-press launcher icon).
+    Each shortcut fires an intent with a unique `android:data` URI
+    that ProcessTextService reads in Flutter via getInitialLink / getInitialText.
+
+    Package: com.notes.tacknotes
+-->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Shortcut 1: Create a new note instantly -->
     <shortcut
         android:shortcutId="new_note"
         android:enabled="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_shortcut_new_note"
         android:shortcutShortLabel="@string/shortcut_new_note_short"
         android:shortcutLongLabel="@string/shortcut_new_note_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.example.notes"
-            android:targetClass="com.example.notes.MainActivity" />
+            android:data="tack://action/new_note"
+            android:targetPackage="com.notes.tacknotes"
+            android:targetClass="com.notes.tacknotes.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
     </shortcut>
+
+    <!-- Shortcut 2: Open a new whiteboard canvas -->
     <shortcut
         android:shortcutId="new_whiteboard"
         android:enabled="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_shortcut_new_board"
         android:shortcutShortLabel="@string/shortcut_new_board_short"
         android:shortcutLongLabel="@string/shortcut_new_board_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.example.notes"
-            android:targetClass="com.example.notes.MainActivity" />
+            android:data="tack://action/new_whiteboard"
+            android:targetPackage="com.notes.tacknotes"
+            android:targetClass="com.notes.tacknotes.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
     </shortcut>
+
 </shortcuts>
