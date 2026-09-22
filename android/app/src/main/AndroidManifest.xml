@@ -94,23 +94,14 @@
         <!-- Quick Settings Tile for Android notification drawer -->
         <service
             android:name=".TackQuickCaptureTileService"
-            android:label="Tack Quick Note"
-            android:icon="@mipmap/ic_launcher"
+            android:label="Quick Note"
+            android:icon="@drawable/ic_stat_tack"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
-
-        <!-- Broadcast receiver for unpinning notifications -->
-        <receiver
-            android:name=".NotificationActionReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.notes.tacknotes.UNPIN_NOTE" />
-            </intent-filter>
-        </receiver>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

@@ -11,7 +11,6 @@ import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../domain/models/sticky_note.dart';
 import '../../../domain/services/note_export_service.dart';
-import '../../../domain/services/pinned_notification_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../feedback/tack_toast.dart';
 
@@ -52,16 +51,6 @@ class NoteActionSheet extends StatefulWidget {
 }
 
 class _NoteActionSheetState extends State<NoteActionSheet> {
-  bool _isPinnedToStatusBar = false;
-
-  @override
-  void initState() {
-    super.initState();
-    PinnedNotificationService.isNotePinned(widget.item.id).then((pinned) {
-      if (mounted) setState(() => _isPinnedToStatusBar = pinned);
-    });
-  }
-
   String _getItemContent() {
     if (widget.item is TextNote) {
       return (widget.item as TextNote).content;
@@ -171,33 +160,6 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
               },
             ),
 
-            // Action: Pin to Status Bar
-            _buildActionTile(
-              title: _isPinnedToStatusBar ? 'Unpin from Status Bar' : 'Pin to Status Bar',
-              isDark: isDark,
-              onTap: () async {
-                HapticFeedback.lightImpact();
-                final content = _getItemContent();
-                final newPinned = await PinnedNotificationService.togglePinNote(
-                  id: widget.item.id,
-                  title: title,
-                  content: content,
-                  paletteId: widget.item.paletteId,
-                );
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  TackToast.show(
-                    context,
-                    message: newPinned
-                        ? 'Note pinned to Android status bar'
-                        : 'Note unpinned from status bar',
-                    icon: TackIcons.pin,
-                    iconColor: AppColors.accentAmber,
-                  );
-                }
-              },
-            ),
-
             // Action: Duplicate Note
             _buildActionTile(
               title: 'Duplicate Note',
@@ -210,7 +172,7 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                   context,
                   message: 'Note duplicated',
                   icon: TackIcons.copy,
-                  iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  iconColor: AppColors.pastelLavenderLight,
                 );
               },
             ),

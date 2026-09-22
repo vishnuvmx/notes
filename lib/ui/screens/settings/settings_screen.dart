@@ -284,7 +284,7 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Add "Tack Quick Note" in Android notification panel for 1-tap capture anywhere',
+                            'Add "Quick Note" in Android notification panel for 1-tap capture anywhere',
                             style: TextStyle(
                               fontFamily: AppTypography.fontFamily,
                               fontSize: 12,

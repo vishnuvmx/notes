@@ -266,16 +266,27 @@ _FlowchartLayoutResult _computeFlowchartLayout(
   double maxColWidth = 0;
   double maxRowHeight = 0;
 
+  int maxCountInLayer = 0;
+  for (int l = 0; l <= maxLayer; l++) {
+    final count = layers[l]?.length ?? 0;
+    if (count > maxCountInLayer) maxCountInLayer = count;
+  }
+
+  final maxSpan = maxCountInLayer * (isLR ? (nodeHeight + vGap) : (nodeWidth + hGap));
+
   for (int l = 0; l <= maxLayer; l++) {
     final list = layers[l] ?? [];
+    final layerSpan = list.length * (isLR ? (nodeHeight + vGap) : (nodeWidth + hGap));
+    final offset = (maxSpan - layerSpan) / 2;
+
     for (int col = 0; col < list.length; col++) {
       final id = list[col];
       double x, y;
       if (isLR) {
         x = l * (nodeWidth + hGap) + 30;
-        y = col * (nodeHeight + vGap) + 30;
+        y = offset + col * (nodeHeight + vGap) + 30;
       } else {
-        x = col * (nodeWidth + hGap) + 30;
+        x = offset + col * (nodeWidth + hGap) + 30;
         y = l * (nodeHeight + vGap) + 30;
       }
       positions[id] = Offset(x, y);
@@ -354,62 +365,136 @@ class MermaidFlowchartWidget extends StatelessWidget {
   }
 
   Widget _buildNodeCard(MermaidNode node, bool isDark) {
-    // Determine shape styling
-    BorderRadius radius = BorderRadius.circular(10);
-    if (node.shape == MermaidNodeShape.pill) {
-      radius = BorderRadius.circular(999);
-    } else if (node.shape == MermaidNodeShape.rounded) {
-      radius = BorderRadius.circular(20);
-    } else if (node.shape == MermaidNodeShape.circle) {
-      radius = BorderRadius.circular(999);
-    }
+    final bgColor = isDark ? const Color(0xFF20242F) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF3F4657) : const Color(0xFFCFD5DF);
+    final textColor = isDark ? const Color(0xFFF1F3F7) : const Color(0xFF191A23);
 
-    final isDecision = node.shape == MermaidNodeShape.decision;
-
-    final bgColor = isDark
-        ? const Color(0xFF232732)
-        : const Color(0xFFFFFFFF);
-    final borderColor = isDark
-        ? const Color(0xFF3F4657)
-        : const Color(0xFFCFD5DF);
-    final textColor = isDark ? const Color(0xFFF1F3F7) : const Color(0xFF1A1D24);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: isDecision ? null : radius,
-        border: isDecision
-            ? null
-            : Border.all(color: borderColor, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(
-              node.label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-                height: 1.25,
-              ),
-            ),
+    final content = Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(
+          node.label,
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+            height: 1.25,
+            letterSpacing: -0.2,
           ),
         ),
       ),
     );
+
+    switch (node.shape) {
+      case MermaidNodeShape.decision:
+        return CustomPaint(
+          painter: _DiamondNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
+          child: content,
+        );
+      case MermaidNodeShape.database:
+        return CustomPaint(
+          painter: _DatabaseNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
+          child: Padding(padding: const EdgeInsets.only(top: 6), child: content),
+        );
+      case MermaidNodeShape.hexagon:
+        return CustomPaint(
+          painter: _HexagonNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
+          child: content,
+        );
+      case MermaidNodeShape.circle:
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: content,
+        );
+      case MermaidNodeShape.pill:
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: content,
+        );
+      case MermaidNodeShape.rounded:
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: content,
+        );
+      case MermaidNodeShape.subroutine:
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(left: 8, top: 0, bottom: 0, child: Container(width: 1.2, color: borderColor)),
+              Positioned(right: 8, top: 0, bottom: 0, child: Container(width: 1.2, color: borderColor)),
+              content,
+            ],
+          ),
+        );
+      case MermaidNodeShape.parallelogram:
+      case MermaidNodeShape.flag:
+      case MermaidNodeShape.process:
+      default:
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: content,
+        );
+    }
   }
 }
 
@@ -533,6 +618,104 @@ class _FlowchartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FlowchartPainter oldDelegate) => true;
+}
+
+class _DiamondNodePainter extends CustomPainter {
+  final Color fillColor;
+  final Color borderColor;
+  final bool isDark;
+
+  _DiamondNodePainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height / 2)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(0, size.height / 2)
+      ..close();
+
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.6..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiamondNodePainter oldDelegate) => true;
+}
+
+class _DatabaseNodePainter extends CustomPainter {
+  final Color fillColor;
+  final Color borderColor;
+  final bool isDark;
+
+  _DatabaseNodePainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const ellipseHeight = 10.0;
+
+    final path = Path()
+      ..moveTo(0, ellipseHeight)
+      ..lineTo(0, size.height - ellipseHeight)
+      ..arcToPoint(Offset(size.width, size.height - ellipseHeight), radius: Radius.elliptical(size.width / 2, ellipseHeight), clockwise: false)
+      ..lineTo(size.width, ellipseHeight)
+      ..arcToPoint(Offset(0, ellipseHeight), radius: Radius.elliptical(size.width / 2, ellipseHeight), clockwise: true)
+      ..close();
+
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+
+    final topRim = Path()
+      ..moveTo(0, ellipseHeight)
+      ..arcToPoint(Offset(size.width, ellipseHeight), radius: Radius.elliptical(size.width / 2, ellipseHeight), clockwise: false);
+    canvas.drawPath(topRim, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DatabaseNodePainter oldDelegate) => true;
+}
+
+class _HexagonNodePainter extends CustomPainter {
+  final Color fillColor;
+  final Color borderColor;
+  final bool isDark;
+
+  _HexagonNodePainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const pointW = 14.0;
+    final path = Path()
+      ..moveTo(pointW, 0)
+      ..lineTo(size.width - pointW, 0)
+      ..lineTo(size.width, size.height / 2)
+      ..lineTo(size.width - pointW, size.height)
+      ..lineTo(pointW, size.height)
+      ..lineTo(0, size.height / 2)
+      ..close();
+
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HexagonNodePainter oldDelegate) => true;
 }
 
 // -------------------------------------------------------------

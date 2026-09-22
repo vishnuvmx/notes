@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android Status Bar / Notification & Quick Settings Tile Icon
+    Android requires notification and QS icons to be pure white silhouette on transparent background.
+    Non-white/multicolor icons are tinted gray/white by ColorOS / Android system.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Pushpin / Tack silhouette -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,4c0,-1.1 -0.9,-2 -2,-2h-4c-1.1,0 -2,0.9 -2,2v2h1v4.17l-2,2V14h5v7l1,1l1,-1v-7h5v-1.83l-2,-2V6h1V4z" />
+</vector>

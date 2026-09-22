@@ -43,27 +43,6 @@ class MainActivity : FlutterActivity() {
                     pendingPayload = null
                     result.success(payload)
                 }
-                "pinNote" -> {
-                    val id = call.argument<String>("id") ?: ""
-                    val title = call.argument<String>("title") ?: ""
-                    val content = call.argument<String>("content") ?: ""
-                    val paletteId = call.argument<String>("paletteId")
-                    if (id.isNotEmpty()) {
-                        pinNoteNotification(id, title, content, paletteId)
-                        result.success(true)
-                    } else {
-                        result.error("INVALID_ARGS", "Note id is required", null)
-                    }
-                }
-                "unpinNote" -> {
-                    val id = call.argument<String>("id") ?: ""
-                    if (id.isNotEmpty()) {
-                        unpinNoteNotification(id)
-                        result.success(true)
-                    } else {
-                        result.error("INVALID_ARGS", "Note id is required", null)
-                    }
-                }
                 "showQuickCapture" -> {
                     showQuickCaptureNotification()
                     result.success(true)
@@ -86,16 +65,6 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NotificationManager::class.java)
 
-            val pinnedChannel = NotificationChannel(
-                "tack_pinned_notes",
-                "Pinned Notes",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Notes and stickies pinned to status bar"
-                setShowBadge(true)
-            }
-            notificationManager?.createNotificationChannel(pinnedChannel)
-
             val quickCaptureChannel = NotificationChannel(
                 "tack_quick_capture",
                 "Quick Capture",
@@ -106,60 +75,6 @@ class MainActivity : FlutterActivity() {
             }
             notificationManager?.createNotificationChannel(quickCaptureChannel)
         }
-    }
-
-    private fun pinNoteNotification(id: String, title: String, content: String, paletteId: String?) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            action = "com.notes.tacknotes.OPEN_NOTE"
-            putExtra("noteId", id)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val openPendingIntent = PendingIntent.getActivity(
-            this,
-            id.hashCode(),
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val unpinIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-            action = "com.notes.tacknotes.UNPIN_NOTE"
-            putExtra("noteId", id)
-        }
-        val unpinPendingIntent = PendingIntent.getBroadcast(
-            this,
-            id.hashCode() + 1,
-            unpinIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, "tack_pinned_notes")
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(this)
-        }
-
-        val displayTitle = if (title.isBlank()) "Pinned Note" else title
-        val displayContent = if (content.isBlank()) "Tap to open note" else content
-
-        builder.setContentTitle(displayTitle)
-            .setContentText(displayContent)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(openPendingIntent)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setStyle(Notification.BigTextStyle().bigText(displayContent))
-            .addAction(Notification.Action.Builder(null, "Open", openPendingIntent).build())
-            .addAction(Notification.Action.Builder(null, "Unpin", unpinPendingIntent).build())
-
-        notificationManager.notify(id.hashCode(), builder.build())
-    }
-
-    private fun unpinNoteNotification(id: String) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(id.hashCode())
     }
 
     private fun showQuickCaptureNotification() {
@@ -182,9 +97,9 @@ class MainActivity : FlutterActivity() {
             Notification.Builder(this)
         }
 
-        builder.setContentTitle("Tack • Quick Capture")
+        builder.setContentTitle("Quick Note")
             .setContentText("Tap to jot down a fast note or checklist")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_tack)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setAutoCancel(false)

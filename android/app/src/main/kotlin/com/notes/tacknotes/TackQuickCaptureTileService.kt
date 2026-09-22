@@ -17,7 +17,11 @@ class TackQuickCaptureTileService : TileService() {
         super.onStartListening()
         val tile = qsTile ?: return
         tile.state = Tile.STATE_ACTIVE
-        tile.label = "Tack Quick Note"
+        tile.label = "Quick Note"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            tile.subtitle = null
+        }
+        tile.icon = android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_stat_tack)
         tile.updateTile()
     }
 

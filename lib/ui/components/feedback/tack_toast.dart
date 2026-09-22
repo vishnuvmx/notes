@@ -100,7 +100,7 @@ class TackToast {
                       ),
                       child: Text(
                         actionLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: AppTypography.fontFamily,
                           color: AppColors.accentAmber,
                           fontWeight: FontWeight.w700,

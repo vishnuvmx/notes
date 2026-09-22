@@ -23,7 +23,6 @@ import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 import '../../../domain/services/note_export_service.dart';
-import '../../../domain/services/pinned_notification_service.dart';
 
 /// Full-featured Note Editor & Reader Screen (Phase 3).
 /// Includes Reading/Editing mode switcher, live interactive checklists,
@@ -50,7 +49,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
   Timer? _saveDebounce;
-  bool _isPinnedToStatusBar = false;
 
   // In-Note Find & Replace State
   bool _isSearching = false;
@@ -79,12 +77,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
-
-    PinnedNotificationService.isNotePinned(widget.item.id).then((pinned) {
-      if (mounted) {
-        setState(() => _isPinnedToStatusBar = pinned);
-      }
-    });
   }
 
   WorkspaceProvider? _workspace;
@@ -182,7 +174,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final content = _contentController.text;
     final paletteId = _paletteId;
     final tags = List<String>.from(_tags);
-    final isPinned = _isPinnedToStatusBar;
 
     BaseWorkspaceItem updated;
     if (widget.item is StickyNote) {
@@ -212,15 +203,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     await workspace.saveItem(updated);
     if (!mounted) return;
-
-    if (isPinned) {
-      PinnedNotificationService.pinNote(
-        id: widget.item.id,
-        title: title.isEmpty ? 'Pinned Note' : title,
-        content: content,
-        paletteId: paletteId,
-      );
-    }
     setState(() => _isSaving = false);
   }
 
@@ -1075,30 +1057,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   );
                 } else if (val == 'share') {
                   _showShareExportSheet();
-                } else if (val == 'pin_status') {
-                  HapticFeedback.mediumImpact();
-                  final title = _titleController.text.trim();
-                  final content = _contentController.text.trim();
-                  final newPinned = await PinnedNotificationService.togglePinNote(
-                    id: widget.item.id,
-                    title: title.isEmpty ? 'Pinned Note' : title,
-                    content: content,
-                    paletteId: _paletteId,
-                  );
-                  if (mounted) {
-                    setState(() => _isPinnedToStatusBar = newPinned);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          newPinned
-                              ? 'Note pinned to Android status bar!'
-                              : 'Note unpinned from status bar',
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
                 } else if (val == 'trash') {
                   workspace.moveToTrash(widget.item.id);
                   Navigator.of(context).pop();
@@ -1111,12 +1069,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   icon: TackIcons.star,
                   iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                   iconColor: AppColors.accentAmber,
-                ),
-                IosMenuItem(
-                  value: 'pin_status',
-                  title: _isPinnedToStatusBar ? 'Unpin from Status Bar' : 'Pin to Status Bar',
-                  icon: TackIcons.tag,
-                  iconColor: _isPinnedToStatusBar ? AppColors.accentCyan : null,
                 ),
                 const IosMenuItem(
                   value: 'duplicate',

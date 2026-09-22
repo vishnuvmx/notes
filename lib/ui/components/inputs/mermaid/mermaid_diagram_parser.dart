@@ -15,6 +15,10 @@ enum MermaidNodeShape {
   decision,  // {text}
   database,  // [(text)]
   circle,    // ((text))
+  subroutine,// [[text]]
+  hexagon,   // {{text}}
+  parallelogram, // [/text/]
+  flag,      // >text]
 }
 
 /// Parsed node in a flowchart graph.
@@ -166,6 +170,11 @@ class MermaidDiagramParser {
     // 4. Timeline Diagram: timeline ...
     if (lines.any((l) => l.toLowerCase() == 'timeline' || l.toLowerCase().startsWith('timeline ') || l.toLowerCase().startsWith('timeline\n'))) {
       return _parseTimeline(rawCode, lines);
+    }
+
+    // 5. State Diagram: stateDiagram / stateDiagram-v2
+    if (lines.any((l) => l.toLowerCase().startsWith('statediagram'))) {
+      return _parseStateDiagram(rawCode, lines);
     }
 
     // Fallback: If lines contain '-->' or '---', attempt flowchart parsing
@@ -406,6 +415,98 @@ class MermaidDiagramParser {
     );
   }
 
+  static String _cleanLabel(String raw) {
+    var s = raw.trim();
+    if ((s.startsWith('"') && s.endsWith('"')) ||
+        (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.substring(1, s.length - 1).trim();
+    }
+    s = s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+    return s;
+  }
+
+  static ParsedMermaidDiagram _parseStateDiagram(String rawCode, List<String> lines) {
+    String direction = 'TD';
+    final nodeMap = <String, MermaidNode>{};
+    final edges = <MermaidEdge>[];
+    String? title;
+    int stateCounter = 0;
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      final lower = line.toLowerCase();
+      if (lower.startsWith('statediagram')) continue;
+      if (lower.startsWith('direction ')) {
+        final d = line.substring(10).trim().toUpperCase();
+        if (d == 'LR' || d == 'RL' || d == 'TD' || d == 'BT') direction = d;
+        continue;
+      }
+      if (lower.startsWith('title ')) {
+        title = line.substring(6).trim();
+        continue;
+      }
+
+      // Transition: From --> To : Label
+      if (line.contains('-->')) {
+        final parts = line.split('-->');
+        if (parts.length >= 2) {
+          final fromRaw = parts[0].trim();
+          final rightPart = parts.sublist(1).join('-->').trim();
+          String toRaw = rightPart;
+          String? label;
+
+          if (rightPart.contains(':')) {
+            final colonIdx = rightPart.indexOf(':');
+            toRaw = rightPart.substring(0, colonIdx).trim();
+            label = _cleanLabel(rightPart.substring(colonIdx + 1));
+          }
+
+          final fromId = fromRaw == '[*]' ? 'start_${stateCounter++}' : fromRaw;
+          final toId = toRaw == '[*]' ? 'end_${stateCounter++}' : toRaw;
+
+          if (!nodeMap.containsKey(fromId)) {
+            nodeMap[fromId] = MermaidNode(
+              id: fromId,
+              label: fromRaw == '[*]' ? 'Start' : fromRaw,
+              shape: fromRaw == '[*]' ? MermaidNodeShape.circle : MermaidNodeShape.rounded,
+            );
+          }
+          if (!nodeMap.containsKey(toId)) {
+            nodeMap[toId] = MermaidNode(
+              id: toId,
+              label: toRaw == '[*]' ? 'End' : toRaw,
+              shape: toRaw == '[*]' ? MermaidNodeShape.circle : MermaidNodeShape.rounded,
+            );
+          }
+
+          edges.add(MermaidEdge(
+            fromId: fromId,
+            toId: toId,
+            label: label,
+          ));
+        }
+      } else if (line.isNotEmpty && !line.startsWith('%%') && !line.startsWith('note ')) {
+        final id = line.split(';').first.trim();
+        if (id.isNotEmpty && !nodeMap.containsKey(id)) {
+          nodeMap[id] = MermaidNode(
+            id: id,
+            label: id,
+            shape: MermaidNodeShape.rounded,
+          );
+        }
+      }
+    }
+
+    return ParsedMermaidDiagram(
+      type: MermaidDiagramType.flowchart,
+      rawCode: rawCode,
+      title: title,
+      direction: direction,
+      nodes: nodeMap.values.toList(),
+      edges: edges,
+    );
+  }
+
   static void _parseFlowchartStatement(
     String stmt,
     Map<String, MermaidNode> nodeMap,
@@ -433,48 +534,54 @@ class MermaidDiagramParser {
       bool isThick = edgeOp.contains('==');
 
       if (edgeOp.startsWith('-->|') && edgeOp.endsWith('|') && edgeOp.length > 5) {
-        edgeLabel = edgeOp.substring(4, edgeOp.length - 1).trim();
+        edgeLabel = _cleanLabel(edgeOp.substring(4, edgeOp.length - 1));
       } else if (edgeOp.startsWith('==>|') && edgeOp.endsWith('|') && edgeOp.length > 5) {
-        edgeLabel = edgeOp.substring(4, edgeOp.length - 1).trim();
+        edgeLabel = _cleanLabel(edgeOp.substring(4, edgeOp.length - 1));
       } else if (edgeOp.startsWith('--') && edgeOp.endsWith('-->') && edgeOp.length > 5) {
-        edgeLabel = edgeOp.substring(2, edgeOp.length - 3).trim();
+        edgeLabel = _cleanLabel(edgeOp.substring(2, edgeOp.length - 3));
       }
 
-      final fromNode = _extractNode(leftPart, nodeMap);
-      // The right part could also be chained (e.g. B --> C)
+      // Handle multi-source or multi-target with & (e.g. A & B --> C & D)
+      final leftTokens = leftPart.split('&').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      final fromNodes = leftTokens.map((t) => _extractNode(t, nodeMap)).whereType<MermaidNode>().toList();
+
+      // Check chained edge on right (e.g. B --> C)
       if (edgeRegex.hasMatch(rightPart)) {
-        // Recursive handling for chain
         final firstRightNodeMatch = RegExp(r'^([^-\s=>]+(?:\[.*?\]|\(.*?\)|<.*?>|\{.*?\}|\([\[(].*?[\])]\))?)').firstMatch(rightPart);
         if (firstRightNodeMatch != null) {
           final toNodeToken = firstRightNodeMatch.group(1)!.trim();
           final toNode = _extractNode(toNodeToken, nodeMap);
-          if (fromNode != null && toNode != null) {
-            edges.add(MermaidEdge(
-              fromId: fromNode.id,
-              toId: toNode.id,
-              label: edgeLabel,
-              isDotted: isDotted,
-              isThick: isThick,
-            ));
+          if (toNode != null) {
+            for (final f in fromNodes) {
+              edges.add(MermaidEdge(
+                fromId: f.id,
+                toId: toNode.id,
+                label: edgeLabel,
+                isDotted: isDotted,
+                isThick: isThick,
+              ));
+            }
           }
-          // Process remainder of chain
           _parseFlowchartStatement(rightPart, nodeMap, edges);
           return;
         }
       }
 
-      final toNode = _extractNode(rightPart, nodeMap);
-      if (fromNode != null && toNode != null) {
-        edges.add(MermaidEdge(
-          fromId: fromNode.id,
-          toId: toNode.id,
-          label: edgeLabel,
-          isDotted: isDotted,
-          isThick: isThick,
-        ));
+      final rightTokens = rightPart.split('&').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      final toNodes = rightTokens.map((t) => _extractNode(t, nodeMap)).whereType<MermaidNode>().toList();
+
+      for (final f in fromNodes) {
+        for (final t in toNodes) {
+          edges.add(MermaidEdge(
+            fromId: f.id,
+            toId: t.id,
+            label: edgeLabel,
+            isDotted: isDotted,
+            isThick: isThick,
+          ));
+        }
       }
     } else {
-      // Standalone node definition: e.g. A[Start process]
       _extractNode(stmt, nodeMap);
     }
   }
@@ -483,71 +590,110 @@ class MermaidDiagramParser {
     var raw = token.trim();
     if (raw.isEmpty) return null;
 
-    // Remove trailing semicolons or punctuation
     if (raw.endsWith(';')) raw = raw.substring(0, raw.length - 1).trim();
 
-    // 1. Pill shape: A([text])
-    var m = RegExp(r'^([A-Za-z0-9_]+)\s*\(\[\s*(.*?)\s*\]\)$').firstMatch(raw);
+    // 1. Subroutine shape: A[[text]]
+    var m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\[\[\s*(.*?)\s*\]\]$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
+      final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.subroutine);
+      nodeMap[id] = node;
+      return node;
+    }
+
+    // 2. Hexagon shape: A{{text}}
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\{\{\s*(.*?)\s*\}\}$').firstMatch(raw);
+    if (m != null) {
+      final id = m.group(1)!;
+      final label = _cleanLabel(m.group(2)!);
+      final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.hexagon);
+      nodeMap[id] = node;
+      return node;
+    }
+
+    // 3. Parallelogram shape: A[/text/] or A[\text\]
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\[[/\\]\s*(.*?)\s*[/\\]\]$').firstMatch(raw);
+    if (m != null) {
+      final id = m.group(1)!;
+      final label = _cleanLabel(m.group(2)!);
+      final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.parallelogram);
+      nodeMap[id] = node;
+      return node;
+    }
+
+    // 4. Pill shape: A([text])
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\(\[\s*(.*?)\s*\]\)$').firstMatch(raw);
+    if (m != null) {
+      final id = m.group(1)!;
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.pill);
       nodeMap[id] = node;
       return node;
     }
 
-    // 2. Database/Cylinder shape: A[(text)]
-    m = RegExp(r'^([A-Za-z0-9_]+)\s*\[\(\s*(.*?)\s*\)\]$').firstMatch(raw);
+    // 5. Database/Cylinder shape: A[(text)]
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\[\(\s*(.*?)\s*\)\]$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.database);
       nodeMap[id] = node;
       return node;
     }
 
-    // 3. Circle shape: A((text))
-    m = RegExp(r'^([A-Za-z0-9_]+)\s*\(\(\s*(.*?)\s*\)\)$').firstMatch(raw);
+    // 6. Circle shape: A((text))
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\(\(\s*(.*?)\s*\)\)$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.circle);
       nodeMap[id] = node;
       return node;
     }
 
-    // 4. Decision Diamond shape: A{text}
-    m = RegExp(r'^([A-Za-z0-9_]+)\s*\{\s*(.*?)\s*\}$').firstMatch(raw);
+    // 7. Decision Diamond shape: A{text}
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\{\s*(.*?)\s*\}$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.decision);
       nodeMap[id] = node;
       return node;
     }
 
-    // 5. Rounded rect shape: A(text)
-    m = RegExp(r'^([A-Za-z0-9_]+)\s*\(\s*(.*?)\s*\)$').firstMatch(raw);
+    // 8. Flag / Asymmetric shape: A>text]
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*>\s*(.*?)\s*\]$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
+      final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.flag);
+      nodeMap[id] = node;
+      return node;
+    }
+
+    // 9. Rounded rect shape: A(text)
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\(\s*(.*?)\s*\)$').firstMatch(raw);
+    if (m != null) {
+      final id = m.group(1)!;
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.rounded);
       nodeMap[id] = node;
       return node;
     }
 
-    // 6. Process/Rect shape: A[text]
-    m = RegExp(r'^([A-Za-z0-9_]+)\s*\[\s*(.*?)\s*\]$').firstMatch(raw);
+    // 10. Process/Rect shape: A[text]
+    m = RegExp(r'^([A-Za-z0-9_.-]+)\s*\[\s*(.*?)\s*\]$').firstMatch(raw);
     if (m != null) {
       final id = m.group(1)!;
-      final label = m.group(2)!.trim();
+      final label = _cleanLabel(m.group(2)!);
       final node = MermaidNode(id: id, label: label, shape: MermaidNodeShape.process);
       nodeMap[id] = node;
       return node;
     }
 
-    // 7. Plain identifier without brackets: A
-    final plainMatch = RegExp(r'^([A-Za-z0-9_]+)$').firstMatch(raw);
+    // 11. Plain identifier without brackets: A
+    final plainMatch = RegExp(r'^([A-Za-z0-9_.-]+)$').firstMatch(raw);
     if (plainMatch != null) {
       final id = plainMatch.group(1)!;
       if (!nodeMap.containsKey(id)) {

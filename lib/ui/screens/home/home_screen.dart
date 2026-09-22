@@ -48,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSearching = false;
   late final ScrollController _scrollController;
   bool _isBarsVisible = true;
+  double _lastScrollOffset = 0;
 
   @override
   void initState() {
@@ -64,17 +65,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients && _scrollController.offset <= 12) {
+    if (!_scrollController.hasClients) return;
+    final offset = _scrollController.offset;
+    final delta = offset - _lastScrollOffset;
+
+    if (offset <= 8) {
       if (!_isBarsVisible) {
         setState(() => _isBarsVisible = true);
       }
+    } else if (delta > 3 && _isBarsVisible) {
+      // User is scrolling down: hide navbar immediately along the motion
+      setState(() => _isBarsVisible = false);
+    } else if (delta < -3 && !_isBarsVisible) {
+      // User is scrolling up: restore navbar immediately
+      setState(() => _isBarsVisible = true);
     }
+    _lastScrollOffset = offset;
   }
 
   String _getHeadlineTitle(ItemType? category) {
     switch (category) {
       case null:
-        return 'Your Files';
+        return 'Your Notes';
       case ItemType.note:
         return 'Your Notes';
       case ItemType.whiteboard:
@@ -387,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: NotificationListener<UserScrollNotification>(
                   onNotification: (notification) {
                     if (notification.direction == ScrollDirection.reverse) {
-                      if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 24) {
+                      if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 4) {
                         setState(() => _isBarsVisible = false);
                       }
                     } else if (notification.direction == ScrollDirection.forward) {
@@ -401,9 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : items.isEmpty
                           ? _buildEmptyState(workspace)
-                          : (workspace.viewMode == HomeViewMode.notebook
-                              ? _buildNotebookFeedView(items, workspace)
-                              : _buildNeoGridFeedView(items)),
+                          : _buildNeoGridFeedView(items),
                 ),
               ),
             ],
@@ -573,34 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
       isGrid: true,
       onTap: () => widget.onOpenItem?.call(item),
       onLongPress: () => NoteActionSheet.show(context, item: item),
-    );
-  }
-
-  /// Clean Notebook List Feed with Spiral Spines and colored index numbers
-  Widget _buildNotebookFeedView(List<BaseWorkspaceItem> items, WorkspaceProvider workspace) {
-    final isClipboard = workspace.selectedCategory == ItemType.clipboard;
-    return ListView.builder(
-      controller: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xs,
-        AppSpacing.lg,
-        isClipboard ? 110 : 88,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SmartNoteListCard(
-            item: item,
-            index: index,
-            onTap: () => widget.onOpenItem?.call(item),
-            onLongPress: () => NoteActionSheet.show(context, item: item),
-          ),
-        );
-      },
     );
   }
 
