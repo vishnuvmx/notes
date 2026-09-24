@@ -66,6 +66,8 @@ class TackIcons {
   // Tag & category aliases
   static const IconData bolt = LucideIcons.zap;
   static const IconData briefcase = LucideIcons.briefcase;
+  static const IconData calendar = LucideIcons.calendar;
+  static const IconData lock = LucideIcons.lock;
 }
 
 /// Aesthetic Icon builder with consistent sizing and sleek Lucide styling.

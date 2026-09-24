@@ -15,6 +15,7 @@ import 'mermaid/mermaid_diagram_card.dart';
 class RichNoteContentView extends StatelessWidget {
   final String content;
   final ValueChanged<String>? onContentChanged;
+  final ValueChanged<int>? onLineTap;
   final bool isInteractive;
   final String? paletteId;
 
@@ -22,11 +23,21 @@ class RichNoteContentView extends StatelessWidget {
     super.key,
     required this.content,
     this.onContentChanged,
+    this.onLineTap,
     this.isInteractive = true,
     this.paletteId,
   });
 
   TackColorPalette get palette => AppColors.getPaletteById(paletteId);
+
+  Widget _wrapLineTap(Widget child, int lineIndex) {
+    if (onLineTap == null) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => onLineTap?.call(lineIndex),
+      child: child,
+    );
+  }
 
   void _toggleCheckbox(int lineIndex) {
     if (onContentChanged == null) return;
@@ -102,12 +113,15 @@ class RichNoteContentView extends StatelessWidget {
                     trimmedCode.startsWith('sequencediagram')));
 
         if (isMermaid) {
-          widgets.add(MermaidDiagramCard(
-            rawCode: code,
-            paletteId: paletteId,
+          widgets.add(_wrapLineTap(
+            MermaidDiagramCard(
+              rawCode: code,
+              paletteId: paletteId,
+            ),
+            i,
           ));
         } else {
-          widgets.add(_buildFencedCodeBlock(context, lang, code, isDark, theme));
+          widgets.add(_wrapLineTap(_buildFencedCodeBlock(context, lang, code, isDark, theme), i));
         }
         i = (j < lines.length) ? j + 1 : j;
         continue;
@@ -124,7 +138,7 @@ class RichNoteContentView extends StatelessWidget {
             tableLines.add(lines[j]);
             j++;
           }
-          widgets.add(_buildTable(context, tableLines, isDark, theme));
+          widgets.add(_wrapLineTap(_buildTable(context, tableLines, isDark, theme), i));
           i = j;
           continue;
         }
@@ -135,20 +149,23 @@ class RichNoteContentView extends StatelessWidget {
       if (imgMatch != null) {
         final alt = imgMatch.group(1) ?? '';
         final url = imgMatch.group(2) ?? '';
-        widgets.add(_buildImageBlock(context, alt, url, isDark));
+        widgets.add(_wrapLineTap(_buildImageBlock(context, alt, url, isDark), i));
         i++;
         continue;
       }
 
       // 4. Horizontal Rule: ---, ***, ___ (at least 3 characters)
       if (RegExp(r'^\s*(-{3,}|\*{3,}|_{3,})\s*$').hasMatch(line)) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Divider(
-            height: 1,
-            thickness: 1.2,
-            color: palette.resolveTableBorder(isDark),
+        widgets.add(_wrapLineTap(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(
+              height: 1,
+              thickness: 1.2,
+              color: palette.resolveTableBorder(isDark),
+            ),
           ),
+          i,
         ));
         i++;
         continue;
@@ -162,13 +179,13 @@ class RichNoteContentView extends StatelessWidget {
           quoteLines.add(lines[j]);
           j++;
         }
-        widgets.add(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme));
+        widgets.add(_wrapLineTap(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme), i));
         i = j;
         continue;
       }
 
       // 6. Line-based elements (Headings, Checklists, Lists, Paragraphs)
-      widgets.add(_buildLineWidget(context, line, i, isDark));
+      widgets.add(_wrapLineTap(_buildLineWidget(context, line, i, isDark), i));
       i++;
     }
 

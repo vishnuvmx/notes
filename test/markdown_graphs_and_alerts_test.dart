@@ -101,7 +101,6 @@ graph TD
       await tester.pumpAndSettle();
 
       expect(find.byType(MermaidDiagramCard), findsOneWidget);
-      expect(find.text('FLOWCHART'), findsOneWidget);
       expect(find.text('Client'), findsOneWidget);
       expect(find.text('Server'), findsOneWidget);
     });

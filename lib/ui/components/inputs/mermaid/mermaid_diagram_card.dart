@@ -5,9 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import 'mermaid_diagram_parser.dart';
 
-/// Card container that visualizes Mermaid graphs and diagrams (Flowcharts,
-/// Pie Charts, Sequence Diagrams, Timelines) with interactive pan/zoom,
-/// theme adaptation, and zero distracting buttons or labels.
+/// Card container that cleanly visualizes Mermaid graphs and diagrams (Flowcharts,
+/// Pie Charts, Sequence Diagrams, Timelines) with responsive auto-fit,
+/// interactive pan/zoom, and ZERO distracting buttons, headers, or toggles.
 class MermaidDiagramCard extends StatefulWidget {
   final String rawCode;
   final String? paletteId;
@@ -56,32 +56,26 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
       return _buildRawCodeView(isDark);
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        // Absorb tap so interacting with or viewing the diagram never enters note edit mode
-      },
-      onDoubleTap: () {
-        // Absorb double-tap as well
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _palette.resolveTableBorder(isDark),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (isDark ? Colors.black : const Color(0xFF191A23)).withValues(alpha: isDark ? 0.35 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161820) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+          width: 1.0,
         ),
-        clipBehavior: Clip.antiAlias,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
         child: _buildDiagramView(isDark),
       ),
     );
@@ -89,25 +83,25 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
   Widget _buildRawCodeView(bool isDark) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16181D) : const Color(0xFFFAFBFC),
+        color: isDark ? const Color(0xFF141720) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _palette.resolveTableBorder(isDark),
-          width: 1.2,
+          color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
+          width: 0.8,
         ),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(12),
         child: SelectableText(
           widget.rawCode,
           style: TextStyle(
             fontFamily: 'monospace',
-            fontSize: 12.5,
+            fontSize: 12.0,
             height: 1.45,
-            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3748),
+            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
           ),
         ),
       ),
@@ -117,59 +111,21 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
   Widget _buildDiagramView(bool isDark) {
     switch (_parsed.type) {
       case MermaidDiagramType.pie:
-        return Container(
-          constraints: const BoxConstraints(minHeight: 180, maxHeight: 380),
-          width: double.infinity,
-          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
-          child: InteractiveViewer(
-            transformationController: _transformController,
-            boundaryMargin: const EdgeInsets.all(40),
-            minScale: 0.6,
-            maxScale: 2.5,
-            child: Center(
-              child: MermaidPieWidget(
-                diagram: _parsed,
-                isDark: isDark,
-              ),
-            ),
-          ),
+        return MermaidPieWidget(
+          diagram: _parsed,
+          isDark: isDark,
         );
       case MermaidDiagramType.sequence:
-        return Container(
-          constraints: const BoxConstraints(minHeight: 200, maxHeight: 420),
-          width: double.infinity,
-          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
-          child: InteractiveViewer(
-            transformationController: _transformController,
-            boundaryMargin: const EdgeInsets.all(60),
-            minScale: 0.5,
-            maxScale: 2.5,
-            child: Center(
-              child: MermaidSequenceWidget(
-                diagram: _parsed,
-                isDark: isDark,
-              ),
-            ),
-          ),
+        return MermaidSequenceWidget(
+          diagram: _parsed,
+          isDark: isDark,
+          transformController: _transformController,
         );
       case MermaidDiagramType.timeline:
-        return Container(
-          constraints: const BoxConstraints(minHeight: 200, maxHeight: 380),
-          width: double.infinity,
-          color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
-          child: InteractiveViewer(
-            transformationController: _transformController,
-            boundaryMargin: const EdgeInsets.all(60),
-            minScale: 0.5,
-            maxScale: 2.5,
-            child: Center(
-              child: MermaidTimelineWidget(
-                diagram: _parsed,
-                isDark: isDark,
-                palette: _palette,
-              ),
-            ),
-          ),
+        return MermaidTimelineWidget(
+          diagram: _parsed,
+          isDark: isDark,
+          palette: _palette,
         );
       case MermaidDiagramType.flowchart:
         return MermaidFlowchartWidget(
@@ -184,29 +140,51 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 }
 
 // -------------------------------------------------------------
-// 1. FLOWCHART RENDERER & LAYOUT ENGINE
+// 1. FLOWCHART RENDERER & LAYOUT ENGINE (AUTO-FIT, NO CLIPPING)
 // -------------------------------------------------------------
 
 class _FlowchartLayoutResult {
   final Map<String, Offset> positions;
+  final Map<String, Size> nodeSizes;
   final Size totalSize;
 
   const _FlowchartLayoutResult({
     required this.positions,
+    required this.nodeSizes,
     required this.totalSize,
   });
 }
 
 _FlowchartLayoutResult _computeFlowchartLayout(
   ParsedMermaidDiagram diagram,
-  double nodeWidth,
-  double nodeHeight,
+  double defaultNodeW,
+  double defaultNodeH,
   double hGap,
   double vGap,
 ) {
   final nodes = diagram.nodes;
   final edges = diagram.edges;
   final isLR = diagram.direction == 'LR' || diagram.direction == 'RL';
+
+  // Measure dynamic node sizes according to label length
+  final nodeSizes = <String, Size>{};
+  for (final n in nodes) {
+    final textLen = n.label.length;
+    double w;
+    double h;
+    if (n.shape == MermaidNodeShape.decision) {
+      w = math.max(130.0, math.min(210.0, textLen * 6.5 + 46.0));
+      h = 64.0;
+    } else if (n.shape == MermaidNodeShape.circle) {
+      final diam = math.max(68.0, math.min(100.0, textLen * 6.0 + 24.0));
+      w = diam;
+      h = diam;
+    } else {
+      w = math.max(110.0, math.min(200.0, textLen * 6.5 + 32.0));
+      h = 54.0;
+    }
+    nodeSizes[n.id] = Size(w, h);
+  }
 
   // Compute incoming degree for layers
   final inDegree = <String, int>{for (var n in nodes) n.id: 0};
@@ -223,7 +201,6 @@ _FlowchartLayoutResult _computeFlowchartLayout(
   final nodeLayer = <String, int>{};
   final queue = <String>[];
 
-  // Start with nodes having 0 in-degree
   for (final n in nodes) {
     if ((inDegree[n.id] ?? 0) == 0) {
       queue.add(n.id);
@@ -231,7 +208,6 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     }
   }
 
-  // If cycle or no 0-degree, pick first
   if (queue.isEmpty && nodes.isNotEmpty) {
     queue.add(nodes.first.id);
     nodeLayer[nodes.first.id] = 0;
@@ -249,7 +225,6 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     }
   }
 
-  // Any unassigned nodes default to layer 0
   for (final n in nodes) {
     nodeLayer.putIfAbsent(n.id, () => 0);
   }
@@ -266,39 +241,64 @@ _FlowchartLayoutResult _computeFlowchartLayout(
   double maxColWidth = 0;
   double maxRowHeight = 0;
 
-  int maxCountInLayer = 0;
-  for (int l = 0; l <= maxLayer; l++) {
-    final count = layers[l]?.length ?? 0;
-    if (count > maxCountInLayer) maxCountInLayer = count;
-  }
-
-  final maxSpan = maxCountInLayer * (isLR ? (nodeHeight + vGap) : (nodeWidth + hGap));
-
+  // Compute breadth per layer
+  final layerBreadths = <int, double>{};
   for (int l = 0; l <= maxLayer; l++) {
     final list = layers[l] ?? [];
-    final layerSpan = list.length * (isLR ? (nodeHeight + vGap) : (nodeWidth + hGap));
-    final offset = (maxSpan - layerSpan) / 2;
+    double breadth = 0;
+    for (int col = 0; col < list.length; col++) {
+      final size = nodeSizes[list[col]] ?? Size(defaultNodeW, defaultNodeH);
+      breadth += isLR ? size.height : size.width;
+      if (col > 0) breadth += isLR ? vGap : hGap;
+    }
+    layerBreadths[l] = breadth;
+  }
+
+  double maxBreadth = 0;
+  for (final b in layerBreadths.values) {
+    if (b > maxBreadth) maxBreadth = b;
+  }
+
+  // Position nodes
+  double currentLayerDepth = 16.0;
+  for (int l = 0; l <= maxLayer; l++) {
+    final list = layers[l] ?? [];
+    final currentBreadth = layerBreadths[l] ?? 0;
+    final startOffset = (maxBreadth - currentBreadth) / 2 + 16.0;
+
+    double currentColOffset = startOffset;
+    double maxDepthInLayer = 0;
 
     for (int col = 0; col < list.length; col++) {
       final id = list[col];
+      final size = nodeSizes[id] ?? Size(defaultNodeW, defaultNodeH);
+
       double x, y;
       if (isLR) {
-        x = l * (nodeWidth + hGap) + 30;
-        y = offset + col * (nodeHeight + vGap) + 30;
+        x = currentLayerDepth;
+        y = currentColOffset;
+        currentColOffset += size.height + vGap;
+        if (size.width > maxDepthInLayer) maxDepthInLayer = size.width;
       } else {
-        x = offset + col * (nodeWidth + hGap) + 30;
-        y = l * (nodeHeight + vGap) + 30;
+        x = currentColOffset;
+        y = currentLayerDepth;
+        currentColOffset += size.width + hGap;
+        if (size.height > maxDepthInLayer) maxDepthInLayer = size.height;
       }
+
       positions[id] = Offset(x, y);
 
-      if (x + nodeWidth > maxColWidth) maxColWidth = x + nodeWidth;
-      if (y + nodeHeight > maxRowHeight) maxRowHeight = y + nodeHeight;
+      if (x + size.width > maxColWidth) maxColWidth = x + size.width;
+      if (y + size.height > maxRowHeight) maxRowHeight = y + size.height;
     }
+
+    currentLayerDepth += maxDepthInLayer + (isLR ? hGap : vGap);
   }
 
   return _FlowchartLayoutResult(
     positions: positions,
-    totalSize: Size(maxColWidth + 30, maxRowHeight + 30),
+    nodeSizes: nodeSizes,
+    totalSize: Size(maxColWidth + 24, maxRowHeight + 24),
   );
 }
 
@@ -316,58 +316,103 @@ class MermaidFlowchartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const nodeW = 120.0;
-    const nodeH = 54.0;
-    const hGap = 36.0;
-    const vGap = 48.0;
+    const defaultNodeW = 120.0;
+    const defaultNodeH = 54.0;
+    const hGap = 28.0;
+    const vGap = 36.0;
 
-    final layout = _computeFlowchartLayout(diagram, nodeW, nodeH, hGap, vGap);
+    final layout = _computeFlowchartLayout(diagram, defaultNodeW, defaultNodeH, hGap, vGap);
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: 180, maxHeight: 420),
-      width: double.infinity,
-      color: isDark ? const Color(0xFF13151A) : const Color(0xFFF7F9FB),
-      child: InteractiveViewer(
-        transformationController: transformController,
-        boundaryMargin: const EdgeInsets.all(60),
-        minScale: 0.5,
-        maxScale: 2.5,
-        child: Center(
-          child: SizedBox(
-            width: layout.totalSize.width,
-            height: layout.totalSize.height,
-            child: CustomPaint(
-              painter: _FlowchartPainter(
-                diagram: diagram,
-                positions: layout.positions,
-                nodeWidth: nodeW,
-                nodeHeight: nodeH,
-                isDark: isDark,
-              ),
-              child: Stack(
-                children: [
-                  for (final node in diagram.nodes)
-                    if (layout.positions.containsKey(node.id))
-                      Positioned(
-                        left: layout.positions[node.id]!.dx,
-                        top: layout.positions[node.id]!.dy,
-                        width: nodeW,
-                        height: nodeH,
-                        child: _buildNodeCard(node, isDark),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final totalW = layout.totalSize.width;
+        final totalH = layout.totalSize.height;
+
+        // Auto-scale to fit available width perfectly without horizontal overflow or clipping!
+        final fitScale = (availableWidth / totalW).clamp(0.0, 1.0);
+        final displayW = totalW * fitScale;
+        final displayH = totalH * fitScale;
+
+        final canvasContent = SizedBox(
+          width: totalW,
+          height: totalH,
+          child: CustomPaint(
+            painter: _FlowchartPainter(
+              diagram: diagram,
+              positions: layout.positions,
+              nodeSizes: layout.nodeSizes,
+              isDark: isDark,
+            ),
+            child: Stack(
+              children: [
+                for (final node in diagram.nodes)
+                  if (layout.positions.containsKey(node.id))
+                    Positioned(
+                      left: layout.positions[node.id]!.dx,
+                      top: layout.positions[node.id]!.dy,
+                      width: layout.nodeSizes[node.id]?.width ?? defaultNodeW,
+                      height: layout.nodeSizes[node.id]?.height ?? defaultNodeH,
+                      child: _buildNodeCard(
+                        node,
+                        isDark,
+                        layout.nodeSizes[node.id] ?? const Size(defaultNodeW, defaultNodeH),
                       ),
-                ],
+                    ),
+              ],
+            ),
+          ),
+        );
+
+        return InteractiveViewer(
+          transformationController: transformController,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 1.0,
+          maxScale: 3.0,
+          child: Center(
+            child: SizedBox(
+              width: displayW,
+              height: displayH,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: canvasContent,
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildNodeCard(MermaidNode node, bool isDark) {
-    final bgColor = isDark ? const Color(0xFF20242F) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F4657) : const Color(0xFFCFD5DF);
-    final textColor = isDark ? const Color(0xFFF1F3F7) : const Color(0xFF191A23);
+  Widget _buildNodeCard(MermaidNode node, bool isDark, Size size) {
+    Color bgColor;
+    Color borderColor;
+    Color textColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+
+    switch (node.shape) {
+      case MermaidNodeShape.decision:
+        bgColor = isDark ? const Color(0xFF2C241B) : const Color(0xFFFFFBEB);
+        borderColor = isDark ? AppColors.accentAmber : const Color(0xFFF59E0B);
+        break;
+      case MermaidNodeShape.pill:
+        bgColor = isDark ? const Color(0xFF192823) : const Color(0xFFF0FDF4);
+        borderColor = isDark ? AppColors.pastelLimeLight : const Color(0xFF22C55E);
+        break;
+      case MermaidNodeShape.database:
+        bgColor = isDark ? const Color(0xFF1B2635) : const Color(0xFFF0F9FF);
+        borderColor = isDark ? AppColors.accentCyan : const Color(0xFF0284C7);
+        break;
+      case MermaidNodeShape.circle:
+        bgColor = isDark ? const Color(0xFF261D2E) : const Color(0xFFFAF5FF);
+        borderColor = isDark ? AppColors.pastelLavenderLight : const Color(0xFF9333EA);
+        break;
+      case MermaidNodeShape.rounded:
+      case MermaidNodeShape.process:
+      default:
+        bgColor = isDark ? const Color(0xFF202531) : const Color(0xFFF8FAFC);
+        borderColor = isDark ? const Color(0xFF384358) : const Color(0xFFCBD5E1);
+        break;
+    }
 
     final content = Center(
       child: Padding(
@@ -375,12 +420,12 @@ class MermaidFlowchartWidget extends StatelessWidget {
         child: Text(
           node.label,
           textAlign: TextAlign.center,
-          maxLines: 3,
+          maxLines: 4,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
             color: textColor,
             height: 1.25,
             letterSpacing: -0.2,
@@ -393,29 +438,35 @@ class MermaidFlowchartWidget extends StatelessWidget {
       case MermaidNodeShape.decision:
         return CustomPaint(
           painter: _DiamondNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
-          child: content,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            child: content,
+          ),
         );
       case MermaidNodeShape.database:
         return CustomPaint(
           painter: _DatabaseNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
-          child: Padding(padding: const EdgeInsets.only(top: 6), child: content),
+          child: Padding(padding: const EdgeInsets.only(top: 8), child: content),
         );
       case MermaidNodeShape.hexagon:
         return CustomPaint(
           painter: _HexagonNodePainter(fillColor: bgColor, borderColor: borderColor, isDark: isDark),
-          child: content,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: content,
+          ),
         );
       case MermaidNodeShape.circle:
         return Container(
           decoration: BoxDecoration(
             color: bgColor,
             shape: BoxShape.circle,
-            border: Border.all(color: borderColor, width: 1.4),
+            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -426,12 +477,12 @@ class MermaidFlowchartWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: borderColor, width: 1.4),
+            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -441,13 +492,13 @@ class MermaidFlowchartWidget extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor, width: 1.4),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: 1.3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -458,12 +509,12 @@ class MermaidFlowchartWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor, width: 1.4),
+            border: Border.all(color: borderColor, width: 1.3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -483,12 +534,12 @@ class MermaidFlowchartWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor, width: 1.4),
+            border: Border.all(color: borderColor, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -501,27 +552,26 @@ class MermaidFlowchartWidget extends StatelessWidget {
 class _FlowchartPainter extends CustomPainter {
   final ParsedMermaidDiagram diagram;
   final Map<String, Offset> positions;
-  final double nodeWidth;
-  final double nodeHeight;
+  final Map<String, Size> nodeSizes;
   final bool isDark;
 
   _FlowchartPainter({
     required this.diagram,
     required this.positions,
-    required this.nodeWidth,
-    required this.nodeHeight,
+    required this.nodeSizes,
     required this.isDark,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final edgePaint = Paint()
-      ..color = isDark ? const Color(0xFF8E99AB) : const Color(0xFF64748B)
+      ..color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
       ..strokeWidth = 1.6
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
     final arrowPaint = Paint()
-      ..color = isDark ? const Color(0xFF8E99AB) : const Color(0xFF64748B)
+      ..color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
       ..style = PaintingStyle.fill;
 
     final isLR = diagram.direction == 'LR' || diagram.direction == 'RL';
@@ -531,18 +581,21 @@ class _FlowchartPainter extends CustomPainter {
       final toPos = positions[edge.toId];
       if (fromPos == null || toPos == null) continue;
 
+      final fromSize = nodeSizes[edge.fromId] ?? const Size(120, 54);
+      final toSize = nodeSizes[edge.toId] ?? const Size(120, 54);
+
       Offset startPort;
       Offset endPort;
 
       if (isLR) {
-        startPort = Offset(fromPos.dx + nodeWidth, fromPos.dy + nodeHeight / 2);
-        endPort = Offset(toPos.dx, toPos.dy + nodeHeight / 2);
+        startPort = Offset(fromPos.dx + fromSize.width, fromPos.dy + fromSize.height / 2);
+        endPort = Offset(toPos.dx, toPos.dy + toSize.height / 2);
       } else {
-        startPort = Offset(fromPos.dx + nodeWidth / 2, fromPos.dy + nodeHeight);
-        endPort = Offset(toPos.dx + nodeWidth / 2, toPos.dy);
+        startPort = Offset(fromPos.dx + fromSize.width / 2, fromPos.dy + fromSize.height);
+        endPort = Offset(toPos.dx + toSize.width / 2, toPos.dy);
       }
 
-      // Draw connector path
+      // Smooth connector path
       final path = Path();
       path.moveTo(startPort.dx, startPort.dy);
 
@@ -550,24 +603,26 @@ class _FlowchartPainter extends CustomPainter {
       final midY = (startPort.dy + endPort.dy) / 2;
 
       if (isLR) {
+        final ctrlX = (endPort.dx - startPort.dx).abs() * 0.45;
         path.cubicTo(
-          startPort.dx + 24, startPort.dy,
-          endPort.dx - 24, endPort.dy,
+          startPort.dx + ctrlX, startPort.dy,
+          endPort.dx - ctrlX, endPort.dy,
           endPort.dx, endPort.dy,
         );
       } else {
+        final ctrlY = (endPort.dy - startPort.dy).abs() * 0.45;
         path.cubicTo(
-          startPort.dx, startPort.dy + 24,
-          endPort.dx, endPort.dy - 24,
+          startPort.dx, startPort.dy + ctrlY,
+          endPort.dx, endPort.dy - ctrlY,
           endPort.dx, endPort.dy,
         );
       }
 
       canvas.drawPath(path, edgePaint);
 
-      // Draw arrowhead at endPort
+      // Arrowhead at endPort
       final arrowPath = Path();
-      const arrowSize = 6.0;
+      const arrowSize = 5.5;
       if (isLR) {
         arrowPath.moveTo(endPort.dx, endPort.dy);
         arrowPath.lineTo(endPort.dx - arrowSize * 1.5, endPort.dy - arrowSize);
@@ -580,14 +635,15 @@ class _FlowchartPainter extends CustomPainter {
       arrowPath.close();
       canvas.drawPath(arrowPath, arrowPaint);
 
-      // Draw label pill if present
+      // Label pill if present
       if (edge.label != null && edge.label!.trim().isNotEmpty) {
         final textSpan = TextSpan(
           text: edge.label!.trim(),
           style: TextStyle(
-            fontSize: 9.5,
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+            color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
           ),
         );
         final tp = TextPainter(
@@ -598,14 +654,14 @@ class _FlowchartPainter extends CustomPainter {
         final labelRect = Rect.fromCenter(
           center: Offset(midX, midY),
           width: tp.width + 10,
-          height: tp.height + 6,
+          height: tp.height + 4,
         );
 
         final bgPaint = Paint()
-          ..color = isDark ? const Color(0xFF1E222B) : const Color(0xFFEEF2F6)
+          ..color = isDark ? const Color(0xFF1A1D27) : const Color(0xFFF1F5F9)
           ..style = PaintingStyle.fill;
         final borderPaint = Paint()
-          ..color = isDark ? const Color(0xFF3B4252) : const Color(0xFFCBD5E1)
+          ..color = isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)
           ..strokeWidth = 0.8
           ..style = PaintingStyle.stroke;
 
@@ -640,9 +696,9 @@ class _DiamondNodePainter extends CustomPainter {
       ..lineTo(0, size.height / 2)
       ..close();
 
-    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.06), 4, false);
     canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
-    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.6..style = PaintingStyle.stroke);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
   }
 
   @override
@@ -662,7 +718,7 @@ class _DatabaseNodePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const ellipseHeight = 10.0;
+    const ellipseHeight = 9.0;
 
     final path = Path()
       ..moveTo(0, ellipseHeight)
@@ -672,14 +728,14 @@ class _DatabaseNodePainter extends CustomPainter {
       ..arcToPoint(Offset(0, ellipseHeight), radius: Radius.elliptical(size.width / 2, ellipseHeight), clockwise: true)
       ..close();
 
-    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.06), 4, false);
     canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
-    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.3..style = PaintingStyle.stroke);
 
     final topRim = Path()
       ..moveTo(0, ellipseHeight)
       ..arcToPoint(Offset(size.width, ellipseHeight), radius: Radius.elliptical(size.width / 2, ellipseHeight), clockwise: false);
-    canvas.drawPath(topRim, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+    canvas.drawPath(topRim, Paint()..color = borderColor..strokeWidth = 1.3..style = PaintingStyle.stroke);
   }
 
   @override
@@ -699,7 +755,7 @@ class _HexagonNodePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const pointW = 14.0;
+    const pointW = 12.0;
     final path = Path()
       ..moveTo(pointW, 0)
       ..lineTo(size.width - pointW, 0)
@@ -709,9 +765,9 @@ class _HexagonNodePainter extends CustomPainter {
       ..lineTo(0, size.height / 2)
       ..close();
 
-    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.08), 4, false);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: isDark ? 0.35 : 0.06), 4, false);
     canvas.drawPath(path, Paint()..color = fillColor..style = PaintingStyle.fill);
-    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.4..style = PaintingStyle.stroke);
+    canvas.drawPath(path, Paint()..color = borderColor..strokeWidth = 1.3..style = PaintingStyle.stroke);
   }
 
   @override
@@ -719,7 +775,7 @@ class _HexagonNodePainter extends CustomPainter {
 }
 
 // -------------------------------------------------------------
-// 2. PIE CHART RENDERER
+// 2. PIE / DONUT CHART RENDERER
 // -------------------------------------------------------------
 
 class MermaidPieWidget extends StatelessWidget {
@@ -748,51 +804,69 @@ class MermaidPieWidget extends StatelessWidget {
     final slices = diagram.pieSlices;
     final total = slices.fold<double>(0.0, (sum, s) => sum + s.value);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Donut Chart Canvas
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: CustomPaint(
-                  painter: _PieChartPainter(
-                    slices: slices,
-                    total: total,
-                    colors: _paletteColors,
-                    isDark: isDark,
+              if (diagram.title != null) ...[
+                Text(
+                  diagram.title!,
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                   ),
                 ),
-              ),
-              const SizedBox(width: 20),
-
-              // Legend
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < slices.length; i++) ...[
-                      _buildLegendRow(
-                        slices[i],
-                        _paletteColors[i % _paletteColors.length],
-                        total,
-                        isDark,
+                const SizedBox(height: 12),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Donut Chart Canvas
+                  SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: CustomPaint(
+                      painter: _PieChartPainter(
+                        slices: slices,
+                        total: total,
+                        colors: _paletteColors,
+                        isDark: isDark,
                       ),
-                      if (i < slices.length - 1) const SizedBox(height: 6),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Legend
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int i = 0; i < slices.length; i++) ...[
+                          _buildLegendRow(
+                            slices[i],
+                            _paletteColors[i % _paletteColors.length],
+                            total,
+                            isDark,
+                          ),
+                          if (i < slices.length - 1) const SizedBox(height: 5),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -802,21 +876,21 @@ class MermaidPieWidget extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 10,
-          height: 10,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 6),
         Expanded(
           child: Text(
             slice.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
@@ -824,7 +898,7 @@ class MermaidPieWidget extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(4),
@@ -832,7 +906,7 @@ class MermaidPieWidget extends StatelessWidget {
           child: Text(
             '$pct%',
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               fontFamily: 'monospace',
               color: isDark ? Colors.white : color.withValues(alpha: 0.9),
@@ -863,7 +937,7 @@ class _PieChartPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-    const innerRadius = 38.0;
+    const innerRadius = 34.0;
 
     double startAngle = -math.pi / 2;
 
@@ -894,7 +968,7 @@ class _PieChartPainter extends CustomPainter {
 
       // White/dark slice separator line
       final borderPaint = Paint()
-        ..color = isDark ? const Color(0xFF16181D) : Colors.white
+        ..color = isDark ? const Color(0xFF161820) : Colors.white
         ..strokeWidth = 1.8
         ..style = PaintingStyle.stroke;
       canvas.drawPath(path, borderPaint);
@@ -914,11 +988,13 @@ class _PieChartPainter extends CustomPainter {
 class MermaidSequenceWidget extends StatelessWidget {
   final ParsedMermaidDiagram diagram;
   final bool isDark;
+  final TransformationController transformController;
 
   const MermaidSequenceWidget({
     super.key,
     required this.diagram,
     required this.isDark,
+    required this.transformController,
   });
 
   @override
@@ -932,61 +1008,70 @@ class MermaidSequenceWidget extends StatelessWidget {
 
     const colWidth = 100.0;
     const msgHeight = 44.0;
-    final totalWidth = math.max(participants.length * (colWidth + 24), 300.0);
-    final totalHeight = 60.0 + messages.length * msgHeight + 30.0;
+    final totalWidth = math.max(participants.length * (colWidth + 20), 280.0);
+    final totalHeight = 60.0 + messages.length * msgHeight + 20.0;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: SizedBox(
-        width: totalWidth,
-        height: totalHeight,
-        child: Stack(
-          children: [
-            // Participant columns & lifelines
-            for (int i = 0; i < participants.length; i++) ...[
-              Positioned(
-                left: i * (colWidth + 24),
-                top: 0,
-                width: colWidth,
-                child: _buildParticipantHeader(participants[i], isDark),
+    final sequenceCanvas = SizedBox(
+      width: totalWidth,
+      height: totalHeight,
+      child: Stack(
+        children: [
+          // Participant columns & lifelines
+          for (int i = 0; i < participants.length; i++) ...[
+            Positioned(
+              left: i * (colWidth + 20),
+              top: 0,
+              width: colWidth,
+              child: _buildParticipantHeader(participants[i], isDark),
+            ),
+            Positioned(
+              left: i * (colWidth + 20) + colWidth / 2 - 0.5,
+              top: 34,
+              bottom: 0,
+              child: Container(
+                width: 1.2,
+                color: isDark ? const Color(0xFF333D52) : const Color(0xFFCBD5E1),
               ),
-              Positioned(
-                left: i * (colWidth + 24) + colWidth / 2 - 0.5,
-                top: 36,
-                bottom: 0,
-                child: Container(
-                  width: 1.2,
-                  color: isDark ? const Color(0xFF3A4252) : const Color(0xFFCBD5E1),
-                ),
-              ),
-            ],
-
-            // Message horizontal arrows
-            for (int m = 0; m < messages.length; m++) ...[
-              _buildMessageRow(
-                messages[m],
-                participants,
-                colWidth,
-                60.0 + m * msgHeight,
-                isDark,
-              ),
-            ],
+            ),
           ],
-        ),
+
+          // Message horizontal arrows
+          for (int m = 0; m < messages.length; m++) ...[
+            _buildMessageRow(
+              messages[m],
+              participants,
+              colWidth,
+              58.0 + m * msgHeight,
+              isDark,
+            ),
+          ],
+        ],
       ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableW = constraints.maxWidth;
+        if (totalWidth <= availableW) {
+          return Center(child: sequenceCanvas);
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: sequenceCanvas,
+        );
+      },
     );
   }
 
   Widget _buildParticipantHeader(String name, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF262A36) : const Color(0xFFE9ECEF),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark ? const Color(0xFF222836) : const Color(0xFFEAEFF5),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: isDark ? const Color(0xFF3F4656) : const Color(0xFFCED4DA),
-          width: 1,
+          color: isDark ? const Color(0xFF3A445C) : const Color(0xFFCBD5E1),
+          width: 1.0,
         ),
       ),
       child: Text(
@@ -995,7 +1080,8 @@ class MermaidSequenceWidget extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: 11.5,
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
           color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
         ),
@@ -1014,36 +1100,48 @@ class MermaidSequenceWidget extends StatelessWidget {
     final toIdx = participants.indexOf(msg.to);
     if (fromIdx < 0 || toIdx < 0) return const SizedBox.shrink();
 
-    final fromX = fromIdx * (colWidth + 24) + colWidth / 2;
-    final toX = toIdx * (colWidth + 24) + colWidth / 2;
+    final fromX = fromIdx * (colWidth + 20) + colWidth / 2;
+    final toX = toIdx * (colWidth + 20) + colWidth / 2;
     final isRight = toX > fromX;
     final left = math.min(fromX, toX);
     final width = (toX - fromX).abs();
 
-    final arrowColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final arrowColor = isDark ? AppColors.pastelLavenderLight : const Color(0xFF6D28D9);
 
     return Positioned(
       left: left,
       top: topY,
       width: width,
-      height: 36,
+      height: 38,
       child: Column(
         children: [
-          Text(
-            msg.text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E222D) : Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: isDark ? const Color(0xFF333B4F) : const Color(0xFFE2E8F0),
+                width: 0.6,
+              ),
+            ),
+            child: Text(
+              msg.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
             ),
           ),
           const SizedBox(height: 2),
           Row(
             children: [
               if (!isRight)
-                Icon(Icons.arrow_left, size: 14, color: arrowColor)
+                Icon(Icons.arrow_left, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
               Expanded(
@@ -1053,7 +1151,7 @@ class MermaidSequenceWidget extends StatelessWidget {
                 ),
               ),
               if (isRight)
-                Icon(Icons.arrow_right, size: 14, color: arrowColor)
+                Icon(Icons.arrow_right, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
             ],
@@ -1085,62 +1183,65 @@ class MermaidTimelineWidget extends StatelessWidget {
     final items = diagram.timelineItems;
     if (items.isEmpty) return const SizedBox.shrink();
 
-    const itemWidth = 170.0;
-    const itemGap = 24.0;
-    final totalWidth = items.length * (itemWidth + itemGap) + 60.0;
-    const totalHeight = 320.0;
+    const itemWidth = 150.0;
+    const itemGap = 20.0;
+    final totalWidth = items.length * (itemWidth + itemGap) + 40.0;
+    const totalHeight = 280.0;
 
     final axisColor = palette.resolveAccentColor(isDark).withValues(alpha: 0.35);
     final dotColor = palette.resolveAccentColor(isDark);
 
-    return SizedBox(
-      width: math.max(totalWidth, 340.0),
-      height: totalHeight,
-      child: Stack(
-        children: [
-          // Title if present
-          if (diagram.title != null)
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: math.max(totalWidth, 300.0),
+        height: totalHeight,
+        child: Stack(
+          children: [
+            // Title if present
+            if (diagram.title != null)
+              Positioned(
+                left: 16,
+                top: 8,
+                child: Text(
+                  diagram.title!,
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+              ),
+
+            // Horizontal Axis Line
             Positioned(
               left: 20,
-              top: 12,
-              child: Text(
-                diagram.title!,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              right: 20,
+              top: 90,
+              height: 2.5,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: axisColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
 
-          // Horizontal Axis Line
-          Positioned(
-            left: 30,
-            right: 30,
-            top: 104,
-            height: 3,
-            child: Container(
-              decoration: BoxDecoration(
-                color: axisColor,
-                borderRadius: BorderRadius.circular(2),
+            // Timeline items
+            for (int i = 0; i < items.length; i++) ...[
+              _buildTimelineColumn(
+                item: items[i],
+                index: i,
+                leftX: 20.0 + i * (itemWidth + itemGap),
+                itemWidth: itemWidth,
+                dotColor: dotColor,
+                isDark: isDark,
               ),
-            ),
-          ),
-
-          // Timeline items
-          for (int i = 0; i < items.length; i++) ...[
-            _buildTimelineColumn(
-              item: items[i],
-              index: i,
-              leftX: 30.0 + i * (itemWidth + itemGap),
-              itemWidth: itemWidth,
-              dotColor: dotColor,
-              isDark: isDark,
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1155,16 +1256,16 @@ class MermaidTimelineWidget extends StatelessWidget {
   }) {
     return Positioned(
       left: leftX,
-      top: 40,
+      top: 36,
       width: itemWidth,
-      bottom: 12,
+      bottom: 8,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Section Tag (if available)
           if (item.section != null) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
                 color: dotColor.withValues(alpha: 0.12),
@@ -1176,7 +1277,7 @@ class MermaidTimelineWidget extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,
-                  fontSize: 10,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.2,
                   color: dotColor,
@@ -1184,11 +1285,11 @@ class MermaidTimelineWidget extends StatelessWidget {
               ),
             ),
           ] else
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
           // Period pill (e.g. 2002, Q1, Phase 1)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF222631) : const Color(0xFFEAEFF5),
               borderRadius: BorderRadius.circular(8),
@@ -1203,7 +1304,7 @@ class MermaidTimelineWidget extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: AppTypography.fontFamily,
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
@@ -1215,25 +1316,25 @@ class MermaidTimelineWidget extends StatelessWidget {
 
           // Axis Connector Node Dot
           Container(
-            width: 14,
-            height: 14,
+            width: 12,
+            height: 12,
             decoration: BoxDecoration(
               color: dotColor,
               shape: BoxShape.circle,
               border: Border.all(
-                color: isDark ? const Color(0xFF13151A) : Colors.white,
-                width: 2.5,
+                color: isDark ? const Color(0xFF161820) : Colors.white,
+                width: 2.0,
               ),
               boxShadow: [
                 BoxShadow(
                   color: dotColor.withValues(alpha: 0.35),
-                  blurRadius: 6,
+                  blurRadius: 4,
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Events cards
           Expanded(
@@ -1245,7 +1346,7 @@ class MermaidTimelineWidget extends StatelessWidget {
               itemBuilder: (context, eIdx) {
                 final event = item.events[eIdx];
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1C1F28) : Colors.white,
                     borderRadius: BorderRadius.circular(8),
@@ -1256,8 +1357,8 @@ class MermaidTimelineWidget extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: (isDark ? Colors.black : Colors.black12).withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
@@ -1268,9 +1369,9 @@ class MermaidTimelineWidget extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: AppTypography.fontFamily,
-                      fontSize: 11.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      height: 1.3,
+                      height: 1.25,
                       color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                     ),
                   ),

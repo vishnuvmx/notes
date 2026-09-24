@@ -21,6 +21,8 @@ import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
 import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
+import '../../components/inputs/mermaid/mermaid_completion_bar.dart';
+import '../../components/dialogs_sheets/mermaid_template_sheet.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 import '../../../domain/services/note_export_service.dart';
 
@@ -41,6 +43,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final MarkdownTextEditingController _contentController;
   final FocusNode _contentFocusNode = FocusNode();
   final TextEditingController _newTagController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  double _savedScrollRatio = 0.0;
+  double _savedScrollOffset = 0.0;
   late String _paletteId;
   late List<String> _tags;
 
@@ -77,6 +82,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
+    _scrollController.addListener(() {
+      if (_scrollController.hasClients) {
+        _savedScrollOffset = _scrollController.offset;
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll > 0) {
+          _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(0.0, 1.0);
+        }
+      }
+    });
   }
 
   WorkspaceProvider? _workspace;
@@ -135,7 +149,98 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _contentFocusNode.dispose();
     _searchQueryController.dispose();
     _replaceQueryController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _toggleViewMode({int? targetLineIndex}) {
+    if (_scrollController.hasClients) {
+      _savedScrollOffset = _scrollController.offset;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll > 0) {
+        _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(0.0, 1.0);
+      }
+    }
+
+    final targetIsEditing = !_isEditingMode;
+
+    if (targetIsEditing) {
+      if (targetLineIndex != null) {
+        final lines = _contentController.text.split('\n');
+        int charOffset = 0;
+        for (int i = 0; i < targetLineIndex && i < lines.length; i++) {
+          charOffset += lines[i].length + 1;
+        }
+        _contentController.selection = TextSelection.collapsed(
+          offset: charOffset.clamp(0, _contentController.text.length),
+        );
+      } else if (_savedScrollRatio > 0 && _contentController.text.isNotEmpty) {
+        final approxOffset = (_savedScrollRatio * _contentController.text.length).floor();
+        _contentController.selection = TextSelection.collapsed(
+          offset: approxOffset.clamp(0, _contentController.text.length),
+        );
+      }
+
+      setState(() => _isEditingMode = true);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          if (maxScroll > 0 && _savedScrollRatio > 0) {
+            final targetOffset = (_savedScrollRatio * maxScroll).clamp(0.0, maxScroll);
+            _scrollController.jumpTo(targetOffset);
+          } else if (_savedScrollOffset <= maxScroll) {
+            _scrollController.jumpTo(_savedScrollOffset);
+          }
+        }
+        _contentFocusNode.requestFocus();
+      });
+    } else {
+      setState(() => _isEditingMode = false);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          if (maxScroll > 0 && _savedScrollRatio > 0) {
+            final targetOffset = (_savedScrollRatio * maxScroll).clamp(0.0, maxScroll);
+            _scrollController.jumpTo(targetOffset);
+          } else if (_savedScrollOffset <= maxScroll) {
+            _scrollController.jumpTo(_savedScrollOffset);
+          }
+        }
+      });
+    }
+  }
+
+  bool _isCursorInsideMermaidBlock() {
+    final text = _contentController.text;
+    final sel = _contentController.selection;
+    if (!sel.isValid) return false;
+    final cursor = sel.baseOffset.clamp(0, text.length);
+    final textBefore = text.substring(0, cursor);
+    final openMatches = RegExp(r'```(?:mermaid|graph|flowchart|pie|sequence|timeline)').allMatches(textBefore).length;
+    final closeMatches = RegExp(r'```').allMatches(textBefore).length - openMatches;
+    return openMatches > closeMatches;
+  }
+
+  void _insertMermaidSnippet(String snippet) {
+    final text = _contentController.text;
+    final sel = _contentController.selection;
+    final start = sel.isValid ? sel.start : text.length;
+    final end = sel.isValid ? sel.end : text.length;
+
+    final before = text.substring(0, start);
+    final after = text.substring(end);
+
+    final newText = '$before$snippet$after';
+    final newCursor = before.length + snippet.length;
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    _saveNote();
+    _contentFocusNode.requestFocus();
   }
 
   void _submitNewTag() {
@@ -440,70 +545,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _showDiagramTemplatePicker() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Insert Diagram / Graph',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                leading: const TackIcon(TackIcons.flow, size: 22, color: Color(0xFFFF8F6B)),
-                title: const Text('Flowchart (Top-Down)'),
-                subtitle: const Text('graph TD with decision branches'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('```mermaid\ngraph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -->|Yes| D[Success]\n    C -->|No| E[Retry]\n```\n');
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.play, size: 22, color: Color(0xFF1BA5BA)),
-                title: const Text('Flowchart (Left-to-Right)'),
-                subtitle: const Text('graph LR for pipelines and stages'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('```mermaid\ngraph LR\n    A[Input] --> B[Processing] --> C[Storage] --> D[Output]\n```\n');
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.chartPie, size: 22, color: Color(0xFFB2CD4D)),
-                title: const Text('Pie Chart'),
-                subtitle: const Text('pie title ... with slice values & percentages'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('```mermaid\npie title Project Distribution\n    "Development" : 45\n    "Design" : 25\n    "Testing" : 15\n    "Documentation" : 15\n```\n');
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.arrowRightLeft, size: 22, color: Color(0xFF9D84D6)),
-                title: const Text('Sequence Diagram'),
-                subtitle: const Text('sequenceDiagram with actors and messages'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('```mermaid\nsequenceDiagram\n    User->>App: Request Note\n    App->>Database: Fetch\n    Database-->>App: Return Note\n    App-->>User: Render View\n```\n');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    MermaidTemplateSheet.show(context, onSelectTemplate: _insertAtCursor);
   }
 
   void _showAlertTemplatePicker() {
@@ -1000,7 +1042,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Mode',
             onPressed: () {
               HapticFeedback.selectionClick();
-              setState(() => _isEditingMode = !_isEditingMode);
+              _toggleViewMode();
             },
           ),
 
@@ -1102,6 +1144,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             // Scrollable Note Document
             Expanded(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 child: SizedBox(
                   width: double.infinity,
@@ -1355,14 +1398,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       GestureDetector(
                         behavior: HitTestBehavior.deferToChild,
                         onTap: () {
-                          setState(() => _isEditingMode = true);
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _contentFocusNode.requestFocus();
-                          });
+                          _toggleViewMode();
                         },
                         child: RichNoteContentView(
                           content: _contentController.text,
                           paletteId: _paletteId,
+                          onLineTap: (lineIdx) {
+                            _toggleViewMode(targetLineIndex: lineIdx);
+                          },
                           onContentChanged: (newContent) {
                             _contentController.text = newContent;
                             _saveNote();
@@ -1378,6 +1421,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
             // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
             if (_isEditingMode) ...[
+              if (_isCursorInsideMermaidBlock())
+                MermaidCompletionBar(
+                  onInsertSnippet: _insertMermaidSnippet,
+                  onOpenTemplates: () {
+                    MermaidTemplateSheet.show(context, onSelectTemplate: _insertAtCursor);
+                  },
+                ),
               EditorFormattingToolbar(onFormatAction: _applyFormatting),
               const SizedBox(height: 4),
             ],
