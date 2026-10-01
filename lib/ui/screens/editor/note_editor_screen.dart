@@ -212,6 +212,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
+  void _handleBackPress() {
+    HapticFeedback.lightImpact();
+    if (_isSearching) {
+      _closeSearch();
+      return;
+    }
+    if (_isEditingMode) {
+      FocusScope.of(context).unfocus();
+      _saveNote();
+      _toggleViewMode();
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   bool _isCursorInsideMermaidBlock() {
     final text = _contentController.text;
     final sel = _contentController.selection;
@@ -971,29 +986,32 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
     final allChecklistsCompleted = totalChecklists > 0 && completedChecklists == totalChecklists;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-        titleSpacing: AppSpacing.md,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const TackIcon(TackIcons.back, size: 22),
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                Navigator.of(context).pop();
-              },
-              tooltip: 'Back',
-            ),
+    return PopScope(
+      canPop: !_isEditingMode && !_isSearching,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          automaticallyImplyLeading: false,
+          centerTitle: false,
+          titleSpacing: AppSpacing.md,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const TackIcon(TackIcons.back, size: 22),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                visualDensity: VisualDensity.compact,
+                onPressed: _handleBackPress,
+                tooltip: _isEditingMode ? 'Reader Mode' : 'Back',
+              ),
             const SizedBox(width: 10),
             Flexible(
               child: Container(
@@ -1470,7 +1488,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildFindAndReplaceBar({required bool isDark, required TackColorPalette palette}) {

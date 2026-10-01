@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import 'code_syntax_highlighter.dart';
 
 /// Syntax-highlighted text controller that renders bold, italic, strikethrough,
 /// underline, highlights, and tags inside any editor or input TextField.
@@ -34,7 +36,7 @@ class MarkdownTextEditingController extends TextEditingController {
 
     final spans = <TextSpan>[];
     final pattern = RegExp(
-      r'(```[a-zA-Z0-9_-]*)'
+      r'(```[\s\S]*?```|```[^\n]*)'
       r'|(`[^`\n]+`)'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
@@ -67,20 +69,67 @@ class MarkdownTextEditingController extends TextEditingController {
 
       final matchedText = match.group(0)!;
       if (matchedText.startsWith('```')) {
-        spans.add(TextSpan(
-          text: matchedText,
-          style: style?.copyWith(
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w700,
-            color: palette.resolveCodeAccent(isDark),
-          ),
-        ));
+        if (matchedText.endsWith('```') && matchedText.length >= 6) {
+          final firstNewline = matchedText.indexOf('\n');
+          final lastFence = matchedText.lastIndexOf('```');
+          if (firstNewline != -1 && firstNewline < lastFence) {
+            final header = matchedText.substring(0, firstNewline + 1);
+            final innerCode = matchedText.substring(firstNewline + 1, lastFence);
+            final closing = matchedText.substring(lastFence);
+
+            spans.add(TextSpan(
+              text: header,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
+            ));
+            spans.addAll(CodeSyntaxHighlighter.highlight(
+              innerCode,
+              isDark: isDark,
+              baseStyle: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontSize: (style?.fontSize ?? 14) * 0.92,
+                color: isDark ? const Color(0xFFABB2BF) : const Color(0xFF2E3440),
+              ),
+            ));
+            spans.add(TextSpan(
+              text: closing,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
+            ));
+          } else {
+            spans.add(TextSpan(
+              text: matchedText,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
+            ));
+          }
+        } else {
+          spans.add(TextSpan(
+            text: matchedText,
+            style: GoogleFonts.jetBrainsMono(
+              textStyle: style,
+              fontWeight: FontWeight.w700,
+              color: palette.resolveCodeAccent(isDark),
+            ),
+          ));
+        }
       } else if (matchedText.startsWith('`') && matchedText.endsWith('`') && matchedText.length >= 2) {
         spans.add(TextSpan(text: '`', style: delimiterStyle));
         spans.add(TextSpan(
           text: matchedText.substring(1, matchedText.length - 1),
-          style: style?.copyWith(
-            fontFamily: 'monospace',
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: style,
+            fontSize: (style?.fontSize ?? 14) * 0.92,
+            fontWeight: FontWeight.w600,
             backgroundColor: palette.resolveInlineCodeBg(isDark),
             color: palette.resolveInlineCodeText(isDark),
           ),
@@ -203,11 +252,11 @@ class MarkdownTextEditingController extends TextEditingController {
           final textColor = luminance > 0.55 ? const Color(0xFF191A23) : Colors.white;
           spans.add(TextSpan(
             text: matchedText,
-            style: style?.copyWith(
+            style: GoogleFonts.jetBrainsMono(
+              textStyle: style,
               backgroundColor: hexColor.withValues(alpha: 0.5),
               color: textColor,
               fontWeight: FontWeight.w700,
-              fontFamily: 'monospace',
             ),
           ));
         } else {

@@ -305,7 +305,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   // ================= 2. Node Operations & Context Actions =================
-  void _addNode(CanvasNodeType shapeType, {Offset? position, String? imagePath}) {
+  void _addNode(CanvasNodeType shapeType, {Offset? position, String? imagePath, double? customWidth, double? customHeight}) {
     HapticFeedback.lightImpact();
     _history.recordSnapshot(_nodes, _edges);
 
@@ -335,22 +335,24 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
     }
 
-    final double width = shapeType == CanvasNodeType.decision
+    final double width = customWidth ??
+        (shapeType == CanvasNodeType.decision
         ? 140
         : shapeType == CanvasNodeType.sticky
             ? 130
             : shapeType == CanvasNodeType.image
                 ? 160
-                : 130;
-    final double height = shapeType == CanvasNodeType.decision
+                : 130);
+    final double height = customHeight ??
+        (shapeType == CanvasNodeType.decision
         ? 64
         : shapeType == CanvasNodeType.sticky
             ? 120
             : shapeType == CanvasNodeType.image
-                ? 120
+                ? 160
                 : shapeType == CanvasNodeType.textOnly
                     ? 42
-                    : 52;
+                    : 52);
 
     double x;
     double y;
@@ -834,6 +836,137 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     _saveCanvasState();
   }
 
+  void _changeNodeShape(CanvasNode node, CanvasNodeType newShapeType) {
+    if (node.shapeType == newShapeType) return;
+    _history.recordSnapshot(_nodes, _edges);
+    HapticFeedback.selectionClick();
+
+    final double newWidth = newShapeType == CanvasNodeType.decision
+        ? 140
+        : newShapeType == CanvasNodeType.sticky
+            ? 130
+            : newShapeType == CanvasNodeType.connector
+                ? 60
+                : newShapeType == CanvasNodeType.image
+                    ? 160
+                    : 130;
+    final double newHeight = newShapeType == CanvasNodeType.decision
+        ? 64
+        : newShapeType == CanvasNodeType.sticky
+            ? 120
+            : newShapeType == CanvasNodeType.connector
+                ? 60
+                : newShapeType == CanvasNodeType.image
+                    ? 120
+                    : newShapeType == CanvasNodeType.textOnly
+                        ? 42
+                        : 52;
+
+    setState(() {
+      final index = _nodes.indexWhere((n) => n.id == node.id);
+      if (index >= 0) {
+        final centerX = node.x + (node.width / 2);
+        final centerY = node.y + (node.height / 2);
+        final newX = (centerX - (newWidth / 2)).clamp(0.0, _canvasSize - newWidth);
+        final newY = (centerY - (newHeight / 2)).clamp(0.0, _canvasSize - newHeight);
+
+        _nodes[index] = node.copyWith(
+          shapeType: newShapeType,
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY,
+        );
+      }
+    });
+    _saveCanvasState();
+  }
+
+  void _insertNodeOnEdge(CanvasEdge edge, CanvasNodeType shapeType) {
+    final from = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.fromNodeId, orElse: () => null);
+    final to = _nodes.cast<CanvasNode?>().firstWhere((n) => n?.id == edge.toNodeId, orElse: () => null);
+    if (from == null || to == null) return;
+
+    _history.recordSnapshot(_nodes, _edges);
+    HapticFeedback.lightImpact();
+
+    final ports = _resolveEdgePorts(edge, from, to);
+    final midX = (ports.start.dx + ports.end.dx) / 2;
+    final midY = (ports.start.dy + ports.end.dy) / 2;
+
+    final double width = shapeType == CanvasNodeType.decision
+        ? 140
+        : shapeType == CanvasNodeType.sticky
+            ? 130
+            : shapeType == CanvasNodeType.connector
+                ? 60
+                : 130;
+    final double height = shapeType == CanvasNodeType.decision
+        ? 64
+        : shapeType == CanvasNodeType.sticky
+            ? 120
+            : shapeType == CanvasNodeType.connector
+                ? 60
+                : 52;
+
+    String paletteId = 'lime';
+    switch (shapeType) {
+      case CanvasNodeType.decision:
+        paletteId = 'lavender';
+        break;
+      case CanvasNodeType.startEnd:
+        paletteId = 'coral';
+        break;
+      case CanvasNodeType.inputOutput:
+        paletteId = 'amber';
+        break;
+      case CanvasNodeType.connector:
+        paletteId = 'cyan';
+        break;
+      default:
+        paletteId = 'lime';
+        break;
+    }
+
+    final newNode = CanvasNode(
+      id: _generateUniqueId('node'),
+      text: shapeType.label,
+      shapeType: shapeType,
+      x: (midX - width / 2).clamp(0.0, _canvasSize - width),
+      y: (midY - height / 2).clamp(0.0, _canvasSize - height),
+      width: width,
+      height: height,
+      paletteId: paletteId,
+    );
+
+    final edge1 = CanvasEdge(
+      id: _generateUniqueId('edge'),
+      fromNodeId: edge.fromNodeId,
+      toNodeId: newNode.id,
+      fromPort: edge.fromPort,
+      toPort: 'top',
+    );
+
+    final edge2 = CanvasEdge(
+      id: _generateUniqueId('edge'),
+      fromNodeId: newNode.id,
+      toNodeId: edge.toNodeId,
+      fromPort: 'bottom',
+      toPort: edge.toPort,
+      label: edge.label,
+    );
+
+    setState(() {
+      _edges.removeWhere((e) => e.id == edge.id);
+      _nodes.add(newNode);
+      _edges.add(edge1);
+      _edges.add(edge2);
+      _selectedNodeId = newNode.id;
+      _selectedEdgeId = null;
+    });
+    _saveCanvasState();
+  }
+
   void _editNodeText(CanvasNode node) {
     final controller = TextEditingController(text: node.text);
     showDialog(
@@ -1038,17 +1171,51 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   // ================= 4. Image Tool Picker =================
   Future<void> _pickAndInsertImage() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery);
-    if (file != null) {
-      final appDir = await getApplicationDocumentsDirectory();
-      final targetFileName = 'wb_img_${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final savedImage = await File(file.path).copy('${appDir.path}/$targetFileName');
-      _addNode(
-        CanvasNodeType.image,
-        position: const Offset(200, 200),
-        imagePath: savedImage.path,
-      );
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(source: ImageSource.gallery);
+      if (file != null) {
+        String savedPath = file.path;
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          final targetFileName = 'wb_img_${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+          final savedImage = await File(file.path).copy('${appDir.path}/$targetFileName');
+          savedPath = savedImage.path;
+        } catch (_) {}
+
+        double imgWidth = 240;
+        double imgHeight = 160;
+        try {
+          final bytes = await File(savedPath).readAsBytes();
+          final decoded = await decodeImageFromList(bytes);
+          if (decoded.width > 0 && decoded.height > 0) {
+            final aspect = decoded.width / decoded.height;
+            if (aspect >= 1.0) {
+              imgWidth = 240;
+              imgHeight = (240 / aspect).clamp(80.0, 360.0);
+            } else {
+              imgHeight = 240;
+              imgWidth = (240 * aspect).clamp(80.0, 360.0);
+            }
+          }
+        } catch (_) {}
+
+        _addNode(
+          CanvasNodeType.image,
+          imagePath: savedPath,
+          customWidth: imgWidth,
+          customHeight: imgHeight,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load image: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -1970,6 +2137,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                           ),
                           ..._nodes.map((node) => _buildNodeWidget(node, isDark)),
                           if (_selectedNodeId != null && _nodes.any((n) => n.id == _selectedNodeId)) ...[
+                            _buildNodeResizeBoundingBox(_nodes.firstWhere((n) => n.id == _selectedNodeId), isDark),
                             _buildSelectedNodeCapsule(isDark),
                             ..._buildNodeBranchHandles(isDark),
                           ],
@@ -2184,6 +2352,58 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   onPressed: () => _showEdgeEditDialog(edge),
+                ),
+                const SizedBox(width: 4),
+
+                // Insert Node on Connection (+ icon from toolbar)
+                PopupMenuButton<CanvasNodeType>(
+                  tooltip: 'Insert Shape on Connection',
+                  offset: const Offset(0, -50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  color: isDark ? AppColors.darkSurface : Colors.white,
+                  itemBuilder: (context) {
+                    final items = [
+                      (type: CanvasNodeType.process, label: 'Process', color: AppColors.pastelLimeLight),
+                      (type: CanvasNodeType.decision, label: 'Decision (Rhombus)', color: AppColors.pastelLavenderLight),
+                      (type: CanvasNodeType.startEnd, label: 'Start / End', color: AppColors.pastelCoralLight),
+                      (type: CanvasNodeType.inputOutput, label: 'Input / Output', color: AppColors.pastelAmberLight),
+                      (type: CanvasNodeType.connector, label: 'Connector', color: AppColors.pastelCyanLight),
+                    ];
+                    return items.map((item) {
+                      return PopupMenuItem<CanvasNodeType>(
+                        value: item.type,
+                        child: Row(
+                          children: [
+                            _buildShapePreview(item.type, item.color, isDark),
+                            const SizedBox(width: 12),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList();
+                  },
+                  onSelected: (newType) => _insertNodeOnEdge(edge, newType),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.add_box_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
 
@@ -2815,6 +3035,174 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
   }
 
+  void _updateNodeBounds(String id, {double? x, double? y, double? width, double? height}) {
+    final idx = _nodes.indexWhere((n) => n.id == id);
+    if (idx < 0) return;
+    final current = _nodes[idx];
+    setState(() {
+      _nodes[idx] = current.copyWith(
+        x: x ?? current.x,
+        y: y ?? current.y,
+        width: width ?? current.width,
+        height: height ?? current.height,
+      );
+    });
+  }
+
+  Widget _buildNodeResizeBoundingBox(CanvasNode node, bool isDark) {
+    if (_activeTool == 'pan') return const SizedBox.shrink();
+
+    return Stack(
+      children: [
+        // Bounding Box Accent Outline
+        Positioned(
+          left: node.x - 2,
+          top: node.y - 2,
+          width: node.width + 4,
+          height: node.height + 4,
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(
+                  node.shapeType == CanvasNodeType.connector
+                      ? (node.height + 4) / 2
+                      : node.shapeType == CanvasNodeType.startEnd
+                          ? (node.height + 4) / 2
+                          : 10,
+                ),
+                border: Border.all(
+                  color: AppColors.accentOrange.withValues(alpha: 0.9),
+                  width: 1.6,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Corner Handle: Top-Left
+        Positioned(
+          left: node.x - 14,
+          top: node.y - 14,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (_) {
+              setState(() => _isDraggingNode = true);
+              _history.recordSnapshot(_nodes, _edges);
+            },
+            onPanUpdate: (details) {
+              final newWidth = (node.width - details.delta.dx).clamp(50.0, node.x + node.width);
+              final newX = (node.x + details.delta.dx).clamp(0.0, node.x + node.width - 50.0);
+              final newHeight = (node.height - details.delta.dy).clamp(36.0, node.y + node.height);
+              final newY = (node.y + details.delta.dy).clamp(0.0, node.y + node.height - 36.0);
+              _updateNodeBounds(node.id, x: newX, y: newY, width: newWidth, height: newHeight);
+            },
+            onPanEnd: (_) {
+              setState(() => _isDraggingNode = false);
+              _saveCanvasState();
+            },
+            child: _buildResizeCornerHandle(),
+          ),
+        ),
+
+        // Corner Handle: Top-Right
+        Positioned(
+          left: node.x + node.width - 14,
+          top: node.y - 14,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (_) {
+              setState(() => _isDraggingNode = true);
+              _history.recordSnapshot(_nodes, _edges);
+            },
+            onPanUpdate: (details) {
+              final newWidth = (node.width + details.delta.dx).clamp(50.0, _canvasSize - node.x);
+              final newHeight = (node.height - details.delta.dy).clamp(36.0, node.y + node.height);
+              final newY = (node.y + details.delta.dy).clamp(0.0, node.y + node.height - 36.0);
+              _updateNodeBounds(node.id, y: newY, width: newWidth, height: newHeight);
+            },
+            onPanEnd: (_) {
+              setState(() => _isDraggingNode = false);
+              _saveCanvasState();
+            },
+            child: _buildResizeCornerHandle(),
+          ),
+        ),
+
+        // Corner Handle: Bottom-Left
+        Positioned(
+          left: node.x - 14,
+          top: node.y + node.height - 14,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (_) {
+              setState(() => _isDraggingNode = true);
+              _history.recordSnapshot(_nodes, _edges);
+            },
+            onPanUpdate: (details) {
+              final newWidth = (node.width - details.delta.dx).clamp(50.0, node.x + node.width);
+              final newX = (node.x + details.delta.dx).clamp(0.0, node.x + node.width - 50.0);
+              final newHeight = (node.height + details.delta.dy).clamp(36.0, _canvasSize - node.y);
+              _updateNodeBounds(node.id, x: newX, width: newWidth, height: newHeight);
+            },
+            onPanEnd: (_) {
+              setState(() => _isDraggingNode = false);
+              _saveCanvasState();
+            },
+            child: _buildResizeCornerHandle(),
+          ),
+        ),
+
+        // Corner Handle: Bottom-Right
+        Positioned(
+          left: node.x + node.width - 14,
+          top: node.y + node.height - 14,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (_) {
+              setState(() => _isDraggingNode = true);
+              _history.recordSnapshot(_nodes, _edges);
+            },
+            onPanUpdate: (details) {
+              final newWidth = (node.width + details.delta.dx).clamp(50.0, _canvasSize - node.x);
+              final newHeight = (node.height + details.delta.dy).clamp(36.0, _canvasSize - node.y);
+              _updateNodeBounds(node.id, width: newWidth, height: newHeight);
+            },
+            onPanEnd: (_) {
+              setState(() => _isDraggingNode = false);
+              _saveCanvasState();
+            },
+            child: _buildResizeCornerHandle(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResizeCornerHandle() {
+    return Container(
+      width: 28,
+      height: 28,
+      color: Colors.transparent,
+      alignment: Alignment.center,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: AppColors.accentOrange, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Floating Context Actions Capsule Anchored Above/Below Selected Node
   Widget _buildSelectedNodeCapsule(bool isDark) {
     final node = _nodes.cast<CanvasNode?>().firstWhere(
@@ -2871,6 +3259,47 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // 0. Drag to Move Node Handle ("moving thing")
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (_) {
+                    if (_activeTool == 'pan' || _activePointers >= 2) return;
+                    setState(() => _isDraggingNode = true);
+                    _history.recordSnapshot(_nodes, _edges);
+                  },
+                  onPanUpdate: (details) {
+                    if (_activePointers >= 2 || _activeTool == 'pan') return;
+                    _updateNodeBounds(
+                      node.id,
+                      x: (node.x + details.delta.dx).clamp(0.0, _canvasSize - node.width),
+                      y: (node.y + details.delta.dy).clamp(0.0, _canvasSize - node.height),
+                    );
+                  },
+                  onPanEnd: (_) {
+                    setState(() => _isDraggingNode = false);
+                    _saveCanvasState();
+                  },
+                  child: Tooltip(
+                    message: 'Drag to Move Node',
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.open_with_rounded,
+                          size: 15,
+                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
                 // 1. Color Swatch Picker Popup
                 PopupMenuButton<String>(
                   tooltip: 'Change Color',
@@ -2929,6 +3358,65 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   onPressed: () => _editNodeText(node),
+                ),
+                const SizedBox(width: 4),
+
+                // 3. Change Shape Action (+ icon from toolbar)
+                PopupMenuButton<CanvasNodeType>(
+                  tooltip: 'Change Shape',
+                  offset: Offset(0, placeBelow ? 40 : -50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  color: isDark ? AppColors.darkSurface : Colors.white,
+                  itemBuilder: (context) {
+                    final items = [
+                      (type: CanvasNodeType.process, label: 'Process', color: AppColors.pastelLimeLight),
+                      (type: CanvasNodeType.decision, label: 'Decision (Rhombus)', color: AppColors.pastelLavenderLight),
+                      (type: CanvasNodeType.startEnd, label: 'Start / End', color: AppColors.pastelCoralLight),
+                      (type: CanvasNodeType.inputOutput, label: 'Input / Output', color: AppColors.pastelAmberLight),
+                      (type: CanvasNodeType.connector, label: 'Connector', color: AppColors.pastelCyanLight),
+                    ];
+                    return items.map((item) {
+                      final isCurrent = node.shapeType == item.type;
+                      return PopupMenuItem<CanvasNodeType>(
+                        value: item.type,
+                        child: Row(
+                          children: [
+                            _buildShapePreview(item.type, item.color, isDark),
+                            const SizedBox(width: 12),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                                fontSize: 13,
+                                color: isCurrent
+                                    ? (isDark ? AppColors.pastelLimeLight : AppColors.primaryLight)
+                                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                              ),
+                            ),
+                            if (isCurrent) ...[
+                              const Spacer(),
+                              const Icon(Icons.check, size: 16, color: AppColors.pastelLimeLight),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList();
+                  },
+                  onSelected: (newType) => _changeNodeShape(node, newType),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.add_box_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
 
@@ -3262,6 +3750,32 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
 
       case CanvasNodeType.image:
+        Widget imgWidget;
+        if (node.imagePath != null && node.imagePath!.isNotEmpty) {
+          imgWidget = Image.file(
+            File(node.imagePath!),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: fillColor,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const TackIcon(TackIcons.photo, size: 28),
+                    const SizedBox(height: 4),
+                    Text('Image', style: TextStyle(fontSize: 10, color: strokeColor)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        } else {
+          imgWidget = Container(
+            color: fillColor,
+            child: const Center(child: TackIcon(TackIcons.photo, size: 32)),
+          );
+        }
+
         shapeContent = Container(
           width: node.width,
           height: node.height,
@@ -3271,15 +3785,44 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               color: isConnectingSource || isSelected ? AppColors.accentOrange : strokeColor,
               width: isConnectingSource || isSelected ? 2.5 : 1.5,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.accentOrange.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(9),
-            child: node.imagePath != null && File(node.imagePath!).existsSync()
-                ? Image.file(File(node.imagePath!), fit: BoxFit.cover)
-                : Container(
-                    color: fillColor,
-                    child: const Center(child: TackIcon(TackIcons.photo, size: 32)),
-                  ),
+            borderRadius: BorderRadius.circular(8.5),
+            child: imgWidget,
+          ),
+        );
+        break;
+
+      case CanvasNodeType.connector:
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            color: fillColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: strokeColor,
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            node.text,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+            textAlign: TextAlign.center,
           ),
         );
         break;

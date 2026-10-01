@@ -6,7 +6,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'code_syntax_highlighter.dart';
 import 'mermaid/mermaid_diagram_card.dart';
 
 /// Rich Interactive Content View for Tack Notes.
@@ -591,91 +593,146 @@ class RichNoteContentView extends StatelessWidget {
     ThemeData theme,
   ) {
     final langLabel = lang.trim().toUpperCase();
+    final lines = code.split('\n');
+    final lineCount = lines.isEmpty ? 1 : lines.length;
+    final gutterText = List.generate(lineCount, (i) => '${i + 1}').join('\n');
+
+    final codeTextStyle = GoogleFonts.jetBrainsMono(
+      fontSize: 12.5,
+      height: 1.52,
+      letterSpacing: -0.1,
+      color: isDark ? const Color(0xFFABB2BF) : const Color(0xFF2E3440),
+    );
+
+    final gutterTextStyle = GoogleFonts.jetBrainsMono(
+      fontSize: 12.5,
+      height: 1.52,
+      letterSpacing: -0.1,
+      color: isDark ? const Color(0xFF5C6370) : const Color(0xFF9CA3AF),
+      fontWeight: FontWeight.w500,
+    );
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: palette.resolveCodeBlockBg(isDark),
-        borderRadius: BorderRadius.circular(10),
+        color: isDark ? const Color(0xFF181A20) : const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: palette.resolveTableBorder(isDark),
+          color: isDark ? const Color(0xFF2A2D37) : const Color(0xFFE2E6ED),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Prettier / IDE Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: palette.resolveCodeHeaderBg(isDark),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+              color: isDark ? const Color(0xFF1E2129) : const Color(0xFFECF0F6),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF2A2D37) : const Color(0xFFE2E6ED),
+                  width: 1,
+                ),
+              ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  langLabel.isEmpty ? 'CODE' : langLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: palette.resolveCodeAccent(isDark),
-                  ),
+                // Window dots
+                Row(
+                  children: [
+                    _buildMacDot(const Color(0xFFFF5F56)),
+                    const SizedBox(width: 5.5),
+                    _buildMacDot(const Color(0xFFFFBD2E)),
+                    const SizedBox(width: 5.5),
+                    _buildMacDot(const Color(0xFF27C93F)),
+                  ],
                 ),
-                InkWell(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: code));
-                    HapticFeedback.lightImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Code copied to clipboard!'),
-                        duration: Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TackIcon(
-                          TackIcons.copy,
-                          size: 13,
-                          color: palette.resolveCodeAccent(isDark).withValues(alpha: 0.8),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Copy',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: palette.resolveCodeAccent(isDark).withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 12),
+                // Language badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF282C37) : const Color(0xFFDEE3EC),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    langLabel.isEmpty ? 'CODE' : langLabel,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: palette.resolveCodeAccent(isDark),
                     ),
                   ),
                 ),
+                const Spacer(),
+                // Copy button
+                _CopyCodeButton(code: code, isDark: isDark),
               ],
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(12),
-            child: SelectableText(
-              code,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                height: 1.45,
-                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3748),
+          // Code Area with Sticky Gutter
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Line Numbers Gutter
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF15171C) : const Color(0xFFF1F3F6),
+                  border: Border(
+                    right: BorderSide(
+                      color: isDark ? const Color(0xFF252833) : const Color(0xFFE5E9F0),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  gutterText,
+                  textAlign: TextAlign.right,
+                  style: gutterTextStyle,
+                ),
               ),
-            ),
+              // Code Content
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: SelectableText.rich(
+                    TextSpan(
+                      children: CodeSyntaxHighlighter.highlight(
+                        code,
+                        isDark: isDark,
+                        baseStyle: codeTextStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMacDot(Color color) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.85),
+        shape: BoxShape.circle,
       ),
     );
   }
@@ -922,9 +979,8 @@ class RichNoteContentView extends StatelessWidget {
               ),
               child: Text(
                 codeText,
-                style: TextStyle(
+                style: GoogleFonts.jetBrainsMono(
                   fontSize: (defaultStyle?.fontSize ?? 15) * 0.88,
-                  fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
                   color: palette.resolveInlineCodeText(isDark),
                 ),
@@ -1090,10 +1146,9 @@ class RichNoteContentView extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       matched,
-                      style: TextStyle(
+                      style: GoogleFonts.jetBrainsMono(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
                         color: isDark ? Colors.white : const Color(0xFF18191F),
                       ),
                     ),
@@ -1147,6 +1202,65 @@ class RichNoteContentView extends StatelessWidget {
       text: TextSpan(
         style: defaultStyle,
         children: spans,
+      ),
+    );
+  }
+}
+
+class _CopyCodeButton extends StatefulWidget {
+  final String code;
+  final bool isDark;
+
+  const _CopyCodeButton({
+    required this.code,
+    required this.isDark,
+  });
+
+  @override
+  State<_CopyCodeButton> createState() => _CopyCodeButtonState();
+}
+
+class _CopyCodeButtonState extends State<_CopyCodeButton> {
+  bool _copied = false;
+
+  void _onCopy() {
+    Clipboard.setData(ClipboardData(text: widget.code));
+    HapticFeedback.lightImpact();
+    setState(() => _copied = true);
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = widget.isDark ? const Color(0xFFABB2BF) : const Color(0xFF5C6370);
+    final activeFg = widget.isDark ? const Color(0xFF98C379) : const Color(0xFF439446);
+
+    return InkWell(
+      onTap: _onCopy,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TackIcon(
+              _copied ? TackIcons.check : TackIcons.copy,
+              size: 13,
+              color: _copied ? activeFg : fg,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _copied ? 'Copied!' : 'Copy',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _copied ? activeFg : fg,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
