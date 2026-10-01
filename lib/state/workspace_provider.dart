@@ -58,13 +58,17 @@ class WorkspaceProvider extends ChangeNotifier {
   List<BaseWorkspaceItem> get rawItems => _items;
 
   List<BaseWorkspaceItem> get items {
+    var result = _items;
+    if (_selectedFolder == 'Favourites' || _selectedFolder == 'Favorites') {
+      result = result.where((item) => item.isFavorite).toList();
+    }
     if (_selectedTag == null ||
         _selectedTag == 'All' ||
         _selectedTag == '#All') {
-      return _items;
+      return result;
     }
     final cleanTag = _selectedTag!.replaceAll('#', '').toLowerCase();
-    final filtered = _items.where((item) {
+    final filtered = result.where((item) {
       if (item is TextNote) {
         return item.tags.any((t) => t.toLowerCase() == cleanTag);
       }

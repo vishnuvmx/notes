@@ -38,11 +38,6 @@ class CategoryFilterPills extends StatelessWidget {
             onSelected: (folder) {
               HapticFeedback.selectionClick();
               workspace.setSelectedFolder(folder);
-              if (folder == 'All Notes') {
-                workspace.setSelectedTag('#All');
-              } else {
-                workspace.setSelectedTag('#$folder');
-              }
             },
             offset: const Offset(0, 42),
             shape: RoundedRectangleBorder(
@@ -51,11 +46,8 @@ class CategoryFilterPills extends StatelessWidget {
             ),
             color: isDark ? AppColors.darkSurface : Colors.white,
             itemBuilder: (context) => [
-              _buildFolderMenuItem('Personal', isDark),
-              _buildFolderMenuItem('Work', isDark),
-              _buildFolderMenuItem('Fitness', isDark),
-              _buildFolderMenuItem('Ideas', isDark),
               _buildFolderMenuItem('All Notes', isDark),
+              _buildFolderMenuItem('Favourites', isDark),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -67,6 +59,14 @@ class CategoryFilterPills extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (selectedFolder == 'Favourites') ...[
+                    const TackIcon(
+                      TackIcons.star,
+                      size: 14,
+                      color: AppColors.accentAmber,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
                     selectedFolder,
                     style: TextStyle(
@@ -157,14 +157,26 @@ class CategoryFilterPills extends StatelessWidget {
   PopupMenuItem<String> _buildFolderMenuItem(String folder, bool isDark) {
     return PopupMenuItem<String>(
       value: folder,
-      child: Text(
-        folder,
-        style: TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 13.5,
-          fontWeight: FontWeight.w600,
-          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-        ),
+      child: Row(
+        children: [
+          TackIcon(
+            folder == 'Favourites' ? TackIcons.star : TackIcons.notes,
+            size: 16,
+            color: folder == 'Favourites'
+                ? AppColors.accentAmber
+                : (isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23)),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            folder,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1035,11 +1035,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           // Edit / Read View Mode Switcher
           IconButton(
             icon: TackIcon(
-              _isEditingMode ? TackIcons.notes : TackIcons.whiteboard,
+              _isEditingMode ? TackIcons.reader : TackIcons.edit,
               size: 20,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
-            tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Mode',
+            tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Note',
             onPressed: () {
               HapticFeedback.selectionClick();
               _toggleViewMode();
@@ -1252,25 +1252,35 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.darkSurfaceAlt
-                                  : AppColors.lightSurfaceAlt,
-                              borderRadius: BorderRadius.circular(6),
+                              color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.16 : 0.12),
+                              borderRadius: AppSpacing.roundedPill,
                               border: Border.all(
-                                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                                width: 0.8,
+                                color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.38 : 0.3),
+                                width: 1,
                               ),
                             ),
-                            child: Text(
-                              'Saved from ${(widget.item as TextNote).sourceApp}',
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TackIcon(
+                                  TackIcons.share,
+                                  size: 11,
+                                  color: palette.resolveAccentColor(isDark),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Saved from ${(widget.item as TextNote).sourceApp}',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                    color: palette.resolveAccentColor(isDark),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

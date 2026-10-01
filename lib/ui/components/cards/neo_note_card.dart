@@ -54,7 +54,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
         ? const Color(0xFFE2E4EC)
         : const Color(0xFF232530).withValues(alpha: 0.85);
 
-    return AnimatedScale(
+    final card = AnimatedScale(
       scale: _isPressed ? 0.965 : 1.0,
       duration: const Duration(milliseconds: 130),
       curve: Curves.easeOutCubic,
@@ -152,6 +152,19 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
         ),
       ),
     );
+
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        card,
+        if (widget.item.isFavorite)
+          Positioned(
+            top: -7,
+            child: _buildPushPin(palette.pinColor, isDark),
+          ),
+      ],
+    );
   }
 
   /// Bottom icon badge representing note category, mood, or type
@@ -195,6 +208,43 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
             color: isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23),
           ),
       ],
+    );
+  }
+
+  Widget _buildPushPin(Color color, bool isDark) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: color.withValues(alpha: 0.6),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        gradient: RadialGradient(
+          center: const Alignment(-0.3, -0.3),
+          radius: 0.8,
+          colors: [
+            Colors.white.withValues(alpha: 0.8),
+            color,
+            color.withValues(alpha: 0.9),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
     );
   }
 }

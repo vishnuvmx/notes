@@ -154,11 +154,12 @@ class _StickyNoteCardState extends State<StickyNoteCard> {
             ),
           ),
 
-          // 3D Translucent Tactile Push-Pin Tack (Top Center - Screenshot 2)
-          Positioned(
-            top: -7,
-            child: _buildPushPin(pinColor, isDark),
-          ),
+          // 3D Translucent Tactile Push-Pin Tack (Shown for Favourites)
+          if (widget.item.isFavorite)
+            Positioned(
+              top: -7,
+              child: _buildPushPin(pinColor, isDark),
+            ),
         ],
       ),
     ),
