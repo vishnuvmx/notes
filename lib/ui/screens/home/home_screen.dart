@@ -14,7 +14,6 @@ import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
-import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/sticky_note_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';

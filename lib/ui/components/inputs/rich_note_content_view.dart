@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -992,7 +993,7 @@ class RichNoteContentView extends StatelessWidget {
       r'(`[^`\n]+`)'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
-      r'|(https?:\/\/[^\s<]+[^<.,:;"\')\]\s])'
+      r'|(https?:\/\/[^\s<]+[^<.,:;"\)\]\s])'
       r'|(==.*?==)'
       r'|(\*\*.*?\*\*)'
       r'|(__.*?__)'

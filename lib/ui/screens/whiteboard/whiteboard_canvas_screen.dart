@@ -2341,8 +2341,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ================= UI Builder Methods =================
 
@@ -2512,9 +2513,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // Interactive Live Minimap Navigator
   Widget _buildMinimap(bool isDark) {

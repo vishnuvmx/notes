@@ -7,6 +7,7 @@ import '../domain/models/sticky_note.dart';
 import '../domain/models/whiteboard_item.dart';
 import '../domain/models/clipboard_item.dart';
 import '../domain/models/item_serializer.dart';
+import '../domain/services/android_shortcuts_service.dart';
 
 /// Supported Home view styles
 enum HomeViewMode {
@@ -35,6 +36,7 @@ class WorkspaceProvider extends ChangeNotifier {
     _favoriteItems = _repository.cachedFavoriteItems;
     _applySort();
     _rebuildIndex();
+    AndroidShortcutsService.syncDynamicShortcuts(_items);
   }
 
   List<BaseWorkspaceItem> _items = [];
@@ -216,6 +218,7 @@ class WorkspaceProvider extends ChangeNotifier {
     await _repository.saveItem(item);
     _rebuildIndex();
     _cachedAvailableTags = null; // invalidate tag cache on any save
+    AndroidShortcutsService.syncDynamicShortcuts(_items);
   }
 
   /// Toggle favorite status

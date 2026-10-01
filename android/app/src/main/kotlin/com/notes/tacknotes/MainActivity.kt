@@ -51,6 +51,11 @@ class MainActivity : FlutterActivity() {
                     hideQuickCaptureNotification()
                     result.success(true)
                 }
+                "updateShortcuts" -> {
+                    val list = call.argument<List<Map<String, Any?>>>("shortcuts") ?: emptyList()
+                    updateDynamicShortcuts(list)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -110,6 +115,35 @@ class MainActivity : FlutterActivity() {
     private fun hideQuickCaptureNotification() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(7777)
+    }
+
+    private fun updateDynamicShortcuts(shortcutsList: List<Map<String, Any?>>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            try {
+                val shortcutManager = getSystemService(android.content.pm.ShortcutManager::class.java) ?: return
+                val shortcuts = mutableListOf<android.content.pm.ShortcutInfo>()
+                for ((index, item) in shortcutsList.take(2).withIndex()) {
+                    val id = item["id"] as? String ?: continue
+                    val title = (item["title"] as? String)?.takeIf { it.isNotBlank() } ?: "Untitled Note"
+                    val intent = Intent(this, MainActivity::class.java).apply {
+                        action = "com.notes.tacknotes.OPEN_NOTE"
+                        putExtra("noteId", id)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    val shortcut = android.content.pm.ShortcutInfo.Builder(this, "dynamic_note_$id")
+                        .setShortLabel(title.take(16))
+                        .setLongLabel(title.take(30))
+                        .setRank(index)
+                        .setIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_shortcut_new_note))
+                        .setIntent(intent)
+                        .build()
+                    shortcuts.add(shortcut)
+                }
+                shortcutManager.dynamicShortcuts = shortcuts
+            } catch (e: Exception) {
+                // Ignore launcher shortcut exceptions gracefully
+            }
+        }
     }
 
     private fun handleIntent(intent: Intent?) {

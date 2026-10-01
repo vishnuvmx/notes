@@ -120,10 +120,18 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
   }
 
   Future<void> _handleIncomingText(IncomingTextData data) async {
-    // 1. Direct open of a status-bar pinned note
+    // 1. Direct open of a pinned note or dynamic app shortcut
     if (data.action == 'OPEN_NOTE' && data.noteId != null) {
       final workspace = context.read<WorkspaceProvider>();
-      final item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+      BaseWorkspaceItem? item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+      if (item == null && workspace.isLoading) {
+        for (int retry = 0; retry < 20; retry++) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (!mounted) return;
+          item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+          if (item != null) break;
+        }
+      }
       if (item != null && mounted) {
         HapticFeedback.selectionClick();
         _openItemDetail(context, item);
