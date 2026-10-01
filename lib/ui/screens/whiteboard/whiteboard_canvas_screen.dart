@@ -305,6 +305,27 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
   }
 
+  /// Converts the center of the current screen/viewport into exact canvas scene coordinates.
+  Offset _getCurrentViewportCenterScene() {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final size = renderBox?.size ?? MediaQuery.sizeOf(context);
+    final viewportCenter = Offset(size.width / 2, (size.height - 80) / 2);
+    try {
+      return _transformationController.toScene(viewportCenter);
+    } catch (_) {
+      final matrix = _transformationController.value;
+      final scale = matrix.getMaxScaleOnAxis();
+      final trans = matrix.getTranslation();
+      if (scale > 0) {
+        return Offset(
+          (viewportCenter.dx - trans.x) / scale,
+          (viewportCenter.dy - trans.y) / scale,
+        );
+      }
+      return const Offset(_canvasSize / 2, _canvasSize / 2);
+    }
+  }
+
   // ================= 2. Node Operations & Context Actions =================
   void _addNode(CanvasNodeType shapeType, {Offset? position, String? imagePath, double? customWidth, double? customHeight}) {
     HapticFeedback.lightImpact();
@@ -361,17 +382,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       x = position.dx;
       y = position.dy;
     } else {
-      final size = MediaQuery.sizeOf(context);
-      final centerScreen = Offset(size.width / 2, (size.height - 100) / 2);
-      final inverse = Matrix4.tryInvert(_transformationController.value);
-      if (inverse != null) {
-        final transformed = MatrixUtils.transformPoint(inverse, centerScreen);
-        x = transformed.dx - (width / 2);
-        y = transformed.dy - (height / 2);
-      } else {
-        x = (_canvasSize / 2) - (width / 2);
-        y = (_canvasSize / 2) - (height / 2);
-      }
+      final centerScene = _getCurrentViewportCenterScene();
+      x = centerScene.dx - (width / 2);
+      y = centerScene.dy - (height / 2);
     }
 
     final newNode = CanvasNode(
@@ -1173,6 +1186,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   // ================= 4. Image Tool Picker =================
   Future<void> _pickAndInsertImage() async {
     try {
+      // Pre-capture the exact center of what the user is currently seeing on screen
+      final targetCenter = _getCurrentViewportCenterScene();
+
       final picker = ImagePicker();
       final file = await picker.pickImage(source: ImageSource.gallery);
       if (file != null) {
@@ -1201,8 +1217,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           }
         } catch (_) {}
 
+        final posX = (targetCenter.dx - (imgWidth / 2)).clamp(0.0, _canvasSize - imgWidth);
+        final posY = (targetCenter.dy - (imgHeight / 2)).clamp(0.0, _canvasSize - imgHeight);
+
         _addNode(
           CanvasNodeType.image,
+          position: Offset(posX, posY),
           imagePath: savedPath,
           customWidth: imgWidth,
           customHeight: imgHeight,
