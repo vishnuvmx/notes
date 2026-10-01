@@ -12,7 +12,7 @@ sealed class ToolbarActionItem {
 }
 
 class IconToolbarItem extends ToolbarActionItem {
-  final IconData icon;
+  final dynamic icon;
   const IconToolbarItem({required super.label, required super.action, required this.icon});
 }
 
@@ -108,7 +108,7 @@ class EditorFormattingToolbar extends StatelessWidget {
     IconToolbarItem(label: 'Diagram / Graph', action: 'diagram', icon: TackIcons.flow),
     IconToolbarItem(label: 'Callout Alert', action: 'alert', icon: TackIcons.bolt),
     IconToolbarItem(label: 'Timestamp', action: 'timestamp', icon: TackIcons.clock),
-    IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.photo),
+    IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.imageSvg),
   ];
 
   @override

@@ -7,9 +7,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'code_syntax_highlighter.dart';
 import 'mermaid/mermaid_diagram_card.dart';
+import '../../../core/utils/url_launcher_helper.dart';
 
 /// Rich Interactive Content View for Tack Notes.
 /// Renders Headings (H1-H6), Blockquotes, Interactive Checklists, Bullet & Numbered Lists,
@@ -832,23 +832,32 @@ class RichNoteContentView extends StatelessWidget {
   }
 
   Widget _buildImageBlock(BuildContext context, String alt, String url, bool isDark) {
+    final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
     Widget imgWidget;
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
       imgWidget = Image.network(
-        url,
+        cleanUrl,
         fit: BoxFit.contain,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return Container(
-            height: 140,
+            height: 180,
             alignment: Alignment.center,
-            child: const CircularProgressIndicator(strokeWidth: 2),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E2028) : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.2),
+            ),
           );
         },
         errorBuilder: (context, error, stackTrace) => _buildImageError(alt, isDark),
       );
     } else if (!kIsWeb) {
-      final file = File(url);
+      final file = File(cleanUrl);
       if (file.existsSync()) {
         imgWidget = Image.file(
           file,
@@ -863,26 +872,68 @@ class RichNoteContentView extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       alignment: Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 320),
-              child: imgWidget,
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _openImageLightbox(context, cleanUrl, alt);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF2C2F38) : const Color(0xFFE2E6EE),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black26 : const Color(0x0A191A23),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 360, minWidth: 100),
+                    child: imgWidget,
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          if (alt.trim().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              alt.trim(),
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+          if (alt.trim().isNotEmpty && alt != 'Image') ...[
+            const SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                alt.trim(),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                ),
               ),
             ),
           ],
@@ -941,6 +992,7 @@ class RichNoteContentView extends StatelessWidget {
       r'(`[^`\n]+`)'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
+      r'|(https?:\/\/[^\s<]+[^<.,:;"\')\]\s])'
       r'|(==.*?==)'
       r'|(\*\*.*?\*\*)'
       r'|(__.*?__)'
@@ -991,18 +1043,44 @@ class RichNoteContentView extends StatelessWidget {
         );
       } else if (matched.startsWith('![') && matched.contains('](') && matched.endsWith(')')) {
         final midIndex = matched.indexOf('](');
-        final url = matched.substring(midIndex + 2, matched.length - 1);
+        final alt = matched.substring(2, midIndex);
+        final url = matched.substring(midIndex + 2, matched.length - 1).trim();
+        final cleanUrl = url.replaceFirst(RegExp(r'^file://'), '');
+        final isNet = cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
+
+        Widget inlineImg;
+        if (isNet) {
+          inlineImg = Image.network(
+            cleanUrl,
+            height: 28,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => const Icon(Icons.broken_image_rounded, size: 20),
+          );
+        } else if (!kIsWeb) {
+          final file = File(cleanUrl);
+          if (file.existsSync()) {
+            inlineImg = Image.file(file, height: 28, fit: BoxFit.cover);
+          } else {
+            inlineImg = const Icon(Icons.broken_image_rounded, size: 20);
+          }
+        } else {
+          inlineImg = const Icon(Icons.broken_image_rounded, size: 20);
+        }
+
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  url,
-                  height: 24,
-                  errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported, size: 18),
+            child: GestureDetector(
+              onTap: () {
+                if (context != null) {
+                  _openImageLightbox(context, cleanUrl, alt);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: inlineImg,
                 ),
               ),
             ),
@@ -1017,6 +1095,11 @@ class RichNoteContentView extends StatelessWidget {
             alignment: PlaceholderAlignment.middle,
             child: InkWell(
               onTap: () {
+                if (context != null) {
+                  UrlLauncherHelper.openUrl(context, url);
+                }
+              },
+              onLongPress: () {
                 Clipboard.setData(ClipboardData(text: url));
                 HapticFeedback.lightImpact();
                 if (context != null) {
@@ -1040,6 +1123,58 @@ class RichNoteContentView extends StatelessWidget {
                       style: TextStyle(
                         color: palette.resolveAccentColor(isDark),
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: palette.resolveAccentColor(isDark),
+                        fontSize: defaultStyle?.fontSize,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    TackIcon(
+                      TackIcons.link,
+                      size: 11,
+                      color: palette.resolveAccentColor(isDark),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      } else if (matched.startsWith('http://') || matched.startsWith('https://')) {
+        final url = matched;
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: InkWell(
+              onTap: () {
+                if (context != null) {
+                  UrlLauncherHelper.openUrl(context, url);
+                }
+              },
+              onLongPress: () {
+                Clipboard.setData(ClipboardData(text: url));
+                HapticFeedback.lightImpact();
+                if (context != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Link copied: $url'),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      url,
+                      style: TextStyle(
+                        color: palette.resolveAccentColor(isDark),
+                        fontWeight: FontWeight.w500,
                         decoration: TextDecoration.underline,
                         decorationColor: palette.resolveAccentColor(isDark),
                         fontSize: defaultStyle?.fontSize,
@@ -1258,6 +1393,131 @@ class _CopyCodeButtonState extends State<_CopyCodeButton> {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: _copied ? activeFg : fg,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _openImageLightbox(BuildContext context, String url, String alt) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      pageBuilder: (ctx, _, _) => _ImageLightboxViewer(url: url, alt: alt),
+    ),
+  );
+}
+
+class _ImageLightboxViewer extends StatelessWidget {
+  final String url;
+  final String alt;
+
+  const _ImageLightboxViewer({required this.url, required this.alt});
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
+    final isNetwork = cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
+
+    Widget imageWidget;
+    if (isNetwork) {
+      imageWidget = Image.network(
+        cleanUrl,
+        fit: BoxFit.contain,
+        loadingBuilder: (_, child, progress) {
+          if (progress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+          );
+        },
+        errorBuilder: (_, _, _) => const Icon(
+          Icons.broken_image_rounded,
+          size: 48,
+          color: Colors.white54,
+        ),
+      );
+    } else if (!kIsWeb) {
+      final file = File(cleanUrl);
+      if (file.existsSync()) {
+        imageWidget = Image.file(file, fit: BoxFit.contain);
+      } else {
+        imageWidget = const Icon(
+          Icons.broken_image_rounded,
+          size: 48,
+          color: Colors.white54,
+        );
+      }
+    } else {
+      imageWidget = const Icon(
+        Icons.broken_image_rounded,
+        size: 48,
+        color: Colors.white54,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Interactive Pinch & Zoom Image Area
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.5,
+                boundaryMargin: const EdgeInsets.all(60),
+                child: imageWidget,
+              ),
+            ),
+
+            // Top action bar
+            Positioned(
+              top: 8,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  // Close button
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black45,
+                      shape: const CircleBorder(),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 12),
+                  if (alt.isNotEmpty && alt != 'Image')
+                    Expanded(
+                      child: Text(
+                        alt,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  if (isNetwork)
+                    IconButton(
+                      icon: const Icon(Icons.open_in_browser_rounded, color: Colors.white, size: 22),
+                      tooltip: 'Open in browser',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black45,
+                        shape: const CircleBorder(),
+                      ),
+                      onPressed: () => UrlLauncherHelper.openUrl(context, cleanUrl),
+                    ),
+                ],
               ),
             ),
           ],
