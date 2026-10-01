@@ -2064,7 +2064,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Undo Button (Disabled when stack is empty)
             IconButton(
               icon: TackIcon(
-                TackIcons.undo,
+                TackIcons.undoSvg,
                 size: 20,
                 color: _history.canUndo
                     ? (isDark ? Colors.white : AppColors.lightTextPrimary)
@@ -2077,7 +2077,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Redo Button (Disabled when stack is empty)
             IconButton(
               icon: TackIcon(
-                TackIcons.redo,
+                TackIcons.redoSvg,
                 size: 20,
                 color: _history.canRedo
                     ? (isDark ? Colors.white : AppColors.lightTextPrimary)
@@ -2730,12 +2730,15 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   Widget _buildDockToolButton({
     required String id,
-    required IconData icon,
+    required dynamic icon,
     required String tooltip,
     required bool isDark,
     VoidCallback? onTapOverride,
   }) {
     final isSelected = _activeTool == id;
+    final iconColor = isSelected
+        ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
+        : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted);
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -2768,12 +2771,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 : null,
           ),
           child: Center(
-            child: Icon(
+            child: TackIcon(
               icon,
               size: 20,
-              color: isSelected
-                  ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
-                  : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+              color: iconColor,
             ),
           ),
         ),
@@ -2910,21 +2911,21 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Tool 1: Select
             _buildDockToolButton(
               id: 'select',
-              icon: Icons.near_me_rounded,
+              icon: TackIcons.selectSvg,
               tooltip: 'Select & Move (V)',
               isDark: isDark,
             ),
             // Tool 2: Pan
             _buildDockToolButton(
               id: 'pan',
-              icon: Icons.pan_tool_rounded,
+              icon: TackIcons.handSvg,
               tooltip: 'Pan Canvas (H)',
               isDark: isDark,
             ),
             // Tool 3: Connect
             _buildDockToolButton(
               id: 'connect',
-              icon: Icons.arrow_right_alt_rounded,
+              icon: TackIcons.connectorSvg,
               tooltip: 'Connect Nodes (L)',
               isDark: isDark,
             ),
@@ -2955,8 +2956,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         : null,
                   ),
                   child: Center(
-                    child: Icon(
-                      Icons.add_box_rounded,
+                    child: TackIcon(
+                      TackIcons.plusSvg,
                       size: 20,
                       color: _showShapesMenu
                           ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
@@ -2977,14 +2978,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Tool 6: Text Tool
             _buildDockToolButton(
               id: 'text',
-              icon: Icons.title_rounded,
+              icon: TackIcons.textSvg,
               tooltip: 'Text Tool (T)',
               isDark: isDark,
             ),
             // Tool 7: Image
             _buildDockToolButton(
               id: 'image',
-              icon: Icons.image_outlined,
+              icon: TackIcons.imageSvg,
               tooltip: 'Insert Image',
               isDark: isDark,
               onTapOverride: _pickAndInsertImage,

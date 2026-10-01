@@ -988,7 +988,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     return PopScope(
       canPop: !_isEditingMode && !_isSearching,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackPress();
       },
@@ -1053,7 +1053,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           // Edit / Read View Mode Switcher
           IconButton(
             icon: TackIcon(
-              _isEditingMode ? TackIcons.reader : TackIcons.edit,
+              _isEditingMode ? TackIcons.eyeSvg : TackIcons.editSvg,
               size: 20,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
@@ -1067,7 +1067,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           // In-Note Find & Replace Trigger
           IconButton(
             icon: TackIcon(
-              _isSearching ? TackIcons.close : TackIcons.search,
+              _isSearching ? TackIcons.close : TackIcons.searchSvg,
               size: 20,
               color: _isSearching
                   ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)

@@ -46,6 +46,8 @@ dependencies:
   image: ^4.9.2
   lucide_icons_flutter: ^3.1.19
   vector_math: ^2.1.4
+  flutter_svg: ^2.3.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +83,7 @@ flutter:
   # Assets section
   assets:
     - icon.png
+    - icons/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

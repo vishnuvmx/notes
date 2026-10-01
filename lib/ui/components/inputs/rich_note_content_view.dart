@@ -706,6 +706,7 @@ class RichNoteContentView extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   child: SelectableText.rich(
                     TextSpan(
@@ -782,6 +783,7 @@ class RichNoteContentView extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
         child: Table(
           defaultColumnWidth: const IntrinsicColumnWidth(),
           border: TableBorder(

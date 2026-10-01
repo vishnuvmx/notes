@@ -474,8 +474,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Floating bottom dock for quick paste when viewing Clipboard category
   Widget _buildClipboardBottomDock(bool isDark) {
@@ -570,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TackIcon(
-                        TackIcons.copy,
+                        TackIcons.pasteSvg,
                         size: 14,
                         color: Color(0xFF191A23),
                       ),
@@ -788,8 +789,8 @@ class _QuickAddButtonState extends State<_QuickAddButton> {
           ),
           child: Center(
             child: TackIcon(
-              TackIcons.plus,
-              size: 22,
+              TackIcons.plusSvg,
+              size: 20,
               color: widget.isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
             ),
           ),

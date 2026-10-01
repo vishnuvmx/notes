@@ -215,8 +215,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TackIcon(
                     _selectedType == ItemType.whiteboard
-                        ? TackIcons.whiteboard
-                        : (_selectedType == ItemType.sticky ? TackIcons.star : TackIcons.notes),
+                        ? TackIcons.whiteboardSvg
+                        : (_selectedType == ItemType.sticky ? TackIcons.star : TackIcons.notesSvg),
                     size: 18,
                     color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   ),
@@ -274,7 +274,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 12, right: 12, bottom: 32),
                     child: TackIcon(
-                      TackIcons.notes,
+                      TackIcons.notesSvg,
                       size: 18,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     ),

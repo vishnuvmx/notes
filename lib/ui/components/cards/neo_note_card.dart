@@ -175,9 +175,9 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     Color borderColor,
     Color accentColor,
   ) {
-    IconData icon = TackIcons.notes;
+    dynamic icon = TackIcons.notesSvg;
     if (widget.item is WhiteboardCanvasItem) {
-      icon = TackIcons.whiteboard;
+      icon = TackIcons.whiteboardSvg;
     } else if (widget.item is ClipboardItem) {
       icon = TackIcons.clipboard;
     } else if (widget.item is TextNote) {
@@ -189,7 +189,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
       } else if (note.tags.any((t) => t.toLowerCase().contains('personal'))) {
         icon = TackIcons.user;
       } else {
-        icon = TackIcons.notes;
+        icon = TackIcons.notesSvg;
       }
     }
 

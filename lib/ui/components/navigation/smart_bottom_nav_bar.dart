@@ -25,10 +25,10 @@ class SmartBottomNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final navItems = [
-      (icon: TackIcons.home, label: 'Home', index: 0),
-      (icon: TackIcons.notes, label: 'Notes', index: 1),
-      (icon: TackIcons.whiteboard, label: 'Whiteboard', index: 3),
-      (icon: TackIcons.clipboard, label: 'Clipboard', index: 4),
+      (icon: TackIcons.home as dynamic, label: 'Home', index: 0),
+      (icon: TackIcons.notesSvg as dynamic, label: 'Notes', index: 1),
+      (icon: TackIcons.whiteboardSvg as dynamic, label: 'Whiteboard', index: 3),
+      (icon: TackIcons.clipboard as dynamic, label: 'Clipboard', index: 4),
     ];
 
     return ClipRect(
@@ -74,7 +74,7 @@ class SmartBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ({IconData icon, String label, int index}) item, bool isDark) {
+  Widget _buildNavItem(BuildContext context, ({dynamic icon, String label, int index}) item, bool isDark) {
     final isSelected = currentIndex == item.index;
     final activeColor = isDark ? AppColors.primaryLight : AppColors.primaryDark;
     final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
@@ -145,10 +145,9 @@ class SmartBottomNavBar extends StatelessWidget {
           },
           child: Center(
             child: TackIcon(
-              TackIcons.plus,
-              size: 26,
+              TackIcons.plusSvg,
+              size: 24,
               color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
-              style: HeroIconStyle.outline,
             ),
           ),
         ),

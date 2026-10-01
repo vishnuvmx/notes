@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 enum HeroIconStyle { outline, solid }
 
-/// Central Minimalist & Modern Iconography for Tack powered by Lucide Icons.
-/// Sleek, consistent stroke weight, subtle rounded corners, zero clunky brutalism or playful slop.
+/// Central Minimalist & Modern Iconography for Tack powered by custom SVGs and Lucide Icons.
 class TackIcons {
   TackIcons._();
+
+  // Custom App SVGs from /icons
+  static const String notesSvg = 'icons/icon-notes.svg';
+  static const String whiteboardSvg = 'icons/icon-whiteboard.svg';
+  static const String plusSvg = 'icons/icon-plus.svg';
+  static const String selectSvg = 'icons/icon-select.svg';
+  static const String handSvg = 'icons/icon-hand.svg';
+  static const String connectorSvg = 'icons/icon-connector.svg';
+  static const String textSvg = 'icons/icon-text.svg';
+  static const String imageSvg = 'icons/icon-image.svg';
+  static const String drawSvg = 'icons/icon-draw.svg';
+  static const String editSvg = 'icons/icon-edit.svg';
+  static const String eyeSvg = 'icons/icon-eye.svg';
+  static const String undoSvg = 'icons/icon-undo.svg';
+  static const String redoSvg = 'icons/icon-redo.svg';
+  static const String searchSvg = 'icons/icon-search.svg';
+  static const String copySvg = 'icons/icon-copy.svg';
+  static const String pasteSvg = 'icons/icon-paste.svg';
 
   // Navigation (Modern & minimal)
   static const IconData home = LucideIcons.home;
@@ -71,9 +89,9 @@ class TackIcons {
   static const IconData lock = LucideIcons.lock;
 }
 
-/// Aesthetic Icon builder with consistent sizing and sleek Lucide styling.
+/// Aesthetic Icon builder with consistent sizing and sleek custom SVG & Lucide styling.
 class TackIcon extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon;
   final double size;
   final Color? color;
   final dynamic style;
@@ -88,10 +106,27 @@ class TackIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      icon,
-      size: size,
-      color: color,
-    );
+    final effectiveColor = color ??
+        IconTheme.of(context).color ??
+        (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF191A23));
+
+    if (icon is String) {
+      return SvgPicture.asset(
+        icon as String,
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(effectiveColor, BlendMode.srcIn),
+      );
+    }
+
+    if (icon is IconData) {
+      return Icon(
+        icon as IconData,
+        size: size,
+        color: effectiveColor,
+      );
+    }
+
+    return SizedBox(width: size, height: size);
   }
 }

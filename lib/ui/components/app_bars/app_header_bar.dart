@@ -61,7 +61,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               child: Row(
                 children: [
                   TackIcon(
-                    TackIcons.search,
+                    TackIcons.searchSvg,
                     size: 18,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),
@@ -188,7 +188,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               onToggleSearch();
             },
             icon: TackIcon(
-              TackIcons.search,
+              TackIcons.searchSvg,
               size: 22,
               color: iconColor,
             ),
