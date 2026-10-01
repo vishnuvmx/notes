@@ -12,6 +12,7 @@ import '../../../domain/models/sticky_note.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
+import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/sticky_note_card.dart';
@@ -789,86 +790,31 @@ class _SortButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<NoteSortOrder>(
-      initialValue: activeSort,
+    return TackDropdown<NoteSortOrder>(
+      value: activeSort,
+      customLabel: '',
       onSelected: onSelected,
       tooltip: 'Sort Notes',
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-      ),
-      color: isDark ? AppColors.darkSurface : Colors.white,
-      elevation: 6,
-      itemBuilder: (context) => [
-        _buildItem(NoteSortOrder.recentlyModified, 'Recently Modified', TackIcons.clock),
-        _buildItem(NoteSortOrder.dateCreated, 'Date Created', TackIcons.notes),
-        _buildItem(NoteSortOrder.titleAZ, 'Title (A–Z)', TackIcons.tag),
+      leadingIcon: TackIcons.listView,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      borderColor: borderColor,
+      items: const [
+        TackDropdownItem(
+          value: NoteSortOrder.recentlyModified,
+          label: 'Recently Modified',
+          icon: TackIcons.clock,
+        ),
+        TackDropdownItem(
+          value: NoteSortOrder.dateCreated,
+          label: 'Date Created',
+          icon: TackIcons.notes,
+        ),
+        TackDropdownItem(
+          value: NoteSortOrder.titleAZ,
+          label: 'Title (A–Z)',
+          icon: TackIcons.tag,
+        ),
       ],
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 1.6),
-          boxShadow: isDark
-              ? null
-              : [
-                  const BoxShadow(
-                    color: Color(0xFF191A23),
-                    blurRadius: 0,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TackIcon(
-              TackIcons.listView,
-              size: 17,
-              color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-            ),
-            const SizedBox(width: 4),
-            TackIcon(
-              TackIcons.chevronDown,
-              size: 13,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PopupMenuItem<NoteSortOrder> _buildItem(NoteSortOrder order, String label, IconData icon) {
-    final isSelected = activeSort == order;
-    return PopupMenuItem<NoteSortOrder>(
-      value: order,
-      child: Row(
-        children: [
-          TackIcon(
-            icon,
-            size: 16,
-            color: isSelected ? AppColors.accentAmber : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
-                  : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-            ),
-          ),
-          if (isSelected) ...[
-            const Spacer(),
-            const TackIcon(TackIcons.check, size: 14, color: AppColors.accentAmber),
-          ],
-        ],
-      ),
     );
   }
 }

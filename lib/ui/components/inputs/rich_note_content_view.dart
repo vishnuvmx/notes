@@ -115,13 +115,12 @@ class RichNoteContentView extends StatelessWidget {
                     trimmedCode.startsWith('sequencediagram')));
 
         if (isMermaid) {
-          widgets.add(_wrapLineTap(
+          widgets.add(
             MermaidDiagramCard(
               rawCode: code,
               paletteId: paletteId,
             ),
-            i,
-          ));
+          );
         } else {
           widgets.add(_wrapLineTap(_buildFencedCodeBlock(context, lang, code, isDark, theme), i));
         }

@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../domain/models/whiteboard_item.dart';
+import '../../../screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'mermaid_diagram_parser.dart';
 
 /// Card container that cleanly visualizes Mermaid graphs and diagrams (Flowcharts,
@@ -48,6 +51,194 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
   TackColorPalette get _palette => AppColors.getPaletteById(widget.paletteId);
 
+  void _openInWhiteboard(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final whiteboardItem = _convertToWhiteboardItem();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WhiteboardCanvasScreen(item: whiteboardItem),
+      ),
+    );
+  }
+
+  WhiteboardCanvasItem _convertToWhiteboardItem() {
+    final id = 'wb_mermaid_${DateTime.now().millisecondsSinceEpoch}';
+    final title = _parsed.title?.isNotEmpty == true
+        ? _parsed.title!
+        : 'Mermaid Diagram';
+
+    final nodes = <CanvasNode>[];
+    final edges = <CanvasEdge>[];
+
+    const defaultNodeW = 140.0;
+    const defaultNodeH = 64.0;
+    const hGap = 40.0;
+    const vGap = 56.0;
+
+    if (_parsed.type == MermaidDiagramType.flowchart && _parsed.nodes.isNotEmpty) {
+      final layout = _computeFlowchartLayout(_parsed, defaultNodeW, defaultNodeH, hGap, vGap);
+
+      for (final n in _parsed.nodes) {
+        final pos = layout.positions[n.id] ?? Offset.zero;
+        final size = layout.nodeSizes[n.id] ?? const Size(defaultNodeW, defaultNodeH);
+
+        CanvasNodeType shapeType;
+        String nodePalette = 'lime';
+        switch (n.shape) {
+          case MermaidNodeShape.decision:
+            shapeType = CanvasNodeType.decision;
+            nodePalette = 'amber';
+            break;
+          case MermaidNodeShape.circle:
+            shapeType = CanvasNodeType.connector;
+            nodePalette = 'lavender';
+            break;
+          case MermaidNodeShape.parallelogram:
+            shapeType = CanvasNodeType.inputOutput;
+            nodePalette = 'cyan';
+            break;
+          case MermaidNodeShape.pill:
+          case MermaidNodeShape.rounded:
+            shapeType = CanvasNodeType.startEnd;
+            nodePalette = 'coral';
+            break;
+          case MermaidNodeShape.process:
+          default:
+            shapeType = CanvasNodeType.process;
+            nodePalette = 'lime';
+            break;
+        }
+
+        nodes.add(CanvasNode(
+          id: n.id,
+          text: n.label,
+          shapeType: shapeType,
+          x: pos.dx + 200,
+          y: pos.dy + 200,
+          width: size.width,
+          height: size.height,
+          paletteId: nodePalette,
+        ));
+      }
+
+      final isLR = _parsed.direction == 'LR' || _parsed.direction == 'RL';
+      for (int i = 0; i < _parsed.edges.length; i++) {
+        final e = _parsed.edges[i];
+        edges.add(CanvasEdge(
+          id: 'edge_${e.fromId}_${e.toId}_$i',
+          fromNodeId: e.fromId,
+          toNodeId: e.toId,
+          label: e.label,
+          fromPort: isLR ? 'right' : 'bottom',
+          toPort: isLR ? 'left' : 'top',
+        ));
+      }
+    } else if (_parsed.type == MermaidDiagramType.sequence && _parsed.sequenceMessages.isNotEmpty) {
+      final participants = <String>{};
+      for (final msg in _parsed.sequenceMessages) {
+        participants.add(msg.from);
+        participants.add(msg.to);
+      }
+      final pList = participants.toList();
+      final pNodes = <String, CanvasNode>{};
+      for (int i = 0; i < pList.length; i++) {
+        final name = pList[i];
+        final node = CanvasNode(
+          id: 'part_$i',
+          text: name,
+          shapeType: CanvasNodeType.process,
+          x: 200.0 + (i * 240.0),
+          y: 200.0,
+          width: 140,
+          height: 56,
+          paletteId: 'lavender',
+        );
+        nodes.add(node);
+        pNodes[name] = node;
+      }
+      for (int i = 0; i < _parsed.sequenceMessages.length; i++) {
+        final msg = _parsed.sequenceMessages[i];
+        final fromN = pNodes[msg.from];
+        final toN = pNodes[msg.to];
+        if (fromN != null && toN != null) {
+          edges.add(CanvasEdge(
+            id: 'seq_edge_$i',
+            fromNodeId: fromN.id,
+            toNodeId: toN.id,
+            label: msg.text,
+            fromPort: 'right',
+            toPort: 'left',
+          ));
+        }
+      }
+    } else if (_parsed.type == MermaidDiagramType.timeline && _parsed.timelineItems.isNotEmpty) {
+      CanvasNode? prevNode;
+      for (int i = 0; i < _parsed.timelineItems.length; i++) {
+        final item = _parsed.timelineItems[i];
+        final text = '${item.period}\n${item.events.join(", ")}';
+        final node = CanvasNode(
+          id: 'tl_$i',
+          text: text,
+          shapeType: CanvasNodeType.process,
+          x: 200.0 + (i * 220.0),
+          y: 300.0,
+          width: 160,
+          height: 72,
+          paletteId: 'cyan',
+        );
+        nodes.add(node);
+        if (prevNode != null) {
+          edges.add(CanvasEdge(
+            id: 'tl_edge_$i',
+            fromNodeId: prevNode.id,
+            toNodeId: node.id,
+            fromPort: 'right',
+            toPort: 'left',
+          ));
+        }
+        prevNode = node;
+      }
+    } else if (_parsed.type == MermaidDiagramType.pie && _parsed.pieSlices.isNotEmpty) {
+      for (int i = 0; i < _parsed.pieSlices.length; i++) {
+        final slice = _parsed.pieSlices[i];
+        final angle = (i / _parsed.pieSlices.length) * 2 * math.pi;
+        final x = 400.0 + 200.0 * math.cos(angle);
+        final y = 400.0 + 200.0 * math.sin(angle);
+        nodes.add(CanvasNode(
+          id: 'pie_$i',
+          text: '${slice.label}\n${slice.value.toStringAsFixed(1)}',
+          shapeType: CanvasNodeType.startEnd,
+          x: x,
+          y: y,
+          width: 130,
+          height: 60,
+          paletteId: 'coral',
+        ));
+      }
+    } else {
+      nodes.add(CanvasNode(
+        id: 'node_0',
+        text: _parsed.title ?? 'Diagram',
+        shapeType: CanvasNodeType.process,
+        x: 300,
+        y: 300,
+        width: 160,
+        height: 70,
+        paletteId: 'peach',
+      ));
+    }
+
+    return WhiteboardCanvasItem(
+      id: id,
+      title: title,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      paletteId: widget.paletteId ?? 'lavender',
+      nodes: nodes,
+      edges: edges,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -56,27 +247,33 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
       return _buildRawCodeView(isDark);
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161820) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openInWhiteboard(context),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161820) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+            width: 1.0,
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: _buildDiagramView(isDark),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: IgnorePointer(
+            child: _buildDiagramView(isDark),
+          ),
+        ),
       ),
     );
   }

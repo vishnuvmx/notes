@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
+import 'tack_dropdown.dart';
 
 /// Neo-Pop filter controls matching reference mockup (Screenshot 1 & 2).
 /// Includes:
@@ -33,59 +34,15 @@ class CategoryFilterPills extends StatelessWidget {
         // 1. Folder Dropdown
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: PopupMenuButton<String>(
-            initialValue: selectedFolder,
-            onSelected: (folder) {
-              HapticFeedback.selectionClick();
-              workspace.setSelectedFolder(folder);
-            },
-            offset: const Offset(0, 42),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor, width: 1.5),
-            ),
-            color: isDark ? AppColors.darkSurface : Colors.white,
-            itemBuilder: (context) => [
-              _buildFolderMenuItem('All Notes', isDark),
-              _buildFolderMenuItem('Favourites', isDark),
+          child: TackDropdown<String>(
+            value: selectedFolder,
+            onSelected: (folder) => workspace.setSelectedFolder(folder),
+            leadingIcon: selectedFolder == 'Favourites' ? TackIcons.star : null,
+            leadingIconColor: selectedFolder == 'Favourites' ? AppColors.accentAmber : null,
+            items: const [
+              TackDropdownItem(value: 'All Notes', label: 'All Notes'),
+              TackDropdownItem(value: 'Favourites', label: 'Favourites', icon: TackIcons.star, iconColor: AppColors.accentAmber),
             ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : const Color(0xFFF1F3F7),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: borderColor, width: 1.4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (selectedFolder == 'Favourites') ...[
-                    const TackIcon(
-                      TackIcons.star,
-                      size: 14,
-                      color: AppColors.accentAmber,
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    selectedFolder,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                      color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  TackIcon(
-                    TackIcons.chevronDown,
-                    size: 15,
-                    color: isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
 
@@ -151,33 +108,6 @@ class CategoryFilterPills extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  PopupMenuItem<String> _buildFolderMenuItem(String folder, bool isDark) {
-    return PopupMenuItem<String>(
-      value: folder,
-      child: Row(
-        children: [
-          TackIcon(
-            folder == 'Favourites' ? TackIcons.star : TackIcons.notes,
-            size: 16,
-            color: folder == 'Favourites'
-                ? AppColors.accentAmber
-                : (isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23)),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            folder,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

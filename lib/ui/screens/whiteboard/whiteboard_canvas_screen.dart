@@ -19,6 +19,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/whiteboard_item.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/inputs/tack_dropdown.dart';
 
 /// Immutable snapshot for Undo / Redo history ring buffer.
 class CanvasSnapshot {
@@ -1803,72 +1804,48 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: (isTransparent && selectedFormat == 'png')
-                            ? (isDark ? AppColors.darkSurface : const Color(0xFFF1F5F9))
-                            : (isDark ? AppColors.darkSurfaceAlt : Colors.white),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: (isTransparent && selectedFormat == 'png')
-                              ? borderColor.withValues(alpha: 0.5)
-                              : borderColor,
+                    TackDropdown<String>(
+                      isExpanded: true,
+                      value: (isTransparent && selectedFormat == 'png') ? null : selectedBgOption,
+                      hint: (isTransparent && selectedFormat == 'png')
+                          ? 'Transparent (Background disabled)'
+                          : 'Select canvas background',
+                      backgroundColor: (isTransparent && selectedFormat == 'png')
+                          ? (isDark ? AppColors.darkSurface : const Color(0xFFF1F5F9))
+                          : (isDark ? AppColors.darkSurfaceAlt : Colors.white),
+                      borderColor: (isTransparent && selectedFormat == 'png')
+                          ? borderColor.withValues(alpha: 0.5)
+                          : borderColor,
+                      onSelected: (isTransparent && selectedFormat == 'png')
+                          ? (_) {}
+                          : (newVal) => setModalState(() => selectedBgOption = newVal),
+                      items: const [
+                        TackDropdownItem(
+                          value: 'dots',
+                          label: 'Checkered dots (Current canvas)',
+                          icon: TackIcons.gridView,
                         ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: (isTransparent && selectedFormat == 'png') ? null : selectedBgOption,
-                          hint: Text(
-                            isTransparent && selectedFormat == 'png'
-                                ? 'Transparent (Background disabled)'
-                                : 'Select canvas background',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: mutedText,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          isExpanded: true,
-                          icon: TackIcon(
-                            TackIcons.chevronDown,
-                            size: 16,
-                            color: mutedText,
-                          ),
-                          dropdownColor: isDark ? AppColors.darkSurfaceAlt : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          onChanged: (isTransparent && selectedFormat == 'png')
-                              ? null
-                              : (newVal) {
-                                  if (newVal != null) {
-                                    setModalState(() => selectedBgOption = newVal);
-                                  }
-                                },
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'dots',
-                              child: Text('Checkered dots (Current canvas)', style: TextStyle(fontSize: 13)),
-                            ),
-                            DropdownMenuItem(
-                              value: 'grid',
-                              child: Text('Line grid', style: TextStyle(fontSize: 13)),
-                            ),
-                            DropdownMenuItem(
-                              value: 'theme',
-                              child: Text('Theme solid', style: TextStyle(fontSize: 13)),
-                            ),
-                            DropdownMenuItem(
-                              value: 'white',
-                              child: Text('Pure white', style: TextStyle(fontSize: 13)),
-                            ),
-                            DropdownMenuItem(
-                              value: 'dark',
-                              child: Text('Pitch black', style: TextStyle(fontSize: 13)),
-                            ),
-                          ],
+                        TackDropdownItem(
+                          value: 'grid',
+                          label: 'Line grid',
+                          icon: TackIcons.gridView,
                         ),
-                      ),
+                        TackDropdownItem(
+                          value: 'theme',
+                          label: 'Theme solid',
+                          icon: TackIcons.palette,
+                        ),
+                        TackDropdownItem(
+                          value: 'white',
+                          label: 'Pure white',
+                          icon: TackIcons.sun,
+                        ),
+                        TackDropdownItem(
+                          value: 'dark',
+                          label: 'Pitch black',
+                          icon: TackIcons.moon,
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
 
