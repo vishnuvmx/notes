@@ -296,10 +296,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final headlineColor = isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23);
     final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
+    final canPopHome = !(_scaffoldKey.currentState?.isDrawerOpen ?? false) &&
+        !_isSearching &&
+        workspace.selectedCategory == null;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      extendBody: true,
+    return PopScope(
+      canPop: canPopHome,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+          _scaffoldKey.currentState?.closeDrawer();
+          return;
+        }
+        if (_isSearching) {
+          setState(() {
+            _isSearching = false;
+            workspace.setSearchQuery('');
+          });
+          return;
+        }
+        if (workspace.selectedCategory != null) {
+          workspace.setCategory(null);
+          return;
+        }
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawerEnableOpenDragGesture: false,
+        extendBody: true,
       drawer: AppNavDrawer(
         onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
         onOpenArchive: widget.onOpenArchive,

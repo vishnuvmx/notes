@@ -110,6 +110,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   final ScrollController _bottomDockScrollController = ScrollController();
   bool _isExporting = false;
   int _activePointers = 0;
+  bool _isEdgeTouch = false;
+  late WorkspaceProvider _workspaceProvider;
 
   @visibleForTesting
   List<CanvasNode> get nodes => _nodes;
@@ -222,7 +224,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _workspaceProvider = context.read<WorkspaceProvider>();
+  }
+
+  @override
   void dispose() {
+    _saveCanvasState();
     _cameraAnimController.dispose();
     _transformationController.dispose();
     _canvasFocusNode.dispose();
@@ -265,13 +274,47 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   void _saveCanvasState() {
-    final workspace = context.read<WorkspaceProvider>();
     final updated = widget.item.copyWith(
       nodes: _nodes,
       edges: _edges,
       updatedAt: DateTime.now(),
     );
-    workspace.saveItem(updated);
+    _workspaceProvider.saveItem(updated);
+  }
+
+  bool _canPopWhiteboard() {
+    return !_showShapesMenu &&
+        !_showMinimap &&
+        !_showGridOpacitySlider &&
+        _connectingFromNodeId == null &&
+        _selectedNodeId == null &&
+        _selectedEdgeId == null;
+  }
+
+  void _handleWhiteboardBack() {
+    if (_showShapesMenu || _showMinimap || _showGridOpacitySlider) {
+      setState(() {
+        _showShapesMenu = false;
+        _showMinimap = false;
+        _showGridOpacitySlider = false;
+      });
+      return;
+    }
+    if (_connectingFromNodeId != null) {
+      setState(() {
+        _connectingFromNodeId = null;
+      });
+      return;
+    }
+    if (_selectedNodeId != null || _selectedEdgeId != null) {
+      setState(() {
+        _selectedNodeId = null;
+        _selectedEdgeId = null;
+      });
+      return;
+    }
+    _saveCanvasState();
+    Navigator.of(context).pop();
   }
 
   // ================= 1. Undo / Redo Actions =================
@@ -1955,34 +1998,40 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return KeyboardListener(
-      focusNode: _canvasFocusNode,
-      autofocus: true,
-      onKeyEvent: (event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.delete ||
-              event.logicalKey == LogicalKeyboardKey.backspace) {
-            if (_selectedNodeId != null) {
-              _deleteSelectedNode();
-            } else if (_selectedEdgeId != null) {
-              _history.recordSnapshot(_nodes, _edges);
-              setState(() {
-                _edges.removeWhere((e) => e.id == _selectedEdgeId);
-                _selectedEdgeId = null;
-              });
-              _saveCanvasState();
+    return PopScope(
+      canPop: _canPopWhiteboard(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleWhiteboardBack();
+      },
+      child: KeyboardListener(
+        focusNode: _canvasFocusNode,
+        autofocus: true,
+        onKeyEvent: (event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.delete ||
+                event.logicalKey == LogicalKeyboardKey.backspace) {
+              if (_selectedNodeId != null) {
+                _deleteSelectedNode();
+              } else if (_selectedEdgeId != null) {
+                _history.recordSnapshot(_nodes, _edges);
+                setState(() {
+                  _edges.removeWhere((e) => e.id == _selectedEdgeId);
+                  _selectedEdgeId = null;
+                });
+                _saveCanvasState();
+              }
             }
           }
-        }
-      },
-      child: Scaffold(
-        backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFFAFBFD),
-        appBar: AppBar(
-          backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-          leading: IconButton(
-            icon: const TackIcon(TackIcons.back, size: 22),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+        },
+        child: Scaffold(
+          backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFFAFBFD),
+          appBar: AppBar(
+            backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+            leading: IconButton(
+              icon: const TackIcon(TackIcons.back, size: 22),
+              onPressed: _handleWhiteboardBack,
+            ),
           title: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2064,7 +2113,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           children: [
             // Infinite/Bounded Interactive Canvas with Multi-Touch Arbiter
             Listener(
-              onPointerDown: (_) {
+              onPointerDown: (event) {
+                final screenWidth = MediaQuery.sizeOf(context).width;
+                final isEdge = event.position.dx < 28.0 || event.position.dx > screenWidth - 28.0;
+                if (isEdge != _isEdgeTouch) {
+                  setState(() => _isEdgeTouch = isEdge);
+                }
                 _activePointers++;
                 if (_activePointers >= 2 && _isDraggingNode) {
                   // If 2 or more fingers are down, immediately cancel node dragging to let 2-finger pan/zoom take priority
@@ -2073,9 +2127,15 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               },
               onPointerUp: (_) {
                 _activePointers = math.max(0, _activePointers - 1);
+                if (_activePointers == 0 && _isEdgeTouch) {
+                  setState(() => _isEdgeTouch = false);
+                }
               },
               onPointerCancel: (_) {
                 _activePointers = math.max(0, _activePointers - 1);
+                if (_activePointers == 0 && _isEdgeTouch) {
+                  setState(() => _isEdgeTouch = false);
+                }
               },
               child: InteractiveViewer(
                 transformationController: _transformationController,
@@ -2083,8 +2143,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 minScale: 0.15,
                 maxScale: 3.5,
                 constrained: false,
-                // When dragging a node, disable pan to eliminate gesture conflict
-                panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode,
+                // When dragging a node or touching near screen edges (system back gesture zone), disable pan
+                panEnabled: (_activeTool == 'pan' || _activeTool == 'select') && !_isDraggingNode && !_isEdgeTouch,
                 child: GestureDetector(
                   onTapUp: (details) => _handleCanvasTap(details.localPosition),
                   onDoubleTapDown: (details) {
@@ -2452,8 +2512,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Interactive Live Minimap Navigator
   Widget _buildMinimap(bool isDark) {
