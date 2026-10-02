@@ -1068,7 +1068,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           // In-Note Find & Replace Trigger
           IconButton(
             icon: TackIcon(
-              _isSearching ? TackIcons.close : TackIcons.searchSvg,
+              _isSearching ? TackIcons.close : TackIcons.search,
               size: 20,
               color: _isSearching
                   ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)

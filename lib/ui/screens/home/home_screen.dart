@@ -16,11 +16,11 @@ import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/sticky_note_card.dart';
-import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
+import '../../components/feedback/tack_toast.dart';
 import '../../components/dialogs_sheets/note_action_sheet.dart';
 
 /// Main Home Dashboard Screen for Tack.
@@ -115,11 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (text == null || text.isEmpty) {
-      _showClipboardFeedbackSnackBar(
-        isDark: isDark,
+      TackToast.show(
+        context,
+        message: 'Clipboard is empty',
         icon: TackIcons.clipboard,
         iconColor: AppColors.accentAmber,
-        message: 'Clipboard is empty',
+        bottomMargin: 88,
       );
       return;
     }
@@ -128,121 +129,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Rule 1: Do not add individual numbers (e.g. standalone numbers)
     if (WorkspaceProvider.isIndividualNumber(text)) {
-      _showClipboardFeedbackSnackBar(
-        isDark: isDark,
+      TackToast.show(
+        context,
+        message: 'Numbers are skipped',
         icon: TackIcons.close,
         iconColor: AppColors.error,
-        message: 'Numbers are skipped',
+        bottomMargin: 88,
       );
       return;
     }
 
     // Rule 2: Do not add duplicates (if added once, don't add again)
     if (workspace.isClipboardDuplicate(text)) {
-      _showClipboardFeedbackSnackBar(
-        isDark: isDark,
+      TackToast.show(
+        context,
+        message: 'Already in clipboard',
         icon: TackIcons.checkCircle,
         iconColor: AppColors.accentAmber,
-        message: 'Already in clipboard',
+        bottomMargin: 88,
       );
       return;
     }
 
     final item = await workspace.saveClipboardSnippet(text);
     if (mounted && item != null) {
-      _showClipboardFeedbackSnackBar(
-        isDark: isDark,
+      TackToast.show(
+        context,
+        message: 'Saved to clips',
         icon: TackIcons.checkCircle,
         iconColor: AppColors.success,
-        message: 'Saved to clips',
-        action: GestureDetector(
-          onTap: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            widget.onOpenItem?.call(item);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.accentAmber.withValues(alpha: isDark ? 0.25 : 0.2),
-              borderRadius: AppSpacing.roundedPill,
-            ),
-            child: Text(
-              'Open',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                color: isDark ? AppColors.pastelAmberLight : AppColors.pastelAmberDark,
-                fontWeight: FontWeight.w700,
-                fontSize: 11.5,
-              ),
-            ),
-          ),
-        ),
+        actionLabel: 'Open',
+        onAction: () => widget.onOpenItem?.call(item),
+        bottomMargin: 88,
       );
     }
-  }
-
-  void _showClipboardFeedbackSnackBar({
-    required bool isDark,
-    required IconData icon,
-    required Color iconColor,
-    required String message,
-    Widget? action,
-  }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(side: BorderSide.none),
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
-        padding: EdgeInsets.zero,
-        duration: const Duration(milliseconds: 1800),
-        content: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              borderRadius: AppSpacing.roundedPill,
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.4)
-                      : const Color(0xFF191A23).withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TackIcon(icon, size: 16, color: iconColor),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    message,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
-                if (action != null) ...[
-                  const SizedBox(width: 10),
-                  action,
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   void _handleBottomNavTap(int index) {
@@ -417,47 +337,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // 3. Main Notes Feed: Neo-Pop Grid Feed with scroll listener
+              // 3. Main Notes Feed: Neo-Pop Grid Feed
               Expanded(
-                child: NotificationListener<UserScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.direction == ScrollDirection.reverse) {
-                      if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 4) {
-                        setState(() => _isBarsVisible = false);
-                      }
-                    } else if (notification.direction == ScrollDirection.forward) {
-                      if (!_isBarsVisible) {
-                        setState(() => _isBarsVisible = true);
-                      }
-                    }
-                    return false;
-                  },
-                  child: workspace.isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : items.isEmpty
-                          ? _buildEmptyState(workspace)
-                          : (workspace.selectedCategory == ItemType.clipboard
-                              ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
-                              : _buildNeoGridFeedView(items)),
-                ),
+                child: workspace.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : items.isEmpty
+                        ? _buildEmptyState(workspace)
+                        : _buildNeoGridFeedView(items),
               ),
             ],
           ),
-
-          // Floating Bottom Popup Dock for Clipboard Category
-          if (workspace.selectedCategory == ItemType.clipboard)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              left: AppSpacing.lg,
-              right: AppSpacing.lg,
-              bottom: _isBarsVisible ? (76 + MediaQuery.paddingOf(context).bottom) : -120,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: _isBarsVisible ? 1.0 : 0.0,
-                child: _buildClipboardBottomDock(isDark),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: AnimatedSlide(
@@ -478,145 +367,6 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
-  /// Floating bottom dock for quick paste when viewing Clipboard category
-  Widget _buildClipboardBottomDock(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF13141B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFF191A23),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.6)
-                : const Color(0xFF191A23).withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _pasteFromClipboard,
-          borderRadius: BorderRadius.circular(18),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.accentAmber.withValues(alpha: 0.35),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Center(
-                    child: TackIcon(
-                      TackIcons.clipboard,
-                      size: 20,
-                      color: AppColors.accentAmber,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Save from Clipboard',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Tap to import copied snippet',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentAmber,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accentAmber.withValues(alpha: 0.35),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TackIcon(
-                        TackIcons.pasteSvg,
-                        size: 14,
-                        color: Color(0xFF191A23),
-                      ),
-                      SizedBox(width: 5),
-                      Text(
-                        'Paste',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF191A23),
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClipboardListView(List<ClipboardItem> clips, bool isDark) {
-    return ListView.builder(
-      controller: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: EdgeInsets.fromLTRB(
-        0,
-        AppSpacing.xs,
-        0,
-        140 + MediaQuery.paddingOf(context).bottom,
-      ),
-      itemCount: clips.length,
-      itemBuilder: (context, index) {
-        final item = clips[index];
-        return ClipboardCard(
-          key: ValueKey(item.id),
-          item: item,
-          onTap: () => widget.onOpenItem?.call(item),
-        );
-      },
-    );
-  }
 
   Widget _buildCard(BaseWorkspaceItem item) {
     if (item is StickyNote) {
@@ -634,9 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Staggered Neo-Pop Feed matching Reference Mockup (Offset columns instead of rigid matrix)
   Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
-    final isClipboard = context.watch<WorkspaceProvider>().selectedCategory == ItemType.clipboard;
     final leftItems = <BaseWorkspaceItem>[];
     final rightItems = <BaseWorkspaceItem>[];
 
@@ -652,11 +400,11 @@ class _HomeScreenState extends State<HomeScreen> {
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       clipBehavior: Clip.none,
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.md,
         AppSpacing.lg,
-        isClipboard ? 110 : 88,
+        88,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -5,13 +5,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapShader
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Shader
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
@@ -100,56 +93,5 @@ class TackQuickActionWidgetProvider : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.btn_plan_day, planDayPendingIntent)
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
-    }
-
-    private fun getCircularMascotBitmap(context: Context): Bitmap? {
-        return try {
-            val density = context.resources.displayMetrics.density
-            val sizePx = (48 * density).toInt().coerceAtLeast(96)
-            val output = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(output)
-
-            val center = sizePx / 2f
-            val outerRadius = sizePx / 2f
-
-            // 1. Crisp white outer circle / ring
-            val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.FILL
-            }
-            canvas.drawCircle(center, center, outerRadius, ringPaint)
-
-            // 2. Mascot icon rendered and clipped into inner circle
-            val strokePx = (2.5f * density).toInt().coerceAtLeast(4)
-            val innerSize = sizePx - (strokePx * 2)
-            val innerRadius = innerSize / 2f
-
-            val drawable: Drawable? = try {
-                context.packageManager.getApplicationIcon(context.packageName)
-            } catch (e: Exception) {
-                context.getDrawable(R.mipmap.ic_launcher)
-            }
-
-            if (drawable != null) {
-                val iconBitmap = Bitmap.createBitmap(innerSize, innerSize, Bitmap.Config.ARGB_8888)
-                val iconCanvas = Canvas(iconBitmap)
-                drawable.setBounds(0, 0, innerSize, innerSize)
-                drawable.draw(iconCanvas)
-
-                val shader = BitmapShader(iconBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-                val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    this.shader = shader
-                }
-
-                canvas.save()
-                canvas.translate(strokePx.toFloat(), strokePx.toFloat())
-                canvas.drawCircle(innerRadius, innerRadius, innerRadius, iconPaint)
-                canvas.restore()
-            }
-
-            output
-        } catch (e: Throwable) {
-            null
-        }
     }
 }

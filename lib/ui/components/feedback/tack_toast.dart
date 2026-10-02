@@ -37,15 +37,21 @@ class TackToast {
         duration: duration,
         content: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkCard : Colors.white,
               borderRadius: AppSpacing.roundedPill,
+              border: Border.all(
+                color: isDark
+                    ? AppColors.darkBorder
+                    : const Color(0xFF191A23).withValues(alpha: 0.08),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withValues(alpha: 0.45)
-                      : const Color(0xFF191A23).withValues(alpha: 0.08),
+                      ? Colors.black.withValues(alpha: 0.5)
+                      : const Color(0xFF191A23).withValues(alpha: 0.09),
                   blurRadius: 18,
                   offset: const Offset(0, 4),
                 ),
@@ -55,15 +61,29 @@ class TackToast {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (icon != null) ...[
-                  TackIcon(
-                    icon,
-                    size: 16,
-                    color: iconColor ??
-                        (isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: (iconColor ??
+                              (isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary))
+                          .withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: TackIcon(
+                        icon,
+                        size: 13,
+                        color: iconColor ??
+                            (isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 9),
                 ],
                 Flexible(
                   child: Text(
@@ -75,9 +95,9 @@ class TackToast {
                       color: isDark
                           ? AppColors.darkTextPrimary
                           : AppColors.lightTextPrimary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ),
@@ -90,18 +110,20 @@ class TackToast {
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.accentAmber.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(6),
+                        color: isDark
+                            ? AppColors.pastelAmberLight.withValues(alpha: 0.22)
+                            : const Color(0xFF191A23),
+                        borderRadius: AppSpacing.roundedPill,
                       ),
                       child: Text(
                         actionLabel,
                         style: TextStyle(
                           fontFamily: AppTypography.fontFamily,
-                          color: AppColors.accentAmber,
+                          color: isDark ? AppColors.pastelAmberLight : Colors.white,
                           fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                          fontSize: 11.5,
                           letterSpacing: -0.2,
                         ),
                       ),
