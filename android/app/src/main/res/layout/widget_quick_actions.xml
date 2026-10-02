@@ -5,10 +5,10 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_bg"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="12dp"
-    android:paddingBottom="12dp">
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp">
 
     <!-- Top Header: Mascot Badge + "Make Today's" Title -->
     <LinearLayout
@@ -19,30 +19,23 @@
         android:gravity="center_vertical"
         android:paddingStart="4dp"
         android:paddingEnd="4dp"
-        android:paddingBottom="10dp">
+        android:paddingBottom="12dp">
 
-        <!-- Mascot Icon Ring -->
-        <FrameLayout
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@drawable/widget_icon_ring"
-            android:padding="2dp">
-
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:src="@mipmap/ic_launcher"
-                android:contentDescription="@string/app_name" />
-        </FrameLayout>
+        <!-- Mascot Icon (Circular badge drawn dynamically in RemoteViews) -->
+        <ImageView
+            android:id="@+id/widget_mascot_icon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@string/app_name" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="10dp"
             android:text="Make Today's"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end" />
@@ -55,10 +48,10 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:background="@drawable/widget_card_bg"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
         <!-- Action Row 1: Worth remembering.... -->
         <LinearLayout
@@ -71,21 +64,21 @@
             android:clickable="true">
 
             <TextView
-                android:layout_width="22dp"
+                android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:text="+"
                 android:textColor="#191A23"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="8dp"
                 android:text="Worth\nremembering...."
                 android:textColor="#191A23"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 android:lineSpacingExtra="-2dp"
                 android:maxLines="2"
@@ -103,21 +96,21 @@
             android:clickable="true">
 
             <TextView
-                android:layout_width="22dp"
+                android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:text="+"
                 android:textColor="#191A23"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="8dp"
                 android:text="Done with your\nworks?"
                 android:textColor="#191A23"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 android:lineSpacingExtra="-2dp"
                 android:maxLines="2"
@@ -135,21 +128,21 @@
             android:clickable="true">
 
             <TextView
-                android:layout_width="22dp"
+                android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:text="+"
                 android:textColor="#191A23"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="8dp"
                 android:text="Plan your day"
                 android:textColor="#191A23"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end" />

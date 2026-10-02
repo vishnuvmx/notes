@@ -21,6 +21,7 @@ import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
 import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
+import '../../components/inputs/smart_markdown_formatter.dart';
 import '../../components/inputs/mermaid/mermaid_completion_bar.dart';
 import '../../components/dialogs_sheets/mermaid_template_sheet.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
@@ -1398,6 +1399,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       TextField(
                         controller: _contentController,
                         focusNode: _contentFocusNode,
+                        inputFormatters: const [
+                          SmartMarkdownContinuationFormatter(),
+                        ],
                         contentInsertionConfiguration: ContentInsertionConfiguration(
                           allowedMimeTypes: const <String>[
                             'image/png',

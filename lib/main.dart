@@ -354,12 +354,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       Navigator.of(context).push(
         _buildTactileRoute(WhiteboardCanvasScreen(item: item)),
       );
-    } else if (item is TextNote || item is StickyNote) {
-      Navigator.of(context).push(
-        _buildTactileRoute(NoteEditorScreen(item: item)),
-      );
-    } else if (item is ClipboardItem) {
-      // Open clipboard item in editor as well
+    } else {
       Navigator.of(context).push(
         _buildTactileRoute(NoteEditorScreen(item: item)),
       );

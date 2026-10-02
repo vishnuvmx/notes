@@ -102,10 +102,10 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
-        <!-- 2x2 Home Screen App Widget: "Make Today's" -->
+        <!-- 3x3 Home Screen App Widget: "Make Today's" -->
         <receiver
             android:name=".TackQuickActionWidgetProvider"
-            android:label="@string/widget_quick_actions_description"
+            android:label="@string/widget_empty_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
