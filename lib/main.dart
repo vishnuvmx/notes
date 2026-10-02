@@ -187,6 +187,54 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       return;
     }
 
+    // 5. 2x2 Widget Action 1: "+ Worth remembering...." -> Fresh memory capture note
+    if (data.action == 'WIDGET_WORTH_REMEMBERING') {
+      final workspace = context.read<WorkspaceProvider>();
+      final note = await workspace.createQuickItem(
+        title: 'Worth remembering',
+        type: ItemType.note,
+        paletteId: 'amber',
+        content: '',
+      );
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        _openItemDetail(context, note);
+      }
+      return;
+    }
+
+    // 6. 2x2 Widget Action 2: "+ Done with your works?" -> Interactive checklist note
+    if (data.action == 'WIDGET_DONE_WORKS') {
+      final workspace = context.read<WorkspaceProvider>();
+      final note = await workspace.createQuickItem(
+        title: 'Today\'s Works',
+        type: ItemType.note,
+        paletteId: 'lime',
+        content: '[ ] Task 1\n[ ] Task 2\n[ ] Wrap up review',
+      );
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        _openItemDetail(context, note);
+      }
+      return;
+    }
+
+    // 7. 2x2 Widget Action 3: "+ Plan your day" -> Daily plan with priorities and schedule
+    if (data.action == 'WIDGET_PLAN_DAY') {
+      final workspace = context.read<WorkspaceProvider>();
+      final note = await workspace.createQuickItem(
+        title: 'Plan for Today',
+        type: ItemType.note,
+        paletteId: 'peach',
+        content: '### Top Priorities\n1. \n2. \n3. \n\n### Schedule\n- Morning: \n- Afternoon: \n- Evening: ',
+      );
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        _openItemDetail(context, note);
+      }
+      return;
+    }
+
     final text = data.text.trim();
     final hasImage = data.imagePath != null && data.imagePath!.isNotEmpty;
 

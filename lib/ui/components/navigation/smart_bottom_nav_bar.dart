@@ -25,10 +25,10 @@ class SmartBottomNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final navItems = [
-      (icon: TackIcons.home as dynamic, label: 'Home', index: 0),
-      (icon: TackIcons.notesSvg as dynamic, label: 'Notes', index: 1),
-      (icon: TackIcons.whiteboardSvg as dynamic, label: 'Whiteboard', index: 3),
-      (icon: TackIcons.clipboard as dynamic, label: 'Clipboard', index: 4),
+      (icon: TackIcons.homeSvg, label: 'Home', index: 0),
+      (icon: TackIcons.notesSvg, label: 'Notes', index: 1),
+      (icon: TackIcons.whiteboardSvg, label: 'Whiteboard', index: 3),
+      (icon: TackIcons.clipboardSvg, label: 'Clipboard', index: 4),
     ];
 
     return ClipRect(

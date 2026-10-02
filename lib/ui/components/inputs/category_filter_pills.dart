@@ -72,7 +72,7 @@ class CategoryFilterPills extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? activeLime
-                        : (isDark ? AppColors.darkSurface : Colors.white),
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isSelected && isDark ? activeLime : borderColor,

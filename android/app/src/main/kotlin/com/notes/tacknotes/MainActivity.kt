@@ -195,6 +195,9 @@ class MainActivity : FlutterActivity() {
                             val shortcutAction = when (uri.path) {
                                 "/new_note" -> "NEW_NOTE"
                                 "/new_whiteboard" -> "NEW_WHITEBOARD"
+                                "/worth_remembering" -> "WIDGET_WORTH_REMEMBERING"
+                                "/done_works" -> "WIDGET_DONE_WORKS"
+                                "/plan_day" -> "WIDGET_PLAN_DAY"
                                 else -> null
                             }
                             if (shortcutAction != null) {

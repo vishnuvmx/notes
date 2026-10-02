@@ -9,8 +9,10 @@ class TackIcons {
   TackIcons._();
 
   // Custom App SVGs from /icons
+  static const String homeSvg = 'icons/icon-home.svg';
   static const String notesSvg = 'icons/icon-notes.svg';
   static const String whiteboardSvg = 'icons/icon-whiteboard.svg';
+  static const String clipboardSvg = 'icons/icon-clipboard.svg';
   static const String plusSvg = 'icons/icon-plus.svg';
   static const String selectSvg = 'icons/icon-select.svg';
   static const String handSvg = 'icons/icon-hand.svg';
@@ -111,10 +113,13 @@ class TackIcon extends StatelessWidget {
         (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF191A23));
 
     if (icon is String) {
+      // SVGs have a 24x24 bounding box with 16x16 actual icon art (4px padding all around).
+      // Scale by 1.5x so the visible icon glyph matches the target visual size (16 * 1.5 = 24).
+      final effectiveSvgSize = size * 1.5;
       return SvgPicture.asset(
         icon as String,
-        width: size,
-        height: size,
+        width: effectiveSvgSize,
+        height: effectiveSvgSize,
         colorFilter: ColorFilter.mode(effectiveColor, BlendMode.srcIn),
       );
     }

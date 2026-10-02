@@ -42,7 +42,10 @@ class IncomingTextData {
       action == 'OPEN_NOTE' ||
       action == 'QUICK_CAPTURE' ||
       action == 'NEW_NOTE' ||
-      action == 'NEW_WHITEBOARD';
+      action == 'NEW_WHITEBOARD' ||
+      action == 'WIDGET_WORTH_REMEMBERING' ||
+      action == 'WIDGET_DONE_WORKS' ||
+      action == 'WIDGET_PLAN_DAY';
 }
 
 /// Service handling incoming text intents from Android system integration

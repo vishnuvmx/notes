@@ -9,12 +9,14 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/sticky_note.dart';
+import '../../../domain/models/clipboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/sticky_note_card.dart';
+import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
@@ -92,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case ItemType.whiteboard:
         return 'Your Boards';
       case ItemType.clipboard:
-        return 'Your Saves';
+        return 'Clipboard';
       case ItemType.sticky:
         return 'Your Stickies';
     }
@@ -437,7 +439,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : items.isEmpty
                           ? _buildEmptyState(workspace)
-                          : _buildNeoGridFeedView(items),
+                          : (workspace.selectedCategory == ItemType.clipboard
+                              ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
+                              : _buildNeoGridFeedView(items)),
                 ),
               ),
             ],
@@ -592,6 +596,28 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildClipboardListView(List<ClipboardItem> clips, bool isDark) {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppSpacing.xs,
+        0,
+        140 + MediaQuery.paddingOf(context).bottom,
+      ),
+      itemCount: clips.length,
+      itemBuilder: (context, index) {
+        final item = clips[index];
+        return ClipboardCard(
+          key: ValueKey(item.id),
+          item: item,
+          onTap: () => widget.onOpenItem?.call(item),
+        );
+      },
     );
   }
 
