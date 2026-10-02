@@ -105,7 +105,7 @@
         <!-- 3x3 Home Screen App Widget: "Make Today's" -->
         <receiver
             android:name=".TackQuickActionWidgetProvider"
-            android:label="@string/widget_empty_label"
+            android:label="@string/widget_quick_tack_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

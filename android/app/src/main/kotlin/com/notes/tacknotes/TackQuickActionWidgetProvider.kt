@@ -44,12 +44,6 @@ class TackQuickActionWidgetProvider : AppWidgetProvider() {
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_quick_actions)
 
-        // Set rounded circular mascot icon
-        val mascotBitmap = getCircularMascotBitmap(context)
-        if (mascotBitmap != null) {
-            views.setImageViewBitmap(R.id.widget_mascot_icon, mascotBitmap)
-        }
-
         // 1. Root / Header tap launches main Tack dashboard
         val mainIntent = Intent(context, MainActivity::class.java).apply {
             action = Intent.ACTION_MAIN

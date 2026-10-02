@@ -62,7 +62,7 @@ class CategoryFilterPills extends StatelessWidget {
               final isSelected = tag.toLowerCase() == selectedTag.toLowerCase();
 
               return GestureDetector(
-                behavior: HitTestBehavior.opaque,
+                behavior: HitTestBehavior.translucent,
                 onTap: () {
                   HapticFeedback.selectionClick();
                   workspace.setSelectedTag(tag);

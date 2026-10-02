@@ -5,6 +5,7 @@
     <string name="shortcut_new_note_long">Create a New Note</string>
     <string name="shortcut_new_board_short">New Board</string>
     <string name="shortcut_new_board_long">Open Whiteboard Canvas</string>
-    <string name="widget_quick_actions_description">Make Today\'s Quick Actions</string>
+    <string name="widget_quick_tack_name">Quick Tack</string>
+    <string name="widget_quick_actions_description">Quick Tack: Make Today\'s Actions</string>
     <string name="widget_empty_label">&#x200B;</string>
 </resources>

@@ -31,6 +31,7 @@ class TackToast {
         elevation: 0,
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(side: BorderSide.none),
         margin: EdgeInsets.fromLTRB(24, 0, 24, bottomMargin),
         padding: EdgeInsets.zero,
         duration: duration,

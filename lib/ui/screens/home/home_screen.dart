@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getHeadlineTitle(ItemType? category) {
     switch (category) {
       case null:
-        return 'Your Notes';
+        return 'Your Files';
       case ItemType.note:
         return 'Your Notes';
       case ItemType.whiteboard:
@@ -194,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(side: BorderSide.none),
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
         padding: EdgeInsets.zero,
         duration: const Duration(milliseconds: 1800),
@@ -650,9 +651,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return SingleChildScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      clipBehavior: Clip.none,
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.xs,
+        AppSpacing.md,
         AppSpacing.lg,
         isClipboard ? 110 : 88,
       ),

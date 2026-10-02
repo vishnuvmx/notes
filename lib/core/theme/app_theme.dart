@@ -161,7 +161,7 @@ class AppTheme {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          side: BorderSide.none,
         ),
         elevation: 8,
         actionTextColor: AppColors.accentAmber,
@@ -321,7 +321,7 @@ class AppTheme {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          side: BorderSide.none,
         ),
         elevation: 8,
         actionTextColor: AppColors.accentAmber,
