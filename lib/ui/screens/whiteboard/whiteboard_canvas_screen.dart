@@ -111,7 +111,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   bool _isExporting = false;
   int _activePointers = 0;
   bool _isEdgeTouch = false;
-  late WorkspaceProvider _workspaceProvider;
+  WorkspaceProvider? _workspaceProvider;
 
   @visibleForTesting
   List<CanvasNode> get nodes => _nodes;
@@ -196,7 +196,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           x: (n.x + shiftX).clamp(0.0, _canvasSize - n.width),
           y: (n.y + shiftY).clamp(0.0, _canvasSize - n.height),
         )).toList();
-        _saveCanvasState();
       }
     }
 
@@ -219,6 +218,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _fitCanvasToContent();
+        _saveCanvasState();
       }
     });
   }
@@ -279,7 +279,10 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       edges: _edges,
       updatedAt: DateTime.now(),
     );
-    _workspaceProvider.saveItem(updated);
+    try {
+      final provider = _workspaceProvider ?? (mounted ? context.read<WorkspaceProvider>() : null);
+      provider?.saveItem(updated);
+    } catch (_) {}
   }
 
   bool _canPopWhiteboard() {
@@ -1106,16 +1109,22 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       if (from == null || to == null) continue;
 
       final ports = _resolveEdgePorts(edge, from, to);
-      final start = ports.start;
-      final end = ports.end;
+      final waypoints = _CanvasEdgesPainter.computeWaypoints(
+        ports.start,
+        edge.fromPort,
+        ports.end,
+        edge.toPort,
+      );
 
-      final midY = (start.dy + end.dy) / 2;
-      final d1 = _distToSegment(localPos, start, Offset(start.dx, midY));
-      final d2 = _distToSegment(localPos, Offset(start.dx, midY), Offset(end.dx, midY));
-      final d3 = _distToSegment(localPos, Offset(end.dx, midY), end);
+      bool hit = false;
+      for (int i = 0; i < waypoints.length - 1; i++) {
+        if (_distToSegment(localPos, waypoints[i], waypoints[i + 1]) <= 22.0) {
+          hit = true;
+          break;
+        }
+      }
 
-      final minDist = math.min(d1, math.min(d2, d3));
-      if (minDist <= 20.0) {
+      if (hit) {
         HapticFeedback.selectionClick();
         setState(() {
           _selectedEdgeId = edge.id;
@@ -2361,13 +2370,49 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     if (from == null || to == null) return const SizedBox.shrink();
 
     final ports = _resolveEdgePorts(edge, from, to);
-    final midX = (ports.start.dx + ports.end.dx) / 2;
-    final midY = (ports.start.dy + ports.end.dy) / 2;
+    final waypoints = _CanvasEdgesPainter.computeWaypoints(
+      ports.start,
+      edge.fromPort,
+      ports.end,
+      edge.toPort,
+    );
+
+    Offset connectorCenter;
+    if (waypoints.length >= 4) {
+      final p1 = waypoints[1];
+      final p2 = waypoints[2];
+      connectorCenter = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+    } else if (waypoints.length == 3) {
+      final seg1 = (waypoints[1] - waypoints[0]).distance;
+      final seg2 = (waypoints[2] - waypoints[1]).distance;
+      final half = (seg1 + seg2) / 2;
+      if (half <= seg1 && seg1 > 0) {
+        final t = half / seg1;
+        connectorCenter = Offset.lerp(waypoints[0], waypoints[1], t)!;
+      } else if (seg2 > 0) {
+        final t = (half - seg1) / seg2;
+        connectorCenter = Offset.lerp(waypoints[1], waypoints[2], t)!;
+      } else {
+        connectorCenter = waypoints[1];
+      }
+    } else if (waypoints.length == 2) {
+      connectorCenter = Offset(
+        (waypoints[0].dx + waypoints[1].dx) / 2,
+        (waypoints[0].dy + waypoints[1].dy) / 2,
+      );
+    } else {
+      connectorCenter = Offset(
+        (ports.start.dx + ports.end.dx) / 2,
+        (ports.start.dy + ports.end.dy) / 2,
+      );
+    }
 
     return Positioned(
-      left: (midX - 70).clamp(8.0, _canvasSize - 160.0),
-      top: (midY - 45).clamp(8.0, _canvasSize - 60.0),
-      child: TweenAnimationBuilder<double>(
+      left: connectorCenter.dx.clamp(80.0, _canvasSize - 80.0),
+      top: (connectorCenter.dy - 32).clamp(8.0, _canvasSize - 40.0),
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutBack,
@@ -2512,6 +2557,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -3277,12 +3323,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final capsuleTop = placeBelow
         ? (node.y + node.height + 8).clamp(8.0, _canvasSize - 100.0)
         : (node.y - 72).clamp(8.0, _canvasSize - 100.0);
-    final capsuleLeft = (node.x + (node.width / 2) - 100).clamp(8.0, _canvasSize - 100.0);
+    final capsuleCenterX = (node.x + (node.width / 2)).clamp(100.0, _canvasSize - 100.0);
 
     return Positioned(
-      left: capsuleLeft,
+      left: capsuleCenterX,
       top: capsuleTop,
-      child: TweenAnimationBuilder<double>(
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, 0.0),
+        child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutBack,
@@ -3516,6 +3564,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             ),
           ),
         ),
+      ),
       ),
     );
   }

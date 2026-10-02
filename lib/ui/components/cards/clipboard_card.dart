@@ -126,10 +126,6 @@ class _ClipboardCardState extends State<ClipboardCard> {
                                   decoration: BoxDecoration(
                                     color: isDark ? AppColors.darkCard : Colors.white,
                                     borderRadius: AppSpacing.roundedPill,
-                                    border: Border.all(
-                                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                                      width: 1,
-                                    ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: isDark

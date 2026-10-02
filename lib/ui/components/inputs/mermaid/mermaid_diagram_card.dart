@@ -53,12 +53,16 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
   void _openInWhiteboard(BuildContext context) {
     HapticFeedback.lightImpact();
-    final whiteboardItem = _convertToWhiteboardItem();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WhiteboardCanvasScreen(item: whiteboardItem),
-      ),
-    );
+    try {
+      final whiteboardItem = _convertToWhiteboardItem();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => WhiteboardCanvasScreen(item: whiteboardItem),
+        ),
+      );
+    } catch (e, stack) {
+      debugPrint('Error opening diagram in whiteboard: $e\n$stack');
+    }
   }
 
   WhiteboardCanvasItem _convertToWhiteboardItem() {
@@ -77,6 +81,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
     if (_parsed.type == MermaidDiagramType.flowchart && _parsed.nodes.isNotEmpty) {
       final layout = _computeFlowchartLayout(_parsed, defaultNodeW, defaultNodeH, hGap, vGap);
+      final startX = (3000.0 - layout.totalSize.width / 2).clamp(200.0, 5000.0);
+      final startY = (3000.0 - layout.totalSize.height / 2).clamp(200.0, 5000.0);
 
       for (final n in _parsed.nodes) {
         final pos = layout.positions[n.id] ?? Offset.zero;
@@ -113,8 +119,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           id: n.id,
           text: n.label,
           shapeType: shapeType,
-          x: pos.dx + 200,
-          y: pos.dy + 200,
+          x: pos.dx + startX,
+          y: pos.dy + startY,
           width: size.width,
           height: size.height,
           paletteId: nodePalette,
@@ -147,8 +153,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           id: 'part_$i',
           text: name,
           shapeType: CanvasNodeType.process,
-          x: 200.0 + (i * 240.0),
-          y: 200.0,
+          x: 2400.0 + (i * 240.0),
+          y: 2800.0,
           width: 140,
           height: 56,
           paletteId: 'lavender',
@@ -180,8 +186,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           id: 'tl_$i',
           text: text,
           shapeType: CanvasNodeType.process,
-          x: 200.0 + (i * 220.0),
-          y: 300.0,
+          x: 2400.0 + (i * 220.0),
+          y: 2900.0,
           width: 160,
           height: 72,
           paletteId: 'cyan',
@@ -202,8 +208,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
       for (int i = 0; i < _parsed.pieSlices.length; i++) {
         final slice = _parsed.pieSlices[i];
         final angle = (i / _parsed.pieSlices.length) * 2 * math.pi;
-        final x = 400.0 + 200.0 * math.cos(angle);
-        final y = 400.0 + 200.0 * math.sin(angle);
+        final x = 3000.0 + 200.0 * math.cos(angle);
+        final y = 3000.0 + 200.0 * math.sin(angle);
         nodes.add(CanvasNode(
           id: 'pie_$i',
           text: '${slice.label}\n${slice.value.toStringAsFixed(1)}',
@@ -220,8 +226,8 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
         id: 'node_0',
         text: _parsed.title ?? 'Diagram',
         shapeType: CanvasNodeType.process,
-        x: 300,
-        y: 300,
+        x: 2900,
+        y: 2900,
         width: 160,
         height: 70,
         paletteId: 'peach',
@@ -410,7 +416,10 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     nodeLayer[nodes.first.id] = 0;
   }
 
-  while (queue.isNotEmpty) {
+  int safetyCounter = 0;
+  final maxSteps = math.max(nodes.length * 4, 30);
+  while (queue.isNotEmpty && safetyCounter < maxSteps) {
+    safetyCounter++;
     final curr = queue.removeAt(0);
     final currL = nodeLayer[curr] ?? 0;
 
