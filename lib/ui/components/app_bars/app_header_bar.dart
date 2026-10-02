@@ -17,6 +17,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSearching;
   final VoidCallback onQuickCreate;
   final String userName;
+  final bool primary;
 
   const AppHeaderBar({
     super.key,
@@ -25,6 +26,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isSearching,
     required this.onQuickCreate,
     this.userName = 'friend',
+    this.primary = true,
   });
 
   @override
@@ -41,6 +43,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
 
     return AppBar(
+      primary: primary,
       elevation: 0,
       scrolledUnderElevation: 0,
       backgroundColor: Colors.transparent,

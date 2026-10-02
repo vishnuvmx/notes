@@ -1395,9 +1395,25 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
     edgesPainter.paint(canvas, Size(_canvasSize, _canvasSize));
 
+    // Preload image assets for any image nodes
+    final loadedImages = <String, ui.Image>{};
+    for (final node in _nodes) {
+      if (node.shapeType == CanvasNodeType.image && node.imagePath != null && node.imagePath!.isNotEmpty) {
+        final file = File(node.imagePath!);
+        if (await file.exists()) {
+          try {
+            final bytes = await file.readAsBytes();
+            final codec = await ui.instantiateImageCodec(bytes);
+            final frame = await codec.getNextFrame();
+            loadedImages[node.id] = frame.image;
+          } catch (_) {}
+        }
+      }
+    }
+
     // Draw each flowchart node
     for (final node in _nodes) {
-      _drawNodeOnCanvas(canvas, node, isDark);
+      _drawNodeOnCanvas(canvas, node, isDark, loadedImages[node.id]);
     }
 
     canvas.restore();
@@ -1411,7 +1427,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     return byteData.buffer.asUint8List();
   }
 
-  void _drawNodeOnCanvas(Canvas canvas, CanvasNode node, bool isDark) {
+  void _drawNodeOnCanvas(Canvas canvas, CanvasNode node, bool isDark, [ui.Image? nodeImage]) {
     final palette = AppColors.getPaletteById(node.paletteId);
     final Color fillColor = isDark ? palette.darkColor.withValues(alpha: 0.6) : palette.softBackground;
     final Color strokeColor = palette.lightColor;
@@ -1458,6 +1474,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
         canvas.drawRRect(rrect, fillPaint);
         canvas.drawRRect(rrect, strokePaint);
+        // Draw top tape accent for sticky note node
+        final tapePaint = Paint()
+          ..color = strokeColor.withValues(alpha: 0.45)
+          ..style = PaintingStyle.fill;
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(node.x + node.width / 2, node.y + 4), width: 32, height: 6),
+            const Radius.circular(3),
+          ),
+          tapePaint,
+        );
         break;
 
       case CanvasNodeType.connector:
@@ -1470,8 +1497,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
       case CanvasNodeType.image:
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(10));
-        canvas.drawRRect(rrect, fillPaint);
-        canvas.drawRRect(rrect, strokePaint);
+        if (nodeImage != null) {
+          canvas.save();
+          canvas.clipRRect(rrect);
+          final src = Rect.fromLTWH(0, 0, nodeImage.width.toDouble(), nodeImage.height.toDouble());
+          canvas.drawImageRect(nodeImage, src, rect, Paint());
+          canvas.restore();
+          canvas.drawRRect(rrect, strokePaint);
+        } else {
+          canvas.drawRRect(rrect, fillPaint);
+          canvas.drawRRect(rrect, strokePaint);
+        }
         break;
 
       case CanvasNodeType.process:

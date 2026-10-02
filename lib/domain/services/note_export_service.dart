@@ -1,10 +1,16 @@
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/date_formatter.dart';
 
 /// Reusable service for note exporting, formatting, PDF generation, and clipboard operations.
 class NoteExportService {
@@ -307,10 +313,31 @@ class NoteExportService {
       }
       // Standard paragraph
       else {
-        // Strip images for PDF or render caption
+        // Render embedded images or fallback caption for PDF
         if (trimmed.startsWith('![') && trimmed.contains('](')) {
-          final altMatch = RegExp(r'!\[(.*?)\]').firstMatch(trimmed);
-          final altText = altMatch?.group(1) ?? 'Image Attachment';
+          final match = RegExp(r'!\[(.*?)\]\((.*?)\)').firstMatch(trimmed);
+          final altText = match?.group(1) ?? 'Image Attachment';
+          final imgPath = match?.group(2) ?? '';
+          pw.Widget? imgWidget;
+
+          if (imgPath.isNotEmpty) {
+            try {
+              final file = File(imgPath);
+              if (file.existsSync()) {
+                final bytes = file.readAsBytesSync();
+                imgWidget = pw.ClipRRect(
+                  horizontalRadius: 6,
+                  verticalRadius: 6,
+                  child: pw.Image(
+                    pw.MemoryImage(bytes),
+                    height: 180,
+                    fit: pw.BoxFit.contain,
+                  ),
+                );
+              }
+            } catch (_) {}
+          }
+
           widgets.add(
             pw.Container(
               margin: const pw.EdgeInsets.symmetric(vertical: 6),
@@ -320,12 +347,13 @@ class NoteExportService {
                 borderRadius: pw.BorderRadius.circular(6),
                 border: pw.Border.all(color: borderColor),
               ),
-              child: pw.Row(
-                children: [
-                  pw.Text('📷 ', style: const pw.TextStyle(fontSize: 10)),
-                  pw.Text(altText, style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic, color: textMuted)),
-                ],
-              ),
+              child: imgWidget ??
+                  pw.Row(
+                    children: [
+                      pw.Text('📷 ', style: const pw.TextStyle(fontSize: 10)),
+                      pw.Text(altText, style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic, color: textMuted)),
+                    ],
+                  ),
             ),
           );
         } else {
@@ -430,6 +458,259 @@ class NoteExportService {
         paletteId: paletteId,
       ),
       name: '$safeName.pdf',
+    );
+  }
+
+  /// Generates high-resolution PNG image bytes of a sticky note or standard note.
+  static Future<Uint8List> generateImageBytes({
+    required String title,
+    required String content,
+    List<String> tags = const [],
+    String paletteId = 'amber',
+    bool isSticky = false,
+    bool isDark = false,
+  }) async {
+    const double cardWidth = 600.0;
+    const double padding = 36.0;
+    const double contentWidth = cardWidth - (padding * 2);
+
+    final palette = AppColors.getPaletteById(paletteId);
+
+    // Color definitions
+    final Color bgColor = isSticky
+        ? (isDark ? palette.darkColor : palette.lightColor)
+        : (isDark ? const Color(0xFF1E1F24) : Colors.white);
+
+    final Color titleColor = isSticky
+        ? (isDark ? Colors.white : const Color(0xFF191A23))
+        : (isDark ? const Color(0xFFF4F4F6) : const Color(0xFF191A23));
+
+    final Color bodyColor = isSticky
+        ? (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3139))
+        : (isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151));
+
+    final Color tagColor = palette.lightColor;
+
+    // 1. Prepare Title Painter
+    final displayTitle = title.trim().isEmpty
+        ? (isSticky ? 'Sticky Note' : 'Untitled Note')
+        : title.trim();
+
+    final titlePainter = TextPainter(
+      text: TextSpan(
+        text: displayTitle,
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: isSticky ? 24 : 26,
+          fontWeight: FontWeight.w800,
+          color: titleColor,
+          letterSpacing: -0.5,
+          height: 1.25,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 3,
+      ellipsis: '...',
+    )..layout(maxWidth: contentWidth);
+
+    // 2. Prepare Content (clean basic markdown tokens for plain text display)
+    final cleanContent = content
+        .replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '[Image]')
+        .replaceAll(RegExp(r'\[[ xX]\]'), '•')
+        .replaceAll('**', '')
+        .replaceAll('__', '')
+        .replaceAll('`', '')
+        .trim();
+
+    final contentPainter = TextPainter(
+      text: TextSpan(
+        text: cleanContent.isEmpty ? '(No content)' : cleanContent,
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: isSticky ? 16 : 15,
+          fontWeight: FontWeight.w500,
+          color: bodyColor,
+          letterSpacing: -0.2,
+          height: 1.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: contentWidth);
+
+    // 3. Compute Card Height
+    double totalHeight = padding; // Top padding
+    if (isSticky) {
+      totalHeight += 24; // Extra space for top tape pin
+    } else {
+      totalHeight += 12; // Top accent bar
+    }
+
+    totalHeight += titlePainter.height + 14;
+
+    if (tags.isNotEmpty && !isSticky) {
+      totalHeight += 32; // Tag chips row
+    }
+
+    totalHeight += contentPainter.height + 28;
+    totalHeight += 32; // Footer row
+    totalHeight += padding; // Bottom padding
+
+    // Enforce reasonable minimum bounds
+    final minHeight = isSticky ? 440.0 : 380.0;
+    totalHeight = math.max(totalHeight, minHeight);
+
+    // 4. Paint to Canvas
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, cardWidth, totalHeight));
+
+    // Outer Background / Card Shape
+    final cardRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, cardWidth, totalHeight),
+      const Radius.circular(24),
+    );
+
+    // Card Fill
+    final bgPaint = Paint()..color = bgColor..style = PaintingStyle.fill;
+    canvas.drawRRect(cardRect, bgPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..color = isSticky
+          ? (isDark ? Colors.white24 : const Color(0xFF191A23).withValues(alpha: 0.15))
+          : (isDark ? const Color(0xFF2D3748) : const Color(0xFFE2E8F0))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(cardRect, borderPaint);
+
+    double currentY = padding;
+
+    // Header decorations
+    if (isSticky) {
+      // Tape / Pin at top center
+      final tapePaint = Paint()
+        ..color = (isDark ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF191A23).withValues(alpha: 0.18))
+        ..style = PaintingStyle.fill;
+      final tapeRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cardWidth / 2, currentY), width: 72, height: 16),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(tapeRect, tapePaint);
+      currentY += 20;
+    } else {
+      // Top accent bar
+      final accentPaint = Paint()..color = tagColor..style = PaintingStyle.fill;
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(padding, currentY, 48, 5),
+          topLeft: const Radius.circular(3),
+          topRight: const Radius.circular(3),
+          bottomLeft: const Radius.circular(3),
+          bottomRight: const Radius.circular(3),
+        ),
+        accentPaint,
+      );
+      currentY += 16;
+    }
+
+    // Draw Title
+    titlePainter.paint(canvas, Offset(padding, currentY));
+    currentY += titlePainter.height + 14;
+
+    // Draw Tags (if regular note)
+    if (tags.isNotEmpty && !isSticky) {
+      double tagX = padding;
+      for (final tag in tags.take(4)) {
+        final tagText = tag.startsWith('#') ? tag : '#$tag';
+        final tagPainter = TextPainter(
+          text: TextSpan(
+            text: tagText,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: tagColor,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final tagBgRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(tagX, currentY, tagPainter.width + 16, 24),
+          const Radius.circular(8),
+        );
+        final tagBgPaint = Paint()
+          ..color = tagColor.withValues(alpha: 0.16)
+          ..style = PaintingStyle.fill;
+        canvas.drawRRect(tagBgRect, tagBgPaint);
+        tagPainter.paint(canvas, Offset(tagX + 8, currentY + 4));
+        tagX += tagPainter.width + 24;
+      }
+      currentY += 32;
+    }
+
+    // Draw Content
+    contentPainter.paint(canvas, Offset(padding, currentY));
+
+    // Draw Footer at bottom
+    final footerY = totalHeight - padding - 16;
+    final dateStr = DateFormatter.formatTimestamp(DateTime.now());
+    final footerPainter = TextPainter(
+      text: TextSpan(
+        text: '$dateStr  •  Tack ${isSticky ? "Sticky Note" : "Notes"}',
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: bodyColor.withValues(alpha: 0.65),
+          letterSpacing: -0.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    footerPainter.paint(canvas, Offset(padding, footerY));
+
+    // End Recording & Export to PNG Bytes
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(cardWidth.toInt(), totalHeight.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) {
+      throw Exception('Failed to generate PNG image bytes');
+    }
+    return byteData.buffer.asUint8List();
+  }
+
+  /// Exports note or sticky note as a PNG image and opens the system share sheet.
+  static Future<void> exportImage({
+    required String title,
+    required String content,
+    List<String> tags = const [],
+    String paletteId = 'amber',
+    bool isSticky = false,
+    bool isDark = false,
+  }) async {
+    final imageBytes = await generateImageBytes(
+      title: title,
+      content: content,
+      tags: tags,
+      paletteId: paletteId,
+      isSticky: isSticky,
+      isDark: isDark,
+    );
+
+    final tempDir = await getTemporaryDirectory();
+    final safeName = (title.trim().isEmpty ? (isSticky ? 'sticky_note' : 'note') : title.trim())
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final filePath = '${tempDir.path}/tack_${safeName}_$timestamp.png';
+    final file = File(filePath);
+    await file.writeAsBytes(imageBytes);
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        text: title.trim().isNotEmpty ? title : 'Exported from Tack',
+      ),
     );
   }
 }

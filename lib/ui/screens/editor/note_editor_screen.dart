@@ -919,6 +919,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ),
             const Divider(),
             ListTile(
+              leading: const TackIcon(TackIcons.photo, size: 22),
+              title: Text(widget.item is StickyNote ? 'Export Sticky as Image (PNG)' : 'Export as Image (PNG)'),
+              subtitle: const Text('High-resolution shareable card image'),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                await NoteExportService.exportImage(
+                  title: title,
+                  content: content,
+                  tags: _tags,
+                  paletteId: _paletteId,
+                  isSticky: widget.item is StickyNote,
+                  isDark: isDark,
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
               leading: const TackIcon(TackIcons.exportData, size: 22),
               title: const Text('Export as PDF Document'),
               subtitle: const Text('Formatted stationery PDF layout'),

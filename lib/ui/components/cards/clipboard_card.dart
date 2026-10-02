@@ -6,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/clipboard_item.dart';
+import '../feedback/tack_toast.dart';
 
 /// Clean Clipboard Card matching reference aesthetics.
 /// Features iOS-style press depression, haptics, and instant copy action.
@@ -111,51 +112,12 @@ class _ClipboardCardState extends State<ClipboardCard> {
                         onPressed: () {
                           HapticFeedback.mediumImpact();
                           Clipboard.setData(ClipboardData(text: widget.item.clipText));
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              elevation: 0,
-                              backgroundColor: Colors.transparent,
-                              behavior: SnackBarBehavior.floating,
-                              margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
-                              padding: EdgeInsets.zero,
-                              duration: const Duration(milliseconds: 1600),
-                              content: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? AppColors.darkCard : Colors.white,
-                                    borderRadius: AppSpacing.roundedPill,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isDark
-                                            ? Colors.black.withValues(alpha: 0.4)
-                                            : const Color(0xFF191A23).withValues(alpha: 0.08),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const TackIcon(TackIcons.checkCircle, size: 16, color: AppColors.success),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Copied to clipboard',
-                                        style: TextStyle(
-                                          fontFamily: AppTypography.fontFamily,
-                                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
+                          TackToast.show(
+                            context,
+                            message: 'Copied to clipboard',
+                            icon: TackIcons.checkCircle,
+                            iconColor: AppColors.success,
+                            bottomMargin: 88,
                           );
                         },
                       ),

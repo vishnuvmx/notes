@@ -210,6 +210,25 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
               },
             ),
 
+            // Action: Export as Image (PNG)
+            _buildActionTile(
+              title: widget.item is StickyNote ? 'Export Sticky as Image (PNG)' : 'Export as Image (PNG)',
+              isDark: isDark,
+              onTap: () {
+                Navigator.of(context).pop();
+                final content = _getItemContent();
+                final tags = widget.item is TextNote ? (widget.item as TextNote).tags : <String>[];
+                NoteExportService.exportImage(
+                  title: title,
+                  content: content,
+                  tags: tags,
+                  paletteId: widget.item.paletteId,
+                  isSticky: widget.item is StickyNote,
+                  isDark: isDark,
+                );
+              },
+            ),
+
             const Divider(height: 16),
 
             // Action: Delete (Move to Trash)

@@ -16,6 +16,7 @@ import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/sticky_note_card.dart';
+import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../../components/navigation/app_nav_drawer.dart';
@@ -67,19 +68,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
+    if (_isSearching) {
+      if (!_isBarsVisible) setState(() => _isBarsVisible = true);
+      return;
+    }
     if (!_scrollController.hasClients) return;
     final offset = _scrollController.offset;
     final delta = offset - _lastScrollOffset;
 
-    if (offset <= 8) {
+    if (offset <= 12) {
       if (!_isBarsVisible) {
         setState(() => _isBarsVisible = true);
       }
     } else if (delta > 3 && _isBarsVisible) {
-      // User is scrolling down: hide navbar immediately along the motion
+      // User is scrolling down: hide navbar and top bar along the motion
       setState(() => _isBarsVisible = false);
     } else if (delta < -3 && !_isBarsVisible) {
-      // User is scrolling up: restore navbar immediately
+      // User is scrolling up: restore navbar and top bar immediately
       setState(() => _isBarsVisible = true);
     }
     _lastScrollOffset = offset;
@@ -112,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (!mounted) return;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (text == null || text.isEmpty) {
       TackToast.show(
@@ -242,130 +246,304 @@ class _HomeScreenState extends State<HomeScreen> {
         key: _scaffoldKey,
         drawerEnableOpenDragGesture: false,
         extendBody: true,
-      drawer: AppNavDrawer(
-        onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
-        onOpenArchive: widget.onOpenArchive,
-        onOpenTrash: widget.onOpenTrash,
-        onOpenSettings: widget.onOpenSettings,
-      ),
-      appBar: AppHeaderBar(
-        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-        onToggleSearch: () {
-          setState(() {
-            _isSearching = !_isSearching;
-            if (!_isSearching) {
-              workspace.setSearchQuery('');
-            }
-          });
-        },
-        isSearching: _isSearching,
-        onQuickCreate: () => _openCreateSheet(),
-      ),
-      body: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Collapsible Top Section ("Your Files" / "Your Notes" + Folder Dropdown + Filter Pills)
-              ClipRect(
-                child: AnimatedAlign(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeInOutCubic,
-                  alignment: Alignment.bottomCenter,
-                  heightFactor: _isBarsVisible ? 1.0 : 0.0,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
-                    opacity: _isBarsVisible ? 1.0 : 0.0,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 1. Headline + Rounded Rect [+] Quick Add Button
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _getHeadlineTitle(workspace.selectedCategory),
-                                  style: AppTypography.sectionHeadline(
-                                    color: headlineColor,
-                                    fontSize: 34,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Sort Selector Menu
-                                  _SortButton(
-                                    isDark: isDark,
-                                    borderColor: borderColor,
-                                    activeSort: workspace.sortOrder,
-                                    onSelected: (order) {
-                                      HapticFeedback.lightImpact();
-                                      workspace.setSortOrder(order);
-                                    },
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Tactile [+] Button with dark border matching reference
-                                  _QuickAddButton(
-                                    isDark: isDark,
-                                    borderColor: borderColor,
-                                    onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
-                                  ),
-                                ],
-                              ),
-                            ],
+        drawer: AppNavDrawer(
+          onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
+          onOpenArchive: widget.onOpenArchive,
+          onOpenTrash: widget.onOpenTrash,
+          onOpenSettings: widget.onOpenSettings,
+        ),
+        body: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Collapsible Top Session: AppHeaderBar + "Your Notes" headline + filter pills
+                ClipRect(
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeInOutCubic,
+                    alignment: Alignment.bottomCenter,
+                    heightFactor: (_isBarsVisible || _isSearching) ? 1.0 : 0.0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 180),
+                      opacity: (_isBarsVisible || _isSearching) ? 1.0 : 0.0,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(height: MediaQuery.paddingOf(context).top),
+                          AppHeaderBar(
+                            primary: false,
+                            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                            onToggleSearch: () {
+                              setState(() {
+                                _isSearching = !_isSearching;
+                                if (!_isSearching) {
+                                  workspace.setSearchQuery('');
+                                }
+                              });
+                            },
+                            isSearching: _isSearching,
+                            onQuickCreate: () => _openCreateSheet(),
                           ),
-                        ),
+                          // 1. Headline + Rounded Rect [+] Quick Add Button
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 4, AppSpacing.lg, 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _getHeadlineTitle(workspace.selectedCategory),
+                                    style: AppTypography.sectionHeadline(
+                                      color: headlineColor,
+                                      fontSize: 34,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
 
-                        // 2. Folder Dropdown + Tag Filter Pills (Only shown for Notes / All)
-                        if (workspace.selectedCategory != ItemType.whiteboard &&
-                            workspace.selectedCategory != ItemType.clipboard) ...[
-                          const CategoryFilterPills(),
-                          const SizedBox(height: AppSpacing.md),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Sort Selector Menu
+                                    _SortButton(
+                                      isDark: isDark,
+                                      borderColor: borderColor,
+                                      activeSort: workspace.sortOrder,
+                                      onSelected: (order) {
+                                        HapticFeedback.lightImpact();
+                                        workspace.setSortOrder(order);
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Tactile [+] Button with dark border matching reference
+                                    _QuickAddButton(
+                                      isDark: isDark,
+                                      borderColor: borderColor,
+                                      onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // 2. Folder Dropdown + Tag Filter Pills (Only shown for Notes / All)
+                          if (workspace.selectedCategory != ItemType.whiteboard &&
+                              workspace.selectedCategory != ItemType.clipboard) ...[
+                            const CategoryFilterPills(),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // 3. Main Notes Feed: Neo-Pop Grid Feed
-              Expanded(
-                child: workspace.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : items.isEmpty
-                        ? _buildEmptyState(workspace)
-                        : _buildNeoGridFeedView(items),
+                // 3. Main Notes Feed: Neo-Pop Grid Feed or Clipboard List
+                Expanded(
+                  child: NotificationListener<UserScrollNotification>(
+                    onNotification: (notification) {
+                      if (_isSearching) return false;
+                      if (notification.direction == ScrollDirection.reverse) {
+                        if (_isBarsVisible && _scrollController.hasClients && _scrollController.offset > 8) {
+                          setState(() => _isBarsVisible = false);
+                        }
+                      } else if (notification.direction == ScrollDirection.forward) {
+                        if (!_isBarsVisible) {
+                          setState(() => _isBarsVisible = true);
+                        }
+                      }
+                      return false;
+                    },
+                    child: workspace.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : items.isEmpty
+                            ? _buildEmptyState(workspace)
+                            : (workspace.selectedCategory == ItemType.clipboard
+                                ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
+                                : _buildNeoGridFeedView(items)),
+                  ),
+                ),
+              ],
+            ),
+
+            // Floating Bottom Popup Dock for Clipboard Category
+            if (workspace.selectedCategory == ItemType.clipboard)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                bottom: (_isBarsVisible && !_isSearching) ? (76 + MediaQuery.paddingOf(context).bottom) : -120,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: (_isBarsVisible && !_isSearching) ? 1.0 : 0.0,
+                  child: _buildClipboardBottomDock(isDark),
+                ),
               ),
-            ],
-          ),
-        ],
-      ),
-      bottomNavigationBar: AnimatedSlide(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        offset: _isBarsVisible ? Offset.zero : const Offset(0, 1.25),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 180),
-          opacity: _isBarsVisible ? 1.0 : 0.0,
-          child: SmartBottomNavBar(
-            currentIndex: currentNavIndex,
-            onTap: _handleBottomNavTap,
-            onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+          ],
+        ),
+        bottomNavigationBar: AnimatedSlide(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          offset: (_isBarsVisible && !_isSearching) ? Offset.zero : const Offset(0, 1.25),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: (_isBarsVisible && !_isSearching) ? 1.0 : 0.0,
+            child: SmartBottomNavBar(
+              currentIndex: currentNavIndex,
+              onTap: _handleBottomNavTap,
+              onFabTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  /// Floating bottom dock for quick paste when viewing Clipboard category
+  Widget _buildClipboardBottomDock(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13141B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFF191A23),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.6)
+                : const Color(0xFF191A23).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _pasteFromClipboard,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.accentAmber.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Center(
+                    child: TackIcon(
+                      TackIcons.clipboard,
+                      size: 20,
+                      color: AppColors.accentAmber,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Save from Clipboard',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Tap to import copied snippet',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentAmber,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentAmber.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(
+                        TackIcons.pasteSvg,
+                        size: 14,
+                        color: Color(0xFF191A23),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Paste',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF191A23),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClipboardListView(List<ClipboardItem> clips, bool isDark) {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppSpacing.xs,
+        0,
+        140 + MediaQuery.paddingOf(context).bottom,
+      ),
+      itemCount: clips.length,
+      itemBuilder: (context, index) {
+        final item = clips[index];
+        return ClipboardCard(
+          key: ValueKey(item.id),
+          item: item,
+          onTap: () => widget.onOpenItem?.call(item),
+        );
+      },
+    );
+  }
 
 
   Widget _buildCard(BaseWorkspaceItem item) {
@@ -561,7 +739,7 @@ class _QuickAddButtonState extends State<_QuickAddButton> {
           child: Center(
             child: TackIcon(
               TackIcons.plusSvg,
-              size: 20,
+              size: 24,
               color: widget.isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
             ),
           ),
