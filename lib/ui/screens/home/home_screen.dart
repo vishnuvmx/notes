@@ -524,6 +524,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildClipboardListView(List<ClipboardItem> clips, bool isDark) {
+    final sortedClips = List<ClipboardItem>.from(clips);
+    sortedClips.sort((a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -533,13 +540,14 @@ class _HomeScreenState extends State<HomeScreen> {
         0,
         140 + MediaQuery.paddingOf(context).bottom,
       ),
-      itemCount: clips.length,
+      itemCount: sortedClips.length,
       itemBuilder: (context, index) {
-        final item = clips[index];
+        final item = sortedClips[index];
         return ClipboardCard(
           key: ValueKey(item.id),
           item: item,
           onTap: () => widget.onOpenItem?.call(item),
+          onLongPress: () => NoteActionSheet.show(context, item: item),
         );
       },
     );

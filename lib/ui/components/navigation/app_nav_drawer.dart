@@ -34,8 +34,7 @@ class AppNavDrawer extends StatelessWidget {
         borderRadius: BorderRadius.horizontal(right: Radius.circular(AppSpacing.radiusLg)),
       ),
       child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
             // Drawer Header with Tack icon and branding
             Padding(
@@ -53,7 +52,7 @@ class AppNavDrawer extends StatelessWidget {
                       child: Image.asset(
                         'icon.png',
                         fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const TackIcon(TackIcons.pin),
+                        errorBuilder: (context, error, stackTrace) => const TackIcon(TackIcons.pin),
                       ),
                     ),
                   ),
@@ -85,10 +84,10 @@ class AppNavDrawer extends StatelessWidget {
             ),
             const Divider(height: 1),
 
-            // Primary Navigation Items with cute HeroIcons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              child: Column(
+            // Scrollable Middle: Primary Navigation Items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                 children: [
                   _buildDrawerTile(
                     context,
@@ -114,16 +113,6 @@ class AppNavDrawer extends StatelessWidget {
                   ),
                   _buildDrawerTile(
                     context,
-                    icon: TackIcons.archive,
-                    title: 'Archived',
-                    badgeCount: workspace.archivedItems.length,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onOpenArchive?.call();
-                    },
-                  ),
-                  _buildDrawerTile(
-                    context,
                     icon: TackIcons.trash,
                     iconColor: AppColors.error,
                     title: 'Trash',
@@ -139,10 +128,11 @@ class AppNavDrawer extends StatelessWidget {
 
             const Divider(height: 1),
 
-            // Settings & About
+            // Bottom-Pinned: Settings & Version Information
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildDrawerTile(
                     context,
@@ -155,7 +145,7 @@ class AppNavDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
