@@ -1,8 +1,6 @@
 import '../../domain/models/base_item.dart';
 import '../../domain/models/text_note.dart';
-import '../../domain/models/sticky_note.dart';
 import '../../domain/models/whiteboard_item.dart';
-import '../../domain/models/clipboard_item.dart';
 
 /// Clean, tactile onboarding starter items matching Tack's neo-pop design identity.
 class MockInitialData {
@@ -10,60 +8,45 @@ class MockInitialData {
     final now = DateTime.now();
 
     return [
-      // 1. Neo-Pop Welcome Note
+      // 1. Single explanatory starter note
       TextNote(
         id: 'tack_welcome_note',
-        title: 'Welcome to Tack',
+        title: 'How Tack Works',
         content:
-            '# Workspace Overview\n\n'
-            'Tack is designed for structured notes, sticky boards, and flowchart diagrams.\n\n'
-            '### Quick Checklist\n'
-            '[x] Explore your workspace dashboard\n'
-            '[ ] Tap (+) below to create a note or sticky\n'
-            '[ ] Apply **bold**, *italics*, and <u>underline</u> formatting\n'
-            '[ ] Build a diagram on the whiteboard canvas\n'
-            '### Color Hex Codes\n'
-            'Type any hex code like #565656, #FF8F6B, or #1BA5BA to preview its color tint directly in the text.\n\n'
-            '> "Clarity begins with structured notes."\n\n'
-            '#welcome #guide #notes',
+            '# Tack in 30 seconds\n\n'
+            'Tack keeps everything you jot down in one place.\n\n'
+            '### 1. Capture\n'
+            'Tap (+) and pick what you need:\n'
+            '- **Note** for longer writing\n'
+            '- **Sticky** for a quick reminder\n'
+            '- **Whiteboard** to draw a flowchart\n'
+            '- **Clip** to save text you copy\n\n'
+            '### 2. Organize\n'
+            'Add tags, star favorites, and archive what you are done with.\n\n'
+            '### 3. Find\n'
+            'Use search or the filter pills to jump back to anything.\n\n'
+            '> Deleted items rest in Trash until you empty it.\n\n'
+            '#welcome #guide',
         createdAt: now.subtract(const Duration(minutes: 5)),
         updatedAt: now.subtract(const Duration(minutes: 5)),
         paletteId: 'peach',
         isFavorite: true,
-        tags: ['welcome', 'guide', 'notes'],
-        estimatedMinutes: 2,
+        tags: ['welcome', 'guide'],
+        estimatedMinutes: 1,
       ),
 
-      // 2. Playful Sticky Pastel
-      StickyNote(
-        id: 'tack_starter_sticky',
-        title: 'Quick Note',
-        content:
-            'Shortcuts:\n'
-            '• Tap (+) to add items\n'
-            '• Star items for quick filtering\n'
-            '• Toggle between list and grid feed\n'
-            '• Switch themes in top header',
-        createdAt: now.subtract(const Duration(minutes: 15)),
-        updatedAt: now.subtract(const Duration(minutes: 15)),
-        paletteId: 'amber',
-        rotationAngle: -0.02,
-        priority: 1,
-        isFavorite: false,
-      ),
-
-      // 3. Figma-Style Starter Flowchart Whiteboard
+      // 2. Single simple whiteboard flow explaining the app
       WhiteboardCanvasItem(
         id: 'tack_starter_whiteboard',
-        title: 'Project Workflow Template',
+        title: 'How Tack Works (Flow)',
         createdAt: now.subtract(const Duration(hours: 1)),
         updatedAt: now.subtract(const Duration(hours: 1)),
         paletteId: 'cyan',
         isFavorite: false,
         nodes: [
           const CanvasNode(
-            id: 'node_spark',
-            text: 'Project Proposal',
+            id: 'n_idea',
+            text: 'You have an idea',
             shapeType: CanvasNodeType.startEnd,
             x: 2920,
             y: 2700,
@@ -72,54 +55,102 @@ class MockInitialData {
             paletteId: 'coral',
           ),
           const CanvasNode(
-            id: 'node_sketch',
-            text: 'Design & Review',
-            shapeType: CanvasNodeType.process,
+            id: 'n_type',
+            text: 'Long or short?',
+            shapeType: CanvasNodeType.decision,
             x: 2910,
-            y: 2830,
+            y: 2820,
             width: 180,
+            height: 90,
+            paletteId: 'amber',
+          ),
+          const CanvasNode(
+            id: 'n_note',
+            text: 'Write a Note',
+            shapeType: CanvasNodeType.process,
+            x: 2700,
+            y: 2990,
+            width: 160,
             height: 56,
             paletteId: 'lime',
           ),
           const CanvasNode(
-            id: 'node_ship',
-            text: 'Launch & Measure',
+            id: 'n_sticky',
+            text: 'Stick a Sticky',
+            shapeType: CanvasNodeType.process,
+            x: 3140,
+            y: 2990,
+            width: 160,
+            height: 56,
+            paletteId: 'amber',
+          ),
+          const CanvasNode(
+            id: 'n_organize',
+            text: 'Tag, star, archive',
+            shapeType: CanvasNodeType.process,
+            x: 2920,
+            y: 3130,
+            width: 160,
+            height: 56,
+            paletteId: 'lavender',
+          ),
+          const CanvasNode(
+            id: 'n_find',
+            text: 'Find it with search',
             shapeType: CanvasNodeType.startEnd,
             x: 2920,
-            y: 2970,
+            y: 3250,
             width: 160,
             height: 52,
-            paletteId: 'amber',
+            paletteId: 'cyan',
           ),
         ],
         edges: [
           const CanvasEdge(
-            id: 'flow_edge_1',
-            fromNodeId: 'node_spark',
-            toNodeId: 'node_sketch',
+            id: 'e1',
+            fromNodeId: 'n_idea',
+            toNodeId: 'n_type',
             fromPort: 'bottom',
             toPort: 'top',
           ),
           const CanvasEdge(
-            id: 'flow_edge_2',
-            fromNodeId: 'node_sketch',
-            toNodeId: 'node_ship',
+            id: 'e2',
+            fromNodeId: 'n_type',
+            toNodeId: 'n_note',
+            label: 'Long',
+            fromPort: 'left',
+            toPort: 'top',
+          ),
+          const CanvasEdge(
+            id: 'e3',
+            fromNodeId: 'n_type',
+            toNodeId: 'n_sticky',
+            label: 'Short',
+            fromPort: 'right',
+            toPort: 'top',
+          ),
+          const CanvasEdge(
+            id: 'e4',
+            fromNodeId: 'n_note',
+            toNodeId: 'n_organize',
+            fromPort: 'bottom',
+            toPort: 'left',
+          ),
+          const CanvasEdge(
+            id: 'e5',
+            fromNodeId: 'n_sticky',
+            toNodeId: 'n_organize',
+            fromPort: 'bottom',
+            toPort: 'right',
+          ),
+          const CanvasEdge(
+            id: 'e6',
+            fromNodeId: 'n_organize',
+            toNodeId: 'n_find',
             fromPort: 'bottom',
             toPort: 'top',
           ),
         ],
-      ),
-
-      // 4. Sample Clipboard Card
-      ClipboardItem(
-        id: 'tack_starter_clip',
-        title: 'Tack Design Tokens',
-        clipText: 'Peach: #FF8F6B • Amber: #F5B842 • Cyan: #1BA5BA • Lime: #B2CD4D',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        updatedAt: now.subtract(const Duration(hours: 2)),
-        paletteId: 'lavender',
-        isPinned: true,
-        sourceApp: 'Tack Design System',
       ),
     ];
   }

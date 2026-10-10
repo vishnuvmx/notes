@@ -1,4 +1,4 @@
-# Java Micro Project Presentation (PPT)
+﻿# Java Micro Project Presentation (PPT)
 
 ---
 
@@ -90,43 +90,47 @@
 ### 7.1 System High-Level Layered Architecture
 
 ```mermaid
-graph TD
-    subgraph Presentation_Layer["Presentation Layer (GUI / View)"]
-        UI_Home["Home Dashboard Screen"]
-        UI_Editor["Note Editor & Toolbar"]
-        UI_Sticky["Sticky Board Screen"]
-        UI_Canvas["Flowchart Whiteboard Canvas"]
-        UI_Clip["Clipboard History Manager"]
+flowchart TD
+    subgraph PL["Presentation Layer"]
+        UIHome["Home Dashboard"]
+        UIEditor["Note Editor"]
+        UISticky["Sticky Board"]
+        UICanvas["Whiteboard Canvas"]
+        UIClip["Clipboard Manager"]
     end
 
-    subgraph Service_Layer["Domain Service Layer"]
-        WS_Service["WorkspaceService (Coordinator)"]
-        Search_Engine["Query & Search Filter Engine"]
-        Export_Service["Note Export Service (TXT / JSON / PDF)"]
+    subgraph SL["Service Layer"]
+        WSService["WorkspaceService"]
+        SearchEngine["Search Filter Engine"]
+        ExportService["Export Service"]
     end
 
-    subgraph Domain_Layer["Domain Layer (OOP Core)"]
-        BaseItem["abstract class BaseWorkspaceItem"]
-        TNote["class TextNote"]
-        SNote["class StickyNote"]
-        WCanvas["class WhiteboardCanvasItem"]
-        CItem["class ClipboardItem"]
-        IRepo["interface IWorkspaceRepository"]
-        IStore["interface IStorageDriver"]
+    subgraph DL["Domain Layer"]
+        BaseItem["BaseWorkspaceItem (abstract)"]
+        Subtypes["TextNote, StickyNote, WhiteboardCanvasItem, ClipboardItem"]
+        IRepo["IWorkspaceRepository (interface)"]
+        IStore["IStorageDriver (interface)"]
     end
 
-    subgraph Data_Layer["Data & Persistence Layer"]
+    subgraph DAL["Data Layer"]
         RepoImpl["WorkspaceRepositoryImpl"]
         FileDriver["JsonFileStorageDriver"]
-        DiskStore[("Local Disk / File System")]
+        Disk[("Local File System")]
     end
 
-    Presentation_Layer --> Service_Layer
-    Service_Layer --> Domain_Layer
-    Data_Layer --> Domain_Layer
-    WS_Service --> IRepo
+    UIHome --> WSService
+    UIEditor --> WSService
+    UISticky --> WSService
+    UICanvas --> WSService
+    UIClip --> WSService
+    WSService --> SearchEngine
+    WSService --> ExportService
+    WSService --> IRepo
+    BaseItem --> Subtypes
+    RepoImpl -.->|implements| IRepo
+    FileDriver -.->|implements| IStore
     RepoImpl --> IStore
-    FileDriver --> DiskStore
+    FileDriver --> Disk
 ```
 
 ---
@@ -135,8 +139,8 @@ graph TD
 
 ```mermaid
 classDiagram
+    direction TB
     class BaseWorkspaceItem {
-        <<abstract>>
         -String id
         -String title
         -long createdAt
@@ -196,7 +200,6 @@ classDiagram
     }
 
     class IWorkspaceRepository {
-        <<interface>>
         +save(BaseWorkspaceItem item) void
         +findById(String id) BaseWorkspaceItem
         +getAllActive() List~BaseWorkspaceItem~
@@ -206,7 +209,6 @@ classDiagram
     }
 
     class IStorageDriver {
-        <<interface>>
         +readAllData() String
         +writeAllData(String payload) boolean
         +backup() boolean
@@ -221,12 +223,17 @@ classDiagram
         +queryWorkspace(String query, String tag) List~BaseWorkspaceItem~
     }
 
-    BaseWorkspaceItem <|-- TextNote : Inheritance
-    BaseWorkspaceItem <|-- StickyNote : Inheritance
-    BaseWorkspaceItem <|-- WhiteboardCanvasItem : Inheritance
-    BaseWorkspaceItem <|-- ClipboardItem : Inheritance
-    WorkspaceService o-- IWorkspaceRepository : Composition
-    IWorkspaceRepository ..> BaseWorkspaceItem : Dependency
+    <<abstract>> BaseWorkspaceItem
+    <<interface>> IWorkspaceRepository
+    <<interface>> IStorageDriver
+
+    BaseWorkspaceItem <|-- TextNote : inherited by
+    BaseWorkspaceItem <|-- StickyNote : inherited by
+    BaseWorkspaceItem <|-- WhiteboardCanvasItem : inherited by
+    BaseWorkspaceItem <|-- ClipboardItem : inherited by
+    WorkspaceService --> IWorkspaceRepository : uses
+    IWorkspaceRepository ..> BaseWorkspaceItem : manages
+    IWorkspaceRepository ..> IStorageDriver : persists via
 ```
 
 ---
@@ -234,24 +241,21 @@ classDiagram
 ### 7.3 Use Case Diagram
 
 ```mermaid
-graph LR
-    User((User / Student))
+flowchart LR
+    User(("User / Student"))
+    UC1(["Create / Edit Text Note"])
+    UC2(["Color-code Sticky Note"])
+    UC3(["Design Flowchart Canvas"])
+    UC4(["Search and Filter by Tag"])
+    UC5(["Move to Trash / Restore"])
+    UC6(["Export Workspace to File"])
 
-    subgraph Tack_Workspace_System["Tack Workspace System"]
-        UC1["Create / Edit Text Note"]
-        UC2["Color-code Sticky Note"]
-        UC3["Design Flowchart Canvas"]
-        UC4["Search & Filter by Tag"]
-        UC5["Move to Trash / Restore"]
-        UC6["Export Workspace to File"]
-    end
-
-    User --> UC1
-    User --> UC2
-    User --> UC3
-    User --> UC4
-    User --> UC5
-    User --> UC6
+    User --- UC1
+    User --- UC2
+    User --- UC3
+    User --- UC4
+    User --- UC5
+    User --- UC6
 ```
 
 ---
@@ -260,21 +264,17 @@ graph LR
 
 ```mermaid
 flowchart TD
-    User([User Touch / Keyboard Input]) --> InputParser[1.0 Command / Input Parser]
-    InputParser --> WorkspaceCoordinator[2.0 Workspace Service Coordinator]
-    
-    WorkspaceCoordinator --> ItemFactory[3.0 Item Factory Polymorphic Instantiation]
-    ItemFactory --> ItemValidation{Valid Input?}
-    
-    ItemValidation -- No --> ErrorHandler[Error Handling & UI Alert]
-    ItemValidation -- Yes --> MemoryCache[(Active Memory List)]
-    
-    MemoryCache --> RepoProcessor[4.0 Repository Transaction Manager]
-    RepoProcessor --> StorageDriver[5.0 Storage Driver Engine]
-    StorageDriver --> JSONFile[("Local Storage - workspace.json")]
-    
-    JSONFile -.-> ReadStream[Data Recovery Stream]
-    ReadStream -.-> WorkspaceCoordinator
+    User(["User Touch / Keyboard Input"]) --> InputParser["1.0 Input Parser"]
+    InputParser --> Coordinator["2.0 Workspace Service"]
+    Coordinator --> Factory["3.0 Item Factory"]
+    Factory --> Valid{"Valid Input?"}
+    Valid -->|No| ErrorHandler["Error Handling and UI Alert"]
+    Valid -->|Yes| Memory[("Active Memory List")]
+    Memory --> Repo["4.0 Repository Manager"]
+    Repo --> Driver["5.0 Storage Driver"]
+    Driver --> JSONFile[("workspace.json")]
+    JSONFile -.-> Recovery["Data Recovery Stream"]
+    Recovery -.-> Coordinator
 ```
 
 ---

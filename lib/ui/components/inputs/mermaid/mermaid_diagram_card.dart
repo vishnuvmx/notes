@@ -117,7 +117,7 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 
         nodes.add(CanvasNode(
           id: n.id,
-          text: n.label,
+          text: n.shape == MermaidNodeShape.classBox ? n.label.replaceAll('---\n', '') : n.label,
           shapeType: shapeType,
           x: pos.dx + startX,
           y: pos.dy + startY,
@@ -375,7 +375,12 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     final textLen = n.label.length;
     double w;
     double h;
-    if (n.shape == MermaidNodeShape.decision) {
+    if (n.shape == MermaidNodeShape.classBox) {
+      final lns = n.label.split('\n');
+      final longest = lns.fold<int>(0, (m, s) => math.max(m, s.length));
+      w = math.max(150.0, math.min(230.0, longest * 6.2 + 28.0));
+      h = lns.where((s) => s != '---').length * 15.0 + 22.0;
+    } else if (n.shape == MermaidNodeShape.decision) {
       w = math.max(130.0, math.min(210.0, textLen * 6.5 + 46.0));
       h = 64.0;
     } else if (n.shape == MermaidNodeShape.circle) {
@@ -438,9 +443,26 @@ _FlowchartLayoutResult _computeFlowchartLayout(
   // Group by layers
   final layers = <int, List<String>>{};
   int maxLayer = 0;
-  for (final entry in nodeLayer.entries) {
-    layers.putIfAbsent(entry.value, () => []).add(entry.key);
-    if (entry.value > maxLayer) maxLayer = entry.value;
+  if (diagram.isClassDiagram) {
+    // Wrap wide layers into rows of 2 so class boxes stay readable on phones.
+    final byLayer = <int, List<String>>{};
+    for (final n in nodes) {
+      byLayer.putIfAbsent(nodeLayer[n.id] ?? 0, () => []).add(n.id);
+    }
+    final keys = byLayer.keys.toList()..sort();
+    int row = 0;
+    for (final k in keys) {
+      final ids = byLayer[k]!;
+      for (int s = 0; s < ids.length; s += 2) {
+        layers[row++] = ids.sublist(s, math.min(s + 2, ids.length));
+      }
+    }
+    maxLayer = math.max(0, row - 1);
+  } else {
+    for (final entry in nodeLayer.entries) {
+      layers.putIfAbsent(entry.value, () => []).add(entry.key);
+      if (entry.value > maxLayer) maxLayer = entry.value;
+    }
   }
 
   final positions = <String, Offset>{};
@@ -590,6 +612,78 @@ class MermaidFlowchartWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildClassBox(MermaidNode node, bool isDark) {
+    final border = isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8);
+    final bg = isDark ? const Color(0xFF1E2430) : const Color(0xFFF8FAFC);
+    final headBg = isDark ? const Color(0xFF2A3345) : const Color(0xFFE2E8F0);
+    final fg = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+    final lines = node.label.split('\n');
+    final divider = lines.indexOf('---');
+    final head = divider < 0 ? lines : lines.sublist(0, divider);
+    final body = divider < 0 ? <String>[] : lines.sublist(divider + 1);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border, width: 1.2),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: headBg,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (int i = 0; i < head.length; i++)
+                  Text(
+                    head[i],
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: i == head.length - 1 ? 11.5 : 9.5,
+                      fontWeight: i == head.length - 1 ? FontWeight.w800 : FontWeight.w500,
+                      fontStyle: i == head.length - 1 ? FontStyle.normal : FontStyle.italic,
+                      color: fg,
+                      height: 1.2,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (body.isNotEmpty)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final m in body)
+                      Text(
+                        m,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 9.5,
+                          color: fg,
+                          height: 1.2,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNodeCard(MermaidNode node, bool isDark, Size size) {
     Color bgColor;
     Color borderColor;
@@ -639,6 +733,10 @@ class MermaidFlowchartWidget extends StatelessWidget {
         ),
       ),
     );
+
+    if (node.shape == MermaidNodeShape.classBox) {
+      return _buildClassBox(node, isDark);
+    }
 
     switch (node.shape) {
       case MermaidNodeShape.decision:

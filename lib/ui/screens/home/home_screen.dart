@@ -345,6 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // 3. Main Notes Feed: Neo-Pop Grid Feed or Clipboard List
                 Expanded(
+                  child: ClipRect(
                   child: NotificationListener<UserScrollNotification>(
                     onNotification: (notification) {
                       if (_isSearching) return false;
@@ -366,6 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             : (workspace.selectedCategory == ItemType.clipboard
                                 ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
                                 : _buildNeoGridFeedView(items)),
+                  ),
                   ),
                 ),
               ],
@@ -409,17 +411,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildClipboardBottomDock(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF13141B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFF191A23),
-          width: 1.5,
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.6)
-                : const Color(0xFF191A23).withValues(alpha: 0.12),
+                ? Colors.black.withValues(alpha: 0.35)
+                : const Color(0xFF191A23).withValues(alpha: 0.10),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -429,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _pasteFromClipboard,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
@@ -462,9 +464,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Save from Clipboard',
                         style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -472,8 +475,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Tap to import copied snippet',
                         style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
+                          letterSpacing: -0.2,
                           color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
@@ -494,18 +499,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TackIcon(
+                      const TackIcon(
                         TackIcons.pasteSvg,
                         size: 14,
                         color: Color(0xFF191A23),
                       ),
-                      SizedBox(width: 5),
+                      const SizedBox(width: 5),
                       Text(
                         'Paste',
                         style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF191A23),
@@ -585,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SingleChildScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      clipBehavior: Clip.none,
+      clipBehavior: Clip.hardEdge,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.md,

@@ -19,6 +19,7 @@ enum MermaidNodeShape {
   hexagon,   // {{text}}
   parallelogram, // [/text/]
   flag,      // >text]
+  classBox,  // UML class box (label: header lines, '---', member lines)
 }
 
 /// Parsed node in a flowchart graph.
@@ -103,6 +104,7 @@ class ParsedMermaidDiagram {
   final List<MermaidSequenceMessage> sequenceMessages;
   final List<MermaidTimelineItem> timelineItems;
   final String? parseError;
+  final bool isClassDiagram;
 
   const ParsedMermaidDiagram({
     required this.type,
@@ -116,6 +118,7 @@ class ParsedMermaidDiagram {
     this.sequenceMessages = const [],
     this.timelineItems = const [],
     this.parseError,
+    this.isClassDiagram = false,
   });
 
   bool get isValid => parseError == null && type != MermaidDiagramType.unsupported;
@@ -160,6 +163,11 @@ class MermaidDiagramParser {
     // 2. Sequence Diagram: sequenceDiagram
     if (firstLine.startsWith('sequencediagram')) {
       return _parseSequenceDiagram(rawCode, lines);
+    }
+
+    // 2b. UML Class Diagram: classDiagram
+    if (firstLine.startsWith('classdiagram')) {
+      return _parseClassDiagram(rawCode, lines);
     }
 
     // 3. Flowchart / Graph: graph TD / flowchart LR ...
@@ -425,6 +433,116 @@ class MermaidDiagramParser {
     return s;
   }
 
+  /// Parses a Mermaid classDiagram into box nodes + relationship edges.
+  static ParsedMermaidDiagram _parseClassDiagram(String rawCode, List<String> lines) {
+    final headers = <String, List<String>>{};
+    final members = <String, List<String>>{};
+    final order = <String>[];
+    final edges = <MermaidEdge>[];
+    String? current;
+
+    void ensure(String name) {
+      if (!headers.containsKey(name)) {
+        headers[name] = [];
+        members[name] = [];
+        order.add(name);
+      }
+    }
+
+    String clean(String s) =>
+        s.replaceAllMapped(RegExp(r'~([^~]*)~'), (m) => '<${m.group(1)}>').trim();
+
+    final relRegex = RegExp(
+      r'^(\w+)\s*(?:"[^"]*"\s*)?(<\|--|--\|>|<\|\.\.|\.\.\|>|\*--|--\*|o--|--o|<--|-->|<\.\.|\.\.>|\.\.|--)\s*(?:"[^"]*"\s*)?(\w+)\s*(?::\s*(.*))?$',
+    );
+
+    for (int i = 1; i < lines.length; i++) {
+      final line = lines[i];
+      final lower = line.toLowerCase();
+      if (lower.startsWith('direction ') || lower.startsWith('title ') || lower.startsWith('note ')) continue;
+
+      if (current != null) {
+        if (line == '}') {
+          current = null;
+          continue;
+        }
+        final stereo = RegExp(r'^<<\s*(.*?)\s*>>$').firstMatch(line);
+        if (stereo != null) {
+          headers[current]!.add('\u00AB${stereo.group(1)}\u00BB');
+        } else {
+          members[current]!.add(clean(line));
+        }
+        continue;
+      }
+
+      final classOpen = RegExp(r'^class\s+(\w+)\s*(\{)?\s*(\})?$').firstMatch(line);
+      if (classOpen != null) {
+        final name = classOpen.group(1)!;
+        ensure(name);
+        if (classOpen.group(2) != null && classOpen.group(3) == null) current = name;
+        continue;
+      }
+
+      final stereoLine = RegExp(r'^<<\s*(.*?)\s*>>\s*(\w+)$').firstMatch(line);
+      if (stereoLine != null) {
+        final name = stereoLine.group(2)!;
+        ensure(name);
+        headers[name]!.add('\u00AB${stereoLine.group(1)}\u00BB');
+        continue;
+      }
+
+      final memberLine = RegExp(r'^(\w+)\s*:\s*(.+)$').firstMatch(line);
+      if (memberLine != null && !line.contains('--') && !line.contains('..')) {
+        final name = memberLine.group(1)!;
+        ensure(name);
+        members[name]!.add(clean(memberLine.group(2)!));
+        continue;
+      }
+
+      final rel = relRegex.firstMatch(line);
+      if (rel != null) {
+        final a = rel.group(1)!;
+        final op = rel.group(2)!;
+        final b = rel.group(3)!;
+        ensure(a);
+        ensure(b);
+        edges.add(MermaidEdge(
+          fromId: a,
+          toId: b,
+          label: rel.group(4) == null ? null : _cleanLabel(rel.group(4)!),
+          isDotted: op.contains('..'),
+        ));
+      }
+    }
+
+    if (order.isEmpty) {
+      return ParsedMermaidDiagram(
+        type: MermaidDiagramType.flowchart,
+        rawCode: rawCode,
+        parseError: 'No classes found in classDiagram',
+      );
+    }
+
+    final nodes = <MermaidNode>[];
+    for (final name in order) {
+      final buf = <String>[...headers[name]!, name];
+      if (members[name]!.isNotEmpty) {
+        buf.add('---');
+        buf.addAll(members[name]!);
+      }
+      nodes.add(MermaidNode(id: name, label: buf.join('\n'), shape: MermaidNodeShape.classBox));
+    }
+
+    return ParsedMermaidDiagram(
+      type: MermaidDiagramType.flowchart,
+      rawCode: rawCode,
+      direction: 'TD',
+      nodes: nodes,
+      edges: edges,
+      isClassDiagram: true,
+    );
+  }
+
   static ParsedMermaidDiagram _parseStateDiagram(String rawCode, List<String> lines) {
     String direction = 'TD';
     final nodeMap = <String, MermaidNode>{};
@@ -520,7 +638,7 @@ class MermaidDiagramParser {
     // A --> B
     // A --- B
     final edgeRegex = RegExp(
-      r'(-->\|.*?\||--\s*.*?\s*-->|==>\|.*?\||==>|-->|-\.->|---|---.*?---)',
+      r'(-\.->\|.*?\||-->\|.*?\||--\s*.*?\s*-->|==>\|.*?\||==>|-->|-\.->|---|---.*?---)',
     );
 
     final edgeMatch = edgeRegex.firstMatch(stmt);
@@ -533,7 +651,9 @@ class MermaidDiagramParser {
       bool isDotted = edgeOp.contains('-.');
       bool isThick = edgeOp.contains('==');
 
-      if (edgeOp.startsWith('-->|') && edgeOp.endsWith('|') && edgeOp.length > 5) {
+      if (edgeOp.startsWith('-.->|') && edgeOp.endsWith('|') && edgeOp.length > 6) {
+        edgeLabel = _cleanLabel(edgeOp.substring(5, edgeOp.length - 1));
+      } else if (edgeOp.startsWith('-->|') && edgeOp.endsWith('|') && edgeOp.length > 5) {
         edgeLabel = _cleanLabel(edgeOp.substring(4, edgeOp.length - 1));
       } else if (edgeOp.startsWith('==>|') && edgeOp.endsWith('|') && edgeOp.length > 5) {
         edgeLabel = _cleanLabel(edgeOp.substring(4, edgeOp.length - 1));

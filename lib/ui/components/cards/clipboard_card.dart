@@ -94,7 +94,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
         margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: widget.item.isPinned
                 ? palette.lightColor.withValues(alpha: isDark ? 0.5 : 0.65)
@@ -113,7 +113,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           child: InkWell(
             onTapDown: (_) {
               HapticFeedback.selectionClick();
@@ -132,7 +132,7 @@ class _ClipboardCardState extends State<ClipboardCard> {
                     widget.onLongPress!();
                   }
                 : null,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
