@@ -252,7 +252,7 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
         icon: TackIcons.exportData,
         description:
             'Implemented Clean Architecture with `IWorkspaceRepository` and atomic JSON file persistence. '
-            'Guarantees 100% offline-first storage with zero telemetry or cloud latency.',
+            'Provides offline-first storage with local on-device persistence.',
       ),
       _JourneyStage(
         phase: 'Stage 3',

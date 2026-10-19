@@ -379,8 +379,8 @@ class SettingsScreen extends StatelessWidget {
               _buildStaticInfoTile(
                 icon: TackIcons.lock,
                 title: 'Offline-First Privacy',
-                subtitle: 'Zero cloud latency, zero trackers. 100% on-device JSON database.',
-                badgeText: 'Encrypted',
+                subtitle: 'Local on-device JSON storage without remote servers.',
+                badgeText: 'Local',
                 isDark: isDark,
               ),
             ],
@@ -525,7 +525,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '100% On-Device & Private',
+                'On-Device Storage',
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,
                   fontSize: 13,
