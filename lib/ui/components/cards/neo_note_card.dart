@@ -106,9 +106,11 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Bold Note Title
+                  // 1. Bold Note Title (with optional iconEmoji)
                   Text(
-                    widget.item.title,
+                    (widget.item.iconEmoji != null && widget.item.iconEmoji!.isNotEmpty)
+                        ? '${widget.item.iconEmoji} ${widget.item.title}'
+                        : widget.item.title,
                     style: AppTypography.cardTitleStyle(
                       color: titleColor,
                       fontSize: widget.isGrid ? 15.5 : 17,

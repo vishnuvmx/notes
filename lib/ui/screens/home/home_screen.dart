@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -15,6 +16,7 @@ import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
+import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/sticky_note_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
@@ -23,6 +25,7 @@ import '../../components/navigation/app_nav_drawer.dart';
 import '../../components/feedback/empty_state_widget.dart';
 import '../../components/feedback/tack_toast.dart';
 import '../../components/dialogs_sheets/note_action_sheet.dart';
+import '../graph/knowledge_graph_screen.dart';
 
 /// Main Home Dashboard Screen for Tack.
 /// Features the Playful Neo-Pop / Soft Neo-Brutalist design matching the Dribbble reference.
@@ -251,6 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onOpenArchive: widget.onOpenArchive,
           onOpenTrash: widget.onOpenTrash,
           onOpenSettings: widget.onOpenSettings,
+          onOpenItem: widget.onOpenItem,
         ),
         body: Stack(
           children: [
@@ -331,11 +335,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
 
-                          // 2. Folder Dropdown + Tag Filter Pills (Only shown for Notes / All)
+                          // 2. Folder Dropdown + Tag Filter Pills + Quick Habit Bar (Notes / All)
                           if (workspace.selectedCategory != ItemType.whiteboard &&
                               workspace.selectedCategory != ItemType.clipboard) ...[
+                            if (!_isSearching)
+                              _buildQuickWorkspaceActionsBar(workspace, isDark, borderColor),
                             const CategoryFilterPills(),
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: AppSpacing.sm),
                           ],
                         ],
                       ),
@@ -343,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // 3. Main Notes Feed: Neo-Pop Grid Feed or Clipboard List
+                // 3. Main Notes Feed: Neo-Pop Grid, Clean Notebook List, or Clipboard List
                 Expanded(
                   child: ClipRect(
                   child: NotificationListener<UserScrollNotification>(
@@ -366,7 +372,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? _buildEmptyState(workspace)
                             : (workspace.selectedCategory == ItemType.clipboard
                                 ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
-                                : _buildNeoGridFeedView(items)),
+                                : (workspace.viewMode == HomeViewMode.notebook &&
+                                        workspace.selectedCategory != ItemType.whiteboard
+                                    ? _buildNotebookListView(items)
+                                    : _buildNeoGridFeedView(items))),
                   ),
                   ),
                 ),
@@ -559,6 +568,139 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
+  Widget _buildQuickWorkspaceActionsBar(
+    WorkspaceProvider workspace,
+    bool isDark,
+    Color borderColor,
+  ) {
+    Widget chip({
+      required String label,
+      String? emoji,
+      IconData? icon,
+      required Color accent,
+      required VoidCallback onTap,
+    }) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : Colors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: isDark ? accent.withValues(alpha: 0.45) : borderColor,
+              width: 1.35,
+            ),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF191A23).withValues(alpha: 0.06),
+                      blurRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (emoji != null) ...[
+                Text(emoji, style: const TextStyle(fontSize: 13.5)),
+                const SizedBox(width: 6),
+              ] else if (icon != null) ...[
+                Icon(icon, size: 14, color: accent),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.25,
+                  color: isDark ? Colors.white : const Color(0xFF191A23),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Row(
+          children: [
+            chip(
+              emoji: '☀️',
+              label: "Today's Note",
+              accent: AppColors.accentAmber,
+              onTap: () async {
+                HapticFeedback.mediumImpact();
+                final daily = await workspace.openOrCreateTodaysNote();
+                widget.onOpenItem?.call(daily);
+              },
+            ),
+            const SizedBox(width: 8),
+            chip(
+              emoji: '⚡',
+              label: 'Quick Note',
+              accent: AppColors.pastelLimeLight,
+              onTap: () async {
+                HapticFeedback.mediumImpact();
+                final created = await workspace.createQuickItem(
+                  title: 'Untitled Note',
+                  type: ItemType.note,
+                  paletteId: 'peach',
+                );
+                widget.onOpenItem?.call(created);
+              },
+            ),
+            const SizedBox(width: 8),
+            chip(
+              icon: LucideIcons.network,
+              label: 'Graph',
+              accent: AppColors.accentCyan,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const KnowledgeGraphScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotebookListView(List<BaseWorkspaceItem> items) {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(
+        0,
+        AppSpacing.xs,
+        0,
+        96 + MediaQuery.paddingOf(context).bottom,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return SmartNoteListCard(
+          key: ValueKey(item.id),
+          item: item,
+          index: index,
+          onTap: () => widget.onOpenItem?.call(item),
+          onLongPress: () => NoteActionSheet.show(context, item: item),
+        );
+      },
+    );
+  }
 
   Widget _buildCard(BaseWorkspaceItem item) {
     if (item is StickyNote) {

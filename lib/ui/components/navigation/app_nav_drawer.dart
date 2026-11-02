@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
+import '../../screens/editor/note_editor_screen.dart';
+import '../../screens/graph/knowledge_graph_screen.dart';
 
-/// Navigation Drawer for secondary destinations with cute HeroIcons.
-/// Fully responsive across all Android device heights and orientations.
+/// Navigation Drawer for secondary destinations, Daily Notes, Knowledge Graph, and Folders.
 class AppNavDrawer extends StatelessWidget {
   final VoidCallback? onOpenFavorites;
   final VoidCallback? onOpenArchive;
   final VoidCallback? onOpenTrash;
   final VoidCallback? onOpenSettings;
+  final ValueChanged<BaseWorkspaceItem>? onOpenItem;
 
   const AppNavDrawer({
     super.key,
@@ -20,6 +25,7 @@ class AppNavDrawer extends StatelessWidget {
     this.onOpenArchive,
     this.onOpenTrash,
     this.onOpenSettings,
+    this.onOpenItem,
   });
 
   @override
@@ -69,7 +75,7 @@ class AppNavDrawer extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Tactile notes & boards',
+                          'Connected specs & notes',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                           ),
@@ -84,11 +90,42 @@ class AppNavDrawer extends StatelessWidget {
             ),
             const Divider(height: 1),
 
-            // Scrollable Middle: Primary Navigation Items
+            // Scrollable Middle: Primary Navigation + Folders
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                 children: [
+                  _buildDrawerTile(
+                    context,
+                    icon: TackIcons.sun,
+                    iconColor: AppColors.accentAmber,
+                    title: "Today's Note",
+                    onTap: () async {
+                      final nav = Navigator.of(context);
+                      nav.pop();
+                      final daily = await workspace.openOrCreateTodaysNote();
+                      if (onOpenItem != null) {
+                        onOpenItem!(daily);
+                      } else {
+                        nav.push(
+                          MaterialPageRoute(builder: (_) => NoteEditorScreen(item: daily)),
+                        );
+                      }
+                    },
+                  ),
+                  _buildDrawerTile(
+                    context,
+                    icon: LucideIcons.network,
+                    iconColor: AppColors.accentCyan,
+                    title: 'Knowledge Graph',
+                    onTap: () {
+                      final nav = Navigator.of(context);
+                      nav.pop();
+                      nav.push(
+                        MaterialPageRoute(builder: (_) => const KnowledgeGraphScreen()),
+                      );
+                    },
+                  ),
                   _buildDrawerTile(
                     context,
                     icon: TackIcons.gridView,
@@ -97,6 +134,7 @@ class AppNavDrawer extends StatelessWidget {
                     onTap: () {
                       Navigator.of(context).pop();
                       workspace.setCategory(null);
+                      workspace.setSelectedFolder('All Notes');
                     },
                   ),
                   _buildDrawerTile(
@@ -111,6 +149,17 @@ class AppNavDrawer extends StatelessWidget {
                       onOpenFavorites?.call();
                     },
                   ),
+                  if (onOpenArchive != null)
+                    _buildDrawerTile(
+                      context,
+                      icon: TackIcons.archive,
+                      title: 'Archive',
+                      badgeCount: workspace.archivedItems.length,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onOpenArchive?.call();
+                      },
+                    ),
                   _buildDrawerTile(
                     context,
                     icon: TackIcons.trash,
@@ -122,6 +171,68 @@ class AppNavDrawer extends StatelessWidget {
                       onOpenTrash?.call();
                     },
                   ),
+                  if (workspace.userFolders.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6),
+                      child: Divider(height: 1),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Text(
+                        'FOLDERS',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        ),
+                      ),
+                    ),
+                    ...workspace.userFolders.map((folder) {
+                      final count = workspace.rawItems
+                          .where((i) =>
+                              !i.isTrash &&
+                              !i.isArchived &&
+                              (i.folderName ?? '').toLowerCase() == folder.toLowerCase())
+                          .length;
+                      return _buildDrawerTile(
+                        context,
+                        icon: LucideIcons.folder,
+                        title: folder,
+                        badgeCount: count,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          workspace.setCategory(null);
+                          workspace.setSelectedFolder(folder);
+                        },
+                        onLongPress: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text('Remove "$folder"?'),
+                              content: const Text(
+                                'Notes inside this folder will stay safe in All Notes.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text('Remove'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await workspace.deleteFolder(folder);
+                          }
+                        },
+                      );
+                    }),
+                  ],
                 ],
               ),
             ),
@@ -156,7 +267,7 @@ class AppNavDrawer extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Flutter Android',
+                          'Local-First Markdown',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                           ),
@@ -181,6 +292,7 @@ class AppNavDrawer extends StatelessWidget {
     dynamic style,
     int? badgeCount,
     required VoidCallback onTap,
+    VoidCallback? onLongPress,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -217,6 +329,7 @@ class AppNavDrawer extends StatelessWidget {
           : null,
       shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }

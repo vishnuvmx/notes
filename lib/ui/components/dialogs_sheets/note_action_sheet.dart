@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -224,6 +225,71 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                   );
                 },
               ),
+
+              // Action: Move to Folder
+              if (!isClip)
+                _buildActionTile(
+                  title: widget.item.folderName != null
+                      ? 'Move Folder (${widget.item.folderName})'
+                      : 'Move to Folder',
+                  icon: LucideIcons.folder,
+                  iconColor: AppColors.accentCyan,
+                  isDark: isDark,
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    final chosen = await showModalBottomSheet<String?>(
+                      context: context,
+                      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (ctx) => SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Move "${widget.item.title}" to Folder',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              ListTile(
+                                leading: const Icon(LucideIcons.folderX, size: 19),
+                                title: const Text('No Folder (All Notes)'),
+                                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                                onTap: () => Navigator.of(ctx).pop(''),
+                              ),
+                              ...workspace.userFolders.map(
+                                (f) => ListTile(
+                                  leading: const Icon(LucideIcons.folder, size: 19),
+                                  title: Text(f),
+                                  trailing: widget.item.folderName == f
+                                      ? const TackIcon(TackIcons.check, size: 16)
+                                      : null,
+                                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                                  onTap: () => Navigator.of(ctx).pop(f),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                    if (chosen != null) {
+                      await workspace.moveItemToFolder(
+                        widget.item.id,
+                        chosen.isEmpty ? null : chosen,
+                      );
+                    }
+                  },
+                ),
 
               // Action: Duplicate
               _buildActionTile(

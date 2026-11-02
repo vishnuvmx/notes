@@ -104,7 +104,9 @@ class SmartNoteListCard extends StatelessWidget {
                     children: [
                       // Title
                       Text(
-                        item.title,
+                        (item.iconEmoji != null && item.iconEmoji!.isNotEmpty)
+                            ? '${item.iconEmoji} ${item.title}'
+                            : item.title,
                         style: TextStyle(
                           fontFamily: AppTypography.fontFamily,
                           fontSize: 16,
