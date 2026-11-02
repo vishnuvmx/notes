@@ -32,14 +32,33 @@ class DividerToolbarItem extends ToolbarActionItem {
 }
 
 /// Tactile, HeroIcons-aligned formatting toolbar for Tack Note Editor.
-/// Features Heading toggles (H1, H2), Bold, Italic, Pastel Highlighter,
-/// Checklists, Lists, and Quotes without any generic Material icons.
+/// Features Slash Commands (/), Turn Into / Line Moves (⇄), Wiki-Links ([[),
+/// Heading toggles (H1, H2), Bold, Italic, Pastel Highlighter, Checklists, Lists, and Quotes.
 class EditorFormattingToolbar extends StatelessWidget {
   final Function(String action)? onFormatAction;
 
   const EditorFormattingToolbar({super.key, this.onFormatAction});
 
   static const List<ToolbarActionItem> tools = [
+    TextToolbarItem(
+      label: 'Slash Blocks (/)',
+      action: 'slash',
+      display: '/',
+      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+    ),
+    TextToolbarItem(
+      label: 'Turn Into & Move Line',
+      action: 'turn_into',
+      display: '⇄',
+      customStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+    ),
+    TextToolbarItem(
+      label: 'Link Note or Board [[',
+      action: 'wikilink',
+      display: '[[',
+      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.8),
+    ),
+    DividerToolbarItem(),
     TextToolbarItem(
       label: 'Heading 1',
       action: 'h1',
@@ -143,6 +162,8 @@ class EditorFormattingToolbar extends StatelessWidget {
             );
           }
 
+          final isHighlightPill = item.action == 'slash' || item.action == 'turn_into';
+
           return Tooltip(
             message: item.label,
             child: Padding(
@@ -159,6 +180,12 @@ class EditorFormattingToolbar extends StatelessWidget {
                     width: 38,
                     height: 38,
                     alignment: Alignment.center,
+                    decoration: isHighlightPill
+                        ? BoxDecoration(
+                            color: AppColors.accentAmber.withValues(alpha: isDark ? 0.16 : 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          )
+                        : null,
                     child: switch (item) {
                       IconToolbarItem iconItem => TackIcon(
                           iconItem.icon,
@@ -170,7 +197,9 @@ class EditorFormattingToolbar extends StatelessWidget {
                           style: (textItem.customStyle ?? const TextStyle()).copyWith(
                             color: textItem.action == 'highlight'
                                 ? (isDark ? Colors.black : const Color(0xFF5A4112))
-                                : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                : (isHighlightPill
+                                    ? (isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23))
+                                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)),
                           ),
                         ),
                       DividerToolbarItem() => const SizedBox.shrink(),

@@ -38,6 +38,7 @@ class MarkdownTextEditingController extends TextEditingController {
     final pattern = RegExp(
       r'(```[\s\S]*?```|```[^\n]*)'
       r'|(`[^`\n]+`)'
+      r'|(!?\[\[[^\[\]\n]+\]\])'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
       r'|(==.*?==)'
@@ -135,6 +136,21 @@ class MarkdownTextEditingController extends TextEditingController {
           ),
         ));
         spans.add(TextSpan(text: '`', style: delimiterStyle));
+      } else if ((matchedText.startsWith('[[') || matchedText.startsWith('![[')) &&
+          matchedText.endsWith(']]')) {
+        final openLen = matchedText.startsWith('![[') ? 3 : 2;
+        final openToken = matchedText.substring(0, openLen);
+        final innerText = matchedText.substring(openLen, matchedText.length - 2);
+        spans.add(TextSpan(text: openToken, style: delimiterStyle));
+        spans.add(TextSpan(
+          text: innerText,
+          style: style?.copyWith(
+            color: palette.resolveAccentColor(isDark),
+            fontWeight: FontWeight.w700,
+            backgroundColor: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.14 : 0.10),
+          ),
+        ));
+        spans.add(TextSpan(text: ']]', style: delimiterStyle));
       } else if (matchedText.startsWith('![') && matchedText.contains('](') && matchedText.endsWith(')')) {
         final midIndex = matchedText.indexOf('](');
         final altText = matchedText.substring(2, midIndex);

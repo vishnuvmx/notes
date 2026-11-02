@@ -10,17 +10,23 @@ import '../../../core/theme/tack_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'code_syntax_highlighter.dart';
 import 'mermaid/mermaid_diagram_card.dart';
+import 'whiteboard_embed_card.dart';
 import '../../../core/utils/url_launcher_helper.dart';
+import '../../../domain/models/base_item.dart';
+import '../../../domain/models/whiteboard_item.dart';
+import '../../../domain/services/wiki_link_service.dart';
 
 /// Rich Interactive Content View for Tack Notes.
 /// Renders Headings (H1-H6), Blockquotes, Interactive Checklists, Bullet & Numbered Lists,
-/// GFM Tables, Fenced Code Blocks, Inline Code, Clickable Links, Images, and Horizontal Rules.
+/// GFM Tables, Fenced Code Blocks, Inline Code, Wiki-Links, Whiteboard Embeds, Clickable Links, Images, and Horizontal Rules.
 class RichNoteContentView extends StatelessWidget {
   final String content;
   final ValueChanged<String>? onContentChanged;
   final ValueChanged<int>? onLineTap;
   final bool isInteractive;
   final String? paletteId;
+  final Iterable<BaseWorkspaceItem> workspaceItems;
+  final ValueChanged<ParsedWikiLink>? onWikiLinkTap;
 
   const RichNoteContentView({
     super.key,
@@ -29,6 +35,8 @@ class RichNoteContentView extends StatelessWidget {
     this.onLineTap,
     this.isInteractive = true,
     this.paletteId,
+    this.workspaceItems = const [],
+    this.onWikiLinkTap,
   });
 
   TackColorPalette get palette => AppColors.getPaletteById(paletteId);
@@ -142,6 +150,24 @@ class RichNoteContentView extends StatelessWidget {
           }
           widgets.add(_wrapLineTap(_buildTable(context, tableLines, isDark, theme), i));
           i = j;
+          continue;
+        }
+      }
+
+      // 2b. Standalone Workspace Embed: ![[Whiteboard]] or ![[Note#Section]]
+      final embedLineMatch = RegExp(r'^\s*(!\[\[[^\[\]\n]+\]\])\s*$').firstMatch(line);
+      if (embedLineMatch != null) {
+        final parsedEmbed = WikiLinkService.parseToken(embedLineMatch.group(1)!);
+        if (parsedEmbed != null) {
+          final resolved = WikiLinkService.resolveTarget(parsedEmbed.target, workspaceItems);
+          widgets.add(
+            WorkspaceEmbedCard(
+              link: parsedEmbed,
+              resolvedItem: resolved,
+              onTap: () => onWikiLinkTap?.call(parsedEmbed),
+            ),
+          );
+          i++;
           continue;
         }
       }
@@ -991,6 +1017,7 @@ class RichNoteContentView extends StatelessWidget {
 
     final pattern = RegExp(
       r'(`[^`\n]+`)'
+      r'|(!?\[\[[^\[\]\n]+\]\])'
       r'|(!\[[^\]\n]*\]\([^)\n]+\))'
       r'|(\[[^\]\n]+\]\([^)\n]+\))'
       r'|(https?:\/\/[^\s<]+[^<.,:;"\)\]\s])'
@@ -1042,6 +1069,81 @@ class RichNoteContentView extends StatelessWidget {
             ),
           ),
         );
+      } else if ((matched.startsWith('[[') || matched.startsWith('![[')) &&
+          matched.endsWith(']]')) {
+        final parsedLink = WikiLinkService.parseToken(matched);
+        if (parsedLink != null) {
+          final targetItem = WikiLinkService.resolveTarget(parsedLink.target, workspaceItems);
+          final isBoard = targetItem is WhiteboardCanvasItem;
+          final exists = targetItem != null;
+          final linkPalette = exists ? AppColors.getPaletteById(targetItem.paletteId) : palette;
+          final linkAccent = linkPalette.resolveAccentColor(isDark);
+
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                child: Material(
+                  color: exists
+                      ? linkAccent.withValues(alpha: isDark ? 0.18 : 0.12)
+                      : (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F7)),
+                  borderRadius: BorderRadius.circular(7),
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onWikiLinkTap?.call(parsedLink);
+                    },
+                    borderRadius: BorderRadius.circular(7),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: exists
+                              ? linkAccent.withValues(alpha: 0.45)
+                              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                          width: 0.9,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TackIcon(
+                            !exists
+                                ? TackIcons.plus
+                                : (isBoard ? TackIcons.whiteboardSvg : TackIcons.notesSvg),
+                            size: 11.5,
+                            color: exists ? linkAccent : AppColors.accentAmber,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              parsedLink.displayLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: (defaultStyle?.fontSize ?? 15) * 0.86,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                                color: exists
+                                    ? linkAccent
+                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        } else {
+          spans.add(TextSpan(text: matched, style: defaultStyle));
+        }
       } else if (matched.startsWith('![') && matched.contains('](') && matched.endsWith(')')) {
         final midIndex = matched.indexOf('](');
         final alt = matched.substring(2, midIndex);

@@ -10,7 +10,8 @@ enum CanvasNodeType {
   connector,    // Small circle
   sticky,       // Sticky note shape
   textOnly,     // Floating text
-  image;        // Pinned/draggable image node
+  image,        // Pinned/draggable image node
+  specCard;     // Figma-Specs style Markdown Spec / Linked Note card
 
   String get label {
     switch (this) {
@@ -30,6 +31,8 @@ enum CanvasNodeType {
         return 'Text';
       case CanvasNodeType.image:
         return 'Image';
+      case CanvasNodeType.specCard:
+        return 'Spec Card';
     }
   }
 }
@@ -46,6 +49,7 @@ class CanvasNode {
   final double height;
   final String paletteId;
   final String? imagePath;
+  final String? linkedNoteId;
 
   const CanvasNode({
     required this.id,
@@ -57,6 +61,7 @@ class CanvasNode {
     this.height = 64,
     this.paletteId = 'peach',
     this.imagePath,
+    this.linkedNoteId,
   });
 
   CanvasNode copyWith({
@@ -68,6 +73,7 @@ class CanvasNode {
     double? height,
     String? paletteId,
     String? imagePath,
+    String? linkedNoteId,
   }) {
     return CanvasNode(
       id: id,
@@ -79,6 +85,7 @@ class CanvasNode {
       height: height ?? this.height,
       paletteId: paletteId ?? this.paletteId,
       imagePath: imagePath ?? this.imagePath,
+      linkedNoteId: linkedNoteId ?? this.linkedNoteId,
     );
   }
 
@@ -99,6 +106,7 @@ class CanvasNode {
       'height': height,
       'paletteId': paletteId,
       'imagePath': imagePath,
+      if (linkedNoteId != null) 'linkedNoteId': linkedNoteId,
     };
   }
 
@@ -116,6 +124,7 @@ class CanvasNode {
       height: (json['height'] as num?)?.toDouble() ?? 64.0,
       paletteId: json['paletteId'] as String? ?? 'peach',
       imagePath: json['imagePath'] as String?,
+      linkedNoteId: json['linkedNoteId'] as String?,
     );
   }
 }
@@ -201,7 +210,19 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
 
   @override
   String getSummary() {
+    final specCount = nodes.where((n) => n.shapeType == CanvasNodeType.specCard).length;
+    if (specCount > 0) {
+      return '${nodes.length} nodes ($specCount spec${specCount == 1 ? '' : 's'}), ${edges.length} connections';
+    }
     return '${nodes.length} nodes, ${edges.length} connections';
+  }
+
+  @override
+  bool matchesQuery(String query) {
+    if (query.isEmpty) return true;
+    final lower = query.toLowerCase();
+    final matchInNodes = nodes.any((n) => n.text.toLowerCase().contains(lower));
+    return super.matchesQuery(query) || matchInNodes;
   }
 
   @override
