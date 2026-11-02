@@ -367,6 +367,16 @@ class WikiLinkService {
 
     final currentTitle = currentItem.title.trim();
     final lowerTitle = currentTitle.toLowerCase();
+    final lowerAliases = FrontmatterService.parse(contentOfItem(currentItem))
+        .aliases
+        .map((a) => a.toLowerCase())
+        .toSet();
+    bool matchesTarget(String rawTarget) {
+      if (rawTarget == currentItem.id) return true;
+      final lower = rawTarget.toLowerCase();
+      return lower == lowerTitle || lowerAliases.contains(lower);
+    }
+
     final canMatchUnlinked = currentTitle.length >= 3 &&
         lowerTitle != 'untitled note' &&
         lowerTitle != 'new sticky' &&
@@ -376,13 +386,11 @@ class WikiLinkService {
       if (candidate.isTrash || candidate.id == currentItem.id) continue;
 
       if (candidate is WhiteboardCanvasItem) {
-        // Check if any CanvasNode pins this note or mentions [[currentTitle]]
+        // Check if any CanvasNode pins this note or mentions [[currentTitle]] / [[alias]]
         for (final node in candidate.nodes) {
           final isDirectPin = node.linkedNoteId == currentItem.id;
           final nodeLinks = extractAllLinks(node.text);
-          final mentionsViaLink = nodeLinks.any(
-            (l) => l.target == currentItem.id || l.target.toLowerCase() == lowerTitle,
-          );
+          final mentionsViaLink = nodeLinks.any((l) => matchesTarget(l.target));
           if (isDirectPin || mentionsViaLink) {
             linked.add(
               BacklinkEntry(
@@ -404,15 +412,19 @@ class WikiLinkService {
       if (body.trim().isEmpty) continue;
 
       final linksInCandidate = extractAllLinks(body);
-      final hasExplicitLink = linksInCandidate.any(
-        (l) => l.target == currentItem.id || l.target.toLowerCase() == lowerTitle,
-      );
+      ParsedWikiLink? matchedLink;
+      for (final l in linksInCandidate) {
+        if (matchesTarget(l.target)) {
+          matchedLink = l;
+          break;
+        }
+      }
 
-      if (hasExplicitLink) {
+      if (matchedLink != null) {
         linked.add(
           BacklinkEntry(
             sourceItem: candidate,
-            contextSnippet: _extractContextAround(body, currentTitle),
+            contextSnippet: _extractContextAround(body, matchedLink.target),
           ),
         );
       } else if (canMatchUnlinked) {

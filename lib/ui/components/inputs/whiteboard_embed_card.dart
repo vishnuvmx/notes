@@ -255,7 +255,9 @@ class WorkspaceEmbedCard extends StatelessWidget {
   ) {
     final palette = AppColors.getPaletteById(noteItem.paletteId);
     final accent = palette.resolveAccentColor(isDark);
-    final rawBody = FrontmatterService.parse(WikiLinkService.contentOfItem(noteItem)).body;
+    final rawBody =
+        FrontmatterService.parse(WikiLinkService.contentOfItem(noteItem))
+            .bodyWithoutFrontmatter;
     final excerpt = WikiLinkService.extractSectionMarkdown(
       rawBody,
       anchor: link.anchor,

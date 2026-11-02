@@ -4675,7 +4675,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
 
       case CanvasNodeType.process:
-      default:
         shapeContent = Container(
           width: node.width,
           height: node.height,

@@ -635,3 +635,4 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
     );
   }
 }
+

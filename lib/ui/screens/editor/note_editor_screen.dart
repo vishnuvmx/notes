@@ -33,6 +33,8 @@ import '../../components/inputs/mermaid/mermaid_completion_bar.dart';
 import '../../components/dialogs_sheets/mermaid_template_sheet.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 import '../../../domain/services/note_export_service.dart';
+import '../../../domain/services/note_template_service.dart';
+import '../graph/knowledge_graph_screen.dart';
 import '../whiteboard/whiteboard_canvas_screen.dart';
 
 /// Full-featured Note Editor & Reader Screen (Phase 3 + Phase 1 Connected Specs).
@@ -62,6 +64,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   double _savedScrollOffset = 0.0;
   late String _paletteId;
   late List<String> _tags;
+  String? _folderName;
+  String? _parentId;
+  String? _iconEmoji;
 
   bool _isEditingMode = true;
   bool _isAddingTag = false;
@@ -94,6 +99,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
     _isEditingMode = widget.initialHeadingAnchor == null && initialContent.trim().isEmpty;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
+    _folderName = widget.item.folderName;
+    _parentId = widget.item.parentId;
+    _iconEmoji = widget.item.iconEmoji;
 
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
@@ -138,40 +146,61 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _workspace = context.read<WorkspaceProvider>();
   }
 
-  void _flushSave() {
-    final ws = _workspace;
-    if (ws == null) return;
+  BaseWorkspaceItem _buildUpdatedItem(WorkspaceProvider ws) {
+    final latest = ws.getItemById(widget.item.id) ?? widget.item;
     final title = _titleController.text.trim();
     final content = _contentController.text;
     final paletteId = _paletteId;
     final tags = List<String>.from(_tags);
 
-    BaseWorkspaceItem updated;
-    if (widget.item is StickyNote) {
-      updated = (widget.item as StickyNote).copyWith(
+    if (latest is StickyNote) {
+      return latest.copyWith(
         title: title.isEmpty ? 'Untitled Sticky' : title,
         content: content,
         paletteId: paletteId,
+        folderName: _folderName,
+        clearFolder: _folderName == null,
+        parentId: _parentId,
+        clearParent: _parentId == null,
+        iconEmoji: _iconEmoji,
+        clearIcon: _iconEmoji == null,
         updatedAt: DateTime.now(),
       );
-    } else if (widget.item is ClipboardItem) {
-      updated = (widget.item as ClipboardItem).copyWith(
+    } else if (latest is ClipboardItem) {
+      return latest.copyWith(
         title: title.isEmpty ? 'Untitled Clip' : title,
         clipText: content,
         paletteId: paletteId,
+        folderName: _folderName,
+        clearFolder: _folderName == null,
+        parentId: _parentId,
+        clearParent: _parentId == null,
+        iconEmoji: _iconEmoji,
+        clearIcon: _iconEmoji == null,
         updatedAt: DateTime.now(),
-      );
-    } else {
-      updated = (widget.item as TextNote).copyWith(
-        title: title.isEmpty ? 'Untitled Note' : title,
-        content: content,
-        tags: tags,
-        paletteId: paletteId,
-        updatedAt: DateTime.now(),
-        sourceApp: (widget.item as TextNote).sourceApp,
       );
     }
-    ws.saveItem(updated);
+    final noteBase = latest is TextNote ? latest : (widget.item as TextNote);
+    return noteBase.copyWith(
+      title: title.isEmpty ? 'Untitled Note' : title,
+      content: content,
+      tags: tags,
+      paletteId: paletteId,
+      folderName: _folderName,
+      clearFolder: _folderName == null,
+      parentId: _parentId,
+      clearParent: _parentId == null,
+      iconEmoji: _iconEmoji,
+      clearIcon: _iconEmoji == null,
+      updatedAt: DateTime.now(),
+      sourceApp: noteBase.sourceApp,
+    );
+  }
+
+  void _flushSave() {
+    final ws = _workspace;
+    if (ws == null) return;
+    ws.saveItem(_buildUpdatedItem(ws));
   }
 
   @override
@@ -376,42 +405,228 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _saveNote() async {
     if (!mounted) return;
     _isSaving = true;
-    // Capture all context-dependent values before the first await
     final workspace = context.read<WorkspaceProvider>();
-    final title = _titleController.text.trim();
-    final content = _contentController.text;
-    final paletteId = _paletteId;
-    final tags = List<String>.from(_tags);
-
-    BaseWorkspaceItem updated;
-    if (widget.item is StickyNote) {
-      updated = (widget.item as StickyNote).copyWith(
-        title: title.isEmpty ? 'Untitled Sticky' : title,
-        content: content,
-        paletteId: paletteId,
-        updatedAt: DateTime.now(),
-      );
-    } else if (widget.item is ClipboardItem) {
-      updated = (widget.item as ClipboardItem).copyWith(
-        title: title.isEmpty ? 'Untitled Clip' : title,
-        clipText: content,
-        paletteId: paletteId,
-        updatedAt: DateTime.now(),
-      );
-    } else {
-      updated = (widget.item as TextNote).copyWith(
-        title: title.isEmpty ? 'Untitled Note' : title,
-        content: content,
-        tags: tags,
-        paletteId: paletteId,
-        updatedAt: DateTime.now(),
-        sourceApp: (widget.item as TextNote).sourceApp,
-      );
-    }
+    final updated = _buildUpdatedItem(workspace);
 
     await workspace.saveItem(updated);
     if (!mounted) return;
     setState(() => _isSaving = false);
+  }
+
+  void _showEmojiPickerSheet() {
+    const emojis = [
+      '📝', '📐', '🎨', '⚖️', '🚀', '💡', '🧠', '☀️',
+      '🔥', '✅', '📌', '🗂️', '🧪', '🛠️', '🌟', '🔒',
+    ];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Note Icon',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  if (_iconEmoji != null)
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _iconEmoji = null);
+                        _saveNote();
+                        Navigator.of(ctx).pop();
+                      },
+                      child: const Text('Remove'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: emojis.map((e) {
+                  final selected = _iconEmoji == e;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _iconEmoji = e);
+                      _saveNote();
+                      Navigator.of(ctx).pop();
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.pastelLimeLight
+                            : (isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFF191A23)
+                              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                          width: selected ? 1.6 : 1.0,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(e, style: const TextStyle(fontSize: 22)),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showMoveToFolderSheet() async {
+    final workspace = context.read<WorkspaceProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chosen = await showModalBottomSheet<String?>(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Move Note to Folder',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(LucideIcons.folderX, size: 19),
+                title: const Text('No Folder (All Notes)'),
+                trailing: _folderName == null
+                    ? const TackIcon(TackIcons.check, size: 16)
+                    : null,
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () => Navigator.of(ctx).pop(''),
+              ),
+              ...workspace.userFolders.map(
+                (f) => ListTile(
+                  leading: const Icon(LucideIcons.folder, size: 19),
+                  title: Text(f),
+                  trailing: _folderName == f
+                      ? const TackIcon(TackIcons.check, size: 16)
+                      : null,
+                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                  onTap: () => Navigator.of(ctx).pop(f),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (chosen != null && mounted) {
+      setState(() => _folderName = chosen.isEmpty ? null : chosen);
+      _saveNote();
+    }
+  }
+
+  Future<void> _handleCreateSubNote() async {
+    HapticFeedback.mediumImpact();
+    _flushSave();
+    final workspace = context.read<WorkspaceProvider>();
+    final child = await workspace.createQuickItem(
+      title: 'Untitled Sub-note',
+      type: ItemType.note,
+      paletteId: _paletteId,
+      parentId: widget.item.id,
+      folderName: _folderName,
+      iconEmoji: '📄',
+    );
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: child)),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _handleSaveAsTemplate() async {
+    final nameController = TextEditingController(
+      text: _titleController.text.trim().isEmpty
+          ? 'Custom Template'
+          : _titleController.text.trim(),
+    );
+    final savedName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Save as Template',
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Template Name',
+            hintText: 'e.g. Sprint Retro, Feature Spec...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(nameController.text.trim()),
+            child: const Text('Save Template'),
+          ),
+        ],
+      ),
+    );
+    if (savedName != null && savedName.isNotEmpty) {
+      await NoteTemplateService.saveCustomTemplate(
+        name: savedName,
+        bodyTemplate: _contentController.text,
+        paletteId: _paletteId,
+        iconEmoji: _iconEmoji ?? '✨',
+        tags: _tags,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Saved "$savedName" to Templates Gallery'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _removeTag(String tag) {
@@ -1406,9 +1621,32 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         ? WikiLinkService.detectActiveSlashTrigger(content, cursorOffset)
         : null;
 
-    final currentSnapshot = widget.item.copyWith(
-      title: _titleController.text.trim().isEmpty ? widget.item.title : _titleController.text.trim(),
-    );
+    final currentSnapshot = (widget.item is TextNote)
+        ? (widget.item as TextNote).copyWith(
+            title: _titleController.text.trim().isEmpty
+                ? widget.item.title
+                : _titleController.text.trim(),
+            content: content,
+            folderName: _folderName,
+            clearFolder: _folderName == null,
+            parentId: _parentId,
+            clearParent: _parentId == null,
+            iconEmoji: _iconEmoji,
+            clearIcon: _iconEmoji == null,
+          )
+        : widget.item.copyWith(
+            title: _titleController.text.trim().isEmpty
+                ? widget.item.title
+                : _titleController.text.trim(),
+            folderName: _folderName,
+            clearFolder: _folderName == null,
+            parentId: _parentId,
+            clearParent: _parentId == null,
+            iconEmoji: _iconEmoji,
+            clearIcon: _iconEmoji == null,
+          );
+    final breadcrumbs = workspace.getBreadcrumbChain(currentSnapshot);
+    final childItems = workspace.getChildItems(widget.item.id);
     final backlinks = WikiLinkService.computeBacklinks(
       currentItem: currentSnapshot,
       allItems: workspace.rawItems,
@@ -1442,7 +1680,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 visualDensity: VisualDensity.compact,
                 onPressed: _handleBackPress,
-                tooltip: _isEditingMode ? 'Reader Mode' : 'Back',
+                tooltip: 'Back',
               ),
             const SizedBox(width: 10),
             Flexible(
@@ -1540,7 +1778,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             },
           ),
 
-          // iOS-Style Overflow Menu (Favorite, Share, Trash)
+          // iOS-Style Overflow Menu (Favorite, Graph, Folder, Template, Share, Trash)
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: IosThreeDotMenu<String>(
@@ -1551,6 +1789,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 if (val == 'favorite') {
                   workspace.toggleFavorite(widget.item.id);
                   setState(() {});
+                } else if (val == 'local_graph') {
+                  _flushSave();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => KnowledgeGraphScreen(focusItemId: widget.item.id),
+                    ),
+                  );
+                } else if (val == 'move_folder') {
+                  await _showMoveToFolderSheet();
+                } else if (val == 'save_template') {
+                  await _handleSaveAsTemplate();
                 } else if (val == 'duplicate') {
                   HapticFeedback.lightImpact();
                   workspace.duplicateItem(widget.item.id);
@@ -1576,6 +1825,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
                   iconColor: AppColors.accentAmber,
                 ),
+                const IosMenuItem(
+                  value: 'local_graph',
+                  title: 'Local Graph',
+                  icon: LucideIcons.network,
+                  iconColor: AppColors.accentCyan,
+                ),
+                const IosMenuItem(
+                  value: 'move_folder',
+                  title: 'Move to Folder',
+                  icon: LucideIcons.folder,
+                ),
+                if (widget.item is TextNote)
+                  const IosMenuItem(
+                    value: 'save_template',
+                    title: 'Save as Template',
+                    icon: LucideIcons.sparkles,
+                  ),
                 const IosMenuItem(
                   value: 'duplicate',
                   title: 'Duplicate Note',
@@ -1638,34 +1904,65 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       ),
 
-                    // Large Note Title
-                    if (_isEditingMode)
-                      TextField(
-                        controller: _titleController,
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                          height: 1.2,
-                        ),
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          hintText: 'Note title...',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      )
-                    else
-                      Text(
-                        _titleController.text.isEmpty ? 'Untitled Note' : _titleController.text,
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.6,
-                          height: 1.2,
-                        ),
+                    // Breadcrumbs, Folder & Hierarchy Bar (Notion / Obsidian)
+                    if (_folderName != null ||
+                        breadcrumbs.isNotEmpty ||
+                        _isEditingMode ||
+                        _iconEmoji != null)
+                      _buildBreadcrumbAndHierarchyBar(
+                        breadcrumbs: breadcrumbs,
+                        isDark: isDark,
+                        palette: palette,
                       ),
+
+                    // Large Note Title (with optional Emoji Icon)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (_iconEmoji != null && _iconEmoji!.isNotEmpty) ...[
+                          GestureDetector(
+                            onTap: _showEmojiPickerSheet,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: Text(
+                                _iconEmoji!,
+                                style: const TextStyle(fontSize: 30),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Expanded(
+                          child: _isEditingMode
+                              ? TextField(
+                                  controller: _titleController,
+                                  style: theme.textTheme.displaySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.6,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: null,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Note title...',
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    filled: false,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                )
+                              : Text(
+                                  _titleController.text.isEmpty
+                                      ? 'Untitled Note'
+                                      : _titleController.text,
+                                  style: theme.textTheme.displaySmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.6,
+                                    height: 1.2,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
 
                     // Ordinal Date Stamp & Checklist Progress
@@ -1905,6 +2202,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       ),
                     ],
+
+                    // Nested Sub-Notes Section (Feature 9)
+                    if (childItems.isNotEmpty)
+                      _buildSubNotesSection(
+                        childItems: childItems,
+                        isDark: isDark,
+                        palette: palette,
+                      ),
 
                     // Collapsible Bi-Directional Backlinks & Unlinked Mentions
                     NoteBacklinksSection(
@@ -2171,6 +2476,277 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreadcrumbAndHierarchyBar({
+    required List<BaseWorkspaceItem> breadcrumbs,
+    required bool isDark,
+    required TackColorPalette palette,
+  }) {
+    final pillBg = isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.85);
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final muted = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Folder pill
+            if (_folderName != null || _isEditingMode)
+              GestureDetector(
+                onTap: _showMoveToFolderSheet,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: pillBg,
+                    borderRadius: AppSpacing.roundedPill,
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.folder, size: 12, color: muted),
+                      const SizedBox(width: 4),
+                      Text(
+                        _folderName ?? 'Folder',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Ancestor breadcrumb chain
+            for (final ancestor in breadcrumbs) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(LucideIcons.chevronRight, size: 13, color: muted),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  _flushSave();
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => NoteEditorScreen(item: ancestor),
+                    ),
+                  );
+                  if (mounted) setState(() {});
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: pillBg,
+                    borderRadius: AppSpacing.roundedPill,
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Text(
+                    ancestor.iconEmoji != null
+                        ? '${ancestor.iconEmoji} ${ancestor.title}'
+                        : ancestor.title,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF191A23),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            if (_isEditingMode) ...[
+              if (_iconEmoji == null) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _showEmojiPickerSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: AppSpacing.roundedPill,
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.smile, size: 12, color: muted),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Add Icon',
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (widget.item is TextNote) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _handleCreateSubNote,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: AppSpacing.roundedPill,
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.filePlus2, size: 12, color: muted),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+ Sub-note',
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubNotesSection({
+    required List<BaseWorkspaceItem> childItems,
+    required bool isDark,
+    required TackColorPalette palette,
+  }) {
+    final accent = palette.resolveAccentColor(isDark);
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(LucideIcons.folderTree, size: 15, color: accent),
+                  const SizedBox(width: 7),
+                  Text(
+                    'Sub-notes (${childItems.length})',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.25,
+                      color: isDark ? Colors.white : const Color(0xFF191A23),
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: _handleCreateSubNote,
+                child: Text(
+                  '+ New',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...childItems.map((child) {
+            return InkWell(
+              onTap: () async {
+                _flushSave();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => NoteEditorScreen(item: child),
+                  ),
+                );
+                if (mounted) setState(() {});
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      child.iconEmoji ?? '📄',
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            child.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF191A23),
+                            ),
+                          ),
+                          if (child.getSummary().isNotEmpty)
+                            Text(
+                              child.getSummary(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11.5,
+                                color: isDark
+                                    ? AppColors.darkTextMuted
+                                    : AppColors.lightTextMuted,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 15,
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

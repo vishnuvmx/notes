@@ -261,7 +261,7 @@ class AppNavDrawer extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Version 1.0.0',
+                          'Version 2.0.0',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                           ),

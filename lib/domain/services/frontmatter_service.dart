@@ -185,3 +185,4 @@ class FrontmatterService {
     return serialize(updated, parsed.bodyWithoutFrontmatter);
   }
 }
+

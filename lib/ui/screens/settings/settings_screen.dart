@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,12 +15,42 @@ import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/feedback/tack_toast.dart';
 import 'about_tack_screen.dart';
+import 'release_notes_tab.dart';
 
 /// Clean, tactile Settings screen for Tack.
-/// Features theme control, workspace preferences, offline storage health,
-/// robust export/restore backups, and deep-dive About Tack session.
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+/// Features segmented Preferences & Release Notes tabs, theme control,
+/// offline storage health, export/restore backups, and About Tack.
+class SettingsScreen extends StatefulWidget {
+  final int initialTabIndex;
+
+  const SettingsScreen({
+    super.key,
+    this.initialTabIndex = 0,
+  });
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   Future<void> _exportBackup(BuildContext context) async {
     final workspace = context.read<WorkspaceProvider>();
@@ -335,152 +366,251 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      body: Column(
         children: [
-          // Theme Section
-          _buildSectionTitle('Theme & Appearance', isDark),
-          const SizedBox(height: 6),
-          _buildThemeSelector(context, themeProv, isDark),
-          const SizedBox(height: 20),
-
-          // Workspace Overview & Local Storage Health
-          _buildSectionTitle('Workspace & Storage Health', isDark),
-          const SizedBox(height: 6),
-          _buildStorageOverviewCard(workspace, isDark),
-          const SizedBox(height: 20),
-
-          // Workspace Preferences (Replaces Status Bar & Quick Settings)
-          _buildSectionTitle('Workspace Preferences', isDark),
-          const SizedBox(height: 6),
-          _buildCardGroup(
-            isDark: isDark,
-            children: [
-              _buildSwitchTile(
-                title: 'Home View Layout',
-                subtitle: workspace.viewMode == HomeViewMode.stickyGrid ? 'Tactile Grid Cards' : 'Spiral Notebook List',
-                icon: workspace.viewMode == HomeViewMode.stickyGrid ? TackIcons.gridView : TackIcons.listView,
-                value: workspace.viewMode == HomeViewMode.stickyGrid,
-                isDark: isDark,
-                onChanged: (val) {
-                  HapticFeedback.lightImpact();
-                  workspace.setViewMode(val ? HomeViewMode.stickyGrid : HomeViewMode.notebook);
-                },
+          // Segmented Tab Selector: Preferences | Release Notes
+          Container(
+            margin: const EdgeInsets.fromLTRB(AppSpacing.lg, 2, AppSpacing.lg, 6),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF1F5),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              onTap: (_) => HapticFeedback.selectionClick(),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                color: isDark ? AppColors.darkCard : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              _buildDivider(isDark),
-              _buildStaticInfoTile(
-                icon: TackIcons.bolt,
-                title: 'Tactile Haptic Feedback',
-                subtitle: 'Hardware haptic vibrations on cards, gestures, and long-press menus',
-                badgeText: 'Active',
-                isDark: isDark,
+              labelColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              unselectedLabelColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              labelStyle: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                letterSpacing: -0.2,
               ),
-              _buildDivider(isDark),
-              _buildStaticInfoTile(
-                icon: TackIcons.lock,
-                title: 'Offline-First Privacy',
-                subtitle: 'Local on-device JSON storage without remote servers.',
-                badgeText: 'Local',
-                isDark: isDark,
+              unselectedLabelStyle: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                letterSpacing: -0.2,
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Data Management Section (Export & Restore Backup)
-          _buildSectionTitle('Data & Backup', isDark),
-          const SizedBox(height: 6),
-          _buildCardGroup(
-            isDark: isDark,
-            children: [
-              _buildTile(
-                icon: TackIcons.exportData,
-                title: 'Export Backup',
-                subtitle: 'Save or share workspace JSON file',
-                onTap: () => _exportBackup(context),
-                isDark: isDark,
-              ),
-              _buildDivider(isDark),
-              _buildTile(
-                icon: TackIcons.importData,
-                title: 'Restore Backup',
-                subtitle: 'Import notes, stickies, and boards',
-                onTap: () => _showRestoreDialog(context),
-                isDark: isDark,
-              ),
-              if (workspace.trashItems.isNotEmpty) ...[
-                _buildDivider(isDark),
-                _buildTile(
-                  icon: TackIcons.trash,
-                  title: 'Empty Trash',
-                  subtitle: '${workspace.trashItems.length} items to permanently delete',
-                  isDestructive: true,
-                  onTap: () => _confirmEmptyTrash(context),
-                  isDark: isDark,
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // About Section
-          _buildSectionTitle('About Tack', isDark),
-          const SizedBox(height: 6),
-          _buildCardGroup(
-            isDark: isDark,
-            children: [
-              _buildTile(
-                icon: TackIcons.notes,
-                title: 'About Tack',
-                subtitle: 'Tech stack journey & open-source libraries',
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AboutTackScreen()),
-                  );
-                },
-                isDark: isDark,
-              ),
-              _buildDivider(isDark),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      'Tack for Android',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF1F5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'v1.0.0',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              tabs: [
+                const Tab(text: 'Preferences'),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Release Notes'),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.pastelLimeLight,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          'v2.0',
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF191A23),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 40),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPreferencesTab(context, themeProv, workspace, isDark),
+                const ReleaseNotesTab(),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPreferencesTab(
+    BuildContext context,
+    ThemeProvider themeProv,
+    WorkspaceProvider workspace,
+    bool isDark,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      children: [
+        // Theme Section
+        _buildSectionTitle('Theme & Appearance', isDark),
+        const SizedBox(height: 6),
+        _buildThemeSelector(context, themeProv, isDark),
+        const SizedBox(height: 20),
+
+        // Workspace Overview & Local Storage Health
+        _buildSectionTitle('Workspace & Storage Health', isDark),
+        const SizedBox(height: 6),
+        _buildStorageOverviewCard(workspace, isDark),
+        const SizedBox(height: 20),
+
+        // Workspace Preferences (Replaces Status Bar & Quick Settings)
+        _buildSectionTitle('Workspace Preferences', isDark),
+        const SizedBox(height: 6),
+        _buildCardGroup(
+          isDark: isDark,
+          children: [
+            _buildSwitchTile(
+              title: 'Home View Layout',
+              subtitle: workspace.viewMode == HomeViewMode.stickyGrid ? 'Tactile Grid Cards' : 'Spiral Notebook List',
+              icon: workspace.viewMode == HomeViewMode.stickyGrid ? TackIcons.gridView : TackIcons.listView,
+              value: workspace.viewMode == HomeViewMode.stickyGrid,
+              isDark: isDark,
+              onChanged: (val) {
+                HapticFeedback.lightImpact();
+                workspace.setViewMode(val ? HomeViewMode.stickyGrid : HomeViewMode.notebook);
+              },
+            ),
+            _buildDivider(isDark),
+            _buildStaticInfoTile(
+              icon: TackIcons.bolt,
+              title: 'Tactile Haptic Feedback',
+              subtitle: 'Hardware haptic vibrations on cards, gestures, and long-press menus',
+              badgeText: 'Active',
+              isDark: isDark,
+            ),
+            _buildDivider(isDark),
+            _buildStaticInfoTile(
+              icon: TackIcons.lock,
+              title: 'Offline-First Privacy',
+              subtitle: 'Local on-device JSON storage without remote servers.',
+              badgeText: 'Local',
+              isDark: isDark,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Data Management Section (Export & Restore Backup)
+        _buildSectionTitle('Data & Backup', isDark),
+        const SizedBox(height: 6),
+        _buildCardGroup(
+          isDark: isDark,
+          children: [
+            _buildTile(
+              icon: TackIcons.exportData,
+              title: 'Export Backup',
+              subtitle: 'Save or share workspace JSON file',
+              onTap: () => _exportBackup(context),
+              isDark: isDark,
+            ),
+            _buildDivider(isDark),
+            _buildTile(
+              icon: TackIcons.importData,
+              title: 'Restore Backup',
+              subtitle: 'Import notes, stickies, and boards',
+              onTap: () => _showRestoreDialog(context),
+              isDark: isDark,
+            ),
+            if (workspace.trashItems.isNotEmpty) ...[
+              _buildDivider(isDark),
+              _buildTile(
+                icon: TackIcons.trash,
+                title: 'Empty Trash',
+                subtitle: '${workspace.trashItems.length} items to permanently delete',
+                isDestructive: true,
+                onTap: () => _confirmEmptyTrash(context),
+                isDark: isDark,
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // About Section
+        _buildSectionTitle('About Tack', isDark),
+        const SizedBox(height: 6),
+        _buildCardGroup(
+          isDark: isDark,
+          children: [
+            _buildTile(
+              icon: LucideIcons.sparkles,
+              title: "What's New in v2.0.0",
+              subtitle: 'Connected specs, wiki-links, knowledge graph & UX polish',
+              onTap: () => _tabController.animateTo(1),
+              isDark: isDark,
+            ),
+            _buildDivider(isDark),
+            _buildTile(
+              icon: TackIcons.notes,
+              title: 'About Tack',
+              subtitle: 'Tech stack journey & open-source libraries',
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AboutTackScreen()),
+                );
+              },
+              isDark: isDark,
+            ),
+            _buildDivider(isDark),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Text(
+                    'Tack for Android',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF1F5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'v2.0.0',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+      ],
     );
   }
 

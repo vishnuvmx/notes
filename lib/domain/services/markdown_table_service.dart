@@ -149,3 +149,4 @@ class MarkdownTableService {
     return lines.join('\n');
   }
 }
+

@@ -139,7 +139,7 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'v1.0.0',
+                                'v2.0.0',
                                 style: TextStyle(
                                   fontFamily: AppTypography.fontFamily,
                                   fontSize: 11,

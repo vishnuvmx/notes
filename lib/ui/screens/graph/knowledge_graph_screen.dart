@@ -41,8 +41,7 @@ class _GraphNode {
     this.iconEmoji,
     this.item,
     this.isTagHub = false,
-    this.degree = 0,
-  });
+  }) : degree = 0;
 
   double get radius {
     if (isTagHub) return (11.0 + math.min(degree * 1.4, 8.0));
@@ -180,7 +179,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
           if (cNode.linkedNoteId != null && nodeMap.containsKey(cNode.linkedNoteId)) {
             addEdge(item.id, cNode.linkedNoteId!, _GraphEdgeKind.specBoard);
           }
-          for (final wl in WikiLinkService.extractLinks(cNode.text)) {
+          for (final wl in WikiLinkService.extractAllLinks(cNode.text)) {
             final target = WikiLinkService.resolveTarget(wl.target, activeItems);
             if (target != null) {
               addEdge(item.id, target.id, _GraphEdgeKind.specBoard);
@@ -189,7 +188,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
         }
       } else {
         final body = WikiLinkService.contentOfItem(item);
-        for (final wl in WikiLinkService.extractLinks(body)) {
+        for (final wl in WikiLinkService.extractAllLinks(body)) {
           final target = WikiLinkService.resolveTarget(wl.target, activeItems);
           if (target != null) {
             final kind = target is WhiteboardCanvasItem

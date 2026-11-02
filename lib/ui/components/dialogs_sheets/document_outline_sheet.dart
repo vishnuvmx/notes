@@ -400,3 +400,4 @@ class _InlineTocCardState extends State<InlineTocCard> {
     );
   }
 }
+
