@@ -10,6 +10,7 @@ enum BlockKind {
   bullet('Bullet List', 'Unordered list item (-)'),
   numbered('Numbered List', 'Ordered step (1.)'),
   quote('Blockquote', 'Indented quote (>)'),
+  toggle('Toggle Block', 'Collapsible section (>▸)'),
   calloutNote('Note Callout', 'Highlighted info box ([!NOTE])'),
   calloutTip('Tip Callout', 'Helpful green tip ([!TIP])'),
   calloutWarning('Warning Callout', 'Amber caution box ([!WARNING])');
@@ -32,6 +33,7 @@ class BlockTransformService {
     r'|[-*+•]\s+'
     r'|\d+[\.\)]\s+'
     r'|>+\s*\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*'
+    r'|>+\s*▸\s*'
     r'|>+\s*'
     r')',
     caseSensitive: false,
@@ -59,6 +61,7 @@ class BlockTransformService {
     if (RegExp(r'^(?:[-*+]\s+)?\[[ xX]\]').hasMatch(line)) return BlockKind.todo;
     if (RegExp(r'^\d+[\.\)]\s+').hasMatch(line)) return BlockKind.numbered;
     if (RegExp(r'^[-*+•]\s+').hasMatch(line)) return BlockKind.bullet;
+    if (RegExp(r'^>\s*▸').hasMatch(line)) return BlockKind.toggle;
     if (line.startsWith('>')) return BlockKind.quote;
 
     return BlockKind.paragraph;
@@ -108,6 +111,15 @@ class BlockTransformService {
           break;
         case BlockKind.quote:
           transformedLines.add('> $body');
+          break;
+        case BlockKind.toggle:
+          if (i == 0) {
+            transformedLines.add(
+              body.isEmpty ? '>▸ Toggle title\n> ' : '>▸ $body\n> ',
+            );
+          } else {
+            transformedLines.add('> $body');
+          }
           break;
         case BlockKind.calloutNote:
           if (i == 0) {

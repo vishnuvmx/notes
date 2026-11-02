@@ -118,6 +118,24 @@ class SlashCommandsCatalog {
       markdownSnippet: '1. ',
     ),
     SlashCommandItem(
+      id: 'toggle',
+      command: 'toggle',
+      label: 'Toggle List',
+      subtitle: 'Collapsible disclosure section',
+      icon: LucideIcons.chevronRight,
+      accentColor: Color(0xFF14B8A6),
+      markdownSnippet: '>▸ Toggle heading\n> Hidden details...\n',
+    ),
+    SlashCommandItem(
+      id: 'toc',
+      command: 'toc',
+      label: 'Table of Contents',
+      subtitle: 'Auto-synced [TOC] outline block',
+      icon: LucideIcons.listTree,
+      accentColor: Color(0xFF0EA5E9),
+      markdownSnippet: '[TOC]\n',
+    ),
+    SlashCommandItem(
       id: 'callout',
       command: 'callout',
       label: 'Callout Box',
@@ -696,6 +714,8 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
         return LucideIcons.listOrdered;
       case BlockKind.quote:
         return LucideIcons.quote;
+      case BlockKind.toggle:
+        return LucideIcons.chevronRight;
       case BlockKind.calloutNote:
         return LucideIcons.info;
       case BlockKind.calloutTip:

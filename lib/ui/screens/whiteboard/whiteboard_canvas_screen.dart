@@ -1195,7 +1195,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         ? '$bodyLines\n\n$embedRef\n'
         : '## Spec Details\n- [ ] Define requirements\n\n$embedRef\n';
 
-    final created = await workspace.createNewItem(
+    final created = await workspace.createQuickItem(
       title: derivedTitle,
       type: ItemType.note,
       paletteId: node.paletteId,
@@ -1413,7 +1413,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         child: ListView.separated(
                           shrinkWrap: true,
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          separatorBuilder: (_, _) => const SizedBox(height: 6),
                           itemBuilder: (_, idx) {
                             final note = filtered[idx];
                             final pal = AppColors.getPaletteById(note.paletteId);

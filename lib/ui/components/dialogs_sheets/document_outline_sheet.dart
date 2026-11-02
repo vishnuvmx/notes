@@ -1,0 +1,402 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
+import '../../../domain/services/wiki_link_service.dart';
+
+/// Slide-up Document Outline (Table of Contents) sheet for [NoteEditorScreen]
+/// plus [InlineTocCard] for `[TOC]` blocks inside [RichNoteContentView].
+class DocumentOutlineSheet extends StatefulWidget {
+  final String noteTitle;
+  final String content;
+  final String paletteId;
+  final int? currentLineIndex;
+  final ValueChanged<({int level, String title, int lineIndex})> onSelectHeading;
+
+  const DocumentOutlineSheet({
+    super.key,
+    required this.noteTitle,
+    required this.content,
+    required this.paletteId,
+    this.currentLineIndex,
+    required this.onSelectHeading,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required String noteTitle,
+    required String content,
+    required String paletteId,
+    int? currentLineIndex,
+    required ValueChanged<({int level, String title, int lineIndex})> onSelectHeading,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => DocumentOutlineSheet(
+        noteTitle: noteTitle,
+        content: content,
+        paletteId: paletteId,
+        currentLineIndex: currentLineIndex,
+        onSelectHeading: onSelectHeading,
+      ),
+    );
+  }
+
+  @override
+  State<DocumentOutlineSheet> createState() => _DocumentOutlineSheetState();
+}
+
+class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
+  String _filter = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppColors.getPaletteById(widget.paletteId);
+    final accent = palette.resolveAccentColor(isDark);
+    final allHeadings = WikiLinkService.extractHeadings(widget.content);
+    final minLevel = allHeadings.isEmpty
+        ? 1
+        : allHeadings.map((h) => h.level).reduce((a, b) => a < b ? a : b);
+
+    int activeIdx = -1;
+    if (widget.currentLineIndex != null) {
+      for (int i = 0; i < allHeadings.length; i++) {
+        if (allHeadings[i].lineIndex <= widget.currentLineIndex!) {
+          activeIdx = i;
+        }
+      }
+    }
+
+    final filtered = _filter.trim().isEmpty
+        ? allHeadings
+        : allHeadings
+            .where((h) => h.title.toLowerCase().contains(_filter.toLowerCase()))
+            .toList();
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 14,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  borderRadius: AppSpacing.roundedPill,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(LucideIcons.listTree, size: 18, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Document Outline',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.14),
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: Text(
+                    '${allHeadings.length} sections',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (allHeadings.length > 5) ...[
+              const SizedBox(height: 10),
+              TextField(
+                onChanged: (v) => setState(() => _filter = v),
+                decoration: InputDecoration(
+                  hintText: 'Jump to section...',
+                  isDense: true,
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: TackIcon(TackIcons.search, size: 15),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 34,
+                    minHeight: 34,
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceAlt
+                      : const Color(0xFFF3F4F6),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            if (allHeadings.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'Add # H1, ## H2, or ### H3 headings to automatically generate a navigable document outline.',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 13,
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 360),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final h = filtered[i];
+                    final isCurrent = activeIdx >= 0 &&
+                        allHeadings[activeIdx].lineIndex == h.lineIndex;
+                    final indent = ((h.level - minLevel).clamp(0, 4)) * 16.0;
+                    return InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.of(context).pop();
+                        widget.onSelectHeading(h);
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        padding: EdgeInsets.fromLTRB(10 + indent, 9, 10, 9),
+                        decoration: BoxDecoration(
+                          color: isCurrent
+                              ? accent.withValues(alpha: isDark ? 0.18 : 0.11)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.darkSurfaceAlt
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                'H${h.level}',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: isCurrent
+                                      ? accent
+                                      : (isDark
+                                          ? AppColors.darkTextMuted
+                                          : AppColors.lightTextMuted),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                h.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: h.level == 1 ? 14 : 13,
+                                  fontWeight: h.level <= 2 || isCurrent
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  letterSpacing: -0.25,
+                                  color: isCurrent
+                                      ? accent
+                                      : (isDark
+                                          ? AppColors.darkTextPrimary
+                                          : AppColors.lightTextPrimary),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Inline `[TOC]` Table of Contents block rendered inside [RichNoteContentView].
+class InlineTocCard extends StatefulWidget {
+  final String content;
+  final String? paletteId;
+  final ValueChanged<int>? onJumpToLine;
+
+  const InlineTocCard({
+    super.key,
+    required this.content,
+    this.paletteId,
+    this.onJumpToLine,
+  });
+
+  @override
+  State<InlineTocCard> createState() => _InlineTocCardState();
+}
+
+class _InlineTocCardState extends State<InlineTocCard> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppColors.getPaletteById(widget.paletteId);
+    final accent = palette.resolveAccentColor(isDark);
+    final headings = WikiLinkService.extractHeadings(widget.content);
+    if (headings.isEmpty) return const SizedBox.shrink();
+
+    final minLevel = headings.map((h) => h.level).reduce((a, b) => a < b ? a : b);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkSurfaceAlt.withValues(alpha: 0.7)
+            : Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.listTree, size: 15, color: accent),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'Table of Contents',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                    size: 15,
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: headings.map((h) {
+                  final indent = ((h.level - minLevel).clamp(0, 4)) * 14.0;
+                  return InkWell(
+                    onTap: () => widget.onJumpToLine?.call(h.lineIndex),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(indent, 4, 4, 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              h.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 12.5,
+                                fontWeight: h.level <= 2
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                letterSpacing: -0.2,
+                                color: isDark
+                                    ? AppColors.darkTextPrimary
+                                    : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

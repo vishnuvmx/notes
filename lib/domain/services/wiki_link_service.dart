@@ -3,6 +3,7 @@ import '../models/clipboard_item.dart';
 import '../models/sticky_note.dart';
 import '../models/text_note.dart';
 import '../models/whiteboard_item.dart';
+import 'frontmatter_service.dart';
 
 /// Parsed representation of a `[[Target#Anchor|Alias]]` or `![[Target#Anchor|Alias]]` link.
 class ParsedWikiLink {
@@ -175,6 +176,20 @@ class WikiLinkService {
     for (final item in items) {
       if (!item.isTrash && item.title.trim().toLowerCase() == lower) {
         return item;
+      }
+    }
+
+    // 3. YAML frontmatter alias match (Obsidian compatibility)
+    for (final item in items) {
+      if (item.isTrash) continue;
+      String? content;
+      if (item is TextNote) content = item.content;
+      if (item is StickyNote) content = item.content;
+      if (content != null && content.startsWith('---')) {
+        final fm = FrontmatterService.parse(content);
+        if (fm.aliases.any((a) => a.toLowerCase() == lower)) {
+          return item;
+        }
       }
     }
 

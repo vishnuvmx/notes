@@ -11,33 +11,59 @@ import 'package:google_fonts/google_fonts.dart';
 import 'code_syntax_highlighter.dart';
 import 'mermaid/mermaid_diagram_card.dart';
 import 'whiteboard_embed_card.dart';
+import '../dialogs_sheets/document_outline_sheet.dart';
+import '../dialogs_sheets/markdown_table_editor_sheet.dart';
 import '../../../core/utils/url_launcher_helper.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/whiteboard_item.dart';
+import '../../../domain/services/frontmatter_service.dart';
+import '../../../domain/services/markdown_table_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
 
 /// Rich Interactive Content View for Tack Notes.
-/// Renders Headings (H1-H6), Blockquotes, Interactive Checklists, Bullet & Numbered Lists,
-/// GFM Tables, Fenced Code Blocks, Inline Code, Wiki-Links, Whiteboard Embeds, Clickable Links, Images, and Horizontal Rules.
-class RichNoteContentView extends StatelessWidget {
+/// Renders Headings (H1-H6 with section folding), Collapsible Toggle Blocks,
+/// Inline `[TOC]` Outline, Blockquotes/Callouts, Interactive Checklists,
+/// Bullet & Numbered Lists, Interactive GFM Tables, Fenced Code Blocks,
+/// Wiki-Links, Whiteboard/Note Embeds, Clickable Links, Images, and Dividers.
+class RichNoteContentView extends StatefulWidget {
   final String content;
   final ValueChanged<String>? onContentChanged;
   final ValueChanged<int>? onLineTap;
+  final ValueChanged<int>? onHeadingJump;
   final bool isInteractive;
   final String? paletteId;
   final Iterable<BaseWorkspaceItem> workspaceItems;
   final ValueChanged<ParsedWikiLink>? onWikiLinkTap;
+  final int transclusionDepth;
 
   const RichNoteContentView({
     super.key,
     required this.content,
     this.onContentChanged,
     this.onLineTap,
+    this.onHeadingJump,
     this.isInteractive = true,
     this.paletteId,
     this.workspaceItems = const [],
     this.onWikiLinkTap,
+    this.transclusionDepth = 0,
   });
+
+  @override
+  State<RichNoteContentView> createState() => _RichNoteContentViewState();
+}
+
+class _RichNoteContentViewState extends State<RichNoteContentView> {
+  final Set<int> _foldedHeadingLines = <int>{};
+  final Map<int, bool> _toggleOpenState = <int, bool>{};
+
+  String get content => widget.content;
+  ValueChanged<String>? get onContentChanged => widget.onContentChanged;
+  ValueChanged<int>? get onLineTap => widget.onLineTap;
+  bool get isInteractive => widget.isInteractive;
+  String? get paletteId => widget.paletteId;
+  Iterable<BaseWorkspaceItem> get workspaceItems => widget.workspaceItems;
+  ValueChanged<ParsedWikiLink>? get onWikiLinkTap => widget.onWikiLinkTap;
 
   TackColorPalette get palette => AppColors.getPaletteById(paletteId);
 
@@ -73,7 +99,9 @@ class RichNoteContentView extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (content.trim().isEmpty) {
+    final parsedFrontmatter = FrontmatterService.parse(content);
+    if (parsedFrontmatter.bodyWithoutFrontmatter.trim().isEmpty &&
+        !parsedFrontmatter.hasProperties) {
       return SizedBox(
         width: double.infinity,
         child: Padding(
@@ -92,10 +120,58 @@ class RichNoteContentView extends StatelessWidget {
     final lines = content.split('\n');
     final widgets = <Widget>[];
 
-    int i = 0;
+    int i = parsedFrontmatter.contentStartLineIndex;
     while (i < lines.length) {
       final line = lines[i];
       final trimmed = line.trim();
+
+      // 0a. Inline Table of Contents: [TOC] or [[_TOC_]]
+      if (trimmed.toUpperCase() == '[TOC]' || trimmed.toUpperCase() == '[[_TOC_]]') {
+        widgets.add(
+          InlineTocCard(
+            content: content,
+            paletteId: paletteId,
+            onJumpToLine: widget.onHeadingJump ?? onLineTap,
+          ),
+        );
+        i++;
+        continue;
+      }
+
+      // 0b. HTML <details> / <summary> Toggle Block (Notion / GitHub / Obsidian portable)
+      if (RegExp(r'^<details(\s+open)?\s*>', caseSensitive: false).hasMatch(trimmed)) {
+        final defaultOpen = RegExp(r'^<details\s+open', caseSensitive: false).hasMatch(trimmed);
+        String summaryTitle = 'Toggle details';
+        final bodyLines = <String>[];
+        int j = i + 1;
+        while (j < lines.length &&
+            !RegExp(r'^</details\s*>', caseSensitive: false).hasMatch(lines[j].trim())) {
+          final lTrim = lines[j].trim();
+          final sumMatch = RegExp(
+            r'^<summary>(.*?)</summary>$',
+            caseSensitive: false,
+          ).firstMatch(lTrim);
+          if (sumMatch != null) {
+            summaryTitle = sumMatch.group(1)!.trim();
+          } else {
+            bodyLines.add(lines[j]);
+          }
+          j++;
+        }
+        widgets.add(
+          _buildToggleBlockWidget(
+            context: context,
+            lineIndex: i,
+            title: summaryTitle,
+            bodyMarkdown: bodyLines.join('\n').trim(),
+            defaultOpen: defaultOpen,
+            isDark: isDark,
+            theme: theme,
+          ),
+        );
+        i = (j < lines.length) ? j + 1 : j;
+        continue;
+      }
 
       // 1. Fenced code block: ```lang ... ```
       if (trimmed.startsWith('```')) {
@@ -148,7 +224,7 @@ class RichNoteContentView extends StatelessWidget {
             tableLines.add(lines[j]);
             j++;
           }
-          widgets.add(_wrapLineTap(_buildTable(context, tableLines, isDark, theme), i));
+          widgets.add(_wrapLineTap(_buildTable(context, tableLines, i, j, isDark, theme), i));
           i = j;
           continue;
         }
@@ -199,7 +275,7 @@ class RichNoteContentView extends StatelessWidget {
         continue;
       }
 
-      // 5. Blockquotes and GitHub / Antigravity Alerts (> [!NOTE], > [!TIP], etc.)
+      // 5. Blockquotes, Toggle Shorthands (>▸ Title), and Alerts (> [!NOTE], etc.)
       if (trimmed.startsWith('>')) {
         final quoteLines = <String>[line];
         int j = i + 1;
@@ -207,8 +283,73 @@ class RichNoteContentView extends StatelessWidget {
           quoteLines.add(lines[j]);
           j++;
         }
-        widgets.add(_wrapLineTap(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme), i));
+        final firstStripped = quoteLines.first.trim().replaceFirst(RegExp(r'^>+\s*'), '');
+        if (firstStripped.startsWith('▸')) {
+          final toggleTitle = firstStripped.substring(1).trim();
+          final innerLines = quoteLines
+              .skip(1)
+              .map((l) => l.trim().replaceFirst(RegExp(r'^>+\s?'), ''))
+              .toList();
+          widgets.add(
+            _buildToggleBlockWidget(
+              context: context,
+              lineIndex: i,
+              title: toggleTitle.isEmpty ? 'Toggle section' : toggleTitle,
+              bodyMarkdown: innerLines.join('\n').trim(),
+              defaultOpen: false,
+              isDark: isDark,
+              theme: theme,
+            ),
+          );
+        } else {
+          widgets.add(_wrapLineTap(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme), i));
+        }
         i = j;
+        continue;
+      }
+
+      // 5b. Foldable Headings (# H1 to #### H4) in Reader Mode
+      final topHeadingMatch = RegExp(r'^(#{1,4})\s+(.*)$').firstMatch(trimmed);
+      if (topHeadingMatch != null && isInteractive) {
+        final hLevel = topHeadingMatch.group(1)!.length;
+        int sectionEnd = i + 1;
+        bool inFence = false;
+        while (sectionEnd < lines.length) {
+          final st = lines[sectionEnd].trim();
+          if (st.startsWith('```')) {
+            inFence = !inFence;
+            sectionEnd++;
+            continue;
+          }
+          if (!inFence) {
+            final nextH = RegExp(r'^(#{1,6})\s+').firstMatch(st);
+            if (nextH != null && nextH.group(1)!.length <= hLevel) {
+              break;
+            }
+          }
+          sectionEnd++;
+        }
+        final hasFoldableBody = sectionEnd > i + 1 &&
+            lines.sublist(i + 1, sectionEnd).any((l) => l.trim().isNotEmpty);
+        final isFolded = _foldedHeadingLines.contains(i);
+
+        widgets.add(
+          _buildFoldableHeadingRow(
+            context: context,
+            line: line,
+            lineIndex: i,
+            isDark: isDark,
+            hasFoldableBody: hasFoldableBody,
+            isFolded: isFolded,
+            foldedLineCount: sectionEnd - i - 1,
+          ),
+        );
+
+        if (isFolded && hasFoldableBody) {
+          i = sectionEnd;
+        } else {
+          i++;
+        }
         continue;
       }
 
