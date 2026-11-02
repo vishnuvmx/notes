@@ -467,3 +467,4 @@ class _MiniWhiteboardPreviewPainter extends CustomPainter {
         oldDelegate.isDark != isDark;
   }
 }
+

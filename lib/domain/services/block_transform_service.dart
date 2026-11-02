@@ -246,3 +246,4 @@ class BlockTransformService {
     return offset;
   }
 }
+

@@ -443,3 +443,4 @@ class WikiLinkService {
     return '$prefix$raw$suffix';
   }
 }
+
