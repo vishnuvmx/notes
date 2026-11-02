@@ -20,9 +20,11 @@ import '../../../domain/services/block_transform_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
+import '../../components/dialogs_sheets/document_outline_sheet.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
 import '../../components/dialogs_sheets/slash_command_sheet.dart';
+import '../../components/inputs/frontmatter_properties_bar.dart';
 import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/inputs/smart_markdown_formatter.dart';
@@ -253,13 +255,64 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _closeSearch();
       return;
     }
-    if (_isEditingMode) {
-      FocusScope.of(context).unfocus();
-      _saveNote();
-      _toggleViewMode();
-      return;
-    }
+    FocusScope.of(context).unfocus();
+    _flushSave();
     Navigator.of(context).pop();
+  }
+
+  void _jumpToLineIndex(int lineIndex) {
+    final text = _contentController.text;
+    final lines = text.split('\n');
+    if (lines.isEmpty) return;
+    final clampedLine = lineIndex.clamp(0, lines.length - 1);
+
+    if (_isEditingMode) {
+      int offset = 0;
+      for (int i = 0; i < clampedLine; i++) {
+        offset += lines[i].length + 1;
+      }
+      _contentController.selection = TextSelection.collapsed(
+        offset: offset.clamp(0, text.length),
+      );
+      _contentFocusNode.requestFocus();
+    }
+
+    if (_scrollController.hasClients) {
+      final ratio = lines.length <= 1 ? 0.0 : (clampedLine / lines.length).clamp(0.0, 1.0);
+      final target = ratio * _scrollController.position.maxScrollExtent;
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _showDocumentOutlineSheet() {
+    int? currentLine;
+    if (_isEditingMode && _contentController.selection.isValid) {
+      final before = _contentController.text.substring(
+        0,
+        _contentController.selection.baseOffset.clamp(0, _contentController.text.length),
+      );
+      currentLine = '\n'.allMatches(before).length;
+    } else if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      final ratio =
+          (_scrollController.offset / _scrollController.position.maxScrollExtent)
+              .clamp(0.0, 1.0);
+      final totalLines = _contentController.text.split('\n').length;
+      currentLine = (ratio * totalLines).round();
+    }
+
+    DocumentOutlineSheet.show(
+      context,
+      noteTitle: _titleController.text.trim(),
+      content: _contentController.text,
+      paletteId: _paletteId,
+      currentLineIndex: currentLine,
+      onSelectHeading: (h) => _jumpToLineIndex(h.lineIndex),
+    );
   }
 
   bool _isCursorInsideMermaidBlock() {
@@ -1360,11 +1413,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       currentItem: currentSnapshot,
       allItems: workspace.rawItems,
     );
+    final hasHeadings = WikiLinkService.extractHeadings(content).isNotEmpty;
 
     return PopScope(
-      canPop: !_isEditingMode && !_isSearching,
+      canPop: !_isSearching,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
+        if (didPop) {
+          _flushSave();
+          return;
+        }
         _handleBackPress();
       },
       child: Scaffold(
@@ -1425,6 +1482,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           ],
         ),
         actions: [
+          if (hasHeadings)
+            IconButton(
+              icon: Icon(
+                LucideIcons.listTree,
+                size: 19,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
+              tooltip: 'Document Outline',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                _showDocumentOutlineSheet();
+              },
+            ),
+
           // Edit / Read View Mode Switcher
           IconButton(
             icon: TackIcon(
@@ -1762,11 +1833,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                               labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                               visualDensity: VisualDensity.compact,
                               shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                              onPressed: () => setState(() => _isAddingTag = true),
-                            ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                               onPressed: () => setState(() => _isAddingTag = true),
+                             ),
+                       ],
+                     ),
+
+                     // Structured YAML Frontmatter Properties Bar (Obsidian / Figma Specs)
+                     FrontmatterPropertiesBar(
+                       rawContent: _contentController.text,
+                       paletteId: _paletteId,
+                       isEditingMode: _isEditingMode,
+                       onContentChanged: (updatedContent) {
+                         _contentController.text = updatedContent;
+                         _saveNote();
+                         setState(() {});
+                       },
+                     ),
+                     const SizedBox(height: AppSpacing.lg),
 
                     // Body Content (Editing TextField vs Interactive Rich Preview)
                     if (_isEditingMode)
@@ -1811,6 +1894,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           paletteId: _paletteId,
                           workspaceItems: workspace.rawItems,
                           onWikiLinkTap: _handleWikiLinkTap,
+                          onHeadingJump: _jumpToLineIndex,
                           onLineTap: (lineIdx) {
                             _toggleViewMode(targetLineIndex: lineIdx);
                           },

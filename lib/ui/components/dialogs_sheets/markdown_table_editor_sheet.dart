@@ -405,7 +405,7 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
                 ),
               ),
               icon: const TackIcon(TackIcons.check, size: 16),
-              label: const Text(
+              label: Text(
                 'Apply Table Changes',
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,

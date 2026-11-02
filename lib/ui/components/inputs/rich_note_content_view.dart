@@ -367,6 +367,167 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     );
   }
 
+  Widget _buildFoldableHeadingRow({
+    required BuildContext context,
+    required String line,
+    required int lineIndex,
+    required bool isDark,
+    required bool hasFoldableBody,
+    required bool isFolded,
+    required int foldedLineCount,
+  }) {
+    final headingChild = _wrapLineTap(
+      _buildLineWidget(context, line, lineIndex, isDark),
+      lineIndex,
+    );
+    if (!hasFoldableBody) return headingChild;
+
+    final accent = palette.resolveAccentColor(isDark);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  if (isFolded) {
+                    _foldedHeadingLines.remove(lineIndex);
+                  } else {
+                    _foldedHeadingLines.add(lineIndex);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 6, top: 6, bottom: 4),
+                child: AnimatedRotation(
+                  turns: isFolded ? -0.25 : 0.0,
+                  duration: const Duration(milliseconds: 160),
+                  child: Icon(
+                    LucideIcons.chevronDown,
+                    size: 16,
+                    color: isFolded
+                        ? accent
+                        : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(child: headingChild),
+            if (isFolded)
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _foldedHeadingLines.remove(lineIndex));
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(left: 8, top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: isDark ? 0.18 : 0.11),
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: Text(
+                    '••• $foldedLineCount lines',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToggleBlockWidget({
+    required BuildContext context,
+    required int lineIndex,
+    required String title,
+    required String bodyMarkdown,
+    required bool defaultOpen,
+    required bool isDark,
+    required ThemeData theme,
+  }) {
+    final isOpen = _toggleOpenState[lineIndex] ?? defaultOpen;
+    final accent = palette.resolveAccentColor(isDark);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkSurfaceAlt.withValues(alpha: 0.65)
+            : Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isOpen
+              ? accent.withValues(alpha: 0.45)
+              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _toggleOpenState[lineIndex] = !isOpen);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  AnimatedRotation(
+                    turns: isOpen ? 0.25 : 0.0,
+                    duration: const Duration(milliseconds: 160),
+                    child: Icon(
+                      LucideIcons.chevronRight,
+                      size: 16,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildRichTextSpans(
+                      title,
+                      isDark,
+                      theme,
+                      context: context,
+                      baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isOpen && bodyMarkdown.isNotEmpty && widget.transclusionDepth < 2)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 0, 12, 12),
+              child: RichNoteContentView(
+                content: bodyMarkdown,
+                paletteId: paletteId,
+                isInteractive: false,
+                workspaceItems: workspaceItems,
+                onWikiLinkTap: onWikiLinkTap,
+                transclusionDepth: widget.transclusionDepth + 1,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLineWidget(BuildContext context, String line, int lineIndex, bool isDark) {
     final theme = Theme.of(context);
     final trimmed = line.trim();
@@ -908,6 +1069,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
   Widget _buildTable(
     BuildContext context,
     List<String> lines,
+    int startLineIndex,
+    int endLineExclusive,
     bool isDark,
     ThemeData theme,
   ) {
@@ -941,6 +1104,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
 
     final borderColor = palette.resolveTableBorder(isDark);
     final headerBg = palette.resolveTableHeaderBg(isDark);
+    final canVisualEdit = isInteractive && onContentChanged != null;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -949,52 +1113,140 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         border: Border.all(color: borderColor, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const ClampingScrollPhysics(),
-        child: Table(
-          defaultColumnWidth: const IntrinsicColumnWidth(),
-          border: TableBorder(
-            horizontalInside: BorderSide(color: borderColor, width: 0.8),
-            verticalInside: BorderSide(color: borderColor, width: 0.8),
-          ),
-          children: [
-            TableRow(
-              decoration: BoxDecoration(color: headerBg),
-              children: List.generate(headers.length, (colIdx) {
-                final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Text(
-                    headers[colIdx],
-                    textAlign: align,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (canVisualEdit)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: headerBg.withValues(alpha: 0.65),
+                border: Border(
+                  bottom: BorderSide(color: borderColor, width: 0.8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.table,
+                    size: 12,
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${rows.length} rows • ${headers.length} cols',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                     ),
                   ),
-                );
-              }),
-            ),
-            ...rows.map((row) {
-              return TableRow(
-                children: List.generate(headers.length, (colIdx) {
-                  final text = colIdx < row.length ? row[colIdx] : '';
-                  final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    child: Align(
-                      alignment: align == TextAlign.center
-                          ? Alignment.center
-                          : (align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft),
-                      child: _buildRichTextSpans(text, isDark, theme, context: context),
+                  const Spacer(),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      final parsedTable = MarkdownTableService.parseTableLines(lines);
+                      if (parsedTable == null) return;
+                      HapticFeedback.lightImpact();
+                      MarkdownTableEditorSheet.show(
+                        context,
+                        initialTable: parsedTable,
+                        paletteId: paletteId,
+                        onSave: (updatedTable) {
+                          final updatedDoc = MarkdownTableService.replaceTableInDocument(
+                            content,
+                            startLineIndex,
+                            endLineExclusive,
+                            updatedTable,
+                          );
+                          onContentChanged?.call(updatedDoc);
+                        },
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurface : Colors.white,
+                        borderRadius: AppSpacing.roundedPill,
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.pencil,
+                            size: 10.5,
+                            color: palette.resolveAccentColor(isDark),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Edit Table',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const ClampingScrollPhysics(),
+            child: Table(
+              defaultColumnWidth: const IntrinsicColumnWidth(),
+              border: TableBorder(
+                horizontalInside: BorderSide(color: borderColor, width: 0.8),
+                verticalInside: BorderSide(color: borderColor, width: 0.8),
+              ),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: headerBg),
+                  children: List.generate(headers.length, (colIdx) {
+                    final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Text(
+                        headers[colIdx],
+                        textAlign: align,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                ...rows.map((row) {
+                  return TableRow(
+                    children: List.generate(headers.length, (colIdx) {
+                      final text = colIdx < row.length ? row[colIdx] : '';
+                      final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        child: Align(
+                          alignment: align == TextAlign.center
+                              ? Alignment.center
+                              : (align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft),
+                          child: _buildRichTextSpans(text, isDark, theme, context: context),
+                        ),
+                      );
+                    }),
                   );
                 }),
-              );
-            }),
-          ],
-        ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

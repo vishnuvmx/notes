@@ -34,6 +34,9 @@ abstract class BaseWorkspaceItem {
   final bool isFavorite;
   final bool isArchived;
   final bool isTrash;
+  final String? folderName;
+  final String? parentId;
+  final String? iconEmoji;
 
   const BaseWorkspaceItem({
     required this.id,
@@ -45,6 +48,9 @@ abstract class BaseWorkspaceItem {
     this.isFavorite = false,
     this.isArchived = false,
     this.isTrash = false,
+    this.folderName,
+    this.parentId,
+    this.iconEmoji,
   });
 
   /// Abstract polymorphic summary method implemented uniquely by each child class.
@@ -58,6 +64,12 @@ abstract class BaseWorkspaceItem {
     bool? isFavorite,
     bool? isArchived,
     bool? isTrash,
+    String? folderName,
+    bool clearFolder = false,
+    String? parentId,
+    bool clearParent = false,
+    String? iconEmoji,
+    bool clearIcon = false,
   });
 
   /// Polymorphic query matching for search.
