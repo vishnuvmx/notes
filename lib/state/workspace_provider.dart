@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/interfaces/i_workspace_repo.dart';
 import '../domain/models/base_item.dart';
 import '../domain/models/text_note.dart';
@@ -24,6 +25,8 @@ enum NoteSortOrder {
 
 /// Default palette used for externally-created items and clipboard snippets.
 const String _kDefaultPaletteId = 'amber';
+const String _kUserFoldersPrefsKey = 'tack_user_folders_v1';
+const String _kHomeViewModePrefsKey = 'tack_home_view_mode_v1';
 
 /// Central state notifier for workspace items, search, filtering, and view mode.
 class WorkspaceProvider extends ChangeNotifier {
@@ -34,8 +37,10 @@ class WorkspaceProvider extends ChangeNotifier {
     _trashItems = _repository.cachedTrashItems;
     _archivedItems = _repository.cachedArchivedItems;
     _favoriteItems = _repository.cachedFavoriteItems;
+    _syncDiscoveredFolders();
     _applySort();
     _rebuildIndex();
+    _loadWorkspacePrefs();
     AndroidShortcutsService.syncDynamicShortcuts(_items);
   }
 
@@ -43,6 +48,7 @@ class WorkspaceProvider extends ChangeNotifier {
   List<BaseWorkspaceItem> _trashItems = [];
   List<BaseWorkspaceItem> _archivedItems = [];
   List<BaseWorkspaceItem> _favoriteItems = [];
+  List<String> _userFolders = ['Specs', 'Work', 'Personal'];
   // O(1) lookup index: kept in sync on every saveItem / delete operation
   final Map<String, BaseWorkspaceItem> _itemIndex = {};
   // Cached tag set — rebuilt only when _items changes
@@ -58,11 +64,17 @@ class WorkspaceProvider extends ChangeNotifier {
 
   // Getters
   List<BaseWorkspaceItem> get rawItems => _items;
+  List<String> get userFolders => List.unmodifiable(_userFolders);
 
   List<BaseWorkspaceItem> get items {
     var result = _items;
     if (_selectedFolder == 'Favourites' || _selectedFolder == 'Favorites') {
       result = result.where((item) => item.isFavorite).toList();
+    } else if (_selectedFolder != 'All Notes') {
+      final needle = _selectedFolder.toLowerCase();
+      result = result
+          .where((item) => (item.folderName ?? '').toLowerCase() == needle)
+          .toList();
     }
     if (_selectedTag == null ||
         _selectedTag == 'All' ||
@@ -126,11 +138,127 @@ class WorkspaceProvider extends ChangeNotifier {
     _archivedItems = await _repository.getArchivedItems();
     _favoriteItems = await _repository.getFavoriteItems();
 
+    _syncDiscoveredFolders();
     _applySort();
     _rebuildIndex();
     _cachedAvailableTags = null; // invalidate tag cache
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> _loadWorkspacePrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedFolders = prefs.getStringList(_kUserFoldersPrefsKey);
+      if (savedFolders != null) {
+        _userFolders = List<String>.from(savedFolders);
+      }
+      _syncDiscoveredFolders();
+
+      final savedView = prefs.getString(_kHomeViewModePrefsKey);
+      if (savedView == HomeViewMode.notebook.name) {
+        _viewMode = HomeViewMode.notebook;
+      } else if (savedView == HomeViewMode.stickyGrid.name) {
+        _viewMode = HomeViewMode.stickyGrid;
+      }
+      notifyListeners();
+    } catch (_) {
+      // Safe fallback in unit tests or before prefs initialize
+    }
+  }
+
+  Future<void> _persistUserFolders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_kUserFoldersPrefsKey, _userFolders);
+    } catch (_) {}
+  }
+
+  void _syncDiscoveredFolders() {
+    for (final item in _items) {
+      final folder = item.folderName?.trim();
+      if (folder != null &&
+          folder.isNotEmpty &&
+          folder != 'All Notes' &&
+          folder != 'Favourites' &&
+          folder != 'Favorites' &&
+          !_userFolders.any((f) => f.toLowerCase() == folder.toLowerCase())) {
+        _userFolders.add(folder);
+      }
+    }
+  }
+
+  /// Create a custom user folder
+  Future<void> addFolder(String rawName) async {
+    final clean = rawName.trim();
+    if (clean.isEmpty ||
+        clean == 'All Notes' ||
+        clean == 'Favourites' ||
+        clean == 'Favorites') {
+      return;
+    }
+    if (!_userFolders.any((f) => f.toLowerCase() == clean.toLowerCase())) {
+      _userFolders = [..._userFolders, clean];
+      notifyListeners();
+      await _persistUserFolders();
+    }
+  }
+
+  /// Delete a custom user folder (items remain safe in All Notes)
+  Future<void> deleteFolder(String rawName) async {
+    final needle = rawName.trim().toLowerCase();
+    _userFolders = _userFolders.where((f) => f.toLowerCase() != needle).toList();
+    if (_selectedFolder.toLowerCase() == needle) {
+      _selectedFolder = 'All Notes';
+    }
+    for (final item in List<BaseWorkspaceItem>.from(_items)) {
+      if ((item.folderName ?? '').toLowerCase() == needle) {
+        await saveItem(item.copyWith(clearFolder: true));
+      }
+    }
+    notifyListeners();
+    await _persistUserFolders();
+  }
+
+  /// Move an item into a custom folder (or clear folder when null)
+  Future<void> moveItemToFolder(String id, String? folderName) async {
+    final item = getItemById(id);
+    if (item == null) return;
+    final clean = folderName?.trim();
+    if (clean != null && clean.isNotEmpty) {
+      await addFolder(clean);
+    }
+    final updated = item.copyWith(
+      folderName: (clean == null || clean.isEmpty) ? null : clean,
+      clearFolder: clean == null || clean.isEmpty,
+      updatedAt: DateTime.now(),
+    );
+    await saveItem(updated);
+  }
+
+  /// Direct sub-notes / child items under [parentId]
+  List<BaseWorkspaceItem> getChildItems(String parentId) {
+    return _items
+        .where((i) => !i.isTrash && !i.isArchived && i.parentId == parentId)
+        .toList();
+  }
+
+  /// Cycle-safe ancestor breadcrumb list `[rootAncestor, ..., immediateParent]`
+  List<BaseWorkspaceItem> getBreadcrumbChain(BaseWorkspaceItem item) {
+    final chain = <BaseWorkspaceItem>[];
+    final visited = <String>{item.id};
+    String? cursorId = item.parentId;
+    int guard = 0;
+    while (cursorId != null && cursorId.isNotEmpty && guard < 12) {
+      if (visited.contains(cursorId)) break;
+      visited.add(cursorId);
+      final parent = getItemById(cursorId);
+      if (parent == null || parent.isTrash) break;
+      chain.insert(0, parent);
+      cursorId = parent.parentId;
+      guard++;
+    }
+    return chain;
   }
 
   /// Change category filter ("All", "Notes", "Sticky", "Whiteboard", "Clipboard")
@@ -167,6 +295,18 @@ class WorkspaceProvider extends ChangeNotifier {
     if (_viewMode == mode) return;
     _viewMode = mode;
     notifyListeners();
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_kHomeViewModePrefsKey, mode.name);
+    }).catchError((_) {});
+  }
+
+  /// Quick flip between Grid and Tactile Numbered List
+  void toggleViewMode() {
+    setViewMode(
+      _viewMode == HomeViewMode.stickyGrid
+          ? HomeViewMode.notebook
+          : HomeViewMode.stickyGrid,
+    );
   }
 
   /// Change note sort order
@@ -316,9 +456,21 @@ class WorkspaceProvider extends ChangeNotifier {
     required ItemType type,
     required String paletteId,
     String? content,
+    String? folderName,
+    String? parentId,
+    String? iconEmoji,
+    List<String>? tags,
   }) async {
     final now = DateTime.now();
-    final id = 'item_${now.millisecondsSinceEpoch}';
+    final id = 'item_${now.microsecondsSinceEpoch}';
+    final inheritedFolder = folderName ??
+        (parentId != null
+            ? getItemById(parentId)?.folderName
+            : (_selectedFolder != 'All Notes' &&
+                    _selectedFolder != 'Favourites' &&
+                    _selectedFolder != 'Favorites'
+                ? _selectedFolder
+                : null));
     BaseWorkspaceItem newItem;
 
     switch (type) {
@@ -330,6 +482,10 @@ class WorkspaceProvider extends ChangeNotifier {
           createdAt: now,
           updatedAt: now,
           paletteId: paletteId,
+          folderName: inheritedFolder,
+          parentId: parentId,
+          iconEmoji: iconEmoji,
+          tags: tags ?? const [],
         );
         break;
       case ItemType.sticky:
@@ -340,6 +496,9 @@ class WorkspaceProvider extends ChangeNotifier {
           createdAt: now,
           updatedAt: now,
           paletteId: paletteId,
+          folderName: inheritedFolder,
+          parentId: parentId,
+          iconEmoji: iconEmoji,
           rotationAngle: (now.millisecond % 5 - 2) * 0.008,
         );
         break;
@@ -350,6 +509,9 @@ class WorkspaceProvider extends ChangeNotifier {
           createdAt: now,
           updatedAt: now,
           paletteId: paletteId,
+          folderName: inheritedFolder,
+          parentId: parentId,
+          iconEmoji: iconEmoji,
           nodes: [
             CanvasNode(
               id: 'node_${now.millisecondsSinceEpoch}',
@@ -370,12 +532,103 @@ class WorkspaceProvider extends ChangeNotifier {
           createdAt: now,
           updatedAt: now,
           paletteId: paletteId,
+          folderName: inheritedFolder,
+          parentId: parentId,
+          iconEmoji: iconEmoji,
         );
         break;
     }
 
     await saveItem(newItem);
     return newItem;
+  }
+
+  /// 1-Tap Daily Note ("Daily Note • YYYY-MM-DD") with automatic carry-forward
+  /// of unfinished `- [ ]` tasks from the most recent previous Daily Note.
+  Future<TextNote> openOrCreateTodaysNote({DateTime? referenceDate}) async {
+    final now = referenceDate ?? DateTime.now();
+    final isoDate =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final expectedTitle = 'Daily Note • $isoDate';
+
+    // 1. Check if today's note already exists
+    final activeNotes = _items
+        .whereType<TextNote>()
+        .where((n) => !n.isTrash && !n.isArchived)
+        .toList();
+
+    for (final note in activeNotes) {
+      final isMatchingTitle =
+          note.title.trim().toLowerCase() == expectedTitle.toLowerCase();
+      final isMatchingDailyDate =
+          note.tags.any((t) => t.toLowerCase() == 'daily') &&
+              note.createdAt.year == now.year &&
+              note.createdAt.month == now.month &&
+              note.createdAt.day == now.day;
+      if (isMatchingTitle || isMatchingDailyDate) {
+        return note;
+      }
+    }
+
+    // 2. Gather unfinished tasks from the most recent previous Daily Note
+    final previousDailyNotes = activeNotes.where((n) {
+      final isDaily = n.tags.any((t) => t.toLowerCase() == 'daily') ||
+          n.title.startsWith('Daily Note • ');
+      return isDaily && n.title.trim().toLowerCase() != expectedTitle.toLowerCase();
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    final carriedTasks = <String>[];
+    String? prevTitle;
+    if (previousDailyNotes.isNotEmpty) {
+      final latestPrev = previousDailyNotes.first;
+      prevTitle = latestPrev.title;
+      final taskRegex = RegExp(r'^\s*(?:[-*]\s+)?\[\s\]\s+(.+)$');
+      for (final rawLine in latestPrev.content.split('\n')) {
+        final match = taskRegex.firstMatch(rawLine);
+        if (match != null) {
+          final taskBody = match.group(1)!.trim();
+          if (taskBody.isNotEmpty) {
+            carriedTasks.add('- [ ] $taskBody');
+          }
+        }
+      }
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('---');
+    buffer.writeln('status: Active');
+    buffer.writeln('target_date: $isoDate');
+    buffer.writeln('---');
+    buffer.writeln();
+    if (carriedTasks.isNotEmpty) {
+      buffer.writeln(
+        '## Carried Forward${prevTitle != null ? ' (from [[$prevTitle]])' : ''}',
+      );
+      for (final t in carriedTasks) {
+        buffer.writeln(t);
+      }
+      buffer.writeln();
+    }
+    buffer.writeln("## Today's Focus");
+    buffer.writeln('- [ ] ');
+    buffer.writeln();
+    buffer.writeln('## Quick Scratchpad');
+    buffer.writeln('- ');
+
+    final created = TextNote(
+      id: 'daily_$isoDate',
+      title: expectedTitle,
+      content: buffer.toString(),
+      createdAt: now,
+      updatedAt: now,
+      paletteId: 'amber',
+      iconEmoji: '☀️',
+      tags: const ['daily'],
+    );
+
+    await saveItem(created);
+    return created;
   }
 
   /// Generates a concise title from note text or source app name.
@@ -518,8 +771,9 @@ class WorkspaceProvider extends ChangeNotifier {
   String exportWorkspaceJson() {
     final Map<String, dynamic> exportData = {
       'app': 'Tack',
-      'version': 1,
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
+      'userFolders': _userFolders,
       'itemCounts': {
         'total': _items.length,
         'notes': totalActiveNotesCount,
@@ -539,6 +793,12 @@ class WorkspaceProvider extends ChangeNotifier {
     List<dynamic> itemsList;
     if (decoded is Map<String, dynamic> && decoded.containsKey('items')) {
       itemsList = decoded['items'] as List<dynamic>;
+      final rawFolders = decoded['userFolders'];
+      if (rawFolders is List) {
+        for (final f in rawFolders.whereType<String>()) {
+          await addFolder(f);
+        }
+      }
     } else if (decoded is List<dynamic>) {
       itemsList = decoded;
     } else {

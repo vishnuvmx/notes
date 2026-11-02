@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/whiteboard_item.dart';
+import '../../../domain/services/frontmatter_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
 
 /// Live interactive embed card for `![[Whiteboard]]`, `![[Whiteboard#nodeId]]`,
@@ -254,25 +255,33 @@ class WorkspaceEmbedCard extends StatelessWidget {
   ) {
     final palette = AppColors.getPaletteById(noteItem.paletteId);
     final accent = palette.resolveAccentColor(isDark);
-    final rawBody = WikiLinkService.contentOfItem(noteItem);
+    final rawBody = FrontmatterService.parse(WikiLinkService.contentOfItem(noteItem)).body;
     final excerpt = WikiLinkService.extractSectionMarkdown(
       rawBody,
       anchor: link.anchor,
-      maxLines: 5,
+      maxLines: 9,
     );
+    final lines = excerpt
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .take(8)
+        .toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: isDark
             ? palette.darkColor.withValues(alpha: 0.22)
-            : palette.softBackground.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
+            : palette.softBackground.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? palette.lightColor.withValues(alpha: 0.35) : palette.resolveTableBorder(false),
+          color: isDark
+              ? palette.lightColor.withValues(alpha: 0.35)
+              : palette.resolveTableBorder(false),
           width: 1.2,
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -280,60 +289,188 @@ class WorkspaceEmbedCard extends StatelessWidget {
             HapticFeedback.selectionClick();
             onTap();
           },
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.circular(16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    TackIcon(TackIcons.notesSvg, size: 15, color: accent),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Text(
-                        link.anchor != null
-                            ? '${noteItem.title}  ›  #${link.anchor}'
-                            : (link.alias ?? noteItem.title),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          color: isDark ? Colors.white : const Color(0xFF191A23),
+                Container(width: 4.5, color: accent),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(13, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (noteItem.iconEmoji != null && noteItem.iconEmoji!.isNotEmpty) ...[
+                              Text(noteItem.iconEmoji!, style: const TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                            ] else ...[
+                              TackIcon(TackIcons.notesSvg, size: 15, color: accent),
+                              const SizedBox(width: 7),
+                            ],
+                            Expanded(
+                              child: Text(
+                                link.anchor != null
+                                    ? '${noteItem.title}  ›  #${link.anchor}'
+                                    : (link.alias ?? noteItem.title),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  color: isDark ? Colors.white : const Color(0xFF191A23),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.14),
+                                borderRadius: AppSpacing.roundedPill,
+                              ),
+                              child: Text(
+                                link.anchor != null ? 'Section ↗' : 'Embed ↗',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    Text(
-                      'Open →',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: accent,
-                      ),
-                    ),
-                  ],
-                ),
-                if (excerpt.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    excerpt,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13,
-                      height: 1.42,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        if (lines.isNotEmpty) ...[
+                          const SizedBox(height: 9),
+                          ...lines.map((rawLine) => _buildTranscludedLine(rawLine, isDark, accent)),
+                        ],
+                      ],
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranscludedLine(String rawLine, bool isDark, Color accent) {
+    final trimmed = rawLine.trim();
+    final primary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final secondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+    // Heading line
+    final headingMatch = RegExp(r'^(#{1,4})\s+(.+)$').firstMatch(trimmed);
+    if (headingMatch != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 3, bottom: 2),
+        child: Text(
+          headingMatch.group(2)!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 13.2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.25,
+            color: primary,
+          ),
+        ),
+      );
+    }
+
+    // Checklist line
+    final taskMatch = RegExp(r'^(?:[-*]\s+)?\[([ xX])\]\s+(.+)$').firstMatch(trimmed);
+    if (taskMatch != null) {
+      final done = taskMatch.group(1)!.toLowerCase() == 'x';
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1.5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              done ? '✓ ' : '○ ',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: done ? AppColors.success : accent,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                taskMatch.group(2)!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12.6,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                  color: done ? secondary.withValues(alpha: 0.7) : secondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Bullet line
+    final bulletMatch = RegExp(r'^[-*]\s+(.+)$').firstMatch(trimmed);
+    if (bulletMatch != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1.5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '•  ',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: accent,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                bulletMatch.group(1)!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12.6,
+                  height: 1.38,
+                  color: secondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Plain / quote line
+    final cleanText = trimmed.startsWith('>') ? trimmed.substring(1).trim() : trimmed;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      child: Text(
+        cleanText,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 12.8,
+          fontStyle: trimmed.startsWith('>') ? FontStyle.italic : FontStyle.normal,
+          height: 1.38,
+          color: secondary,
         ),
       ),
     );
