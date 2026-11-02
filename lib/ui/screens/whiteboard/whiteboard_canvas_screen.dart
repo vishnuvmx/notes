@@ -16,10 +16,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../domain/models/base_item.dart';
+import '../../../domain/models/sticky_note.dart';
+import '../../../domain/models/text_note.dart';
 import '../../../domain/models/whiteboard_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/inputs/tack_dropdown.dart';
+import '../editor/note_editor_screen.dart';
 
 /// Immutable snapshot for Undo / Redo history ring buffer.
 class CanvasSnapshot {
@@ -74,8 +79,13 @@ class CanvasHistoryManager {
 /// Undo/Redo history, context actions, edge editing, intelligent ports, and PNG export.
 class WhiteboardCanvasScreen extends StatefulWidget {
   final WhiteboardCanvasItem item;
+  final String? initialFocusNodeId;
 
-  const WhiteboardCanvasScreen({super.key, required this.item});
+  const WhiteboardCanvasScreen({
+    super.key,
+    required this.item,
+    this.initialFocusNodeId,
+  });
 
   @override
   State<WhiteboardCanvasScreen> createState() => _WhiteboardCanvasScreenState();
@@ -217,10 +227,46 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _fitCanvasToContent();
+        if (widget.initialFocusNodeId != null &&
+            widget.initialFocusNodeId!.trim().isNotEmpty) {
+          _focusNodeByIdOrLabel(widget.initialFocusNodeId!.trim());
+        } else {
+          _fitCanvasToContent();
+        }
         _saveCanvasState();
       }
     });
+  }
+
+  void _focusNodeByIdOrLabel(String query) {
+    final lower = query.toLowerCase();
+    final target = _nodes.cast<CanvasNode?>().firstWhere(
+          (n) =>
+              n != null &&
+              (n.id == query ||
+                  n.id.toLowerCase() == lower ||
+                  n.text.trim().toLowerCase() == lower ||
+                  n.text.toLowerCase().contains(lower)),
+          orElse: () => null,
+        );
+    if (target == null) {
+      _fitCanvasToContent();
+      return;
+    }
+    setState(() {
+      _selectedNodeId = target.id;
+      _selectedEdgeId = null;
+    });
+    final size = MediaQuery.sizeOf(context);
+    const focusScale = 1.05;
+    final centerScreenX = size.width / 2;
+    final centerScreenY = (size.height - 80) / 2;
+    final transX = centerScreenX - (target.center.dx * focusScale);
+    final transY = centerScreenY - (target.center.dy * focusScale);
+    final matrix = Matrix4.identity()
+      ..translateByVector3(vmath.Vector3(transX, transY, 0.0))
+      ..scaleByVector3(vmath.Vector3(focusScale, focusScale, 1.0));
+    _animateCanvasToMatrix(matrix);
   }
 
   @override
@@ -373,7 +419,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   // ================= 2. Node Operations & Context Actions =================
-  void _addNode(CanvasNodeType shapeType, {Offset? position, String? imagePath, double? customWidth, double? customHeight}) {
+  void _addNode(
+    CanvasNodeType shapeType, {
+    Offset? position,
+    String? imagePath,
+    double? customWidth,
+    double? customHeight,
+    String? linkedNoteId,
+    String? customText,
+    String? customPaletteId,
+    bool autoEdit = true,
+  }) {
     HapticFeedback.lightImpact();
     _history.recordSnapshot(_nodes, _edges);
 
@@ -397,30 +453,226 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       case CanvasNodeType.image:
         paletteId = 'peach';
         break;
+      case CanvasNodeType.specCard:
+        paletteId = 'cyan';
+        break;
+      case CanvasNodeType.specCard:
+        final workspace = context.watch<WorkspaceProvider>();
+        final linkedItem = node.linkedNoteId != null
+            ? workspace.getItemById(node.linkedNoteId!)
+            : null;
+        final isLinked = linkedItem != null && !linkedItem.isTrash;
+
+        String cardTitle;
+        String cardBody;
+        String rawForTasks;
+        if (isLinked && linkedItem is TextNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else if (isLinked && linkedItem is StickyNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else {
+          final lines = node.text.trim().split('\n');
+          cardTitle = lines.isNotEmpty && lines.first.trim().isNotEmpty
+              ? lines.first.trim()
+              : 'Spec Card';
+          cardBody = lines.length > 1
+              ? lines.sublist(1).join('\n').trim()
+              : 'Double-tap to write spec or tap Open to expand as note';
+          rawForTasks = node.text;
+        }
+
+        final totalTasks = RegExp(r'^\s*[-*]\s+\[[ xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+        final doneTasks = RegExp(r'^\s*[-*]\s+\[[xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isConnectingSource || isSelected
+                  ? AppColors.accentOrange
+                  : strokeColor.withValues(alpha: 0.85),
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  color: isDark
+                      ? palette.darkColor.withValues(alpha: 0.75)
+                      : palette.lightColor.withValues(alpha: 0.25),
+                  child: Row(
+                    children: [
+                      TackIcon(
+                        isLinked ? TackIcons.link : TackIcons.notes,
+                        size: 11,
+                        color: isDark ? palette.lightColor : AppColors.lightTextPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          isLinked ? 'LINKED SPEC' : 'SPEC CARD',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (totalTasks > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.28)
+                                : Colors.white.withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$doneTasks/$totalTasks',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openOrPromoteSpecNode(node),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                          child: Text(
+                            isLinked ? 'Open ↗' : '+ Note',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? palette.lightColor
+                                  : AppColors.primaryLight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cardTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            letterSpacing: -0.3,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: Text(
+                            cardBody,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 11.5,
+                              height: 1.32,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        break;
+
       case CanvasNodeType.process:
       default:
         paletteId = 'lime';
         break;
     }
+    if (customPaletteId != null && customPaletteId.isNotEmpty) {
+      paletteId = customPaletteId;
+    }
 
     final double width = customWidth ??
         (shapeType == CanvasNodeType.decision
-        ? 140
-        : shapeType == CanvasNodeType.sticky
-            ? 130
-            : shapeType == CanvasNodeType.image
-                ? 160
-                : 130);
+            ? 140
+            : shapeType == CanvasNodeType.sticky
+                ? 130
+                : shapeType == CanvasNodeType.specCard
+                    ? 220
+                    : shapeType == CanvasNodeType.image
+                        ? 160
+                        : 130);
     final double height = customHeight ??
         (shapeType == CanvasNodeType.decision
-        ? 64
-        : shapeType == CanvasNodeType.sticky
-            ? 120
-            : shapeType == CanvasNodeType.image
-                ? 160
-                : shapeType == CanvasNodeType.textOnly
-                    ? 42
-                    : 52);
+            ? 64
+            : shapeType == CanvasNodeType.sticky
+                ? 120
+                : shapeType == CanvasNodeType.specCard
+                    ? 148
+                    : shapeType == CanvasNodeType.image
+                        ? 160
+                        : shapeType == CanvasNodeType.textOnly
+                            ? 42
+                            : 52);
 
     double x;
     double y;
@@ -435,7 +687,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     final newNode = CanvasNode(
       id: _generateUniqueId('node'),
-      text: shapeType == CanvasNodeType.image ? '' : shapeType.label,
+      text: customText ??
+          (shapeType == CanvasNodeType.image
+              ? ''
+              : shapeType == CanvasNodeType.specCard
+                  ? 'Spec Overview\n- Goal: \n- Edge cases: '
+                  : shapeType.label),
       shapeType: shapeType,
       x: x.clamp(0.0, _canvasSize - width),
       y: y.clamp(0.0, _canvasSize - height),
@@ -443,6 +700,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       height: height,
       paletteId: paletteId,
       imagePath: imagePath,
+      linkedNoteId: linkedNoteId,
     );
 
     setState(() {
@@ -452,7 +710,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     });
     _saveCanvasState();
 
-    if (shapeType == CanvasNodeType.textOnly || shapeType == CanvasNodeType.sticky) {
+    if (autoEdit &&
+        linkedNoteId == null &&
+        (shapeType == CanvasNodeType.textOnly ||
+            shapeType == CanvasNodeType.sticky ||
+            shapeType == CanvasNodeType.specCard)) {
       _editNodeText(newNode);
     }
   }
@@ -499,6 +761,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       height: cloned.height,
       paletteId: cloned.paletteId,
       imagePath: cloned.imagePath,
+      linkedNoteId: cloned.linkedNoteId,
     );
 
     setState(() {
@@ -905,22 +1168,26 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         ? 140
         : newShapeType == CanvasNodeType.sticky
             ? 130
-            : newShapeType == CanvasNodeType.connector
-                ? 60
-                : newShapeType == CanvasNodeType.image
-                    ? 160
-                    : 130;
+            : newShapeType == CanvasNodeType.specCard
+                ? 220
+                : newShapeType == CanvasNodeType.connector
+                    ? 60
+                    : newShapeType == CanvasNodeType.image
+                        ? 160
+                        : 130;
     final double newHeight = newShapeType == CanvasNodeType.decision
         ? 64
         : newShapeType == CanvasNodeType.sticky
             ? 120
-            : newShapeType == CanvasNodeType.connector
-                ? 60
-                : newShapeType == CanvasNodeType.image
-                    ? 120
-                    : newShapeType == CanvasNodeType.textOnly
-                        ? 42
-                        : 52;
+            : newShapeType == CanvasNodeType.specCard
+                ? 148
+                : newShapeType == CanvasNodeType.connector
+                    ? 60
+                    : newShapeType == CanvasNodeType.image
+                        ? 120
+                        : newShapeType == CanvasNodeType.textOnly
+                            ? 42
+                            : 52;
 
     setState(() {
       final index = _nodes.indexWhere((n) => n.id == node.id);
@@ -1029,22 +1296,47 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   void _editNodeText(CanvasNode node) {
     final controller = TextEditingController(text: node.text);
+    final isSpec = node.shapeType == CanvasNodeType.specCard;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Node Text'),
+          title: Text(isSpec ? 'Edit Spec Card' : 'Edit Node Text'),
           content: TextField(
             controller: controller,
             autofocus: true,
-            maxLines: node.shapeType == CanvasNodeType.sticky ? 4 : 1,
-            decoration: const InputDecoration(hintText: 'Enter node label...'),
-            onSubmitted: (val) {
-              _saveNodeText(node, val);
-              Navigator.of(context).pop();
-            },
+            maxLines: isSpec
+                ? 6
+                : node.shapeType == CanvasNodeType.sticky
+                    ? 4
+                    : 1,
+            decoration: InputDecoration(
+              hintText: isSpec
+                  ? 'Spec summary, acceptance criteria, edge cases...'
+                  : 'Enter node label...',
+            ),
+            onSubmitted: isSpec
+                ? null
+                : (val) {
+                    _saveNodeText(node, val);
+                    Navigator.of(context).pop();
+                  },
           ),
           actions: [
+            if (isSpec || node.shapeType == CanvasNodeType.sticky)
+              TextButton.icon(
+                onPressed: () {
+                  _saveNodeText(node, controller.text);
+                  Navigator.of(context).pop();
+                  final updatedNode = _nodes.firstWhere(
+                    (n) => n.id == node.id,
+                    orElse: () => node.copyWith(text: controller.text.trim()),
+                  );
+                  _openOrPromoteSpecNode(updatedNode);
+                },
+                icon: const TackIcon(TackIcons.notes, size: 15),
+                label: Text(node.linkedNoteId != null ? 'Open Note' : 'Open as Note'),
+              ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
@@ -1057,6 +1349,348 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               child: const Text('Save'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  /// Opens a Spec Card's linked note in [NoteEditorScreen], or promotes an unlinked
+  /// Spec Card / Sticky node into a full bi-directionally linked [TextNote].
+  Future<void> _openOrPromoteSpecNode(CanvasNode node) async {
+    final workspace = context.read<WorkspaceProvider>();
+    if (node.linkedNoteId != null) {
+      final existing = workspace.getItemById(node.linkedNoteId!);
+      if (existing != null && (existing is TextNote || existing is StickyNote)) {
+        _saveCanvasState();
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => NoteEditorScreen(item: existing)),
+        );
+        if (mounted) setState(() {});
+        return;
+      }
+    }
+
+    // Promote unlinked Spec Card / Sticky node to a full Markdown note linked to this board!
+    final lines = node.text.trim().split('\n');
+    final derivedTitle = lines.isNotEmpty && lines.first.trim().isNotEmpty
+        ? lines.first.replaceFirst(RegExp(r'^#+\s*'), '').trim()
+        : '${widget.item.title} Spec';
+    final bodyLines = lines.length > 1 ? lines.sublist(1).join('\n').trim() : '';
+    final embedRef = '![[${widget.item.title}#${node.id}]]';
+    final initialBody = bodyLines.isNotEmpty
+        ? '$bodyLines\n\n$embedRef\n'
+        : '## Spec Details\n- [ ] Define requirements\n\n$embedRef\n';
+
+    final created = await workspace.createNewItem(
+      title: derivedTitle,
+      type: ItemType.note,
+      paletteId: node.paletteId,
+      content: initialBody,
+    );
+
+    _history.recordSnapshot(_nodes, _edges);
+    setState(() {
+      final idx = _nodes.indexWhere((n) => n.id == node.id);
+      if (idx >= 0) {
+        _nodes[idx] = _nodes[idx].copyWith(
+          shapeType: CanvasNodeType.specCard,
+          linkedNoteId: created.id,
+          text: derivedTitle,
+          width: math.max(_nodes[idx].width, 220),
+          height: math.max(_nodes[idx].height, 148),
+        );
+      }
+    });
+    _saveCanvasState();
+
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: created)),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// Bottom sheet to create a new Spec Card on the board or pin an existing Note/Sticky.
+  void _showAddSpecCardSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final workspace = context.read<WorkspaceProvider>();
+    final pinnableNotes = workspace.rawItems
+        .where((i) => !i.isTrash && (i is TextNote || i is StickyNote))
+        .toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final filtered = search.trim().isEmpty
+                ? pinnableNotes
+                : pinnableNotes
+                    .where((n) =>
+                        n.title.toLowerCase().contains(search.toLowerCase()) ||
+                        n.getSummary().toLowerCase().contains(search.toLowerCase()))
+                    .toList();
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 14,
+                  bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.pastelCyanLight.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const TackIcon(
+                            TackIcons.notes,
+                            size: 18,
+                            color: AppColors.pastelCyanLight,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Canvas Spec Card',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.4,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                              Text(
+                                'Write a structured spec on the board or pin a live note',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 12,
+                                  letterSpacing: -0.2,
+                                  color: isDark
+                                      ? AppColors.darkTextMuted
+                                      : AppColors.lightTextMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(sheetCtx).pop();
+                        _addNode(CanvasNodeType.specCard);
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.pastelCyanDark.withValues(alpha: 0.35)
+                              : AppColors.pastelCyanLight.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.pastelCyanLight.withValues(alpha: 0.55),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const TackIcon(
+                              TackIcons.plus,
+                              size: 18,
+                              color: AppColors.pastelCyanLight,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'New Blank Spec Card on Board',
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (pinnableNotes.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'OR PIN AN EXISTING NOTE',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        onChanged: (v) => setModalState(() => search = v),
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 13.5,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.lightTextPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Filter notes...',
+                          isDense: true,
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: TackIcon(TackIcons.search, size: 16),
+                          ),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurfaceAlt
+                              : const Color(0xFFF3F4F6),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 230),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          itemBuilder: (_, idx) {
+                            final note = filtered[idx];
+                            final pal = AppColors.getPaletteById(note.paletteId);
+                            return InkWell(
+                              onTap: () {
+                                Navigator.of(sheetCtx).pop();
+                                _addNode(
+                                  CanvasNodeType.specCard,
+                                  linkedNoteId: note.id,
+                                  customText: note.title,
+                                  customPaletteId: note.paletteId,
+                                  autoEdit: false,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.darkSurfaceAlt
+                                      : const Color(0xFFF8F9FA),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.lightBorder,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: pal.lightColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            note.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontFamily: AppTypography.fontFamily,
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: -0.3,
+                                              color: isDark
+                                                  ? AppColors.darkTextPrimary
+                                                  : AppColors.lightTextPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            note.getSummary(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontFamily: AppTypography.fontFamily,
+                                              fontSize: 11.5,
+                                              color: isDark
+                                                  ? AppColors.darkTextMuted
+                                                  : AppColors.lightTextMuted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const TackIcon(TackIcons.pin, size: 15),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1510,6 +2144,208 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         }
         break;
 
+      case CanvasNodeType.specCard:
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+        canvas.drawRRect(rrect, fillPaint);
+        canvas.save();
+        canvas.clipRRect(rrect);
+        final headerPaint = Paint()
+          ..color = strokeColor.withValues(alpha: 0.28)
+          ..style = PaintingStyle.fill;
+        canvas.drawRect(
+          Rect.fromLTWH(node.x, node.y, node.width, 24),
+          headerPaint,
+        );
+        canvas.restore();
+        canvas.drawRRect(rrect, strokePaint);
+        break;
+
+      case CanvasNodeType.specCard:
+        final workspace = context.watch<WorkspaceProvider>();
+        final linkedItem = node.linkedNoteId != null
+            ? workspace.getItemById(node.linkedNoteId!)
+            : null;
+        final isLinked = linkedItem != null && !linkedItem.isTrash;
+
+        String cardTitle;
+        String cardBody;
+        String rawForTasks;
+        if (isLinked && linkedItem is TextNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else if (isLinked && linkedItem is StickyNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else {
+          final lines = node.text.trim().split('\n');
+          cardTitle = lines.isNotEmpty && lines.first.trim().isNotEmpty
+              ? lines.first.trim()
+              : 'Spec Card';
+          cardBody = lines.length > 1
+              ? lines.sublist(1).join('\n').trim()
+              : 'Double-tap to write spec or tap Open to expand as note';
+          rawForTasks = node.text;
+        }
+
+        final totalTasks = RegExp(r'^\s*[-*]\s+\[[ xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+        final doneTasks = RegExp(r'^\s*[-*]\s+\[[xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isConnectingSource || isSelected
+                  ? AppColors.accentOrange
+                  : strokeColor.withValues(alpha: 0.85),
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  color: isDark
+                      ? palette.darkColor.withValues(alpha: 0.75)
+                      : palette.lightColor.withValues(alpha: 0.25),
+                  child: Row(
+                    children: [
+                      TackIcon(
+                        isLinked ? TackIcons.link : TackIcons.notes,
+                        size: 11,
+                        color: isDark ? palette.lightColor : AppColors.lightTextPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          isLinked ? 'LINKED SPEC' : 'SPEC CARD',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (totalTasks > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.28)
+                                : Colors.white.withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$doneTasks/$totalTasks',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openOrPromoteSpecNode(node),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                          child: Text(
+                            isLinked ? 'Open ↗' : '+ Note',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? palette.lightColor
+                                  : AppColors.primaryLight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cardTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            letterSpacing: -0.3,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: Text(
+                            cardBody,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 11.5,
+                              height: 1.32,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        break;
+
       case CanvasNodeType.process:
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
         canvas.drawRRect(rrect, fillPaint);
@@ -1518,26 +2354,33 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     }
 
     if (node.text.isNotEmpty && node.shapeType != CanvasNodeType.image) {
+      final isSpec = node.shapeType == CanvasNodeType.specCard;
       final textSpan = TextSpan(
         text: node.text,
         style: TextStyle(
           color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          fontSize: node.shapeType == CanvasNodeType.decision ? 12 : 13,
+          fontSize: node.shapeType == CanvasNodeType.decision ? 12 : (isSpec ? 12 : 13),
           fontWeight: FontWeight.w600,
         ),
       );
       final textPainter = TextPainter(
         text: textSpan,
-        textAlign: TextAlign.center,
+        textAlign: isSpec ? TextAlign.left : TextAlign.center,
         textDirection: TextDirection.ltr,
-        maxLines: node.shapeType == CanvasNodeType.sticky ? 4 : 2,
+        maxLines: isSpec
+            ? 5
+            : node.shapeType == CanvasNodeType.sticky
+                ? 4
+                : 2,
         ellipsis: '...',
       );
-      textPainter.layout(maxWidth: math.max(node.width - 16, 20));
-      final textOffset = Offset(
-        node.x + (node.width - textPainter.width) / 2,
-        node.y + (node.height - textPainter.height) / 2,
-      );
+      textPainter.layout(maxWidth: math.max(node.width - 20, 20));
+      final textOffset = isSpec
+          ? Offset(node.x + 10, node.y + 30)
+          : Offset(
+              node.x + (node.width - textPainter.width) / 2,
+              node.y + (node.height - textPainter.height) / 2,
+            );
       textPainter.paint(canvas, textOffset);
     }
   }
@@ -2691,7 +3534,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
   }
 
-  // Floating Shapes Selector Popup (Start/End, Process, Decision, I/O, Connector)
+  // Floating Shapes Selector Popup (Start/End, Process, Decision, I/O, Connector, Spec Card)
   Widget _buildShapesMenu(bool isDark) {
     final items = [
       (type: CanvasNodeType.startEnd, label: 'Start / End', color: AppColors.pastelCoralLight),
@@ -2699,6 +3542,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       (type: CanvasNodeType.decision, label: 'Decision', color: AppColors.pastelLavenderLight),
       (type: CanvasNodeType.inputOutput, label: 'Input / Output', color: AppColors.pastelAmberLight),
       (type: CanvasNodeType.connector, label: 'Connector', color: AppColors.pastelCyanLight),
+      (type: CanvasNodeType.specCard, label: 'Spec Card', color: AppColors.pastelCyanLight),
     ];
 
     return Container(
@@ -2796,6 +3640,210 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             border: Border.all(color: color, width: 1.5),
           ),
         );
+      case CanvasNodeType.specCard:
+        return Container(
+          width: 24,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(3.5),
+            border: Border.all(color: color, width: 1.5),
+          ),
+          alignment: Alignment.topCenter,
+          child: Container(
+            height: 4,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.75),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+            ),
+          ),
+        );
+      case CanvasNodeType.specCard:
+        final workspace = context.watch<WorkspaceProvider>();
+        final linkedItem = node.linkedNoteId != null
+            ? workspace.getItemById(node.linkedNoteId!)
+            : null;
+        final isLinked = linkedItem != null && !linkedItem.isTrash;
+
+        String cardTitle;
+        String cardBody;
+        String rawForTasks;
+        if (isLinked && linkedItem is TextNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else if (isLinked && linkedItem is StickyNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else {
+          final lines = node.text.trim().split('\n');
+          cardTitle = lines.isNotEmpty && lines.first.trim().isNotEmpty
+              ? lines.first.trim()
+              : 'Spec Card';
+          cardBody = lines.length > 1
+              ? lines.sublist(1).join('\n').trim()
+              : 'Double-tap to write spec or tap Open to expand as note';
+          rawForTasks = node.text;
+        }
+
+        final totalTasks = RegExp(r'^\s*[-*]\s+\[[ xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+        final doneTasks = RegExp(r'^\s*[-*]\s+\[[xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isConnectingSource || isSelected
+                  ? AppColors.accentOrange
+                  : strokeColor.withValues(alpha: 0.85),
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  color: isDark
+                      ? palette.darkColor.withValues(alpha: 0.75)
+                      : palette.lightColor.withValues(alpha: 0.25),
+                  child: Row(
+                    children: [
+                      TackIcon(
+                        isLinked ? TackIcons.link : TackIcons.notes,
+                        size: 11,
+                        color: isDark ? palette.lightColor : AppColors.lightTextPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          isLinked ? 'LINKED SPEC' : 'SPEC CARD',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (totalTasks > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.28)
+                                : Colors.white.withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$doneTasks/$totalTasks',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openOrPromoteSpecNode(node),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                          child: Text(
+                            isLinked ? 'Open ↗' : '+ Note',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? palette.lightColor
+                                  : AppColors.primaryLight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cardTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            letterSpacing: -0.3,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: Text(
+                            cardBody,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 11.5,
+                              height: 1.32,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        break;
+
       case CanvasNodeType.process:
       default:
         return Container(
@@ -3056,6 +4104,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               icon: Icons.sticky_note_2_rounded,
               tooltip: 'Sticky Note (S)',
               isDark: isDark,
+            ),
+            // Tool 5b: Spec Card / Pin Note
+            _buildDockToolButton(
+              id: 'spec',
+              icon: TackIcons.notesSvg,
+              tooltip: 'Spec Card / Pin Note',
+              isDark: isDark,
+              onTapOverride: _showAddSpecCardSheet,
             ),
             // Tool 6: Text Tool
             _buildDockToolButton(
@@ -3504,6 +4560,24 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 ),
                 const SizedBox(width: 4),
 
+                if (node.shapeType == CanvasNodeType.specCard ||
+                    node.shapeType == CanvasNodeType.sticky) ...[
+                  IconButton(
+                    icon: const TackIcon(
+                      TackIcons.notes,
+                      size: 16,
+                      color: AppColors.pastelCyanLight,
+                    ),
+                    tooltip: node.linkedNoteId != null
+                        ? 'Open Linked Note'
+                        : 'Promote to Linked Note',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () => _openOrPromoteSpecNode(node),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+
                 // 3. Change Shape Action (+ icon from toolbar)
                 PopupMenuButton<CanvasNodeType>(
                   tooltip: 'Change Shape',
@@ -3517,6 +4591,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       (type: CanvasNodeType.startEnd, label: 'Start / End', color: AppColors.pastelCoralLight),
                       (type: CanvasNodeType.inputOutput, label: 'Input / Output', color: AppColors.pastelAmberLight),
                       (type: CanvasNodeType.connector, label: 'Connector', color: AppColors.pastelCyanLight),
+                      (type: CanvasNodeType.specCard, label: 'Spec Card', color: AppColors.pastelCyanLight),
                     ];
                     return items.map((item) {
                       final isCurrent = node.shapeType == item.type;
@@ -3971,6 +5046,192 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         );
         break;
 
+      case CanvasNodeType.specCard:
+        final workspace = context.watch<WorkspaceProvider>();
+        final linkedItem = node.linkedNoteId != null
+            ? workspace.getItemById(node.linkedNoteId!)
+            : null;
+        final isLinked = linkedItem != null && !linkedItem.isTrash;
+
+        String cardTitle;
+        String cardBody;
+        String rawForTasks;
+        if (isLinked && linkedItem is TextNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else if (isLinked && linkedItem is StickyNote) {
+          cardTitle = linkedItem.title;
+          cardBody = linkedItem.getSummary();
+          rawForTasks = linkedItem.content;
+        } else {
+          final lines = node.text.trim().split('\n');
+          cardTitle = lines.isNotEmpty && lines.first.trim().isNotEmpty
+              ? lines.first.trim()
+              : 'Spec Card';
+          cardBody = lines.length > 1
+              ? lines.sublist(1).join('\n').trim()
+              : 'Double-tap to write spec or tap Open to expand as note';
+          rawForTasks = node.text;
+        }
+
+        final totalTasks = RegExp(r'^\s*[-*]\s+\[[ xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+        final doneTasks = RegExp(r'^\s*[-*]\s+\[[xX]\]', multiLine: true)
+            .allMatches(rawForTasks)
+            .length;
+
+        shapeContent = Container(
+          width: node.width,
+          height: node.height,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isConnectingSource || isSelected
+                  ? AppColors.accentOrange
+                  : strokeColor.withValues(alpha: 0.85),
+              width: isConnectingSource || isSelected ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  color: isDark
+                      ? palette.darkColor.withValues(alpha: 0.75)
+                      : palette.lightColor.withValues(alpha: 0.25),
+                  child: Row(
+                    children: [
+                      TackIcon(
+                        isLinked ? TackIcons.link : TackIcons.notes,
+                        size: 11,
+                        color: isDark ? palette.lightColor : AppColors.lightTextPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          isLinked ? 'LINKED SPEC' : 'SPEC CARD',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (totalTasks > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.28)
+                                : Colors.white.withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$doneTasks/$totalTasks',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openOrPromoteSpecNode(node),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                          child: Text(
+                            isLinked ? 'Open ↗' : '+ Note',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? palette.lightColor
+                                  : AppColors.primaryLight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cardTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            letterSpacing: -0.3,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: Text(
+                            cardBody,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 11.5,
+                              height: 1.32,
+                              letterSpacing: -0.2,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        break;
+
       case CanvasNodeType.process:
       default:
         shapeContent = Container(
@@ -4056,7 +5317,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                 }
               });
             },
-            onDoubleTap: () => _editNodeText(node),
+            onDoubleTap: () {
+              if (node.shapeType == CanvasNodeType.specCard &&
+                  node.linkedNoteId != null) {
+                _openOrPromoteSpecNode(node);
+              } else {
+                _editNodeText(node);
+              }
+            },
             onPanStart: (_) {
               if (_activeTool == 'pan' || _activePointers >= 2) return;
               // Disable InteractiveViewer pan so gestures don't conflict

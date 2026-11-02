@@ -15,25 +15,36 @@ import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../domain/models/sticky_note.dart';
 import '../../../domain/models/clipboard_item.dart';
+import '../../../domain/models/whiteboard_item.dart';
+import '../../../domain/services/block_transform_service.dart';
+import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
+import '../../components/dialogs_sheets/slash_command_sheet.dart';
 import '../../components/inputs/markdown_text_editing_controller.dart';
 import '../../components/inputs/rich_note_content_view.dart';
 import '../../components/inputs/smart_markdown_formatter.dart';
+import '../../components/inputs/wiki_link_components.dart';
 import '../../components/inputs/mermaid/mermaid_completion_bar.dart';
 import '../../components/dialogs_sheets/mermaid_template_sheet.dart';
 import '../../components/toolbars/editor_formatting_toolbar.dart';
 import '../../../domain/services/note_export_service.dart';
+import '../whiteboard/whiteboard_canvas_screen.dart';
 
-/// Full-featured Note Editor & Reader Screen (Phase 3).
-/// Includes Reading/Editing mode switcher, live interactive checklists,
-/// tag manager, auto-save status pill, floating formatting toolbar, and note sharing.
+/// Full-featured Note Editor & Reader Screen (Phase 3 + Phase 1 Connected Specs).
+/// Includes Reading/Editing mode switcher, bi-directional [[Wiki-Links]],
+/// live ![[Whiteboard]] embeds, / Slash blocks, Turn-Into actions, and Backlinks.
 class NoteEditorScreen extends StatefulWidget {
   final BaseWorkspaceItem item;
+  final String? initialHeadingAnchor;
 
-  const NoteEditorScreen({super.key, required this.item});
+  const NoteEditorScreen({
+    super.key,
+    required this.item,
+    this.initialHeadingAnchor,
+  });
 
   @override
   State<NoteEditorScreen> createState() => _NoteEditorScreenState();
@@ -63,6 +74,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final TextEditingController _replaceQueryController = TextEditingController();
   final List<int> _searchMatches = [];
   int _currentMatchIndex = 0;
+  int? _dismissedWikiTriggerOffset;
 
   @override
   void initState() {
@@ -78,7 +90,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       text: initialContent,
       paletteId: _paletteId,
     );
-    _isEditingMode = initialContent.trim().isEmpty;
+    _isEditingMode = widget.initialHeadingAnchor == null && initialContent.trim().isEmpty;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
 
     _titleController.addListener(_onTextChanged);
@@ -92,6 +104,28 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         }
       }
     });
+
+    if (widget.initialHeadingAnchor != null && initialContent.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToHeadingAnchor(widget.initialHeadingAnchor!);
+      });
+    }
+  }
+
+  void _scrollToHeadingAnchor(String anchor) {
+    if (!_scrollController.hasClients) return;
+    final text = _contentController.text;
+    final lineIdx = WikiLinkService.findHeadingLineIndex(text, anchor);
+    if (lineIdx == null) return;
+    final totalLines = text.split('\n').length;
+    if (totalLines <= 1) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final ratio = (lineIdx / totalLines).clamp(0.0, 1.0);
+    _scrollController.animateTo(
+      (maxScroll * ratio).clamp(0.0, maxScroll),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   WorkspaceProvider? _workspace;
@@ -349,6 +383,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     int newCursorEnd = selection.end;
 
     switch (action) {
+      case 'slash':
+        _openSlashAndBlockSheet(startOnTurnIntoTab: false);
+        return;
+      case 'turn_into':
+        _openSlashAndBlockSheet(startOnTurnIntoTab: true);
+        return;
+      case 'wikilink':
+        if (selectedText.isNotEmpty) {
+          newText = '$before[[$selectedText]]$after';
+          newCursorStart = before.length + 2 + selectedText.length + 2;
+          newCursorEnd = newCursorStart;
+        } else {
+          newText = '$before[[$after';
+          newCursorStart = before.length + 2;
+          newCursorEnd = newCursorStart;
+          _dismissedWikiTriggerOffset = null;
+        }
+        break;
       case 'h1':
         final prefixH1 = (before.isEmpty || before.endsWith('\n')) ? '# ' : '\n# ';
         newText = '$before$prefixH1$selectedText$after';
@@ -985,11 +1037,293 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
+  // ================= Phase 1: Slash Commands, Turn Into, Wiki-Links & Backlinks =================
+
+  void _openSlashAndBlockSheet({required bool startOnTurnIntoTab}) {
+    final sel = _contentController.selection;
+    final cursor = sel.isValid ? sel.baseOffset : _contentController.text.length;
+    final currentKind = BlockTransformService.detectBlockKind(_contentController.text, cursor);
+
+    SlashAndBlockActionsSheet.show(
+      context,
+      currentBlockKind: currentKind,
+      startOnTurnIntoTab: startOnTurnIntoTab,
+      onInsertCommand: (cmd) => _executeSlashCommand(cmd),
+      onTurnInto: (kind) {
+        _contentController.value = BlockTransformService.turnInto(_contentController.value, kind);
+        _saveNote();
+        _contentFocusNode.requestFocus();
+      },
+      onMoveUp: () {
+        _contentController.value = BlockTransformService.moveBlockUp(_contentController.value);
+        _saveNote();
+      },
+      onMoveDown: () {
+        _contentController.value = BlockTransformService.moveBlockDown(_contentController.value);
+        _saveNote();
+      },
+      onDuplicateBlock: () {
+        _contentController.value = BlockTransformService.duplicateBlock(_contentController.value);
+        _saveNote();
+        _contentFocusNode.requestFocus();
+      },
+    );
+  }
+
+  void _executeSlashCommand(SlashCommandItem cmd, {ActiveSlashTrigger? slashTrigger}) {
+    if (cmd.id == 'diagram') {
+      if (slashTrigger != null) {
+        _removeSlashToken(slashTrigger);
+      }
+      _showDiagramTemplatePicker();
+      return;
+    }
+
+    if (cmd.id == 'board') {
+      if (slashTrigger != null) {
+        _removeSlashToken(slashTrigger);
+      }
+      _showWhiteboardEmbedPicker();
+      return;
+    }
+
+    final snippet = cmd.markdownSnippet ?? '';
+    if (snippet.isEmpty) return;
+
+    final text = _contentController.text;
+    int replaceStart;
+    int replaceEnd;
+
+    if (slashTrigger != null) {
+      replaceStart = slashTrigger.slashOffset.clamp(0, text.length);
+      replaceEnd = slashTrigger.cursorOffset.clamp(replaceStart, text.length);
+    } else {
+      final sel = _contentController.selection;
+      replaceStart = sel.isValid ? sel.start.clamp(0, text.length) : text.length;
+      replaceEnd = sel.isValid ? sel.end.clamp(replaceStart, text.length) : text.length;
+    }
+
+    final before = text.substring(0, replaceStart);
+    final after = text.substring(replaceEnd);
+
+    final needsLeadingNewline = slashTrigger == null &&
+        cmd.id != 'link' &&
+        before.isNotEmpty &&
+        !before.endsWith('\n');
+    final effectiveSnippet = needsLeadingNewline ? '\n$snippet' : snippet;
+
+    final newText = '$before$effectiveSnippet$after';
+    int newCursor = before.length + effectiveSnippet.length;
+    if (cmd.id == 'code' && effectiveSnippet.endsWith('\n```')) {
+      newCursor -= 4; // Place cursor inside fenced code block
+    }
+    if (cmd.id == 'link') {
+      _dismissedWikiTriggerOffset = null;
+    }
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor.clamp(0, newText.length)),
+    );
+    _saveNote();
+    _contentFocusNode.requestFocus();
+  }
+
+  void _removeSlashToken(ActiveSlashTrigger trigger) {
+    final text = _contentController.text;
+    final start = trigger.slashOffset.clamp(0, text.length);
+    final end = trigger.cursorOffset.clamp(start, text.length);
+    final newText = text.replaceRange(start, end, '');
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start),
+    );
+  }
+
+  void _showWhiteboardEmbedPicker() {
+    final workspace = context.read<WorkspaceProvider>();
+    final boards = workspace.rawItems.whereType<WhiteboardCanvasItem>().where((b) => !b.isTrash).toList();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Embed Whiteboard Canvas',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Inserts a live interactive preview right inside this note.',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentCyan.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: TackIcon(TackIcons.plus, size: 18, color: AppColors.accentCyan),
+                  ),
+                ),
+                title: const Text(
+                  'Create & Embed New Whiteboard',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final baseTitle = _titleController.text.trim();
+                  final boardTitle = baseTitle.isEmpty ? 'Spec Flow' : '$baseTitle (Flow)';
+                  final created = await workspace.createQuickItem(
+                    title: boardTitle,
+                    type: ItemType.whiteboard,
+                    paletteId: 'cyan',
+                  );
+                  _insertAtCursor('![[${created.title}]]');
+                },
+              ),
+              if (boards.isNotEmpty) const Divider(),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: boards.length,
+                  itemBuilder: (_, idx) {
+                    final board = boards[idx];
+                    return ListTile(
+                      leading: TackIcon(
+                        TackIcons.whiteboardSvg,
+                        size: 20,
+                        color: AppColors.getPaletteById(board.paletteId).resolveAccentColor(isDark),
+                      ),
+                      title: Text(
+                        board.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(board.getSummary()),
+                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _insertAtCursor('![[${board.title}]]');
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _completeWikiTrigger(ActiveWikiTrigger trigger, String completionToken) {
+    final text = _contentController.text;
+    final start = trigger.triggerStart.clamp(0, text.length);
+    final end = trigger.cursorOffset.clamp(start, text.length);
+    final newText = text.replaceRange(start, end, completionToken);
+    final newCursor = (start + completionToken.length).clamp(0, newText.length);
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    _dismissedWikiTriggerOffset = null;
+    _saveNote();
+    _contentFocusNode.requestFocus();
+  }
+
+  Future<void> _handleWikiLinkTap(ParsedWikiLink link) async {
+    _flushSave();
+    final workspace = context.read<WorkspaceProvider>();
+    final resolved = WikiLinkService.resolveTarget(link.target, workspace.rawItems);
+
+    if (resolved != null) {
+      if (!mounted) return;
+      if (resolved is WhiteboardCanvasItem) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => WhiteboardCanvasScreen(
+              item: resolved,
+              initialFocusNodeId: link.anchor,
+            ),
+          ),
+        );
+      } else {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => NoteEditorScreen(
+              item: resolved,
+              initialHeadingAnchor: link.anchor,
+            ),
+          ),
+        );
+      }
+      if (mounted) setState(() {});
+      return;
+    }
+
+    // Create & open new linked note on 1 tap (Obsidian workflow)
+    final created = await workspace.createQuickItem(
+      title: link.target,
+      type: ItemType.note,
+      paletteId: _paletteId,
+      content: '',
+    );
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: created)),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _handleConvertUnlinkedMention(BacklinkEntry entry) async {
+    final offset = entry.unlinkedMatchOffset;
+    final length = entry.unlinkedMatchLength;
+    if (offset == null || length == null) return;
+
+    final workspace = context.read<WorkspaceProvider>();
+    final source = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
+    final raw = WikiLinkService.contentOfItem(source);
+    if (offset < 0 || offset + length > raw.length) return;
+
+    final targetTitle = _titleController.text.trim();
+    if (targetTitle.isEmpty) return;
+
+    final updatedContent = raw.replaceRange(offset, offset + length, '[[$targetTitle]]');
+    BaseWorkspaceItem? updatedItem;
+    if (source is TextNote) {
+      updatedItem = source.copyWith(content: updatedContent, updatedAt: DateTime.now());
+    } else if (source is StickyNote) {
+      updatedItem = source.copyWith(content: updatedContent, updatedAt: DateTime.now());
+    }
+    if (updatedItem != null) {
+      await workspace.saveItem(updatedItem);
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final workspace = context.read<WorkspaceProvider>();
+    final workspace = context.watch<WorkspaceProvider>();
     final palette = AppColors.getPaletteById(_paletteId);
 
     final backgroundColor = isDark
@@ -1004,6 +1338,28 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
     final allChecklistsCompleted = totalChecklists > 0 && completedChecklists == totalChecklists;
+
+    final sel = _contentController.selection;
+    final cursorOffset = sel.isValid ? sel.baseOffset : -1;
+    final activeWikiTrigger = (_isEditingMode && cursorOffset >= 0)
+        ? WikiLinkService.detectActiveWikiTrigger(content, cursorOffset)
+        : null;
+    if (activeWikiTrigger == null && _dismissedWikiTriggerOffset != null) {
+      _dismissedWikiTriggerOffset = null;
+    }
+    final showWikiBar = activeWikiTrigger != null &&
+        _dismissedWikiTriggerOffset != activeWikiTrigger.triggerStart;
+    final activeSlashTrigger = (_isEditingMode && !showWikiBar && cursorOffset >= 0)
+        ? WikiLinkService.detectActiveSlashTrigger(content, cursorOffset)
+        : null;
+
+    final currentSnapshot = widget.item.copyWith(
+      title: _titleController.text.trim().isEmpty ? widget.item.title : _titleController.text.trim(),
+    );
+    final backlinks = WikiLinkService.computeBacklinks(
+      currentItem: currentSnapshot,
+      allItems: workspace.rawItems,
+    );
 
     return PopScope(
       canPop: !_isEditingMode && !_isSearching,
@@ -1436,7 +1792,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                         maxLines: null,
                         decoration: const InputDecoration(
-                          hintText: 'Start writing your thoughts...\n\nTip: Use [ ] for interactive checklists, # for headings, and > for quotes.',
+                          hintText: 'Start writing...\n\nTip: Type / for blocks, [[ to link notes or boards, or [ ] for tasks.',
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -1453,6 +1809,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         child: RichNoteContentView(
                           content: _contentController.text,
                           paletteId: _paletteId,
+                          workspaceItems: workspace.rawItems,
+                          onWikiLinkTap: _handleWikiLinkTap,
                           onLineTap: (lineIdx) {
                             _toggleViewMode(targetLineIndex: lineIdx);
                           },
@@ -1463,6 +1821,34 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       ),
                     ],
+
+                    // Collapsible Bi-Directional Backlinks & Unlinked Mentions
+                    NoteBacklinksSection(
+                      linked: backlinks.linked,
+                      unlinked: backlinks.unlinked,
+                      onOpenEntry: (entry) async {
+                        _flushSave();
+                        final target = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
+                        if (target is WhiteboardCanvasItem) {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => WhiteboardCanvasScreen(
+                                item: target,
+                                initialFocusNodeId: entry.canvasNodeId,
+                              ),
+                            ),
+                          );
+                        } else {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => NoteEditorScreen(item: target),
+                            ),
+                          );
+                        }
+                        if (mounted) setState(() {});
+                      },
+                      onConvertUnlinkedToWikiLink: _handleConvertUnlinkedMention,
+                    ),
                   ],
                 ),
               ),
@@ -1471,7 +1857,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
             // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
             if (_isEditingMode) ...[
-              if (_isCursorInsideMermaidBlock())
+              if (showWikiBar)
+                WikiLinkAutocompleteBar(
+                  trigger: activeWikiTrigger,
+                  workspaceItems: workspace.rawItems,
+                  currentItemId: widget.item.id,
+                  onSelectCompletion: (token) => _completeWikiTrigger(activeWikiTrigger, token),
+                  onDismiss: () {
+                    setState(() => _dismissedWikiTriggerOffset = activeWikiTrigger.triggerStart);
+                  },
+                )
+              else if (activeSlashTrigger != null)
+                SlashCommandInlineBar(
+                  trigger: activeSlashTrigger,
+                  onSelectCommand: (cmd) => _executeSlashCommand(cmd, slashTrigger: activeSlashTrigger),
+                  onOpenFullSheet: () {
+                    _removeSlashToken(activeSlashTrigger);
+                    _openSlashAndBlockSheet(startOnTurnIntoTab: false);
+                  },
+                )
+              else if (_isCursorInsideMermaidBlock())
                 MermaidCompletionBar(
                   onInsertSnippet: _insertMermaidSnippet,
                   onOpenTemplates: () {
