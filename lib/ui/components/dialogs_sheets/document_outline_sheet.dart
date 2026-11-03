@@ -7,6 +7,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/wiki_link_service.dart';
+import '../inputs/app_search_field.dart';
+import 'app_bottom_sheet.dart';
 
 /// Slide-up Document Outline (Table of Contents) sheet for [NoteEditorScreen]
 /// plus [InlineTocCard] for `[TOC]` blocks inside [RichNoteContentView].
@@ -34,14 +36,8 @@ class DocumentOutlineSheet extends StatefulWidget {
     int? currentLineIndex,
     required ValueChanged<({int level, String title, int lineIndex})> onSelectHeading,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet<void>(
+    return AppBottomSheet.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (_) => DocumentOutlineSheet(
         noteTitle: noteTitle,
         content: content,
@@ -84,91 +80,57 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
             .where((h) => h.title.toLowerCase().contains(_filter.toLowerCase()))
             .toList();
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 14,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  borderRadius: AppSpacing.roundedPill,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(LucideIcons.listTree, size: 18, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Document Outline',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Icon(LucideIcons.listTree, size: 18, color: accent),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Document Outline',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.lightTextPrimary,
-                    ),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: AppSpacing.roundedPill,
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.14),
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Text(
-                    '${allHeadings.length} sections',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: accent,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (allHeadings.length > 5) ...[
-              const SizedBox(height: 10),
-              TextField(
-                onChanged: (v) => setState(() => _filter = v),
-                decoration: InputDecoration(
-                  hintText: 'Jump to section...',
-                  isDense: true,
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.all(10),
-                    child: TackIcon(TackIcons.search, size: 15),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 34,
-                    minHeight: 34,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceAlt
-                      : const Color(0xFFF3F4F6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                child: Text(
+                  '${allHeadings.length} sections',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
                   ),
                 ),
               ),
             ],
+          ),
+          if (allHeadings.length > 5) ...[
+            const SizedBox(height: 10),
+            AppSearchField(
+              hintText: 'Jump to section...',
+              height: 40,
+              onChanged: (v) => setState(() => _filter = v),
+              onClear: () => setState(() => _filter = ''),
+            ),
+          ],
             const SizedBox(height: 10),
             if (allHeadings.isEmpty)
               Padding(

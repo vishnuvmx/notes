@@ -8,6 +8,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/block_transform_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
+import '../inputs/app_search_field.dart';
+import 'app_bottom_sheet.dart';
 
 /// Definition of a `/` Slash Block Command inspired by Figma Specs & Notion.
 class SlashCommandItem {
@@ -337,11 +339,9 @@ class SlashAndBlockActionsSheet extends StatefulWidget {
     bool startOnTurnIntoTab = false,
   }) {
     HapticFeedback.lightImpact();
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      maxHeightFactor: 0.85,
       builder: (_) => SlashAndBlockActionsSheet(
         currentBlockKind: currentBlockKind,
         onInsertCommand: onInsertCommand,
@@ -381,38 +381,16 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
     final filteredCommands = SlashCommandsCatalog.filter(_searchController.text);
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: size.height * 0.80),
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg + keyboardBottom,
-        ),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-          boxShadow: AppSpacing.floatingControlShadow,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            // Quick Mobile Line Actions Row (Move Up, Move Down, Duplicate)
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Quick Mobile Line Actions Row (Move Up, Move Down, Duplicate)
             Row(
               children: [
                 _buildQuickActionPill(
@@ -481,26 +459,11 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
 
             if (!_showTurnInto) ...[
               // Filter Search Input
-              TextField(
+              AppSearchField(
                 controller: _searchController,
+                hintText: 'Filter blocks (e.g. spec, board, todo, table)...',
                 onChanged: (_) => setState(() {}),
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  color: isDark ? Colors.white : AppColors.lightTextPrimary,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Filter blocks (e.g. spec, board, todo, table)...',
-                  prefixIcon: const Icon(LucideIcons.search, size: 17),
-                  isDense: true,
-                  filled: true,
-                  fillColor: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF6F7FA),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+                onClear: () => setState(() {}),
               ),
               const SizedBox(height: 8),
               Flexible(
@@ -605,8 +568,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
             ],
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildQuickActionPill({

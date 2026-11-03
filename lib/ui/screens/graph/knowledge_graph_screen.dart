@@ -13,6 +13,7 @@ import '../../../domain/models/text_note.dart';
 import '../../../domain/models/whiteboard_item.dart';
 import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/inputs/app_search_field.dart';
 import '../editor/note_editor_screen.dart';
 import '../whiteboard/whiteboard_canvas_screen.dart';
 
@@ -560,29 +561,13 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_isSearching)
-                  Container(
+                  AppSearchField(
+                    controller: _searchController,
+                    autofocus: true,
+                    hintText: 'Highlight node by title or #tag...',
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderColor, width: 1.3),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13.5,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Highlight node by title or #tag...',
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 11),
-                      ),
-                      onChanged: (val) => setState(() => _query = val.trim().toLowerCase()),
-                    ),
+                    onChanged: (val) => setState(() => _query = val.trim().toLowerCase()),
+                    onClear: () => setState(() => _query = ''),
                   ),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,

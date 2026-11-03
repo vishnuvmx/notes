@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/tack_icons.dart';
+import 'app_bottom_sheet.dart';
 
 class MermaidTemplateItem {
   final String title;
@@ -31,14 +32,9 @@ class MermaidTemplateSheet extends StatefulWidget {
     BuildContext context, {
     required ValueChanged<String> onSelectTemplate,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-      ),
+      maxHeightFactor: 0.80,
       builder: (ctx) => MermaidTemplateSheet(onSelectTemplate: onSelectTemplate),
     );
   }
@@ -253,32 +249,15 @@ timeline
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SafeArea(
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.75,
-        ),
-        padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Sheet handle bar
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Sheet title and close
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Sheet title and close
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Row(
                 children: [
                   Container(
@@ -354,8 +333,7 @@ timeline
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildTemplateCard(MermaidTemplateItem template, bool isDark, ThemeData theme) {

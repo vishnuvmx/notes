@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import 'app_bottom_sheet.dart';
 
 /// Clean Modal Bottom Sheet presenting note reading metrics, word counts, and task progress.
 class NoteStatisticsSheet extends StatelessWidget {
@@ -16,13 +17,8 @@ class NoteStatisticsSheet extends StatelessWidget {
 
   /// Displays the NoteStatisticsSheet modally.
   static Future<void> show(BuildContext context, {required String content}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => NoteStatisticsSheet(content: content),
     );
   }
@@ -40,39 +36,28 @@ class NoteStatisticsSheet extends StatelessWidget {
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  borderRadius: BorderRadius.circular(2),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Note Statistics',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Note Statistics',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                IconButton(
-                  icon: const TackIcon(TackIcons.close, size: 18),
-                  onPressed: () => Navigator.of(context).pop(),
+              IconButton(
+                icon: const TackIcon(TackIcons.close, size: 18),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
