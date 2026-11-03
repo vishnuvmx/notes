@@ -51,14 +51,14 @@ class MarkdownTableService {
   /// work with clean, human-readable cell strings without raw markdown leaking into inputs.
   static String stripInlineMarkdown(String text) {
     var result = text.trim();
-    result = result.replaceAll(RegExp(r'\*\*\*(.*?)\*\*\*'), r'$1');
-    result = result.replaceAll(RegExp(r'\*\*(.*?)\*\*'), r'$1');
-    result = result.replaceAll(RegExp(r'\*(.*?)\*'), r'$1');
-    result = result.replaceAll(RegExp(r'___(.*?)___'), r'$1');
-    result = result.replaceAll(RegExp(r'__(.*?)__'), r'$1');
-    result = result.replaceAll(RegExp(r'_(.*?)_'), r'$1');
-    result = result.replaceAll(RegExp(r'`(.*?)`'), r'$1');
-    result = result.replaceAll(RegExp(r'~~(.*?)~~'), r'$1');
+    result = result.replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'\*\*(.*?)\*\*'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'\*(.*?)\*'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'___(.*?)___'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'__(.*?)__'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'_(.*?)_'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'`(.*?)`'), (m) => m[1] ?? '');
+    result = result.replaceAllMapped(RegExp(r'~~(.*?)~~'), (m) => m[1] ?? '');
     result = result.replaceAll(RegExp(r'^[\*_]+|[\*_]+$'), '');
     return result.trim();
   }
