@@ -209,7 +209,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                   constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   splashRadius: 18,
                   icon: TackIcon(
-                    TackIcons.x,
+                    TackIcons.close,
                     size: 16,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),

@@ -5,7 +5,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/wiki_link_service.dart';
 import '../inputs/app_search_field.dart';
 import 'app_bottom_sheet.dart';
@@ -228,8 +227,7 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

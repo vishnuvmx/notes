@@ -377,8 +377,6 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.sizeOf(context);
-    final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
     final filteredCommands = SlashCommandsCatalog.filter(_searchController.text);
 
     return Padding(

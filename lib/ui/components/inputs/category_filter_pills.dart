@@ -71,6 +71,7 @@ class CategoryFilterPills extends StatelessWidget {
     final workspace = context.watch<WorkspaceProvider>();
 
     final activeLime = AppColors.pastelLimeLight;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     final availableTags = workspace.availableTags;
     final selectedTag = workspace.selectedTag ?? '#All';

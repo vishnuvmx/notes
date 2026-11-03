@@ -1156,10 +1156,10 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                         paletteId: paletteId,
                         onSave: (updatedTable) {
                           final updatedDoc = MarkdownTableService.replaceTableInDocument(
-                            content,
-                            startLineIndex,
-                            endLineExclusive,
-                            updatedTable,
+                            rawDocument: content,
+                            startLine: startLineIndex,
+                            endLineExclusive: endLineExclusive,
+                            updatedTable: updatedTable,
                           );
                           onContentChanged?.call(updatedDoc);
                         },

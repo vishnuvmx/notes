@@ -89,8 +89,7 @@ class NoteStatisticsSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildStatCard(String label, String value, bool isDark) {
@@ -129,7 +128,6 @@ class NoteStatisticsSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

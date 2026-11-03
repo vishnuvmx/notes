@@ -198,7 +198,7 @@ class MermaidCompletionBar extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: completions.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 5),
+              separatorBuilder: (_, _) => const SizedBox(width: 5),
               itemBuilder: (context, index) {
                 final item = completions[index];
                 return Tooltip(
