@@ -421,6 +421,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _showEmojiPickerSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const emojis = [
       '📝', '📐', '🎨', '⚖️', '🚀', '💡', '🧠', '☀️',
       '🔥', '✅', '📌', '🗂️', '🧪', '🛠️', '🌟', '🔒',

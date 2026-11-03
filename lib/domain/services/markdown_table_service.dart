@@ -86,10 +86,13 @@ class MarkdownTableService {
     return cells;
   }
 
-  static EditableMarkdownTable? parseTableLines(List<String> lines) {
+  static EditableMarkdownTable? parseTableLines(List<String> lines, {bool stripFormatting = true}) {
     if (lines.length < 2) return null;
-    final headers = _splitPipeCells(lines[0]);
-    if (headers.isEmpty) return null;
+    final rawHeaders = _splitPipeCells(lines[0]);
+    if (rawHeaders.isEmpty) return null;
+    final headers = stripFormatting
+        ? rawHeaders.map(stripInlineMarkdown).toList()
+        : rawHeaders;
 
     final sepCells = _splitPipeCells(lines[1]);
     final alignments = List<TableColumnAlign>.generate(headers.length, (idx) {
@@ -105,7 +108,10 @@ class MarkdownTableService {
       final parsedRow = _splitPipeCells(lines[r]);
       final normalizedRow = List<String>.generate(
         headers.length,
-        (c) => c < parsedRow.length ? parsedRow[c] : '',
+        (c) {
+          final cell = c < parsedRow.length ? parsedRow[c] : '';
+          return stripFormatting ? stripInlineMarkdown(cell) : cell;
+        },
       );
       rows.add(normalizedRow);
     }

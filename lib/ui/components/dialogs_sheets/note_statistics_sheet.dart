@@ -128,6 +128,7 @@ class NoteStatisticsSheet extends StatelessWidget {
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 }

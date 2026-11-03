@@ -1,0 +1,296 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+import 'package:notes/core/theme/app_theme.dart';
+import 'package:notes/domain/interfaces/i_workspace_repo.dart';
+import 'package:notes/domain/models/base_item.dart';
+import 'package:notes/domain/models/text_note.dart';
+import 'package:notes/domain/services/markdown_table_service.dart';
+import 'package:notes/state/theme_provider.dart';
+import 'package:notes/state/workspace_provider.dart';
+import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
+import 'package:notes/ui/components/inputs/app_search_field.dart';
+import 'package:notes/ui/screens/editor/note_editor_screen.dart';
+
+class _MockWorkspaceRepo extends IWorkspaceRepository {
+  final List<BaseWorkspaceItem> _store = [];
+
+  @override
+  List<BaseWorkspaceItem> get cachedActiveItems =>
+      _store.where((i) => !i.isTrash && !i.isArchived).toList();
+
+  @override
+  Future<List<BaseWorkspaceItem>> getAllActiveItems() async => cachedActiveItems;
+
+  @override
+  Future<List<BaseWorkspaceItem>> getItemsByType(ItemType? type) async {
+    if (type == null) return cachedActiveItems;
+    return cachedActiveItems.where((i) => i.type == type).toList();
+  }
+
+  @override
+  Future<List<BaseWorkspaceItem>> getFavoriteItems() async =>
+      cachedActiveItems.where((i) => i.isFavorite).toList();
+
+  @override
+  Future<List<BaseWorkspaceItem>> getArchivedItems() async =>
+      _store.where((i) => i.isArchived && !i.isTrash).toList();
+
+  @override
+  Future<List<BaseWorkspaceItem>> getTrashItems() async =>
+      _store.where((i) => i.isTrash).toList();
+
+  @override
+  Future<List<BaseWorkspaceItem>> searchItems(String query, {ItemType? type}) async =>
+      cachedActiveItems
+          .where((i) =>
+              (type == null || i.type == type) && i.matchesQuery(query))
+          .toList();
+
+  @override
+  Future<BaseWorkspaceItem?> getItemById(String id) async =>
+      _store.where((i) => i.id == id).firstOrNull;
+
+  @override
+  Future<void> saveItem(BaseWorkspaceItem item) async {
+    final idx = _store.indexWhere((i) => i.id == item.id);
+    if (idx >= 0) {
+      _store[idx] = item;
+    } else {
+      _store.add(item);
+    }
+  }
+
+  @override
+  Future<void> moveToTrash(String id) async {}
+
+  @override
+  Future<void> restoreItem(String id) async {}
+
+  @override
+  Future<void> toggleArchive(String id) async {}
+
+  @override
+  Future<void> toggleFavorite(String id) async {}
+
+  @override
+  Future<void> deletePermanently(String id) async {
+    _store.removeWhere((i) => i.id == id);
+  }
+
+  @override
+  Future<void> emptyTrash() async {}
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('UI & UX Audit Verifications', () {
+    testWidgets('1. AppSearchField has a single container border and bare TextField input decoration', (tester) async {
+      String query = '';
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Center(
+              child: AppSearchField(
+                hintText: 'Search notes...',
+                onChanged: (val) => query = val,
+                onClear: () => query = '',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify TextField exists and uses InputBorder.none to prevent nested border slop
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.decoration?.border, equals(InputBorder.none));
+      expect(textField.decoration?.focusedBorder, equals(InputBorder.none));
+      expect(textField.decoration?.enabledBorder, equals(InputBorder.none));
+      expect(textField.decoration?.filled, isFalse);
+
+      // Verify parent Container has the single canonical rounded border
+      final containerFinder = find.ancestor(
+        of: find.byType(TextField),
+        matching: find.byType(Container),
+      ).first;
+      final container = tester.widget<Container>(containerFinder);
+      final decoration = container.decoration as BoxDecoration?;
+      expect(decoration?.border, isNotNull);
+
+      // Verify typing and clearing
+      await tester.enterText(find.byType(TextField), 'Flutter clean architecture');
+      await tester.pump();
+      expect(query, equals('Flutter clean architecture'));
+
+      // Clear button should be visible (using Semantics label)
+      final clearButtonFinder = find.bySemanticsLabel('Clear search text');
+      expect(clearButtonFinder, findsOneWidget);
+
+      await tester.tap(clearButtonFinder);
+      await tester.pump();
+      expect(query, equals(''));
+    });
+
+    testWidgets('2. AppBottomSheet has exactly one drag handle', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () {
+                  AppBottomSheet.show(
+                    context: ctx,
+                    builder: (sheetCtx) => const SizedBox(
+                      height: 180,
+                      child: Text('Sheet Content'),
+                    ),
+                  );
+                },
+                child: const Text('Open Sheet'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet Content'), findsOneWidget);
+
+      // Verify exactly one drag handle semantics widget is present
+      final handleFinder = find.bySemanticsLabel('Drag handle to dismiss');
+      expect(handleFinder, findsOneWidget);
+    });
+
+    test('3. Table editor round-trip strips markdown asterisks and regenerates clean markdown', () {
+      const rawMarkdown = '''
+| **Feature** | *Status* | `Complexity` |
+| :--- | :---: | ---: |
+| **Android 15 Edge** | *Done* | High |
+| **Grid Only** | *Locked* | Low |
+''';
+
+      // 1. Parsing lines and stripping inline markdown formatting from cells
+      final lines = rawMarkdown.trim().split('\n');
+      final parsed = MarkdownTableService.parseTableLines(lines);
+      expect(parsed, isNotNull);
+      expect(parsed!.headers, equals(['Feature', 'Status', 'Complexity']));
+      expect(parsed.rows[0], equals(['Android 15 Edge', 'Done', 'High']));
+      expect(parsed.rows[1], equals(['Grid Only', 'Locked', 'Low']));
+
+      // 2. Modify a cell and round-trip to Markdown
+      parsed.rows[0][1] = 'Verified';
+      final reGenerated = MarkdownTableService.toMarkdown(parsed);
+
+      expect(reGenerated.contains('**'), isFalse, reason: 'Asterisks must not leak into generated cells');
+      expect(reGenerated.contains('*Done*'), isFalse);
+      expect(reGenerated.contains('Verified'), isTrue);
+
+      // Verify replaceTableInDocument in-place replacement
+      final fullDoc = '''
+# Notes
+
+$rawMarkdown
+
+Footer text.
+''';
+
+      final replacedDoc = MarkdownTableService.replaceTableInDocument(
+        rawDocument: fullDoc,
+        startLine: 2,
+        endLineExclusive: 7,
+        updatedTable: parsed,
+      );
+
+      expect(replacedDoc.contains('Verified'), isTrue);
+      expect(replacedDoc.contains('Footer text.'), isTrue);
+    });
+
+    testWidgets('4. Navigation hierarchy: Edit mode -> Back -> Read mode -> Back -> Home', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final workspaceProvider = WorkspaceProvider(repo);
+
+      final existingNote = TextNote(
+        id: 'test-note-1',
+        title: 'Architecture Review',
+        content: '# Heading 1\nAuditing navigation patterns.',
+        folderName: 'All Notes',
+        tags: const ['#work'],
+        paletteId: 'peach',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await workspaceProvider.saveItem(existingNote);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).push(
+                        MaterialPageRoute(
+                          builder: (_) => NoteEditorScreen(item: existingNote),
+                        ),
+                      );
+                    },
+                    child: const Text('Open Note'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 1. Home screen: Tap 'Open Note'
+      await tester.tap(find.text('Open Note'));
+      await tester.pumpAndSettle();
+
+      // Note opens in Read Mode
+      expect(find.byType(NoteEditorScreen), findsOneWidget);
+      expect(find.byTooltip('Edit Note'), findsOneWidget);
+      expect(find.byTooltip('Reader Mode'), findsNothing);
+
+      // 2. Transition from Read Mode -> Edit Mode
+      await tester.tap(find.byTooltip('Edit Note'));
+      await tester.pumpAndSettle();
+
+      // Now in Edit Mode (reader switch button visible)
+      expect(find.byTooltip('Reader Mode'), findsOneWidget);
+
+      // 3. Press back while in Edit Mode
+      // Should transition to Read Mode instead of popping the screen
+      final backButton = find.byTooltip('Back');
+      expect(backButton, findsOneWidget);
+      await tester.tap(backButton);
+      await tester.pumpAndSettle();
+
+      // We should STILL be in NoteEditorScreen, but back in Read Mode!
+      expect(find.byType(NoteEditorScreen), findsOneWidget);
+      expect(find.byTooltip('Edit Note'), findsOneWidget);
+      expect(find.byTooltip('Reader Mode'), findsNothing);
+
+      // 4. Press back while in Read Mode
+      // Should now pop back to Home screen
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+
+      // NoteEditorScreen is popped, Home screen is back
+      expect(find.byType(NoteEditorScreen), findsNothing);
+      expect(find.text('Open Note'), findsOneWidget);
+    });
+  });
+}

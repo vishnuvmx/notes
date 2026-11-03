@@ -278,9 +278,10 @@ class _SettingsScreenState extends State<SettingsScreen>
           );
         }
       }
-    } finally {
-      controller.dispose();
     }
+  } finally {
+    controller.dispose();
+  }
   }
 
   Future<void> _confirmEmptyTrash(BuildContext context) async {
@@ -826,60 +827,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required bool isDark,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          TackIcon(
-            icon,
-            size: 18,
-            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: AppColors.accentCyan,
-          ),
-        ],
       ),
     );
   }

@@ -299,26 +299,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     _cameraAnimController.forward(from: 0.0);
   }
 
-  void _zoomCanvas(double factor) {
-    final size = MediaQuery.sizeOf(context);
-    final focalPoint = Offset(size.width / 2, (size.height - 100) / 2);
-    final matrix = _transformationController.value.clone();
-
-    final translation = matrix.getTranslation();
-    final currentScale = matrix.getMaxScaleOnAxis();
-    final newScale = (currentScale * factor).clamp(0.15, 3.5);
-    final effectiveFactor = newScale / currentScale;
-
-    final newTransX = focalPoint.dx - (focalPoint.dx - translation.x) * effectiveFactor;
-    final newTransY = focalPoint.dy - (focalPoint.dy - translation.y) * effectiveFactor;
-
-    final target = Matrix4.identity()
-      ..translateByVector3(vmath.Vector3(newTransX, newTransY, 0.0))
-      ..scaleByVector3(vmath.Vector3(newScale, newScale, 1.0));
-
-    _animateCanvasToMatrix(target);
-  }
-
   void _saveCanvasState() {
     final updated = widget.item.copyWith(
       nodes: _nodes,
@@ -4416,7 +4396,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           imgWidget = Image.file(
             File(node.imagePath!),
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               color: fillColor,
               child: Center(
                 child: Column(

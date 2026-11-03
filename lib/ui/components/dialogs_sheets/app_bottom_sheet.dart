@@ -69,12 +69,15 @@ class AppBottomSheet {
                       Padding(
                         padding: const EdgeInsets.only(top: 10, bottom: 6),
                         child: Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                              borderRadius: BorderRadius.circular(2),
+                          child: Semantics(
+                            label: 'Drag handle to dismiss',
+                            child: Container(
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
                             ),
                           ),
                         ),
