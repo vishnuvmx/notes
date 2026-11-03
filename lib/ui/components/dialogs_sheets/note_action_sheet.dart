@@ -16,6 +16,7 @@ import '../../../domain/models/clipboard_item.dart';
 import '../../../domain/services/note_export_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../feedback/tack_toast.dart';
+import 'app_bottom_sheet.dart';
 
 /// Modal bottom sheet triggered on long press of any workspace card.
 /// Provides quick actions for Favorites, Pin to Status Bar, Duplicate, Share, and Delete.
@@ -37,15 +38,8 @@ class NoteActionSheet extends StatefulWidget {
     VoidCallback? onOpen,
   }) {
     HapticFeedback.mediumImpact();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      showDragHandle: true,
-      useSafeArea: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => NoteActionSheet(item: item, onOpen: onOpen),
     );
   }
@@ -85,21 +79,14 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
         ? '${(widget.item as ClipboardItem).sourceApp}  •  $dateStr'
         : (summary.isNotEmpty ? summary : dateStr);
 
-    // Calculate mobile gesture bar safe clearance
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final gestureClearance = math.max(bottomInset, 18.0) + 18.0;
-
-    return SafeArea(
-      top: false,
-      bottom: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xs,
-          AppSpacing.lg,
-          0,
-        ),
-        child: SingleChildScrollView(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -391,13 +378,11 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 },
               ),
 
-              // Generous bottom clearance gap to avoid mobile gesture bar overlap
-              SizedBox(height: gestureClearance),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildActionTile({

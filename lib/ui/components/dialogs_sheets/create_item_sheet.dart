@@ -9,6 +9,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/services/note_template_service.dart';
 import '../../../state/workspace_provider.dart';
+import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';
 
 /// Modern Bottom Sheet for creating a new Note, Spec from Template, Sticky, or Whiteboard.
@@ -20,12 +21,9 @@ class CreateItemSheet extends StatefulWidget {
 
   static Future<BaseWorkspaceItem?> show(BuildContext context, {ItemType? defaultType}) {
     HapticFeedback.mediumImpact();
-    return showModalBottomSheet<BaseWorkspaceItem>(
+    return AppBottomSheet.show<BaseWorkspaceItem>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
+      maxHeightFactor: 0.92,
       builder: (context) => CreateItemSheet(defaultType: defaultType),
     );
   }
@@ -176,43 +174,15 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
     final size = MediaQuery.sizeOf(context);
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: size.height * 0.90,
-      ),
-      child: Container(
-        padding: EdgeInsets.only(
-          left: AppSpacing.lg,
-          right: AppSpacing.lg,
-          top: AppSpacing.md,
-          bottom: AppSpacing.lg + keyboardBottom,
-        ),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
-          boxShadow: AppSpacing.floatingControlShadow,
-        ),
-        child: SingleChildScrollView(
-          child: SizedBox(
-            width: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag Handle
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-
-                // Sheet Title & Close Button
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sheet Title & Close Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -322,7 +292,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
-                    height: 82,
+                    height: 84 * MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.35),
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _templates.length,
@@ -518,6 +488,13 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                           width: 1.2,
                         ),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -600,9 +577,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildInstantShortcutButton({

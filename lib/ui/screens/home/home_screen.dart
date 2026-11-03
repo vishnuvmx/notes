@@ -250,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
         drawerEnableOpenDragGesture: false,
         extendBody: true,
         drawer: AppNavDrawer(
-          onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setCategory(null),
+          onOpenFavorites: widget.onOpenFavorites ?? () => workspace.setSelectedFolder('Favorites'),
           onOpenArchive: widget.onOpenArchive,
           onOpenTrash: widget.onOpenTrash,
           onOpenSettings: widget.onOpenSettings,

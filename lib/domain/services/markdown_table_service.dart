@@ -47,6 +47,22 @@ class EditableMarkdownTable {
 class MarkdownTableService {
   MarkdownTableService._();
 
+  /// Strips formatting markers (bold, italic, code, orphan asterisks) so table editors
+  /// work with clean, human-readable cell strings without raw markdown leaking into inputs.
+  static String stripInlineMarkdown(String text) {
+    var result = text.trim();
+    result = result.replaceAll(RegExp(r'\*\*\*(.*?)\*\*\*'), r'$1');
+    result = result.replaceAll(RegExp(r'\*\*(.*?)\*\*'), r'$1');
+    result = result.replaceAll(RegExp(r'\*(.*?)\*'), r'$1');
+    result = result.replaceAll(RegExp(r'___(.*?)___'), r'$1');
+    result = result.replaceAll(RegExp(r'__(.*?)__'), r'$1');
+    result = result.replaceAll(RegExp(r'_(.*?)_'), r'$1');
+    result = result.replaceAll(RegExp(r'`(.*?)`'), r'$1');
+    result = result.replaceAll(RegExp(r'~~(.*?)~~'), r'$1');
+    result = result.replaceAll(RegExp(r'^[\*_]+|[\*_]+$'), '');
+    return result.trim();
+  }
+
   static List<String> _splitPipeCells(String line) {
     var raw = line.trim();
     if (raw.startsWith('|')) raw = raw.substring(1);
@@ -135,14 +151,14 @@ class MarkdownTableService {
     return buf.toString();
   }
 
-  static String replaceTableInDocument(
-    String fullContent,
-    int startLineIndex,
-    int endLineExclusive,
-    EditableMarkdownTable updatedTable,
-  ) {
-    final lines = fullContent.split('\n');
-    final safeStart = startLineIndex.clamp(0, lines.length);
+  static String replaceTableInDocument({
+    required String rawDocument,
+    required int startLine,
+    required int endLineExclusive,
+    required EditableMarkdownTable updatedTable,
+  }) {
+    final lines = rawDocument.split('\n');
+    final safeStart = startLine.clamp(0, lines.length);
     final safeEnd = endLineExclusive.clamp(safeStart, lines.length);
     final replacementLines = toMarkdown(updatedTable).split('\n');
     lines.replaceRange(safeStart, safeEnd, replacementLines);

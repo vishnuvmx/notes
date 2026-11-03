@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/frontmatter_service.dart';
+import '../dialogs_sheets/app_bottom_sheet.dart';
 
 /// Zero-clutter Obsidian / Figma-Specs Frontmatter Properties Bar.
 ///
@@ -329,14 +330,8 @@ class FrontmatterEditorSheet extends StatefulWidget {
     required String paletteId,
     required ValueChanged<String> onContentChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet<void>(
+    return AppBottomSheet.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (_) => FrontmatterEditorSheet(
         rawContent: rawContent,
         paletteId: paletteId,
@@ -391,33 +386,16 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
     final palette = AppColors.getPaletteById(widget.paletteId);
     final accent = palette.resolveAccentColor(isDark);
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 14,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 18,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Icon(LucideIcons.slidersHorizontal, size: 18, color: accent),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(LucideIcons.slidersHorizontal, size: 18, color: accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -582,7 +560,15 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                             : const Color(0xFFF3F4F6),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder, width: 1.5),
                         ),
                       ),
                     ),
@@ -601,7 +587,15 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                             : const Color(0xFFF3F4F6),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder, width: 1.5),
                         ),
                       ),
                       onSubmitted: (_) {
@@ -631,8 +625,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

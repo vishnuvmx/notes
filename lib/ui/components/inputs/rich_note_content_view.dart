@@ -1215,12 +1215,19 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      child: Text(
-                        headers[colIdx],
-                        textAlign: align,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      child: Align(
+                        alignment: align == TextAlign.center
+                            ? Alignment.center
+                            : (align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft),
+                        child: _buildRichTextSpans(
+                          headers[colIdx],
+                          isDark,
+                          theme,
+                          context: context,
+                          baseStyle: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
                         ),
                       ),
                     );

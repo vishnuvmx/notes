@@ -10,12 +10,6 @@ import '../domain/models/clipboard_item.dart';
 import '../domain/models/item_serializer.dart';
 import '../domain/services/android_shortcuts_service.dart';
 
-/// Supported Home view styles
-enum HomeViewMode {
-  notebook, // Tactile spiral notebook list with numbered indices (01, 02...)
-  stickyGrid, // 2-column pastel sticky note card grid
-}
-
 /// Supported note sort orders
 enum NoteSortOrder {
   recentlyModified, // Newest updatedAt first
@@ -26,7 +20,6 @@ enum NoteSortOrder {
 /// Default palette used for externally-created items and clipboard snippets.
 const String _kDefaultPaletteId = 'amber';
 const String _kUserFoldersPrefsKey = 'tack_user_folders_v1';
-const String _kHomeViewModePrefsKey = 'tack_home_view_mode_v1';
 
 /// Central state notifier for workspace items, search, filtering, and view mode.
 class WorkspaceProvider extends ChangeNotifier {
@@ -56,7 +49,6 @@ class WorkspaceProvider extends ChangeNotifier {
 
   ItemType? _selectedCategory; // null = 'All'
   String _searchQuery = '';
-  HomeViewMode _viewMode = HomeViewMode.stickyGrid; // Default to 2x2 neo-pop grid
   NoteSortOrder _sortOrder = NoteSortOrder.recentlyModified;
   String? _selectedTag = '#All'; // Default to show all notes
   String _selectedFolder = 'All Notes';
@@ -97,7 +89,6 @@ class WorkspaceProvider extends ChangeNotifier {
   List<BaseWorkspaceItem> get favoriteItems => _favoriteItems;
   ItemType? get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
-  HomeViewMode get viewMode => _viewMode;
   NoteSortOrder get sortOrder => _sortOrder;
   String? get selectedTag => _selectedTag;
   String get selectedFolder => _selectedFolder;
@@ -154,13 +145,6 @@ class WorkspaceProvider extends ChangeNotifier {
         _userFolders = List<String>.from(savedFolders);
       }
       _syncDiscoveredFolders();
-
-      final savedView = prefs.getString(_kHomeViewModePrefsKey);
-      if (savedView == HomeViewMode.notebook.name) {
-        _viewMode = HomeViewMode.notebook;
-      } else if (savedView == HomeViewMode.stickyGrid.name) {
-        _viewMode = HomeViewMode.stickyGrid;
-      }
       notifyListeners();
     } catch (_) {
       // Safe fallback in unit tests or before prefs initialize
@@ -288,25 +272,6 @@ class WorkspaceProvider extends ChangeNotifier {
   void setSearchQuery(String query) {
     _searchQuery = query;
     loadItems();
-  }
-
-  /// Toggle between Notebook list and Sticky grid view modes
-  void setViewMode(HomeViewMode mode) {
-    if (_viewMode == mode) return;
-    _viewMode = mode;
-    notifyListeners();
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(_kHomeViewModePrefsKey, mode.name);
-    }).catchError((_) {});
-  }
-
-  /// Quick flip between Grid and Tactile Numbered List
-  void toggleViewMode() {
-    setViewMode(
-      _viewMode == HomeViewMode.stickyGrid
-          ? HomeViewMode.notebook
-          : HomeViewMode.stickyGrid,
-    );
   }
 
   /// Change note sort order

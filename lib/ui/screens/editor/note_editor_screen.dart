@@ -20,6 +20,7 @@ import '../../../domain/services/block_transform_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
+import '../../components/dialogs_sheets/app_bottom_sheet.dart';
 import '../../components/dialogs_sheets/document_outline_sheet.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
@@ -284,6 +285,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _closeSearch();
       return;
     }
+    if (_isEditingMode) {
+      FocusScope.of(context).unfocus();
+      _flushSave();
+      setState(() => _isEditingMode = false);
+      return;
+    }
     FocusScope.of(context).unfocus();
     _flushSave();
     Navigator.of(context).pop();
@@ -418,17 +425,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       '📝', '📐', '🎨', '⚖️', '🚀', '💡', '🧠', '☀️',
       '🔥', '✅', '📌', '🗂️', '🧪', '🛠️', '🌟', '🔒',
     ];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -493,23 +494,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _showMoveToFolderSheet() async {
     final workspace = context.read<WorkspaceProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final chosen = await showModalBottomSheet<String?>(
+    final chosen = await AppBottomSheet.show<String?>(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -546,8 +540,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
     if (chosen != null && mounted) {
       setState(() => _folderName = chosen.isEmpty ? null : chosen);
       _saveNote();
@@ -885,24 +878,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _showAlertTemplatePicker() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Insert Callout Alert',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Insert Callout Alert',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
               const SizedBox(height: AppSpacing.md),
               ListTile(
                 leading: const Icon(LucideIcons.info, size: 22, color: Color(0xFF0284C7)),
@@ -957,29 +944,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   void _showImageSourcePicker() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Insert Image',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Insert Image',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
               const SizedBox(height: AppSpacing.md),
               ListTile(
                 leading: const TackIcon(TackIcons.photo, size: 22, color: AppColors.accentCyan),
@@ -1035,41 +1015,44 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
-  void _showImageUrlDialog() {
+  void _showImageUrlDialog() async {
     final urlController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Image Web Link'),
-        content: TextField(
-          controller: urlController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'https://example.com/image.png',
+    try {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Image Web Link'),
+          content: TextField(
+            controller: urlController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'https://example.com/image.png',
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final url = urlController.text.trim();
+                if (url.isNotEmpty) {
+                  _insertImageMarkdown(url, alt: 'Web Image');
+                }
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Insert'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final url = urlController.text.trim();
-              if (url.isNotEmpty) {
-                _insertImageMarkdown(url, alt: 'Web Image');
-              }
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Insert'),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      urlController.dispose();
+    }
   }
 
   void _showNoteStatisticsSheet() {
@@ -1077,7 +1060,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _showColorPicker() {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
       builder: (context) {
         return Container(
@@ -1193,9 +1176,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final title = _titleController.text;
     final content = _contentController.text;
 
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      builder: (ctx) => Container(
+      builder: (ctx) => SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1413,23 +1396,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final boards = workspace.rawItems.whereType<WhiteboardCanvasItem>().where((b) => !b.isTrash).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Embed Whiteboard Canvas',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Embed Whiteboard Canvas',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
               const SizedBox(height: 4),
               Text(
                 'Inserts a live interactive preview right inside this note.',
@@ -1497,8 +1475,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   void _completeWikiTrigger(ActiveWikiTrigger trigger, String completionToken) {
@@ -1654,7 +1631,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final hasHeadings = WikiLinkService.extractHeadings(content).isNotEmpty;
 
     return PopScope(
-      canPop: !_isSearching,
+      canPop: !_isSearching && !_isEditingMode,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           _flushSave();
@@ -1677,8 +1654,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               IconButton(
                 icon: const TackIcon(TackIcons.back, size: 22),
                 padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 onPressed: _handleBackPress,
                 tooltip: 'Back',
               ),
