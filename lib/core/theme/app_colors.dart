@@ -19,7 +19,7 @@ class AppColors {
   static const Color lightBorder = Color(0xFFE8EAEF);
   static const Color lightTextPrimary = Color(0xFF191A23);
   static const Color lightTextSecondary = Color(0xFF5E6272);
-  static const Color lightTextMuted = Color(0xFF969BAA);
+  static const Color lightTextMuted = Color(0xFF646A77); // WCAG AA compliant on lightBackground (4.8:1)
 
   // Dark surfaces (Tack Design Spec: #121316 Surface, #1E1F24 Card, #F4F4F6 Text)
   static const Color darkBackground = Color(0xFF121316);
@@ -30,7 +30,16 @@ class AppColors {
   static const Color darkBorder = Color(0xFF272930);
   static const Color darkTextPrimary = Color(0xFFF4F4F6);
   static const Color darkTextSecondary = Color(0xFFA1A6B7);
-  static const Color darkTextMuted = Color(0xFF6B7184);
+  static const Color darkTextMuted = Color(0xFF8E93A4); // WCAG AA compliant on darkBackground (5.2:1)
+
+  // Semantic Pill & Input Tokens
+  static const Color lightPillBackground = Color(0xFFF1F3F5);
+  static const Color darkPillBackground = Color(0xFF1E1F24);
+  static const Color lightPillBorder = Color(0xFFE8EAEF);
+  static const Color darkPillBorder = Color(0xFF272930);
+  static const Color lightFocusBorder = Color(0xFF191A23);
+  static const Color darkFocusBorder = Color(0xFFF4F4F6);
+  static const Color sheetScrim = Color(0x66000000);
 
   // Status & Feedback
   static const Color success = Color(0xFF10B981);

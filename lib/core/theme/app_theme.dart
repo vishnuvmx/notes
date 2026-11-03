@@ -135,7 +135,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
         ),
-        showDragHandle: true,
+        showDragHandle: false,
         dragHandleColor: AppColors.lightBorder,
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -295,7 +295,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
         ),
-        showDragHandle: true,
+        showDragHandle: false,
         dragHandleColor: AppColors.darkBorder,
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -326,6 +326,32 @@ class AppTheme {
         elevation: 8,
         actionTextColor: AppColors.accentAmber,
       ),
+    );
+  }
+}
+
+/// Clean input decoration presets that prevent global InputDecorationTheme leaking
+/// inner borders or filled colors into custom-styled search pills, table cells, or dialog inputs.
+class AppInputDecorations {
+  AppInputDecorations._();
+
+  static const InputDecoration bare = InputDecoration(
+    isDense: true,
+    filled: false,
+    fillColor: Colors.transparent,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    errorBorder: InputBorder.none,
+    focusedErrorBorder: InputBorder.none,
+    disabledBorder: InputBorder.none,
+    contentPadding: EdgeInsets.zero,
+  );
+
+  static InputDecoration bareWithHint(String hint, {TextStyle? hintStyle}) {
+    return bare.copyWith(
+      hintText: hint,
+      hintStyle: hintStyle,
     );
   }
 }

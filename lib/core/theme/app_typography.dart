@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Central typography tokens for Tack.
-/// Uses Google Fonts: Plus Jakarta Sans for clean geometric UI and Space Grotesk for bold headlines.
+/// Central typography tokens for Tack Android-First Design System.
+/// Standardized strictly on DM Sans per Locked Product Decisions and Design Guidelines.
 class AppTypography {
   AppTypography._();
 
-  // Primary & display font family: DM Sans per Tack Design Guidelines
+  // Primary & display font family: DM Sans
   static String get fontFamily =>
       GoogleFonts.dmSans().fontFamily ?? 'DM Sans';
 
@@ -19,36 +19,36 @@ class AppTypography {
   static double ls(double fontSize) => -(fontSize * 0.02);
 
   // ================= Neo-Pop Display & Header Styles =================
-  /// Punchy display headline for "Your Notes" (Screenshot 1 & 2)
+  /// Punchy display headline for "Your Notes" / section titles
   static TextStyle sectionHeadline({
     required Color color,
     double fontSize = 34,
   }) {
-    return GoogleFonts.spaceGrotesk(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       fontWeight: FontWeight.w800,
-      letterSpacing: -1.2,
-      height: 1.05,
+      letterSpacing: -1.0,
+      height: 1.08,
       color: color,
     );
   }
 
   /// Welcome greeting: "Welcome back " (regular weight)
   static TextStyle welcomeGreetingStyle({required Color color}) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.dmSans(
       fontSize: 13.5,
       fontWeight: FontWeight.w500,
-      letterSpacing: -0.2,
+      letterSpacing: -0.3,
       color: color,
     );
   }
 
   /// Welcome greeting username: "**Chad**" (bold weight)
   static TextStyle welcomeUsernameStyle({required Color color}) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.dmSans(
       fontSize: 13.5,
       fontWeight: FontWeight.w800,
-      letterSpacing: -0.2,
+      letterSpacing: -0.3,
       color: color,
     );
   }
@@ -58,7 +58,7 @@ class AppTypography {
     required Color color,
     double fontSize = 16.5,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       fontWeight: FontWeight.w800,
       letterSpacing: -0.5,
@@ -72,7 +72,7 @@ class AppTypography {
     required Color color,
     double fontSize = 11.5,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       fontWeight: FontWeight.w600,
       letterSpacing: -0.2,
@@ -85,7 +85,7 @@ class AppTypography {
     required Color color,
     double fontSize = 12.5,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       fontWeight: FontWeight.w400,
       height: 1.38,
@@ -96,81 +96,81 @@ class AppTypography {
 
   // ================= Light Typography =================
   static TextTheme lightTextTheme = TextTheme(
-    displayLarge: GoogleFonts.spaceGrotesk(
+    displayLarge: GoogleFonts.dmSans(
       fontSize: 34,
       fontWeight: FontWeight.w800,
       letterSpacing: -1.2,
       color: AppColors.lightTextPrimary,
     ),
-    displayMedium: GoogleFonts.spaceGrotesk(
+    displayMedium: GoogleFonts.dmSans(
       fontSize: 28,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(28),
       color: AppColors.lightTextPrimary,
     ),
-    headlineMedium: GoogleFonts.plusJakartaSans(
+    headlineMedium: GoogleFonts.dmSans(
       fontSize: 24,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(24),
       color: AppColors.lightTextPrimary,
     ),
-    headlineSmall: GoogleFonts.plusJakartaSans(
+    headlineSmall: GoogleFonts.dmSans(
       fontSize: 20,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(20),
       color: AppColors.lightTextPrimary,
     ),
-    titleLarge: GoogleFonts.plusJakartaSans(
+    titleLarge: GoogleFonts.dmSans(
       fontSize: 18,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(18),
       color: AppColors.lightTextPrimary,
     ),
-    titleMedium: GoogleFonts.plusJakartaSans(
+    titleMedium: GoogleFonts.dmSans(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(16),
       color: AppColors.lightTextPrimary,
     ),
-    titleSmall: GoogleFonts.plusJakartaSans(
+    titleSmall: GoogleFonts.dmSans(
       fontSize: 14,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(14),
       color: AppColors.lightTextSecondary,
     ),
-    bodyLarge: GoogleFonts.plusJakartaSans(
+    bodyLarge: GoogleFonts.dmSans(
       fontSize: 15,
       fontWeight: FontWeight.w400,
       height: 1.45,
       letterSpacing: ls(15),
       color: AppColors.lightTextPrimary,
     ),
-    bodyMedium: GoogleFonts.plusJakartaSans(
+    bodyMedium: GoogleFonts.dmSans(
       fontSize: 13,
       fontWeight: FontWeight.w400,
       height: 1.40,
       letterSpacing: ls(13),
       color: AppColors.lightTextSecondary,
     ),
-    bodySmall: GoogleFonts.plusJakartaSans(
+    bodySmall: GoogleFonts.dmSans(
       fontSize: 11,
       fontWeight: FontWeight.w400,
       letterSpacing: ls(11),
       color: AppColors.lightTextMuted,
     ),
-    labelLarge: GoogleFonts.plusJakartaSans(
+    labelLarge: GoogleFonts.dmSans(
       fontSize: 13,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(13),
       color: AppColors.lightTextPrimary,
     ),
-    labelMedium: GoogleFonts.plusJakartaSans(
+    labelMedium: GoogleFonts.dmSans(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(11),
       color: AppColors.lightTextSecondary,
     ),
-    labelSmall: GoogleFonts.plusJakartaSans(
+    labelSmall: GoogleFonts.dmSans(
       fontSize: 10,
       fontWeight: FontWeight.w500,
       letterSpacing: ls(10),
@@ -180,81 +180,81 @@ class AppTypography {
 
   // ================= Dark Typography =================
   static TextTheme darkTextTheme = TextTheme(
-    displayLarge: GoogleFonts.spaceGrotesk(
+    displayLarge: GoogleFonts.dmSans(
       fontSize: 34,
       fontWeight: FontWeight.w800,
       letterSpacing: -1.2,
       color: AppColors.darkTextPrimary,
     ),
-    displayMedium: GoogleFonts.spaceGrotesk(
+    displayMedium: GoogleFonts.dmSans(
       fontSize: 28,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(28),
       color: AppColors.darkTextPrimary,
     ),
-    headlineMedium: GoogleFonts.plusJakartaSans(
+    headlineMedium: GoogleFonts.dmSans(
       fontSize: 24,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(24),
       color: AppColors.darkTextPrimary,
     ),
-    headlineSmall: GoogleFonts.plusJakartaSans(
+    headlineSmall: GoogleFonts.dmSans(
       fontSize: 20,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(20),
       color: AppColors.darkTextPrimary,
     ),
-    titleLarge: GoogleFonts.plusJakartaSans(
+    titleLarge: GoogleFonts.dmSans(
       fontSize: 18,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(18),
       color: AppColors.darkTextPrimary,
     ),
-    titleMedium: GoogleFonts.plusJakartaSans(
+    titleMedium: GoogleFonts.dmSans(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(16),
       color: AppColors.darkTextPrimary,
     ),
-    titleSmall: GoogleFonts.plusJakartaSans(
+    titleSmall: GoogleFonts.dmSans(
       fontSize: 14,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(14),
       color: AppColors.darkTextSecondary,
     ),
-    bodyLarge: GoogleFonts.plusJakartaSans(
+    bodyLarge: GoogleFonts.dmSans(
       fontSize: 15,
       fontWeight: FontWeight.w400,
       height: 1.45,
       letterSpacing: ls(15),
       color: AppColors.darkTextPrimary,
     ),
-    bodyMedium: GoogleFonts.plusJakartaSans(
+    bodyMedium: GoogleFonts.dmSans(
       fontSize: 13,
       fontWeight: FontWeight.w400,
       height: 1.40,
       letterSpacing: ls(13),
       color: AppColors.darkTextSecondary,
     ),
-    bodySmall: GoogleFonts.plusJakartaSans(
+    bodySmall: GoogleFonts.dmSans(
       fontSize: 11,
       fontWeight: FontWeight.w400,
       letterSpacing: ls(11),
       color: AppColors.darkTextMuted,
     ),
-    labelLarge: GoogleFonts.plusJakartaSans(
+    labelLarge: GoogleFonts.dmSans(
       fontSize: 13,
       fontWeight: FontWeight.w700,
       letterSpacing: ls(13),
       color: AppColors.darkTextPrimary,
     ),
-    labelMedium: GoogleFonts.plusJakartaSans(
+    labelMedium: GoogleFonts.dmSans(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: ls(11),
       color: AppColors.darkTextSecondary,
     ),
-    labelSmall: GoogleFonts.plusJakartaSans(
+    labelSmall: GoogleFonts.dmSans(
       fontSize: 10,
       fontWeight: FontWeight.w500,
       letterSpacing: ls(10),
@@ -264,7 +264,7 @@ class AppTypography {
 
   // Stylized index script typography (01, 02...)
   static TextStyle scriptIndexStyle({required Color color, double fontSize = 34}) {
-    return GoogleFonts.spaceGrotesk(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       fontWeight: FontWeight.w600,
       fontStyle: FontStyle.italic,
