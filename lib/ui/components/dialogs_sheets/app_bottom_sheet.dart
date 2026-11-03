@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -41,7 +40,6 @@ class AppBottomSheet {
       barrierColor: scrim,
       builder: (modalContext) {
         final viewInsets = MediaQuery.viewInsetsOf(modalContext);
-        final viewPadding = MediaQuery.viewPaddingOf(modalContext);
         final screenHeight = MediaQuery.sizeOf(modalContext).height;
 
         return AnimatedPadding(

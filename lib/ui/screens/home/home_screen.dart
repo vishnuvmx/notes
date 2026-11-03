@@ -16,7 +16,6 @@ import '../../components/app_bars/app_header_bar.dart';
 import '../../components/inputs/category_filter_pills.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../../components/cards/neo_note_card.dart';
-import '../../components/cards/smart_note_list_card.dart';
 import '../../components/cards/sticky_note_card.dart';
 import '../../components/cards/clipboard_card.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
@@ -309,27 +308,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
 
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Sort Selector Menu
-                                    _SortButton(
-                                      isDark: isDark,
-                                      borderColor: borderColor,
-                                      activeSort: workspace.sortOrder,
-                                      onSelected: (order) {
-                                        HapticFeedback.lightImpact();
-                                        workspace.setSortOrder(order);
-                                      },
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Tactile [+] Button with dark border matching reference
-                                    _QuickAddButton(
-                                      isDark: isDark,
-                                      borderColor: borderColor,
-                                      onTap: () => _openCreateSheet(defaultType: workspace.selectedCategory),
-                                    ),
-                                  ],
+                                // Sort Selector Menu
+                                _SortButton(
+                                  isDark: isDark,
+                                  borderColor: borderColor,
+                                  activeSort: workspace.sortOrder,
+                                  onSelected: (order) {
+                                    HapticFeedback.lightImpact();
+                                    workspace.setSortOrder(order);
+                                  },
                                 ),
                               ],
                             ),
@@ -372,10 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? _buildEmptyState(workspace)
                             : (workspace.selectedCategory == ItemType.clipboard
                                 ? _buildClipboardListView(items.whereType<ClipboardItem>().toList(), isDark)
-                                : (workspace.viewMode == HomeViewMode.notebook &&
-                                        workspace.selectedCategory != ItemType.whiteboard
-                                    ? _buildNotebookListView(items)
-                                    : _buildNeoGridFeedView(items))),
+                                : _buildNeoGridFeedView(items)),
                   ),
                   ),
                 ),
@@ -647,21 +631,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 8),
             chip(
-              emoji: '⚡',
-              label: 'Quick Note',
-              accent: AppColors.pastelLimeLight,
-              onTap: () async {
-                HapticFeedback.mediumImpact();
-                final created = await workspace.createQuickItem(
-                  title: 'Untitled Note',
-                  type: ItemType.note,
-                  paletteId: 'peach',
-                );
-                widget.onOpenItem?.call(created);
-              },
-            ),
-            const SizedBox(width: 8),
-            chip(
               icon: LucideIcons.network,
               label: 'Graph',
               accent: AppColors.accentCyan,
@@ -675,30 +644,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildNotebookListView(List<BaseWorkspaceItem> items) {
-    return ListView.builder(
-      controller: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: EdgeInsets.fromLTRB(
-        0,
-        AppSpacing.xs,
-        0,
-        96 + MediaQuery.paddingOf(context).bottom,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return SmartNoteListCard(
-          key: ValueKey(item.id),
-          item: item,
-          index: index,
-          onTap: () => widget.onOpenItem?.call(item),
-          onLongPress: () => NoteActionSheet.show(context, item: item),
-        );
-      },
     );
   }
 
@@ -719,6 +664,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNeoGridFeedView(List<BaseWorkspaceItem> items) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final cardHeight = (220 * textScale.clamp(1.0, 1.45)).roundToDouble();
+
     final leftItems = <BaseWorkspaceItem>[];
     final rightItems = <BaseWorkspaceItem>[];
 
@@ -753,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Transform.rotate(
                       angle: i.isEven ? -0.035 : -0.022,
                       child: SizedBox(
-                        height: 218,
+                        height: cardHeight,
                         child: _buildCard(leftItems[i]),
                       ),
                     ),
@@ -773,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Transform.rotate(
                       angle: i.isEven ? 0.028 : 0.032,
                       child: SizedBox(
-                        height: 218,
+                        height: cardHeight,
                         child: _buildCard(rightItems[i]),
                       ),
                     ),
@@ -836,71 +784,6 @@ class _HomeScreenState extends State<HomeScreen> {
           : (cat == ItemType.clipboard
               ? () => _pasteFromClipboard()
               : () => _openCreateSheet(defaultType: workspace.selectedCategory)),
-    );
-  }
-}
-
-class _QuickAddButton extends StatefulWidget {
-  final bool isDark;
-  final Color borderColor;
-  final VoidCallback onTap;
-
-  const _QuickAddButton({
-    required this.isDark,
-    required this.borderColor,
-    required this.onTap,
-  });
-
-  @override
-  State<_QuickAddButton> createState() => _QuickAddButtonState();
-}
-
-class _QuickAddButtonState extends State<_QuickAddButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        HapticFeedback.selectionClick();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        widget.onTap();
-      },
-      child: AnimatedScale(
-        scale: _pressed ? 0.88 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: widget.isDark ? AppColors.darkSurface : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: widget.borderColor, width: 1.6),
-            boxShadow: widget.isDark
-                ? null
-                : [
-                    BoxShadow(
-                      color: const Color(0xFF191A23).withValues(alpha: _pressed ? 0.02 : 0.08),
-                      blurRadius: 0,
-                      offset: Offset(0, _pressed ? 1 : 2),
-                    ),
-                  ],
-          ),
-          child: Center(
-            child: TackIcon(
-              TackIcons.plusSvg,
-              size: 24,
-              color: widget.isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -171,8 +171,6 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
-    final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
-    final size = MediaQuery.sizeOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),

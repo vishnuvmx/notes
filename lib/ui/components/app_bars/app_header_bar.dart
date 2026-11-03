@@ -38,7 +38,6 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final themeProv = context.watch<ThemeProvider>();
-    final workspace = context.watch<WorkspaceProvider>();
 
     final iconColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
 
@@ -90,7 +89,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
                           color: isDark ? AppColors.darkSurfaceAlt : AppColors.pastelPeachSoft,
                           child: Center(
                             child: TackIcon(
-                              TackIcons.note,
+                              TackIcons.notes,
                               size: 20,
                               color: isDark ? AppColors.pastelPeachLight : AppColors.accentOrange,
                             ),

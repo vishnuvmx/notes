@@ -98,7 +98,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     final controller = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final confirmed = await showDialog<bool>(
+    try {
+      final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) {
         String? validationMessage;
@@ -277,6 +278,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           );
         }
       }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -479,18 +482,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         _buildCardGroup(
           isDark: isDark,
           children: [
-            _buildSwitchTile(
-              title: 'Home View Layout',
-              subtitle: workspace.viewMode == HomeViewMode.stickyGrid ? 'Tactile Grid Cards' : 'Spiral Notebook List',
-              icon: workspace.viewMode == HomeViewMode.stickyGrid ? TackIcons.gridView : TackIcons.listView,
-              value: workspace.viewMode == HomeViewMode.stickyGrid,
-              isDark: isDark,
-              onChanged: (val) {
-                HapticFeedback.lightImpact();
-                workspace.setViewMode(val ? HomeViewMode.stickyGrid : HomeViewMode.notebook);
-              },
-            ),
-            _buildDivider(isDark),
             _buildStaticInfoTile(
               icon: TackIcons.bolt,
               title: 'Tactile Haptic Feedback',

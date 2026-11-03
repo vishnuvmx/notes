@@ -24,40 +24,44 @@ class CategoryFilterPills extends StatelessWidget {
     WorkspaceProvider workspace,
   ) async {
     final controller = TextEditingController();
-    final created = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'New Folder',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
+    try {
+      final created = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            'New Folder',
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
           ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'e.g. Product Specs, Archive, Journal...',
+            ),
+            onSubmitted: (val) => Navigator.of(ctx).pop(val.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: const Text('Create'),
+            ),
+          ],
         ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Product Specs, Archive, Journal...',
-          ),
-          onSubmitted: (val) => Navigator.of(ctx).pop(val.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-    if (created != null && created.isNotEmpty) {
-      await workspace.addFolder(created);
-      workspace.setSelectedFolder(created);
+      );
+      if (created != null && created.isNotEmpty) {
+        await workspace.addFolder(created);
+        workspace.setSelectedFolder(created);
+      }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -66,19 +70,17 @@ class CategoryFilterPills extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final workspace = context.watch<WorkspaceProvider>();
 
-    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
     final activeLime = AppColors.pastelLimeLight;
 
     final availableTags = workspace.availableTags;
     final selectedTag = workspace.selectedTag ?? '#All';
     final selectedFolder = workspace.selectedFolder;
-    final isGrid = workspace.viewMode == HomeViewMode.stickyGrid;
 
     final folderItems = <TackDropdownItem<String>>[
       const TackDropdownItem(value: 'All Notes', label: 'All Notes', icon: TackIcons.gridView),
       const TackDropdownItem(
-        value: 'Favourites',
-        label: 'Favourites',
+        value: 'Favorites',
+        label: 'Favorites',
         icon: TackIcons.star,
         iconColor: AppColors.accentAmber,
       ),
@@ -100,66 +102,29 @@ class CategoryFilterPills extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Folder Dropdown + Grid/List View Toggle
+        // 1. Folder Dropdown
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Row(
-            children: [
-              Flexible(
-                child: TackDropdown<String>(
-                  value: selectedFolder,
-                  onSelected: (folder) {
-                    if (folder == _kCreateNewFolderValue) {
-                      _promptNewFolder(context, workspace);
-                    } else {
-                      workspace.setSelectedFolder(folder);
-                    }
-                  },
-                  leadingIcon: selectedFolder == 'Favourites'
-                      ? TackIcons.star
-                      : (selectedFolder == 'All Notes' ? null : LucideIcons.folder),
-                  leadingIconColor:
-                      selectedFolder == 'Favourites' ? AppColors.accentAmber : null,
-                  items: folderItems,
-                ),
-              ),
-              const Spacer(),
-              // Tactile Grid vs Numbered Notebook List Switcher
-              Container(
-                padding: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : const Color(0xFFF1F3F7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor, width: 1.3),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ViewModeSegment(
-                      icon: TackIcons.gridView,
-                      tooltip: 'Sticky Grid',
-                      selected: isGrid,
-                      isDark: isDark,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        workspace.setViewMode(HomeViewMode.stickyGrid);
-                      },
-                    ),
-                    const SizedBox(width: 2),
-                    _ViewModeSegment(
-                      icon: TackIcons.listView,
-                      tooltip: 'Notebook List',
-                      selected: !isGrid,
-                      isDark: isDark,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        workspace.setViewMode(HomeViewMode.notebook);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TackDropdown<String>(
+              value: (selectedFolder == 'Favourites' ? 'Favorites' : selectedFolder),
+              onSelected: (folder) {
+                if (folder == _kCreateNewFolderValue) {
+                  _promptNewFolder(context, workspace);
+                } else {
+                  workspace.setSelectedFolder(folder);
+                }
+              },
+              leadingIcon: (selectedFolder == 'Favourites' || selectedFolder == 'Favorites')
+                  ? TackIcons.star
+                  : (selectedFolder == 'All Notes' ? null : LucideIcons.folder),
+              leadingIconColor:
+                  (selectedFolder == 'Favourites' || selectedFolder == 'Favorites')
+                      ? AppColors.accentAmber
+                      : null,
+              items: folderItems,
+            ),
           ),
         ),
 
@@ -223,50 +188,6 @@ class CategoryFilterPills extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ViewModeSegment extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final bool selected;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  const _ViewModeSegment({
-    required this.icon,
-    required this.tooltip,
-    required this.selected,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          width: 32,
-          height: 28,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.pastelLimeLight : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Center(
-            child: TackIcon(
-              icon,
-              size: 15,
-              color: selected
-                  ? const Color(0xFF191A23)
-                  : (isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23)),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
