@@ -285,7 +285,7 @@ class _NoteActionSheetState extends State<NoteActionSheet> {
                 isDark: isDark,
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  workspace.duplicateItem(widget.item.id);
+                  workspace.duplicateItem(widget.item);
                   Navigator.of(context).pop();
                   TackToast.show(
                     context,

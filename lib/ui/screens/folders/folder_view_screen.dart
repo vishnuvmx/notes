@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../../core/theme/app_colors.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
+import '../../../domain/models/whiteboard_item.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/cards/board_grid_card.dart';
 import '../../components/cards/neo_note_card.dart';
+import '../../components/cards/responsive_card_grid.dart';
+import '../../components/dialogs_sheets/app_bottom_sheet.dart';
+import '../../components/dialogs_sheets/card_peek_sheet.dart';
 import '../../components/feedback/empty_state_widget.dart';
-import '../../components/dialogs_sheets/note_action_sheet.dart';
+import '../today/today_screen.dart';
 
 enum FolderType {
   favorites,
@@ -18,19 +26,20 @@ enum FolderType {
   String get title {
     switch (this) {
       case FolderType.favorites:
-        return 'Favorites';
+        return 'Pinned';
       case FolderType.archive:
-        return 'Archived Notes';
+        return 'Archived';
       case FolderType.trash:
         return 'Trash';
     }
   }
 }
 
-/// Dedicated Folder screen for Favorites, Archive, or Trash with cute HeroIcons.
+/// Dedicated screen for Trash (and legacy Pinned/Archive routes) (`05` §2.1).
+/// Includes confirmation on permanent delete and tap-to-preview in Trash (`03` §7 P2).
 class FolderViewScreen extends StatelessWidget {
   final FolderType folderType;
-  final Function(BaseWorkspaceItem item)? onOpenItem;
+  final void Function(BaseWorkspaceItem item)? onOpenItem;
 
   const FolderViewScreen({
     super.key,
@@ -38,11 +47,153 @@ class FolderViewScreen extends StatelessWidget {
     this.onOpenItem,
   });
 
+  Future<void> _confirmDeleteSingle(
+    BuildContext context,
+    WorkspaceProvider workspace,
+    BaseWorkspaceItem item,
+  ) async {
+    final tokens = context.tokens;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete permanently?'),
+        content: Text(
+          '"${item.title.trim().isEmpty ? 'Untitled' : item.title}" will be permanently deleted and cannot be recovered.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: tokens.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete Forever'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await workspace.deletePermanently(item.id);
+    }
+  }
+
+  Future<void> _confirmEmptyTrash(
+    BuildContext context,
+    WorkspaceProvider workspace,
+  ) async {
+    final tokens = context.tokens;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Empty Trash?'),
+        content: const Text(
+          'All items in Trash will be permanently deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: tokens.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Empty Trash'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await workspace.emptyTrash();
+    }
+  }
+
+  void _previewTrashedItem(
+    BuildContext context,
+    WorkspaceProvider workspace,
+    BaseWorkspaceItem item,
+  ) {
+    AppBottomSheet.show<void>(
+      context: context,
+      builder: (ctx) {
+        final tokens = ctx.tokens;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s5,
+            AppSpacing.s2,
+            AppSpacing.s5,
+            AppSpacing.s5,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                item.title.trim().isEmpty ? 'Untitled' : item.title,
+                style: AppTypography.title(color: tokens.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.s1),
+              Text(
+                'Deleted ${DateFormatter.formatTimestamp(item.updatedAt)}',
+                style: AppTypography.caption(color: tokens.textTertiary),
+              ),
+              const SizedBox(height: AppSpacing.s3),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Text(
+                    item.getSummary(),
+                    style: AppTypography.bodySm(color: tokens.textSecondary),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s5),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _confirmDeleteSingle(context, workspace, item);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: tokens.danger,
+                      ),
+                      child: const Text('Delete forever'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s3),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await workspace.restoreFromTrash(item.id);
+                      },
+                      child: const Text('Restore'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
     final workspace = context.watch<WorkspaceProvider>();
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final gutter = AppSpacing.screenGutter(screenWidth);
+    final cols = AppSpacing.gridColumnsForWidth(screenWidth);
 
     List<BaseWorkspaceItem> items;
     switch (folderType) {
@@ -58,99 +209,139 @@ class FolderViewScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: tokens.canvasPrimary,
       appBar: AppBar(
-        title: Text(folderType.title),
+        backgroundColor: tokens.canvasPrimary,
+        leading: IconButton(
+          icon: TackIcon(TackIcons.back, size: 20, color: tokens.textPrimary),
+          tooltip: 'Back',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            Navigator.of(context).pop();
+          },
+        ),
+        title: Text(
+          folderType.title,
+          style: AppTypography.title(color: tokens.textPrimary),
+        ),
         actions: [
           if (folderType == FolderType.trash && items.isNotEmpty)
             TextButton.icon(
-              icon: const TackIcon(TackIcons.trash, size: 18, color: AppColors.error),
-              label: const Text('Empty', style: TextStyle(color: AppColors.error)),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Empty Trash?'),
-                    content: const Text('All notes in the trash will be permanently deleted.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                        onPressed: () {
-                          workspace.emptyTrash();
-                          Navigator.of(ctx).pop();
-                        },
-                        child: const Text('Empty Trash'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              icon: TackIcon(TackIcons.trash, size: 17, color: tokens.danger),
+              label: Text(
+                'Empty',
+                style: AppTypography.label(
+                  color: tokens.danger,
+                  weight: FontWeight.w600,
+                ),
+              ),
+              onPressed: () => _confirmEmptyTrash(context, workspace),
             ),
+          const SizedBox(width: AppSpacing.s2),
         ],
       ),
       body: items.isEmpty
           ? EmptyStateWidget(
               icon: folderType == FolderType.trash
                   ? TackIcons.trash
-                  : (folderType == FolderType.favorites ? TackIcons.star : TackIcons.archive),
+                  : TackIcons.pin,
               title: 'No items in ${folderType.title}',
-              subtitle: 'Items you ${folderType.name} will appear here.',
+              subtitle: folderType == FolderType.trash
+                  ? 'Deleted notes and boards rest here until you empty Trash.'
+                  : 'Pinned items appear here.',
             )
           : folderType == FolderType.trash
-              ? ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              ? ListView.separated(
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    AppSpacing.s3,
+                    gutter,
+                    AppSpacing.s8,
+                  ),
                   itemCount: items.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.s3),
                   itemBuilder: (context, index) {
                     final item = items[index];
+                    final palette = AppColors.getPaletteById(item.paletteId);
+                    final bandColor = palette.resolveCardColor(tokens.isDark);
+
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                        borderRadius: BorderRadius.circular(20),
+                        color: tokens.surfacePrimary,
+                        borderRadius: AppSpacing.roundedMd,
                         border: Border.all(
-                          color: isDark ? const Color(0xFF323642) : const Color(0xFF191A23),
-                          width: 1.5,
+                          color: tokens.borderSubtle,
+                          width: 1,
                         ),
-                        boxShadow: isDark
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: const Color(0xFF191A23).withValues(alpha: 0.06),
-                                  blurRadius: 0,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        title: Text(
-                          item.title,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                        ),
-                        subtitle: Text(
-                          item.getSummary(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                            fontSize: 13,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      clipBehavior: Clip.antiAlias,
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            IconButton(
-                              icon: const TackIcon(TackIcons.redo, size: 20),
-                              tooltip: 'Restore',
-                              onPressed: () => workspace.restoreItem(item.id),
+                            Container(
+                              width: AppSpacing.cardColorBandWidth,
+                              color: bandColor,
                             ),
-                            IconButton(
-                              icon: const TackIcon(TackIcons.trash, size: 20, color: AppColors.error),
-                              tooltip: 'Delete Forever',
-                              onPressed: () => workspace.deletePermanently(item.id),
+                            Expanded(
+                              child: ListTile(
+                                onTap: () => _previewTrashedItem(
+                                  context,
+                                  workspace,
+                                  item,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.s4,
+                                  vertical: AppSpacing.s1,
+                                ),
+                                title: Text(
+                                  item.title.trim().isEmpty
+                                      ? 'Untitled'
+                                      : item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.titleSm(
+                                    color: tokens.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  item.getSummary(),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySm(
+                                    color: tokens.textSecondary,
+                                  ),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: TackIcon(
+                                        TackIcons.undo,
+                                        size: 19,
+                                        color: tokens.textPrimary,
+                                      ),
+                                      tooltip: 'Restore',
+                                      onPressed: () =>
+                                          workspace.restoreFromTrash(item.id),
+                                    ),
+                                    IconButton(
+                                      icon: TackIcon(
+                                        TackIcons.trash,
+                                        size: 19,
+                                        color: tokens.danger,
+                                      ),
+                                      tooltip: 'Delete Forever',
+                                      onPressed: () => _confirmDeleteSingle(
+                                        context,
+                                        workspace,
+                                        item,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -158,27 +349,45 @@ class FolderViewScreen extends StatelessWidget {
                     );
                   },
                 )
-              : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    AppSpacing.xxl,
+              : ResponsiveCardGrid(
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    AppSpacing.s3,
+                    gutter,
+                    AppSpacing.s8,
                   ),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
-                    mainAxisExtent: 220,
-                  ),
+                  crossAxisCount: cols,
+                  mainAxisSpacing: AppSpacing.cardGridGap,
+                  crossAxisSpacing: AppSpacing.cardGridGap,
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
+                    void openFn() {
+                      if (onOpenItem != null) {
+                        onOpenItem!(item);
+                      } else {
+                        openWorkspaceItemScreen(context, item);
+                      }
+                    }
+                    if (item is WhiteboardCanvasItem) {
+                      return BoardGridCard(
+                        board: item,
+                        onTap: openFn,
+                        onLongPress: () => CardPeekSheet.show(
+                          context: context,
+                          item: item,
+                          onOpen: openFn,
+                        ),
+                      );
+                    }
                     return NeoNoteCard(
                       item: item,
-                      onTap: () => onOpenItem?.call(item),
-                      onLongPress: () => NoteActionSheet.show(context, item: item),
-                      isGrid: true,
+                      onTap: openFn,
+                      onLongPress: () => CardPeekSheet.show(
+                        context: context,
+                        item: item,
+                        onOpen: openFn,
+                      ),
                     );
                   },
                 ),

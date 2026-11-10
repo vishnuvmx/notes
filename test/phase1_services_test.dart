@@ -10,7 +10,9 @@ import 'package:notes/domain/models/whiteboard_item.dart';
 import 'package:notes/domain/services/block_transform_service.dart';
 import 'package:notes/domain/services/frontmatter_service.dart';
 import 'package:notes/domain/services/markdown_table_service.dart';
+import 'package:notes/domain/services/note_export_service.dart';
 import 'package:notes/domain/services/note_template_service.dart';
+import 'package:notes/domain/services/open_tasks_service.dart';
 import 'package:notes/domain/services/wiki_link_service.dart';
 import 'package:notes/state/workspace_provider.dart';
 
@@ -421,6 +423,133 @@ Outro line''';
       // Calling a second time on the same day is idempotent
       final sameDayAgain = await provider.openOrCreateTodaysNote(referenceDate: today);
       expect(sameDayAgain.id, todaysNote.id);
+    });
+  });
+
+  group('Paper & Pin Redesign — Inbox Triage, Open Tasks, Link Rename Propagation & Export', () {
+    test('Inbox capture & triage actions (keep, append, convert to task)', () async {
+      final repo = _InMemoryWorkspaceRepo();
+      final provider = WorkspaceProvider(repo);
+
+      // 1. Capture to Inbox -> keep as note
+      final cap1 = await provider.captureToInbox(
+        'Quick architectural thought\nMore details here',
+        sourceApp: 'Share Sheet',
+      );
+      expect(cap1.isInbox, isTrue);
+      expect(provider.inboxItems.map((e) => e.id), contains(cap1.id));
+      expect(provider.libraryNotes.map((e) => e.id), isNot(contains(cap1.id)));
+
+      await provider.keepInboxItemAsNote(cap1.id, folderName: 'Architecture');
+      expect(provider.inboxItems.map((e) => e.id), isNot(contains(cap1.id)));
+      expect(provider.libraryNotes.map((e) => e.id), contains(cap1.id));
+
+      // 2. Capture to Inbox -> append to existing note
+      final cap2 = await provider.captureToInbox('Appended paragraph from inbox');
+      await provider.appendInboxItemToNote(cap2.id, cap1.id);
+      expect(provider.inboxItems, isEmpty);
+      final updatedNote = provider.getItemByIdSync(cap1.id) as TextNote;
+      expect(updatedNote.content, contains('Appended paragraph from inbox'));
+
+      // 3. Capture to Inbox -> convert to Today task
+      final cap3 = await provider.captureToInbox('Review PR #42');
+      await provider.convertInboxItemToTodayTask(cap3.id);
+      expect(provider.inboxItems, isEmpty);
+      expect(
+        provider.openTasks.any((t) => t.text.contains('Review PR #42')),
+        isTrue,
+      );
+    });
+
+    test('OpenTasksService extracts open tasks and toggleTask updates note in-place', () async {
+      final repo = _InMemoryWorkspaceRepo();
+      final provider = WorkspaceProvider(repo);
+
+      final note = await provider.createQuickItem(
+        title: 'Release Checklist',
+        content: '- [ ] Run flutter analyze\n- [x] Update tokens\n```\n- [ ] Ignored in code fence\n```',
+        type: ItemType.note,
+        paletteId: 'amber',
+      );
+
+      final open = provider.openTasks.where((t) => t.noteId == note.id).toList();
+      expect(open.length, 1);
+      expect(open.first.text, 'Run flutter analyze');
+
+      await provider.toggleTask(open.first);
+      final openAfter = provider.openTasks.where((t) => t.noteId == note.id).toList();
+      expect(openAfter, isEmpty);
+
+      final allTasks = OpenTasksService.extractTasks(
+        provider.allActiveItems,
+        includeCompleted: true,
+      ).where((t) => t.noteId == note.id).toList();
+      expect(allTasks.length, 2);
+      expect(allTasks.every((t) => t.isDone), isTrue);
+    });
+
+    test('Renaming a note automatically rewrites inbound [[WikiLinks]] across notes', () async {
+      final repo = _InMemoryWorkspaceRepo();
+      final provider = WorkspaceProvider(repo);
+
+      final target = await provider.createQuickItem(
+        title: 'Auth Spec',
+        content: '## Token Flow\nDetails.',
+        type: ItemType.note,
+        paletteId: 'cyan',
+      ) as TextNote;
+
+      final caller = await provider.createQuickItem(
+        title: 'API Overview',
+        content: 'Refer to [[Auth Spec]] and [[Auth Spec#Token Flow|token docs]].',
+        type: ItemType.note,
+        paletteId: 'amber',
+      ) as TextNote;
+
+      await provider.saveItem(target.copyWith(title: 'Identity Spec'));
+
+      final updatedCaller = provider.getItemByIdSync(caller.id) as TextNote;
+      expect(updatedCaller.content, contains('[[Identity Spec]]'));
+      expect(updatedCaller.content, contains('[[Identity Spec#Token Flow|token docs]]'));
+      expect(updatedCaller.content, isNot(contains('[[Auth Spec')));
+    });
+
+    test('exportWorkspaceJson exports all items regardless of active UI filters and formatMarkdown preserves YAML at line 0', () async {
+      final repo = _InMemoryWorkspaceRepo();
+      final provider = WorkspaceProvider(repo);
+
+      await provider.addFolder('Work');
+      await provider.createQuickItem(
+        title: 'Work Note',
+        content: 'Body A',
+        type: ItemType.note,
+        paletteId: 'amber',
+        folderName: 'Work',
+      );
+      final personal = await provider.createQuickItem(
+        title: 'Personal Note',
+        content: '---\nstatus: Active\n---\nBody B',
+        type: ItemType.note,
+        paletteId: 'peach',
+      ) as TextNote;
+
+      // Activate a restrictive UI filter
+      provider.setSelectedFolder('Work');
+      provider.setSearchQuery('NonExistentQueryXYZ');
+      expect(provider.libraryNotes, isEmpty);
+
+      // Backup export must still contain both notes
+      final backupJson = provider.exportWorkspaceJson();
+      expect(backupJson, contains('Work Note'));
+      expect(backupJson, contains('Personal Note'));
+
+      // Markdown export must keep YAML frontmatter at line 0
+      final exportedMd = NoteExportService.formatMarkdown(
+        title: personal.title,
+        content: personal.content,
+        tags: personal.tags,
+      );
+      expect(exportedMd.startsWith('---\nstatus: Active\n---'), isTrue);
     });
   });
 }

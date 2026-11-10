@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
 /// Supported item types in the formatting toolbar using OOP sealed hierarchy.
@@ -13,7 +15,11 @@ sealed class ToolbarActionItem {
 
 class IconToolbarItem extends ToolbarActionItem {
   final dynamic icon;
-  const IconToolbarItem({required super.label, required super.action, required this.icon});
+  const IconToolbarItem({
+    required super.label,
+    required super.action,
+    required this.icon,
+  });
 }
 
 class TextToolbarItem extends ToolbarActionItem {
@@ -31,70 +37,91 @@ class DividerToolbarItem extends ToolbarActionItem {
   const DividerToolbarItem() : super(label: '', action: 'divider');
 }
 
-/// Tactile, HeroIcons-aligned formatting toolbar for Tack Note Editor.
-/// Features Slash Commands (/), Turn Into / Line Moves (⇄), Wiki-Links ([[),
-/// Heading toggles (H1, H2), Bold, Italic, Pastel Highlighter, Checklists, Lists, and Quotes.
+/// Keyboard-docked formatting toolbar for Tack Note Editor (`04` M6, `07` §7).
+///
+/// Consolidates `/` and `⇄` into a single **Insert & Transform (`/`)** button,
+/// and provides `[[` wiki-link, task `- [ ]`, headings, inline styles, table,
+/// diagram, callout, and image triggers with accessible touch targets.
 class EditorFormattingToolbar extends StatelessWidget {
-  final Function(String action)? onFormatAction;
+  final void Function(String action)? onFormatAction;
 
   const EditorFormattingToolbar({super.key, this.onFormatAction});
 
   static const List<ToolbarActionItem> tools = [
     TextToolbarItem(
-      label: 'Slash Blocks (/)',
+      label: 'Insert & Transform (/)',
       action: 'slash',
       display: '/',
-      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-    ),
-    TextToolbarItem(
-      label: 'Turn Into & Move Line',
-      action: 'turn_into',
-      display: '⇄',
-      customStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+      customStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
     ),
     TextToolbarItem(
       label: 'Link Note or Board [[',
       action: 'wikilink',
       display: '[[',
-      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.8),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+        letterSpacing: -0.8,
+      ),
+    ),
+    IconToolbarItem(
+      label: 'Task Checkbox',
+      action: 'checkbox',
+      icon: TackIcons.checkCircle,
     ),
     DividerToolbarItem(),
     TextToolbarItem(
       label: 'Heading 1',
       action: 'h1',
       display: 'H1',
-      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.5),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+        letterSpacing: -0.4,
+      ),
     ),
     TextToolbarItem(
       label: 'Heading 2',
       action: 'h2',
       display: 'H2',
-      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: -0.5),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+        letterSpacing: -0.4,
+      ),
     ),
     DividerToolbarItem(),
     TextToolbarItem(
       label: 'Bold',
       action: 'bold',
       display: 'B',
-      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, fontFamily: 'serif'),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 15,
+        fontFamily: 'serif',
+      ),
     ),
     TextToolbarItem(
       label: 'Italic',
       action: 'italic',
       display: 'I',
-      customStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, fontStyle: FontStyle.italic, fontFamily: 'serif'),
-    ),
-    TextToolbarItem(
-      label: 'Underline',
-      action: 'underline',
-      display: 'U',
-      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, decoration: TextDecoration.underline, fontFamily: 'serif'),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 15,
+        fontStyle: FontStyle.italic,
+        fontFamily: 'serif',
+      ),
     ),
     TextToolbarItem(
       label: 'Strikethrough',
       action: 'strikethrough',
       display: 'S',
-      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, decoration: TextDecoration.lineThrough, fontFamily: 'serif'),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 15,
+        decoration: TextDecoration.lineThrough,
+        fontFamily: 'serif',
+      ),
     ),
     TextToolbarItem(
       label: 'Highlight',
@@ -103,52 +130,74 @@ class EditorFormattingToolbar extends StatelessWidget {
       customStyle: TextStyle(
         fontWeight: FontWeight.w800,
         fontSize: 11,
-        color: Color(0xFF5A4112),
-        backgroundColor: Color(0xFFFFC661),
+        color: AppColors.lightTextPrimary,
+        backgroundColor: AppColors.objectAmber,
       ),
     ),
     DividerToolbarItem(),
-    IconToolbarItem(label: 'Checkbox', action: 'checkbox', icon: TackIcons.checkCircle),
-    IconToolbarItem(label: 'Bullet List', action: 'bullet', icon: TackIcons.menu),
-    IconToolbarItem(label: 'Numbered List', action: 'numbered', icon: TackIcons.listView),
-    DividerToolbarItem(),
+    IconToolbarItem(
+      label: 'Bullet List',
+      action: 'bullet',
+      icon: TackIcons.menu,
+    ),
+    IconToolbarItem(
+      label: 'Numbered List',
+      action: 'numbered',
+      icon: TackIcons.listView,
+    ),
     TextToolbarItem(
       label: 'Quote',
       action: 'quote',
       display: '”',
-      customStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, height: 1.0, fontFamily: 'serif'),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w900,
+        fontSize: 20,
+        height: 1.0,
+        fontFamily: 'serif',
+      ),
     ),
     TextToolbarItem(
       label: 'Table',
       action: 'table',
       display: '⊞',
-      customStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, height: 1.0),
+      customStyle: TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 16,
+        height: 1.0,
+      ),
     ),
-    IconToolbarItem(label: 'Diagram / Graph', action: 'diagram', icon: TackIcons.flow),
-    IconToolbarItem(label: 'Callout Alert', action: 'alert', icon: TackIcons.bolt),
-    IconToolbarItem(label: 'Timestamp', action: 'timestamp', icon: TackIcons.clock),
-    IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.imageSvg),
+    IconToolbarItem(
+      label: 'Diagram / Flowchart',
+      action: 'diagram',
+      icon: TackIcons.flow,
+    ),
+    IconToolbarItem(
+      label: 'Callout Block',
+      action: 'alert',
+      icon: TackIcons.bolt,
+    ),
+    IconToolbarItem(
+      label: 'Image',
+      action: 'image',
+      icon: TackIcons.imageSvg,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
 
     return Container(
-      height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      height: AppSpacing.minTouchTarget,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: AppSpacing.roundedPill,
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-          width: 1,
+        color: tokens.surfacePrimary,
+        border: Border(
+          top: BorderSide(color: tokens.borderSubtle, width: 1),
         ),
-        boxShadow: AppSpacing.floatingControlShadow,
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
         itemCount: tools.length,
         itemBuilder: (context, index) {
           final item = tools[index];
@@ -157,49 +206,58 @@ class EditorFormattingToolbar extends StatelessWidget {
             return Container(
               width: 1,
               height: 20,
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
-              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+              margin: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s1,
+                vertical: 14,
+              ),
+              color: tokens.borderSubtle,
             );
           }
 
-          final isHighlightPill = item.action == 'slash' || item.action == 'turn_into';
+          final isPrimaryCommand = item.action == 'slash';
 
           return Tooltip(
             message: item.label,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    onFormatAction?.call(item.action);
-                  },
+            child: InkWell(
+              borderRadius: AppSpacing.roundedSm,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onFormatAction?.call(item.action);
+              },
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                child: Center(
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: 34,
+                    height: 34,
                     alignment: Alignment.center,
-                    decoration: isHighlightPill
+                    decoration: isPrimaryCommand
                         ? BoxDecoration(
-                            color: AppColors.accentAmber.withValues(alpha: isDark ? 0.16 : 0.14),
-                            borderRadius: BorderRadius.circular(10),
+                            color: tokens.canvasSunken,
+                            borderRadius: AppSpacing.roundedXs,
+                            border: Border.all(
+                              color: tokens.borderStrong,
+                              width: 1,
+                            ),
                           )
                         : null,
                     child: switch (item) {
                       IconToolbarItem iconItem => TackIcon(
                           iconItem.icon,
-                          size: 19,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          size: 18,
+                          color: tokens.textPrimary,
                         ),
                       TextToolbarItem textItem => Text(
                           textItem.display,
-                          style: (textItem.customStyle ?? const TextStyle()).copyWith(
+                          style: (textItem.customStyle ??
+                                  AppTypography.label(color: tokens.textPrimary))
+                              .copyWith(
                             color: textItem.action == 'highlight'
-                                ? (isDark ? Colors.black : const Color(0xFF5A4112))
-                                : (isHighlightPill
-                                    ? (isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23))
-                                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)),
+                                ? AppColors.lightTextPrimary
+                                : tokens.textPrimary,
                           ),
                         ),
                       DividerToolbarItem() => const SizedBox.shrink(),

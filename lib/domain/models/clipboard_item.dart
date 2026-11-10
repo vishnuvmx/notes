@@ -1,9 +1,12 @@
 import 'base_item.dart';
 
 /// Concrete Clipboard Item model inheriting from BaseWorkspaceItem.
+/// Retained for legacy persistence compatibility; new captures create
+/// `TextNote` items in Inbox (`isInbox: true`).
 class ClipboardItem extends BaseWorkspaceItem {
   final String clipText;
   final String sourceApp;
+  @override
   final bool isPinned;
 
   const ClipboardItem({
@@ -15,6 +18,7 @@ class ClipboardItem extends BaseWorkspaceItem {
     super.isFavorite,
     super.isArchived,
     super.isTrash,
+    super.isInbox,
     super.folderName,
     super.parentId,
     super.iconEmoji,
@@ -31,6 +35,14 @@ class ClipboardItem extends BaseWorkspaceItem {
   }
 
   @override
+  bool matchesQuery(String query) {
+    if (query.isEmpty) return true;
+    final lower = query.toLowerCase();
+    return title.toLowerCase().contains(lower) ||
+        clipText.toLowerCase().contains(lower);
+  }
+
+  @override
   ClipboardItem copyWith({
     String? title,
     DateTime? updatedAt,
@@ -38,6 +50,7 @@ class ClipboardItem extends BaseWorkspaceItem {
     bool? isFavorite,
     bool? isArchived,
     bool? isTrash,
+    bool? isInbox,
     String? folderName,
     bool clearFolder = false,
     String? parentId,
@@ -57,6 +70,7 @@ class ClipboardItem extends BaseWorkspaceItem {
       isFavorite: isFavorite ?? this.isFavorite,
       isArchived: isArchived ?? this.isArchived,
       isTrash: isTrash ?? this.isTrash,
+      isInbox: isInbox ?? this.isInbox,
       folderName: clearFolder ? null : (folderName ?? this.folderName),
       parentId: clearParent ? null : (parentId ?? this.parentId),
       iconEmoji: clearIcon ? null : (iconEmoji ?? this.iconEmoji),
@@ -78,6 +92,7 @@ class ClipboardItem extends BaseWorkspaceItem {
       'isFavorite': isFavorite,
       'isArchived': isArchived,
       'isTrash': isTrash,
+      'isInbox': isInbox,
       'folderName': folderName,
       'parentId': parentId,
       'iconEmoji': iconEmoji,
@@ -97,6 +112,7 @@ class ClipboardItem extends BaseWorkspaceItem {
       isFavorite: json['isFavorite'] as bool? ?? false,
       isArchived: json['isArchived'] as bool? ?? false,
       isTrash: json['isTrash'] as bool? ?? false,
+      isInbox: json['isInbox'] as bool? ?? false,
       folderName: json['folderName'] as String?,
       parentId: json['parentId'] as String?,
       iconEmoji: json['iconEmoji'] as String?,

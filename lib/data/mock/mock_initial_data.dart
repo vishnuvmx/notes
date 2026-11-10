@@ -2,7 +2,7 @@ import '../../domain/models/base_item.dart';
 import '../../domain/models/text_note.dart';
 import '../../domain/models/whiteboard_item.dart';
 
-/// Clean, tactile onboarding starter items matching Tack's neo-pop design identity.
+/// Clean, editorial starter items matching Tack's Paper & Pin design identity.
 class MockInitialData {
   static List<BaseWorkspaceItem> getInitialItems() {
     final now = DateTime.now();
@@ -14,39 +14,41 @@ class MockInitialData {
         title: 'How Tack Works',
         content:
             '# Tack in 30 seconds\n\n'
-            'Tack keeps everything you jot down in one place.\n\n'
+            'Tack is a calm, offline-first notebook and board workspace.\n\n'
             '### 1. Capture\n'
-            'Tap (+) and pick what you need:\n'
-            '- **Note** for longer writing\n'
-            '- **Sticky** for a quick reminder\n'
-            '- **Whiteboard** to draw a flowchart\n'
-            '- **Clip** to save text you copy\n\n'
-            '### 2. Organize\n'
-            'Add tags, star favorites, and archive what you are done with.\n\n'
-            '### 3. Find\n'
-            'Use search or the filter pills to jump back to anything.\n\n'
-            '> Deleted items rest in Trash until you empty it.\n\n'
+            'Tap **(+)** from any screen to jot a quick thought to your **Inbox**, '
+            'open a full **Note**, or start a visual **Board**.\n\n'
+            '### 2. Today & Triage\n'
+            'Your **Today** view collects your daily note, unsorted Inbox captures, '
+            'and open `- [ ]` tasks across every note:\n'
+            '- [ ] Try checking off this task from Today\n'
+            '- [ ] Link notes together with `[[How Tack Works]]`\n\n'
+            '### 3. Library & Boards\n'
+            'Pin important notes so they stay at the top, or place notes directly '
+            'onto a **Board** as live Spec Cards.\n\n'
+            '> Deleted items rest in Trash (under **You**) until you empty it.\n\n'
             '#welcome #guide',
         createdAt: now.subtract(const Duration(minutes: 5)),
         updatedAt: now.subtract(const Duration(minutes: 5)),
-        paletteId: 'peach',
+        paletteId: 'amber',
         isFavorite: true,
         tags: ['welcome', 'guide'],
+        links: ['How Tack Works'],
         estimatedMinutes: 1,
       ),
 
-      // 2. Single simple whiteboard flow explaining the app
+      // 2. Single simple board flow explaining the app
       WhiteboardCanvasItem(
         id: 'tack_starter_whiteboard',
-        title: 'How Tack Works (Flow)',
+        title: 'Capture to Clarity (Board)',
         createdAt: now.subtract(const Duration(hours: 1)),
         updatedAt: now.subtract(const Duration(hours: 1)),
         paletteId: 'cyan',
-        isFavorite: false,
+        isFavorite: true,
         nodes: [
           const CanvasNode(
             id: 'n_idea',
-            text: 'You have an idea',
+            text: 'Quick thought',
             shapeType: CanvasNodeType.startEnd,
             x: 2920,
             y: 2700,
@@ -56,7 +58,7 @@ class MockInitialData {
           ),
           const CanvasNode(
             id: 'n_type',
-            text: 'Long or short?',
+            text: 'Need structure?',
             shapeType: CanvasNodeType.decision,
             x: 2910,
             y: 2820,
@@ -66,7 +68,7 @@ class MockInitialData {
           ),
           const CanvasNode(
             id: 'n_note',
-            text: 'Write a Note',
+            text: 'Write in Note',
             shapeType: CanvasNodeType.process,
             x: 2700,
             y: 2990,
@@ -75,34 +77,25 @@ class MockInitialData {
             paletteId: 'lime',
           ),
           const CanvasNode(
-            id: 'n_sticky',
-            text: 'Stick a Sticky',
+            id: 'n_inbox',
+            text: 'Save to Inbox',
             shapeType: CanvasNodeType.process,
             x: 3140,
             y: 2990,
             width: 160,
             height: 56,
-            paletteId: 'amber',
+            paletteId: 'peach',
           ),
           const CanvasNode(
-            id: 'n_organize',
-            text: 'Tag, star, archive',
-            shapeType: CanvasNodeType.process,
-            x: 2920,
+            id: 'n_spec',
+            text: 'Pin onto Board\n#welcome',
+            shapeType: CanvasNodeType.specCard,
+            x: 2890,
             y: 3130,
-            width: 160,
-            height: 56,
+            width: 220,
+            height: 110,
             paletteId: 'lavender',
-          ),
-          const CanvasNode(
-            id: 'n_find',
-            text: 'Find it with search',
-            shapeType: CanvasNodeType.startEnd,
-            x: 2920,
-            y: 3250,
-            width: 160,
-            height: 52,
-            paletteId: 'cyan',
+            linkedNoteId: 'tack_welcome_note',
           ),
         ],
         edges: [
@@ -124,31 +117,24 @@ class MockInitialData {
           const CanvasEdge(
             id: 'e3',
             fromNodeId: 'n_type',
-            toNodeId: 'n_sticky',
-            label: 'Short',
+            toNodeId: 'n_inbox',
+            label: 'Quick',
             fromPort: 'right',
             toPort: 'top',
           ),
           const CanvasEdge(
             id: 'e4',
             fromNodeId: 'n_note',
-            toNodeId: 'n_organize',
+            toNodeId: 'n_spec',
             fromPort: 'bottom',
             toPort: 'left',
           ),
           const CanvasEdge(
             id: 'e5',
-            fromNodeId: 'n_sticky',
-            toNodeId: 'n_organize',
+            fromNodeId: 'n_inbox',
+            toNodeId: 'n_spec',
             fromPort: 'bottom',
             toPort: 'right',
-          ),
-          const CanvasEdge(
-            id: 'e6',
-            fromNodeId: 'n_organize',
-            toNodeId: 'n_find',
-            fromPort: 'bottom',
-            toPort: 'top',
           ),
         ],
       ),

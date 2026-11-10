@@ -3,23 +3,23 @@ import 'package:flutter/services.dart' hide ProcessTextService;
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_colors.dart';
-import 'core/theme/app_theme.dart';
 import 'core/theme/app_spacing.dart';
+import 'core/theme/app_theme.dart';
 import 'core/theme/app_typography.dart';
 import 'core/theme/tack_icons.dart';
 import 'data/repositories/workspace_repo_impl.dart';
 import 'domain/models/base_item.dart';
 import 'domain/models/whiteboard_item.dart';
-import 'domain/services/process_text_service.dart';
 import 'domain/services/pinned_notification_service.dart';
-import 'state/workspace_provider.dart';
+import 'domain/services/process_text_service.dart';
 import 'state/theme_provider.dart';
-
-import 'ui/screens/home/home_screen.dart';
+import 'state/workspace_provider.dart';
+import 'ui/components/dialogs_sheets/create_item_sheet.dart';
 import 'ui/screens/editor/note_editor_screen.dart';
-import 'ui/screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'ui/screens/folders/folder_view_screen.dart';
+import 'ui/screens/home/home_screen.dart';
 import 'ui/screens/settings/settings_screen.dart';
+import 'ui/screens/whiteboard/whiteboard_canvas_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,13 +38,15 @@ void main() async {
   // Load saved theme preference & repository items from local storage
   final initialTheme = await ThemeProvider.loadSavedThemeMode();
   final repository = LocalStorageWorkspaceRepository();
-  await repository.init();
+  await repository.getAllActiveItems();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => WorkspaceProvider(repository)),
-        ChangeNotifierProvider(create: (_) => ThemeProvider(initialMode: initialTheme)),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(initialMode: initialTheme),
+        ),
       ],
       child: const TackApp(),
     ),
@@ -95,8 +97,7 @@ class TackApp extends StatelessWidget {
   }
 }
 
-
-/// Root navigator managing seamless routing between Home, Editor, Whiteboard, and Folders.
+/// Root navigator managing routing between the 5-slot Shell, Note Editor, Board Canvas, and System Intents (`05` §9).
 class TackRootNavigator extends StatefulWidget {
   const TackRootNavigator({super.key});
 
@@ -105,7 +106,7 @@ class TackRootNavigator extends StatefulWidget {
 }
 
 class _TackRootNavigatorState extends State<TackRootNavigator> {
-  static Route<T> _buildTactileRoute<T>(Widget page) {
+  static Route<T> _buildRoute<T>(Widget page) {
     return MaterialPageRoute<T>(
       builder: (context) => page,
     );
@@ -120,7 +121,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
   }
 
   void _initSystemIntegration() async {
-    // 1. Listen for incoming text / actions when app is running (foreground or background)
+    // 1. Listen for incoming text / actions via `com.notes.tacknotes/process_text`
     ProcessTextService.initialize(
       onTextReceived: (data) {
         if (mounted) {
@@ -129,29 +130,31 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
     );
 
-    // 2. Check if app was launched via "Save to Tack", SEND intent, or Quick Capture / Pinned Notification
+    // 2. Check if app was launched via "Save to Tack", SEND intent, or Quick Capture
     final initialData = await ProcessTextService.getInitialText();
     if (initialData != null && mounted) {
       _handleIncomingText(initialData);
     }
 
-    // 3. Ensure persistent Quick Capture notification stays synced if enabled
-    final quickCaptureEnabled = await PinnedNotificationService.isQuickCaptureEnabled();
+    // 3. Keep persistent Quick Capture notification synced if enabled
+    final quickCaptureEnabled =
+        await PinnedNotificationService.isQuickCaptureEnabled();
     if (quickCaptureEnabled) {
       await PinnedNotificationService.setQuickCaptureEnabled(true);
     }
   }
 
   Future<void> _handleIncomingText(IncomingTextData data) async {
+    final workspace = context.read<WorkspaceProvider>();
+
     // 1. Direct open of a pinned note or dynamic app shortcut
     if (data.action == 'OPEN_NOTE' && data.noteId != null) {
-      final workspace = context.read<WorkspaceProvider>();
-      BaseWorkspaceItem? item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+      BaseWorkspaceItem? item = workspace.getItemByIdSync(data.noteId!);
       if (item == null && workspace.isLoading) {
         for (int retry = 0; retry < 20; retry++) {
           await Future.delayed(const Duration(milliseconds: 50));
           if (!mounted) return;
-          item = workspace.items.where((i) => i.id == data.noteId).firstOrNull;
+          item = workspace.getItemByIdSync(data.noteId!);
           if (item != null) break;
         }
       }
@@ -162,46 +165,36 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       return;
     }
 
-    // 2. Instant 1-tap quick capture from status bar or Quick Settings Tile
+    // 2. Quick Settings Tile / Notification → Open Capture Sheet (`05` §9)
     if (data.action == 'QUICK_CAPTURE') {
-      final workspace = context.read<WorkspaceProvider>();
-      final note = await workspace.createQuickItem(
-        title: '',
-        type: ItemType.note,
-        paletteId: 'peach',
-        content: '',
-      );
-      if (mounted) {
-        HapticFeedback.lightImpact();
-        _openItemDetail(context, note);
+      if (!mounted) return;
+      final created = await CreateItemSheet.show(context);
+      if (created != null && mounted) {
+        _openItemDetail(context, created, startInEditMode: true);
       }
       return;
     }
 
-    // 3. App Shortcut → New Note (long-press launcher icon)
+    // 3. App Shortcut → New Note
     if (data.action == 'NEW_NOTE') {
-      final workspace = context.read<WorkspaceProvider>();
       final note = await workspace.createQuickItem(
-        title: '',
+        title: 'Untitled Note',
         type: ItemType.note,
-        paletteId: 'peach',
-        content: '',
+        paletteId: 'amber',
       );
       if (mounted) {
         HapticFeedback.mediumImpact();
-        _openItemDetail(context, note);
+        _openItemDetail(context, note, startInEditMode: true);
       }
       return;
     }
 
-    // 4. App Shortcut → New Whiteboard (long-press launcher icon)
+    // 4. App Shortcut → New Board
     if (data.action == 'NEW_WHITEBOARD') {
-      final workspace = context.read<WorkspaceProvider>();
       final board = await workspace.createQuickItem(
-        title: '',
+        title: 'Untitled Board',
         type: ItemType.whiteboard,
-        paletteId: 'lavender',
-        content: '',
+        paletteId: 'cyan',
       );
       if (mounted) {
         HapticFeedback.mediumImpact();
@@ -210,50 +203,22 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       return;
     }
 
-    // 5. 2x2 Widget Action 1: "+ Worth remembering...." -> Fresh memory capture note
+    // 5. Widget Action 1: "+ Worth remembering...." -> Capture to Inbox / Today
     if (data.action == 'WIDGET_WORTH_REMEMBERING') {
-      final workspace = context.read<WorkspaceProvider>();
-      final note = await workspace.createQuickItem(
-        title: 'Worth remembering',
-        type: ItemType.note,
-        paletteId: 'amber',
-        content: '',
-      );
-      if (mounted) {
-        HapticFeedback.lightImpact();
-        _openItemDetail(context, note);
+      if (!mounted) return;
+      final created = await CreateItemSheet.show(context);
+      if (created != null && mounted) {
+        _openItemDetail(context, created, startInEditMode: true);
       }
       return;
     }
 
-    // 6. 2x2 Widget Action 2: "+ Done with your works?" -> Interactive checklist note
-    if (data.action == 'WIDGET_DONE_WORKS') {
-      final workspace = context.read<WorkspaceProvider>();
-      final note = await workspace.createQuickItem(
-        title: 'Today\'s Works',
-        type: ItemType.note,
-        paletteId: 'lime',
-        content: '[ ] Task 1\n[ ] Task 2\n[ ] Wrap up review',
-      );
+    // 6. Widget Action 2: "+ Done with your works?" -> Open Today's Daily Note
+    if (data.action == 'WIDGET_DONE_WORKS' || data.action == 'WIDGET_PLAN_DAY') {
+      final daily = await workspace.openOrCreateTodaysNote();
       if (mounted) {
         HapticFeedback.lightImpact();
-        _openItemDetail(context, note);
-      }
-      return;
-    }
-
-    // 7. 2x2 Widget Action 3: "+ Plan your day" -> Daily plan with priorities and schedule
-    if (data.action == 'WIDGET_PLAN_DAY') {
-      final workspace = context.read<WorkspaceProvider>();
-      final note = await workspace.createQuickItem(
-        title: 'Plan for Today',
-        type: ItemType.note,
-        paletteId: 'peach',
-        content: '### Top Priorities\n1. \n2. \n3. \n\n### Schedule\n- Morning: \n- Afternoon: \n- Evening: ',
-      );
-      if (mounted) {
-        HapticFeedback.lightImpact();
-        _openItemDetail(context, note);
+        _openItemDetail(context, daily);
       }
       return;
     }
@@ -279,43 +244,49 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       noteContent = data.text;
     }
 
-    final workspace = context.read<WorkspaceProvider>();
-    final newNote = await workspace.createNoteFromExternalText(
+    // `VIEW` `.md`/`.txt` file opens directly in Read Mode; `SEND` / `PROCESS_TEXT` saves to Inbox (`05` §9)
+    final isFileOpen = data.fileName != null && data.fileName!.isNotEmpty;
+    if (isFileOpen) {
+      final fileNote = await workspace.createQuickItem(
+        title: data.title ?? data.fileName!,
+        type: ItemType.note,
+        paletteId: 'slate',
+        extraContent: noteContent,
+      );
+      if (mounted) {
+        _showFeedbackSnackBar(
+          message: 'Imported ${data.fileName}',
+          isError: false,
+        );
+        _openItemDetail(context, fileNote, startInEditMode: false);
+      }
+      return;
+    }
+
+    final captured = await workspace.captureToInbox(
       noteContent,
       title: data.title,
-      sourceApp: data.sourceApp ?? data.fileName,
+      sourceApp: data.sourceApp,
     );
-
-    if (newNote != null && mounted) {
+    if (mounted) {
       HapticFeedback.mediumImpact();
-      final String sourceLabel;
-      if (hasImage) {
-        sourceLabel = data.sourceApp != null
-            ? 'Saved image from ${data.sourceApp}'
-            : 'Saved image note';
-      } else if (data.fileName != null && data.fileName!.isNotEmpty) {
-        sourceLabel = 'Opened ${data.fileName}';
-      } else if (data.sourceApp != null && data.sourceApp!.isNotEmpty) {
-        sourceLabel = 'Saved from ${data.sourceApp}';
-      } else {
-        sourceLabel = 'Saved from selected text';
-      }
-
+      final label = (data.sourceApp != null && data.sourceApp!.isNotEmpty)
+          ? 'Saved to Inbox from ${data.sourceApp}'
+          : 'Saved to Inbox';
       _showFeedbackSnackBar(
-        message: sourceLabel,
+        message: label,
         isError: false,
+        onOpen: () => _openItemDetail(context, captured),
       );
-
-      // Open directly in Note Editor (which starts in Reader Mode for instant markdown preview)
-      _openItemDetail(context, newNote);
     }
   }
 
   void _showFeedbackSnackBar({
     required String message,
     required bool isError,
+    VoidCallback? onOpen,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -324,22 +295,15 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 88),
         padding: EdgeInsets.zero,
-        duration: const Duration(milliseconds: 2000),
+        duration: const Duration(milliseconds: 2800),
         content: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
+              color: tokens.surfaceElevated,
               borderRadius: AppSpacing.roundedPill,
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.4)
-                      : const Color(0xFF191A23).withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              border: Border.all(color: tokens.borderSubtle, width: 1),
+              boxShadow: AppSpacing.elev2(tokens.isDark),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -347,7 +311,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
                 TackIcon(
                   isError ? TackIcons.close : TackIcons.checkCircle,
                   size: 16,
-                  color: isError ? AppColors.error : AppColors.success,
+                  color: isError ? tokens.danger : tokens.success,
                 ),
                 const SizedBox(width: 8),
                 Flexible(
@@ -355,15 +319,28 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
                     message,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      letterSpacing: -0.2,
+                    style: AppTypography.label(
+                      color: tokens.textPrimary,
+                      weight: FontWeight.w600,
                     ),
                   ),
                 ),
+                if (onOpen != null) ...[
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      onOpen();
+                    },
+                    child: Text(
+                      'Open',
+                      style: AppTypography.label(
+                        color: tokens.accentPinText,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -372,14 +349,23 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     );
   }
 
-  void _openItemDetail(BuildContext context, BaseWorkspaceItem item) {
+  void _openItemDetail(
+    BuildContext context,
+    BaseWorkspaceItem item, {
+    bool startInEditMode = false,
+  }) {
     if (item is WhiteboardCanvasItem) {
       Navigator.of(context).push(
-        _buildTactileRoute(WhiteboardCanvasScreen(item: item)),
+        _buildRoute(WhiteboardCanvasScreen(item: item)),
       );
     } else {
       Navigator.of(context).push(
-        _buildTactileRoute(NoteEditorScreen(item: item)),
+        _buildRoute(
+          NoteEditorScreen(
+            item: item,
+            startInEditMode: startInEditMode,
+          ),
+        ),
       );
     }
   }
@@ -387,10 +373,14 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
   @override
   Widget build(BuildContext context) {
     return HomeScreen(
-      onOpenItem: (item) => _openItemDetail(context, item),
+      onOpenItem: (item, {startInEditMode = false}) => _openItemDetail(
+        context,
+        item,
+        startInEditMode: startInEditMode,
+      ),
       onOpenFavorites: () {
         Navigator.of(context).push(
-          _buildTactileRoute(
+          _buildRoute(
             FolderViewScreen(
               folderType: FolderType.favorites,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -400,7 +390,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenArchive: () {
         Navigator.of(context).push(
-          _buildTactileRoute(
+          _buildRoute(
             FolderViewScreen(
               folderType: FolderType.archive,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -410,7 +400,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenTrash: () {
         Navigator.of(context).push(
-          _buildTactileRoute(
+          _buildRoute(
             FolderViewScreen(
               folderType: FolderType.trash,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -420,7 +410,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenSettings: () {
         Navigator.of(context).push(
-          _buildTactileRoute(const SettingsScreen()),
+          _buildRoute(const SettingsScreen()),
         );
       },
     );

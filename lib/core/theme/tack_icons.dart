@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'app_colors.dart';
 
 enum HeroIconStyle { outline, solid }
 
-/// Central Minimalist & Modern Iconography for Tack powered by custom SVGs and Lucide Icons.
+/// Central Iconography for Tack powered by Lucide Icons and custom SVGs.
+/// Follows docs/design/07-design-system.md §6:
+/// - Single `TackIcon` wrapper across the app.
+/// - Semantic fixes: sort != list-view, saving != undo, forward chevron != chevron-down.
 class TackIcons {
   TackIcons._();
 
@@ -28,49 +32,62 @@ class TackIcons {
   static const String copySvg = 'icons/icon-copy.svg';
   static const String pasteSvg = 'icons/icon-paste.svg';
 
-  // Navigation (Modern & minimal)
-  static const IconData home = LucideIcons.home;
+  // Primary Navigation (5-slot bar: Today · Library · + Capture · Boards · Search)
+  static const IconData today = LucideIcons.calendarCheck2;
+  static const IconData library = LucideIcons.library;
+  static const IconData inbox = LucideIcons.inbox;
+  static const IconData boards = LucideIcons.gitFork;
+  static const IconData home = LucideIcons.sun;
   static const IconData notes = LucideIcons.fileText;
-  static const IconData sticky = LucideIcons.stickyNote;
-  static const IconData whiteboard = LucideIcons.penTool;
-  static const IconData clipboard = LucideIcons.clipboardList;
+  static const IconData sticky = LucideIcons.pin;
+  static const IconData whiteboard = LucideIcons.gitFork;
+  static const IconData clipboard = LucideIcons.inbox;
   static const IconData plus = LucideIcons.plus;
 
-  // Actions & Controls
+  // Actions & Controls (Semantic fixes per 07-design-system.md §6)
   static const IconData menu = LucideIcons.menu;
   static const IconData search = LucideIcons.search;
   static const IconData close = LucideIcons.x;
   static const IconData check = LucideIcons.check;
-  static const IconData checkCircle = LucideIcons.checkCircle2;
+  static const IconData checkCircle = LucideIcons.circleCheck;
   static const IconData back = LucideIcons.arrowLeft;
-  static const IconData more = LucideIcons.moreHorizontal;
+  static const IconData more = LucideIcons.ellipsis;
   static const IconData share = LucideIcons.share2;
   static const IconData copy = LucideIcons.copy;
   static const IconData exportData = LucideIcons.upload;
   static const IconData importData = LucideIcons.download;
-  static const IconData undo = LucideIcons.undo;
-  static const IconData redo = LucideIcons.redo;
+  static const IconData undo = LucideIcons.undo2;
+  static const IconData redo = LucideIcons.redo2;
   static const IconData palette = LucideIcons.palette;
   static const IconData clock = LucideIcons.clock;
+  static const IconData sort = LucideIcons.arrowUpDown;
+  static const IconData saving = LucideIcons.refreshCw;
+  static const IconData command = LucideIcons.terminal;
+  static const IconData task = LucideIcons.squareCheckBig;
+  static const IconData taskOpen = LucideIcons.square;
+  static const IconData folder = LucideIcons.folder;
+  static const IconData folderPlus = LucideIcons.folderPlus;
+  static const IconData graph = LucideIcons.network;
 
   // Views & Folders
   static const IconData gridView = LucideIcons.layoutGrid;
-  static const IconData listView = LucideIcons.list;
-  static const IconData star = LucideIcons.star;
+  static const IconData listView = LucideIcons.arrowUpDown; // Semantic sort alias
+  static const IconData star = LucideIcons.pin; // Pin replaces Favorite star
   static const IconData archive = LucideIcons.archive;
   static const IconData trash = LucideIcons.trash2;
   static const IconData settings = LucideIcons.settings;
   static const IconData sun = LucideIcons.sun;
   static const IconData moon = LucideIcons.moon;
-  static const IconData user = LucideIcons.user;
+  static const IconData user = LucideIcons.circleUser;
   static const IconData notification = LucideIcons.bell;
   static const IconData chevronDown = LucideIcons.chevronDown;
   static const IconData chevronUp = LucideIcons.chevronUp;
+  static const IconData chevronRight = LucideIcons.chevronRight;
   static const IconData edit = LucideIcons.pencil;
   static const IconData reader = LucideIcons.bookOpen;
-  static const IconData tag = LucideIcons.tag;
+  static const IconData tag = LucideIcons.hash;
 
-  // Whiteboard shapes & tools
+  // Board shapes & tools
   static const IconData play = LucideIcons.play;
   static const IconData square = LucideIcons.square;
   static const IconData diamond = LucideIcons.diamond;
@@ -81,17 +98,18 @@ class TackIcons {
   static const IconData camera = LucideIcons.camera;
   static const IconData minus = LucideIcons.minus;
   static const IconData pencil = LucideIcons.pencil;
-  static const IconData link = LucideIcons.link;
+  static const IconData link = LucideIcons.link2;
   static const IconData pin = LucideIcons.pin;
 
   // Tag & category aliases
   static const IconData bolt = LucideIcons.zap;
+  static const IconData sparkles = LucideIcons.sparkles;
   static const IconData briefcase = LucideIcons.briefcase;
   static const IconData calendar = LucideIcons.calendar;
   static const IconData lock = LucideIcons.lock;
 }
 
-/// Aesthetic Icon builder with consistent sizing and sleek custom SVG & Lucide styling.
+/// Aesthetic Icon builder with consistent sizing and token-resolved colors.
 class TackIcon extends StatelessWidget {
   final dynamic icon;
   final double size;
@@ -108,13 +126,12 @@ class TackIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = TackTokens.of(context);
     final effectiveColor = color ??
         IconTheme.of(context).color ??
-        (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF191A23));
+        tokens.textPrimary;
 
     if (icon is String) {
-      // SVGs have a 24x24 bounding box with 16x16 actual icon art (4px padding all around).
-      // Scale by 1.5x so the visible icon glyph matches the target visual size (16 * 1.5 = 24).
       final effectiveSvgSize = size * 1.5;
       return SvgPicture.asset(
         icon as String,
@@ -133,5 +150,47 @@ class TackIcon extends StatelessWidget {
     }
 
     return SizedBox(width: size, height: size);
+  }
+}
+
+/// Bespoke Pin Motif widget (`06-design-directions.md` Direction A: "Paper & Pin").
+/// Used on pinned cards, active nav slot dot, and board ports.
+class TackPinBadge extends StatelessWidget {
+  final double size;
+  final bool showIcon;
+  final Color? color;
+
+  const TackPinBadge({
+    super.key,
+    this.size = 14,
+    this.showIcon = true,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = TackTokens.of(context);
+    final resolvedColor = color ?? tokens.accentPin;
+    if (!showIcon) {
+      return Semantics(
+        label: 'Pinned',
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: resolvedColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+      );
+    }
+    return Semantics(
+      label: 'Pinned',
+      child: Icon(
+        TackIcons.pin,
+        size: size,
+        color: resolvedColor,
+      ),
+    );
   }
 }

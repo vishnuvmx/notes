@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Theme switcher state provider with persistent storage.
+/// Default on first launch is `ThemeMode.system` per docs/design/05-information-architecture.md §6.
 class ThemeProvider extends ChangeNotifier {
   static const String _themePrefKey = 'app_theme_mode';
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
 
   ThemeProvider({ThemeMode? initialMode}) {
     if (initialMode != null) {
@@ -30,7 +31,7 @@ class ThemeProvider extends ChangeNotifier {
       if (saved == 'dark') return ThemeMode.dark;
       if (saved == 'system') return ThemeMode.system;
     } catch (_) {}
-    return ThemeMode.light;
+    return ThemeMode.system;
   }
 
   Future<void> _loadPersistedTheme() async {

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,147 +6,187 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// 5-Destination Bottom Navigation Bar with iOS frosted blur and microanimations.
+/// 5-Destination Bottom Navigation Bar (`05-information-architecture.md` §2.1, `07-design-system.md` §7):
+/// `[ Today ]  [ Library ]  [ (+) Capture ]  [ Boards ]  [ Search ]`
 class SmartBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final VoidCallback onFabTap;
+  final int inboxCount;
 
   const SmartBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
     required this.onFabTap,
+    this.inboxCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
 
     final navItems = [
-      (icon: TackIcons.homeSvg, label: 'Home', index: 0),
-      (icon: TackIcons.notesSvg, label: 'Notes', index: 1),
-      (icon: TackIcons.whiteboardSvg, label: 'Whiteboard', index: 3),
-      (icon: TackIcons.clipboardSvg, label: 'Clipboard', index: 4),
+      (icon: TackIcons.today, label: 'Today', index: 0, badge: inboxCount),
+      (icon: TackIcons.library, label: 'Library', index: 1, badge: 0),
+      (icon: TackIcons.boards, label: 'Boards', index: 3, badge: 0),
+      (icon: TackIcons.search, label: 'Search', index: 4, badge: 0),
     ];
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: (isDark ? const Color(0xFF000000) : Colors.white).withValues(alpha: 0.88),
-            border: Border(
-              top: BorderSide(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                width: 0.8,
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: tokens.surfacePrimary,
+        border: Border(
+          top: BorderSide(
+            color: tokens.borderSubtle,
+            width: 1,
           ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 64,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // 1. Home
-                  _buildNavItem(context, navItems[0], isDark),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: AppSpacing.bottomBarHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // 0. Today
+              _buildNavItem(context, navItems[0], tokens),
 
-                  // 2. Notes
-                  _buildNavItem(context, navItems[1], isDark),
+              // 1. Library
+              _buildNavItem(context, navItems[1], tokens),
 
-                  // 3. Center (+) Floating Action Button
-                  _buildCenterFab(context, isDark),
+              // 2. Center (+) Capture Button (56x56dp in action/primary)
+              _buildCenterCaptureButton(context, tokens),
 
-                  // 4. Whiteboard
-                  _buildNavItem(context, navItems[2], isDark),
+              // 3. Boards
+              _buildNavItem(context, navItems[2], tokens),
 
-                  // 5. Clipboard
-                  _buildNavItem(context, navItems[3], isDark),
-                ],
-              ),
-            ),
+              // 4. Search
+              _buildNavItem(context, navItems[3], tokens),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ({dynamic icon, String label, int index}) item, bool isDark) {
+  Widget _buildNavItem(
+    BuildContext context,
+    ({dynamic icon, String label, int index, int badge}) item,
+    TackTokens tokens,
+  ) {
     final isSelected = currentIndex == item.index;
-    final activeColor = isDark ? AppColors.primaryLight : AppColors.primaryDark;
-    final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+    final iconColor = isSelected ? tokens.textPrimary : tokens.textTertiary;
 
     return Expanded(
-      child: InkWell(
-        key: ValueKey('nav_item_${item.index}'),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap(item.index);
-        },
-        borderRadius: AppSpacing.roundedSm,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedScale(
-              scale: isSelected ? 1.08 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutBack,
-              child: TackIcon(
-                item.icon,
-                size: 24,
-                color: isSelected ? activeColor : inactiveColor,
-                style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
-              ),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: item.label,
+        child: InkWell(
+          key: ValueKey('nav_item_${item.index}'),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap(item.index);
+          },
+          borderRadius: AppSpacing.roundedSm,
+          child: SizedBox(
+            height: AppSpacing.bottomBarHeight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    TackIcon(
+                      item.icon,
+                      size: 22,
+                      color: iconColor,
+                      style: isSelected
+                          ? HeroIconStyle.solid
+                          : HeroIconStyle.outline,
+                    ),
+                    if (item.badge > 0)
+                      Positioned(
+                        top: -3,
+                        right: -6,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: tokens.accentPin,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: tokens.surfacePrimary,
+                              width: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption(
+                    color: iconColor,
+                    weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                // Signature Pin Red dot under the active tab (`07` §7)
+                AnimatedContainer(
+                  duration: AppSpacing.durationFast,
+                  curve: AppSpacing.curveStandard,
+                  width: isSelected ? 4 : 0,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isSelected ? tokens.accentPin : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 3),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 180),
-              style: (AppTypography.lightTextTheme.labelSmall ?? const TextStyle()).copyWith(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-              child: Text(item.label),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCenterFab(BuildContext context, bool isDark) {
-    return Container(
-      width: 50,
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.lightSurface : AppColors.primaryDark,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? Colors.white : AppColors.primaryDark).withValues(alpha: 0.22),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+  Widget _buildCenterCaptureButton(BuildContext context, TackTokens tokens) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
+      child: Semantics(
+        button: true,
+        label: 'Capture thought, note, or board',
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: tokens.actionPrimary,
+            shape: BoxShape.circle,
+            boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            onFabTap();
-          },
-          child: Center(
-            child: TackIcon(
-              TackIcons.plusSvg,
-              size: 24,
-              color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              key: const ValueKey('nav_capture_fab'),
+              customBorder: const CircleBorder(),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                onFabTap();
+              },
+              child: Center(
+                child: TackIcon(
+                  TackIcons.plus,
+                  size: 22,
+                  color: tokens.actionPrimaryFg,
+                ),
+              ),
             ),
           ),
         ),

@@ -11,27 +11,48 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/date_formatter.dart';
+import 'frontmatter_service.dart';
 
 /// Reusable service for note exporting, formatting, PDF generation, and clipboard operations.
 class NoteExportService {
   NoteExportService._();
 
   /// Formats note title and content as structured Markdown.
+  /// Preserves YAML frontmatter (`--- ... ---`) at line 0 when present (`03` §7 P1).
   static String formatMarkdown({
     required String title,
     required String content,
     List<String> tags = const [],
   }) {
+    final parsed = FrontmatterService.parse(content);
     final buffer = StringBuffer();
-    if (title.trim().isNotEmpty) {
-      buffer.writeln('# $title');
+
+    if (parsed.hasProperties) {
+      final rawLines = content.split('\n');
+      for (int i = 0; i < parsed.contentStartLineIndex && i < rawLines.length; i++) {
+        buffer.writeln(rawLines[i]);
+      }
+      buffer.writeln();
+    }
+
+    final body = parsed.hasProperties ? parsed.bodyWithoutFrontmatter : content;
+    final cleanTitle = title.trim();
+    final startsWithSameH1 = cleanTitle.isNotEmpty &&
+        body.trimLeft().startsWith('# ') &&
+        body.trimLeft().split('\n').first.contains(cleanTitle);
+
+    if (cleanTitle.isNotEmpty && !startsWithSameH1) {
+      buffer.writeln('# $cleanTitle');
       buffer.writeln();
     }
     if (tags.isNotEmpty) {
-      buffer.writeln(tags.map((t) => '#$t').join(' '));
-      buffer.writeln();
+      final missingTags = tags.where((t) => !body.contains('#$t')).toList();
+      if (missingTags.isNotEmpty) {
+        buffer.writeln(missingTags.map((t) => '#$t').join(' '));
+        buffer.writeln();
+      }
     }
-    buffer.write(content);
+    buffer.write(body);
     return buffer.toString();
   }
 
@@ -479,17 +500,17 @@ class NoteExportService {
     // Color definitions
     final Color bgColor = isSticky
         ? (isDark ? palette.darkColor : palette.lightColor)
-        : (isDark ? const Color(0xFF1E1F24) : Colors.white);
+        : (isDark ? AppColors.darkSurface : AppColors.lightSurface);
 
     final Color titleColor = isSticky
-        ? (isDark ? Colors.white : const Color(0xFF191A23))
-        : (isDark ? const Color(0xFFF4F4F6) : const Color(0xFF191A23));
+        ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
+        : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
 
     final Color bodyColor = isSticky
-        ? (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF2D3139))
-        : (isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151));
+        ? (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)
+        : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary);
 
-    final Color tagColor = palette.lightColor;
+    final Color tagColor = palette.indexColor;
 
     // 1. Prepare Title Painter
     final displayTitle = title.trim().isEmpty
@@ -576,8 +597,8 @@ class NoteExportService {
     // Border
     final borderPaint = Paint()
       ..color = isSticky
-          ? (isDark ? Colors.white24 : const Color(0xFF191A23).withValues(alpha: 0.15))
-          : (isDark ? const Color(0xFF2D3748) : const Color(0xFFE2E8F0))
+          ? (isDark ? Colors.white24 : AppColors.lightTextPrimary.withValues(alpha: 0.15))
+          : (isDark ? AppColors.darkBorderSubtle : AppColors.lightBorderSubtle)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawRRect(cardRect, borderPaint);
@@ -588,7 +609,7 @@ class NoteExportService {
     if (isSticky) {
       // Tape / Pin at top center
       final tapePaint = Paint()
-        ..color = (isDark ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF191A23).withValues(alpha: 0.18))
+        ..color = (isDark ? Colors.white.withValues(alpha: 0.25) : AppColors.lightTextPrimary.withValues(alpha: 0.18))
         ..style = PaintingStyle.fill;
       final tapeRect = RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cardWidth / 2, currentY), width: 72, height: 16),

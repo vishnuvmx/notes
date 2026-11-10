@@ -11,6 +11,7 @@ import 'package:notes/state/theme_provider.dart';
 import 'package:notes/state/workspace_provider.dart';
 import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
 import 'package:notes/ui/components/inputs/app_search_field.dart';
+import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
 import 'package:notes/ui/screens/editor/note_editor_screen.dart';
 
 class _MockWorkspaceRepo extends IWorkspaceRepository {
@@ -291,6 +292,96 @@ Footer text.
       // NoteEditorScreen is popped, Home screen is back
       expect(find.byType(NoteEditorScreen), findsNothing);
       expect(find.text('Open Note'), findsOneWidget);
+    });
+
+    testWidgets('5. Untouched blank draft discards and pops directly on Back (05 §2.2 D2)', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final workspaceProvider = WorkspaceProvider(repo);
+
+      final blankDraft = await workspaceProvider.createQuickItem(
+        title: 'Untitled Note',
+        content: '',
+        type: ItemType.note,
+        paletteId: 'amber',
+      );
+      expect(workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id), isTrue);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).push(
+                        MaterialPageRoute(
+                          builder: (_) => NoteEditorScreen(
+                            item: blankDraft,
+                            startInEditMode: true,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('New Blank Draft'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('New Blank Draft'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NoteEditorScreen), findsOneWidget);
+
+      // Press Back immediately without typing anything
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+
+      // Should pop directly back to caller and discard the untouched empty draft
+      expect(find.byType(NoteEditorScreen), findsNothing);
+      expect(find.text('New Blank Draft'), findsOneWidget);
+      expect(workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id), isFalse);
+    });
+
+    testWidgets('6. SmartBottomNavBar renders 5 Paper & Pin slots (Today, Library, Capture, Boards, Search)', (tester) async {
+      int tappedIndex = -1;
+      bool captureTapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            bottomNavigationBar: SmartBottomNavBar(
+              currentIndex: 0,
+              inboxCount: 3,
+              onTap: (idx) => tappedIndex = idx,
+              onFabTap: () => captureTapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Library'), findsOneWidget);
+      expect(find.text('Boards'), findsOneWidget);
+      expect(find.text('Search'), findsOneWidget);
+
+      await tester.tap(find.text('Library'));
+      await tester.pump();
+      expect(tappedIndex, 1);
+
+      await tester.tap(find.byKey(const ValueKey('nav_capture_fab')));
+      await tester.pump();
+      expect(captureTapped, isTrue);
     });
   });
 }

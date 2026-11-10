@@ -253,32 +253,25 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
       return _buildRawCodeView(isDark);
     }
 
+    final tokens = context.tokens;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => _openInWhiteboard(context),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF161820) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: tokens.surfacePrimary,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+            color: tokens.borderSubtle,
             width: 1.0,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: IgnorePointer(
-            child: _buildDiagramView(isDark),
-          ),
+          child: _buildDiagramView(isDark),
         ),
       ),
     );

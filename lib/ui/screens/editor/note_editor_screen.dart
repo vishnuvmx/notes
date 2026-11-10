@@ -44,18 +44,21 @@ import '../whiteboard/whiteboard_canvas_screen.dart';
 class NoteEditorScreen extends StatefulWidget {
   final BaseWorkspaceItem item;
   final String? initialHeadingAnchor;
+  final bool startInEditMode;
 
   const NoteEditorScreen({
     super.key,
     required this.item,
     this.initialHeadingAnchor,
+    this.startInEditMode = false,
   });
 
   @override
   State<NoteEditorScreen> createState() => _NoteEditorScreenState();
 }
 
-class _NoteEditorScreenState extends State<NoteEditorScreen> {
+class _NoteEditorScreenState extends State<NoteEditorScreen>
+    with WidgetsBindingObserver {
   late final TextEditingController _titleController;
   late final MarkdownTextEditingController _contentController;
   final FocusNode _contentFocusNode = FocusNode();
@@ -87,6 +90,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _titleController = TextEditingController(text: widget.item.title);
     final initialContent = widget.item is TextNote
         ? (widget.item as TextNote).content
@@ -98,7 +102,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       text: initialContent,
       paletteId: _paletteId,
     );
-    _isEditingMode = widget.initialHeadingAnchor == null && initialContent.trim().isEmpty;
+    _isEditingMode = widget.startInEditMode ||
+        (widget.initialHeadingAnchor == null && initialContent.trim().isEmpty);
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
     _folderName = widget.item.folderName;
     _parentId = widget.item.parentId;
@@ -198,14 +203,38 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
+  bool get _isUntouchedEmptyDraft {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+    final isDefaultTitle = title.isEmpty ||
+        title == 'Untitled Note' ||
+        title == 'Untitled' ||
+        title == 'Quick Sticky';
+    return isDefaultTitle && content.isEmpty && _tags.isEmpty;
+  }
+
   void _flushSave() {
     final ws = _workspace;
     if (ws == null) return;
+    if (_isUntouchedEmptyDraft) return;
     ws.saveItem(_buildUpdatedItem(ws));
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (_saveDebounce?.isActive ?? false) {
+        _saveDebounce?.cancel();
+        _flushSave();
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (_saveDebounce?.isActive ?? false) {
       _saveDebounce?.cancel();
       _flushSave();
@@ -283,6 +312,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     HapticFeedback.lightImpact();
     if (_isSearching) {
       _closeSearch();
+      return;
+    }
+    // Discard untouched empty draft on Back (`05-information-architecture.md` §2.2 D2)
+    if (_isUntouchedEmptyDraft) {
+      _saveDebounce?.cancel();
+      FocusScope.of(context).unfocus();
+      _workspace?.deletePermanently(widget.item.id);
+      Navigator.of(context).pop();
       return;
     }
     if (_isEditingMode) {
@@ -1572,9 +1609,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final workspace = context.watch<WorkspaceProvider>();
     final palette = AppColors.getPaletteById(_paletteId);
 
-    final backgroundColor = isDark
-        ? AppColors.darkBackground
-        : palette.softBackground;
+    final tokens = context.tokens;
+    final backgroundColor = tokens.canvasPrimary;
 
     final content = _contentController.text;
     final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
@@ -1779,7 +1815,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   await _handleSaveAsTemplate();
                 } else if (val == 'duplicate') {
                   HapticFeedback.lightImpact();
-                  workspace.duplicateItem(widget.item.id);
+                  workspace.duplicateItem(widget.item);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Note duplicated!'),
@@ -1848,16 +1884,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             if (_isSearching)
               _buildFindAndReplaceBar(isDark: isDark, palette: palette),
 
-            // Scrollable Note Document
+            // Scrollable Note Document (constrained to 720dp reading measure on wide screens)
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppSpacing.readMaxWidth,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     // Reader Mode Banner Indicator (Tap for detailed note stats)
                     if (!_isEditingMode)
                       GestureDetector(
@@ -1931,10 +1970,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   _titleController.text.isEmpty
                                       ? 'Untitled Note'
                                       : _titleController.text,
-                                  style: theme.textTheme.displaySmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.6,
-                                    height: 1.2,
+                                  style: AppTypography.display(
+                                    color: tokens.textPrimary,
                                   ),
                                 ),
                         ),
@@ -2158,24 +2195,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       )
                     else ...[
-                      GestureDetector(
-                        behavior: HitTestBehavior.deferToChild,
-                        onTap: () {
-                          _toggleViewMode();
-                        },
-                        child: RichNoteContentView(
-                          content: _contentController.text,
-                          paletteId: _paletteId,
-                          workspaceItems: workspace.rawItems,
-                          onWikiLinkTap: _handleWikiLinkTap,
-                          onHeadingJump: _jumpToLineIndex,
-                          onLineTap: (lineIdx) {
-                            _toggleViewMode(targetLineIndex: lineIdx);
+                      SelectionArea(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.deferToChild,
+                          onTap: () {
+                            _toggleViewMode();
                           },
-                          onContentChanged: (newContent) {
-                            _contentController.text = newContent;
-                            _saveNote();
-                          },
+                          child: RichNoteContentView(
+                            content: _contentController.text,
+                            paletteId: _paletteId,
+                            workspaceItems: workspace.rawItems,
+                            onWikiLinkTap: _handleWikiLinkTap,
+                            onHeadingJump: _jumpToLineIndex,
+                            onLineTap: (lineIdx) {
+                              _toggleViewMode(targetLineIndex: lineIdx);
+                            },
+                            onContentChanged: (newContent) {
+                              _contentController.text = newContent;
+                              _saveNote();
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -2215,7 +2254,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       },
                       onConvertUnlinkedToWikiLink: _handleConvertUnlinkedMention,
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

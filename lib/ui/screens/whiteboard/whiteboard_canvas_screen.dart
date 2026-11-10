@@ -230,6 +230,18 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         if (widget.initialFocusNodeId != null &&
             widget.initialFocusNodeId!.trim().isNotEmpty) {
           _focusNodeByIdOrLabel(widget.initialFocusNodeId!.trim());
+        } else if (widget.item.panOffset != Offset.zero) {
+          final savedZoom = widget.item.zoomScale.clamp(0.15, 3.0);
+          final matrix = Matrix4.identity()
+            ..translateByVector3(
+              vmath.Vector3(
+                widget.item.panOffset.dx,
+                widget.item.panOffset.dy,
+                0.0,
+              ),
+            )
+            ..scaleByVector3(vmath.Vector3(savedZoom, savedZoom, 1.0));
+          _transformationController.value = matrix;
         } else {
           _fitCanvasToContent();
         }
@@ -300,9 +312,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   void _saveCanvasState() {
+    final matrix = _transformationController.value;
+    final zoom = matrix.getMaxScaleOnAxis().clamp(0.15, 3.0);
+    final translation = matrix.getTranslation();
     final updated = widget.item.copyWith(
       nodes: _nodes,
       edges: _edges,
+      zoomScale: zoom,
+      panOffset: Offset(translation.x, translation.y),
       updatedAt: DateTime.now(),
     );
     try {

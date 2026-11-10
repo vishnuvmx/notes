@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'base_item.dart';
 
-/// Node shape types matching the flowchart editor palette in Screenshot 4.
+/// Node shape types on a Board canvas.
 enum CanvasNodeType {
   startEnd,     // Rounded pill
   process,      // Rectangle
@@ -11,7 +11,7 @@ enum CanvasNodeType {
   sticky,       // Sticky note shape
   textOnly,     // Floating text
   image,        // Pinned/draggable image node
-  specCard;     // Figma-Specs style Markdown Spec / Linked Note card
+  specCard;     // Markdown Spec / Linked Note card
 
   String get label {
     switch (this) {
@@ -202,6 +202,7 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
     super.isFavorite,
     super.isArchived,
     super.isTrash,
+    super.isInbox,
     super.folderName,
     super.parentId,
     super.iconEmoji,
@@ -215,9 +216,9 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
   String getSummary() {
     final specCount = nodes.where((n) => n.shapeType == CanvasNodeType.specCard).length;
     if (specCount > 0) {
-      return '${nodes.length} nodes ($specCount spec${specCount == 1 ? '' : 's'}), ${edges.length} connections';
+      return '${nodes.length} nodes ($specCount spec${specCount == 1 ? '' : 's'}) · ${edges.length} links';
     }
-    return '${nodes.length} nodes, ${edges.length} connections';
+    return '${nodes.length} nodes · ${edges.length} links';
   }
 
   @override
@@ -229,6 +230,19 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
   }
 
   @override
+  String extractMatchSnippet(String query) {
+    if (query.trim().isEmpty) return getSummary();
+    final lower = query.toLowerCase();
+    for (final node in nodes) {
+      if (node.text.toLowerCase().contains(lower)) {
+        final cleaned = node.text.replaceAll('\n', ' ').trim();
+        return cleaned.length > 90 ? '${cleaned.substring(0, 90)}…' : cleaned;
+      }
+    }
+    return getSummary();
+  }
+
+  @override
   WhiteboardCanvasItem copyWith({
     String? title,
     DateTime? updatedAt,
@@ -236,6 +250,7 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
     bool? isFavorite,
     bool? isArchived,
     bool? isTrash,
+    bool? isInbox,
     String? folderName,
     bool clearFolder = false,
     String? parentId,
@@ -256,6 +271,7 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
       isFavorite: isFavorite ?? this.isFavorite,
       isArchived: isArchived ?? this.isArchived,
       isTrash: isTrash ?? this.isTrash,
+      isInbox: isInbox ?? this.isInbox,
       folderName: clearFolder ? null : (folderName ?? this.folderName),
       parentId: clearParent ? null : (parentId ?? this.parentId),
       iconEmoji: clearIcon ? null : (iconEmoji ?? this.iconEmoji),
@@ -278,6 +294,7 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
       'isFavorite': isFavorite,
       'isArchived': isArchived,
       'isTrash': isTrash,
+      'isInbox': isInbox,
       'folderName': folderName,
       'parentId': parentId,
       'iconEmoji': iconEmoji,
@@ -299,6 +316,7 @@ class WhiteboardCanvasItem extends BaseWorkspaceItem {
       isFavorite: json['isFavorite'] as bool? ?? false,
       isArchived: json['isArchived'] as bool? ?? false,
       isTrash: json['isTrash'] as bool? ?? false,
+      isInbox: json['isInbox'] as bool? ?? false,
       folderName: json['folderName'] as String?,
       parentId: json['parentId'] as String?,
       iconEmoji: json['iconEmoji'] as String?,

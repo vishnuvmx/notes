@@ -1,10 +1,12 @@
 import 'base_item.dart';
 
 /// Concrete Sticky Note model inheriting from BaseWorkspaceItem.
+/// Legacy sticky notes are migrated and rendered as standard notes with object
+/// color bands or placed on Boards (`05-information-architecture.md` §7.2).
 class StickyNote extends BaseWorkspaceItem {
   final String content;
-  final double rotationAngle; // Slight playful skew angle in radians
-  final int priority; // 0 = normal, 1 = important, 2 = urgent
+  final double rotationAngle;
+  final int priority;
 
   const StickyNote({
     required super.id,
@@ -15,6 +17,7 @@ class StickyNote extends BaseWorkspaceItem {
     super.isFavorite,
     super.isArchived,
     super.isTrash,
+    super.isInbox,
     super.folderName,
     super.parentId,
     super.iconEmoji,
@@ -38,6 +41,14 @@ class StickyNote extends BaseWorkspaceItem {
   }
 
   @override
+  bool matchesQuery(String query) {
+    if (query.isEmpty) return true;
+    final lower = query.toLowerCase();
+    return title.toLowerCase().contains(lower) ||
+        content.toLowerCase().contains(lower);
+  }
+
+  @override
   StickyNote copyWith({
     String? title,
     DateTime? updatedAt,
@@ -45,6 +56,7 @@ class StickyNote extends BaseWorkspaceItem {
     bool? isFavorite,
     bool? isArchived,
     bool? isTrash,
+    bool? isInbox,
     String? folderName,
     bool clearFolder = false,
     String? parentId,
@@ -64,6 +76,7 @@ class StickyNote extends BaseWorkspaceItem {
       isFavorite: isFavorite ?? this.isFavorite,
       isArchived: isArchived ?? this.isArchived,
       isTrash: isTrash ?? this.isTrash,
+      isInbox: isInbox ?? this.isInbox,
       folderName: clearFolder ? null : (folderName ?? this.folderName),
       parentId: clearParent ? null : (parentId ?? this.parentId),
       iconEmoji: clearIcon ? null : (iconEmoji ?? this.iconEmoji),
@@ -85,6 +98,7 @@ class StickyNote extends BaseWorkspaceItem {
       'isFavorite': isFavorite,
       'isArchived': isArchived,
       'isTrash': isTrash,
+      'isInbox': isInbox,
       'folderName': folderName,
       'parentId': parentId,
       'iconEmoji': iconEmoji,
@@ -104,6 +118,7 @@ class StickyNote extends BaseWorkspaceItem {
       isFavorite: json['isFavorite'] as bool? ?? false,
       isArchived: json['isArchived'] as bool? ?? false,
       isTrash: json['isTrash'] as bool? ?? false,
+      isInbox: json['isInbox'] as bool? ?? false,
       folderName: json['folderName'] as String?,
       parentId: json['parentId'] as String?,
       iconEmoji: json['iconEmoji'] as String?,

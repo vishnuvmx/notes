@@ -6,10 +6,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// A unified, tactile search input component for Tack.
-/// Features exactly ONE visual container border that highlights on focus,
-/// an integrated clear (X) button with minimum 48x48dp touch target,
-/// tap-outside focus dismissal, and zero inner decoration leaking.
+/// Unified search input component for Tack (`07-design-system.md` §7).
+/// Features:
+/// - Single visual container border (`1dp` `border/subtle` unfocused, `1.5dp` `border/focus` focused)
+/// - `r-sm` (`8dp`) corner radius
+/// - Integrated clear (X) button with 48dp touch target
+/// - Zero inner `InputDecoration` border leaking (`AppInputDecorations.bareWithHint`)
 class AppSearchField extends StatefulWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
@@ -27,15 +29,15 @@ class AppSearchField extends StatefulWidget {
     super.key,
     this.controller,
     this.focusNode,
-    this.hintText = 'Search...',
+    this.hintText = 'Search notes, boards, tasks, or type an action…',
     this.onChanged,
     this.onSubmitted,
     this.onClear,
     this.autofocus = false,
     this.leading,
     this.margin,
-    this.height = 44,
-    this.borderRadius = 14,
+    this.height = 48,
+    this.borderRadius = AppSpacing.rSm,
   });
 
   @override
@@ -134,13 +136,10 @@ class _AppSearchFieldState extends State<AppSearchField> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
 
-    final bgColor = isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt;
-    final borderColor = _isFocused
-        ? (isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder)
-        : (isDark ? AppColors.darkBorder : AppColors.lightBorder);
+    final bgColor = _isFocused ? tokens.surfacePrimary : tokens.canvasSunken;
+    final borderColor = _isFocused ? tokens.borderFocus : tokens.borderSubtle;
 
     return Container(
       margin: widget.margin,
@@ -155,19 +154,17 @@ class _AppSearchFieldState extends State<AppSearchField> {
       ),
       child: Row(
         children: [
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: AppSpacing.s3),
           widget.leading ??
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
                 child: TackIcon(
                   TackIcons.search,
                   size: 18,
-                  color: _isFocused
-                      ? (isDark ? AppColors.darkTextPrimary : AppColors.primaryDark)
-                      : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                  color: _isFocused ? tokens.textPrimary : tokens.textTertiary,
                 ),
               ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: AppSpacing.s2),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -177,23 +174,14 @@ class _AppSearchFieldState extends State<AppSearchField> {
               onTapOutside: (_) => _focusNode.unfocus(),
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.3,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              style: AppTypography.bodySm(
+                color: tokens.textPrimary,
+                weight: FontWeight.w500,
               ),
-              cursorColor: isDark ? AppColors.darkTextPrimary : AppColors.primaryDark,
+              cursorColor: tokens.textPrimary,
               decoration: AppInputDecorations.bareWithHint(
                 widget.hintText,
-                hintStyle: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: -0.3,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                ),
+                hintStyle: AppTypography.bodySm(color: tokens.textTertiary),
               ),
             ),
           ),
@@ -202,23 +190,25 @@ class _AppSearchFieldState extends State<AppSearchField> {
               label: 'Clear search text',
               button: true,
               child: SizedBox(
-                width: 44,
-                height: 44,
+                width: AppSpacing.minTouchTarget,
+                height: AppSpacing.minTouchTarget,
                 child: IconButton(
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                  splashRadius: 18,
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
                   icon: TackIcon(
                     TackIcons.close,
                     size: 16,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    color: tokens.textTertiary,
                   ),
                   onPressed: _handleClear,
                 ),
               ),
             )
           else
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.s3),
         ],
       ),
     );

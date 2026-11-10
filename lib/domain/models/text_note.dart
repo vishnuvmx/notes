@@ -4,6 +4,7 @@ import 'base_item.dart';
 class TextNote extends BaseWorkspaceItem {
   final String content;
   final List<String> tags;
+  final List<String> links;
   final int estimatedMinutes;
   final String? sourceApp;
 
@@ -16,11 +17,13 @@ class TextNote extends BaseWorkspaceItem {
     super.isFavorite,
     super.isArchived,
     super.isTrash,
+    super.isInbox,
     super.folderName,
     super.parentId,
     super.iconEmoji,
     required this.content,
     this.tags = const [],
+    this.links = const [],
     this.estimatedMinutes = 3,
     this.sourceApp,
   }) : super(type: ItemType.note);
@@ -40,7 +43,15 @@ class TextNote extends BaseWorkspaceItem {
   @override
   String getSummary() {
     if (content.trim().isEmpty) return 'Empty note';
-    final cleaned = content
+    // Strip YAML frontmatter block if present
+    var body = content;
+    if (body.startsWith('---\n')) {
+      final endIdx = body.indexOf('\n---', 4);
+      if (endIdx != -1) {
+        body = body.substring(endIdx + 4);
+      }
+    }
+    final cleaned = body
         .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
         .replaceAll(RegExp(r'\[[ xX]\]'), '')
         .replaceAll(RegExp(r'[*_~=`]+'), '')
@@ -48,17 +59,42 @@ class TextNote extends BaseWorkspaceItem {
         .replaceAll('\n', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    return cleaned.length > 90 ? '${cleaned.substring(0, 90)}...' : cleaned;
+    if (cleaned.isEmpty) return 'Empty note';
+    return cleaned.length > 110 ? '${cleaned.substring(0, 110)}...' : cleaned;
+  }
+
+  @override
+  String extractMatchSnippet(String query) {
+    final trimmedQuery = query.trim().toLowerCase();
+    if (trimmedQuery.isEmpty) return getSummary();
+    for (final rawLine in content.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty || line == '---') continue;
+      if (line.toLowerCase().contains(trimmedQuery)) {
+        final cleaned = line
+            .replaceAll(RegExp(r'^\s*#+\s*'), '')
+            .replaceAll(RegExp(r'[*_~=`]+'), '')
+            .trim();
+        return cleaned.length > 100 ? '${cleaned.substring(0, 100)}...' : cleaned;
+      }
+    }
+    return getSummary();
   }
 
   @override
   bool matchesQuery(String query) {
     if (query.isEmpty) return true;
-    final lowerQuery = query.toLowerCase().replaceAll('#', '');
-    final matchInTags = tags.any((t) => t.toLowerCase().contains(lowerQuery));
-    return super.matchesQuery(query) || matchInTags;
+    final lowerQuery = query.toLowerCase().trim();
+    final tagQuery = lowerQuery.replaceAll('#', '');
+    final matchInTags = tags.any((t) => t.toLowerCase().contains(tagQuery));
+    final matchInBody = content.toLowerCase().contains(lowerQuery);
+    final matchInSource =
+        sourceApp != null && sourceApp!.toLowerCase().contains(lowerQuery);
+    return super.matchesQuery(query) ||
+        matchInBody ||
+        matchInTags ||
+        matchInSource;
   }
-
 
   @override
   TextNote copyWith({
@@ -68,6 +104,7 @@ class TextNote extends BaseWorkspaceItem {
     bool? isFavorite,
     bool? isArchived,
     bool? isTrash,
+    bool? isInbox,
     String? folderName,
     bool clearFolder = false,
     String? parentId,
@@ -76,6 +113,7 @@ class TextNote extends BaseWorkspaceItem {
     bool clearIcon = false,
     String? content,
     List<String>? tags,
+    List<String>? links,
     int? estimatedMinutes,
     String? sourceApp,
   }) {
@@ -88,11 +126,13 @@ class TextNote extends BaseWorkspaceItem {
       isFavorite: isFavorite ?? this.isFavorite,
       isArchived: isArchived ?? this.isArchived,
       isTrash: isTrash ?? this.isTrash,
+      isInbox: isInbox ?? this.isInbox,
       folderName: clearFolder ? null : (folderName ?? this.folderName),
       parentId: clearParent ? null : (parentId ?? this.parentId),
       iconEmoji: clearIcon ? null : (iconEmoji ?? this.iconEmoji),
       content: content ?? this.content,
       tags: tags ?? this.tags,
+      links: links ?? this.links,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
       sourceApp: sourceApp ?? this.sourceApp,
     );
@@ -110,11 +150,13 @@ class TextNote extends BaseWorkspaceItem {
       'isFavorite': isFavorite,
       'isArchived': isArchived,
       'isTrash': isTrash,
+      'isInbox': isInbox,
       'folderName': folderName,
       'parentId': parentId,
       'iconEmoji': iconEmoji,
       'content': content,
       'tags': tags,
+      'links': links,
       'estimatedMinutes': estimatedMinutes,
       'sourceApp': sourceApp,
     };
@@ -130,11 +172,13 @@ class TextNote extends BaseWorkspaceItem {
       isFavorite: json['isFavorite'] as bool? ?? false,
       isArchived: json['isArchived'] as bool? ?? false,
       isTrash: json['isTrash'] as bool? ?? false,
+      isInbox: json['isInbox'] as bool? ?? false,
       folderName: json['folderName'] as String?,
       parentId: json['parentId'] as String?,
       iconEmoji: json['iconEmoji'] as String?,
       content: json['content'] as String? ?? '',
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      links: (json['links'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       estimatedMinutes: json['estimatedMinutes'] as int? ?? 3,
       sourceApp: json['sourceApp'] as String?,
     );
