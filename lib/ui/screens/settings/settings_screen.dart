@@ -54,11 +54,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex.clamp(0, 1),
     );
+    _tabController.addListener(_onTabChanged);
     _loadProfileName();
+  }
+
+  void _onTabChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -236,8 +242,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             builder: (context, setDialogState) {
               return AlertDialog(
                 title: const Text('Restore Backup'),
-                content: SizedBox(
-                  width: 360,
+                content: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -381,6 +387,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               onTap: (_) => HapticFeedback.selectionClick(),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              splashBorderRadius: AppSpacing.roundedPill,
               indicator: BoxDecoration(
                 color: tokens.actionPrimary,
                 borderRadius: AppSpacing.roundedPill,
@@ -402,8 +411,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: IndexedStack(
+              index: _tabController.index,
               children: [
                 _buildPreferencesTab(context, themeProv, workspace, tokens),
                 const ReleaseNotesTab(),
@@ -438,6 +447,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       children: [
         // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
         Container(
+          clipBehavior: Clip.antiAlias,
           padding: const EdgeInsets.all(AppSpacing.s4),
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
@@ -581,12 +591,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
 
         // 2. Trash Navigation Tile
         Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
             boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
-          child: ListTile(
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
             leading: Container(
               width: 36,
               height: 36,
@@ -654,6 +667,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             },
           ),
         ),
+      ),
 
         const SizedBox(height: AppSpacing.s6),
 
@@ -668,12 +682,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         _SectionLabel(text: 'Today & Daily Note'),
         const SizedBox(height: AppSpacing.s2),
         Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
             boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
-          child: SwitchListTile(
+          child: Material(
+            color: Colors.transparent,
+            child: SwitchListTile(
             title: Text(
               'Carry forward unfinished tasks',
               style: AppTypography.body(
@@ -694,6 +711,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             },
           ),
         ),
+      ),
 
         const SizedBox(height: AppSpacing.s6),
 
@@ -701,12 +719,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         _SectionLabel(text: 'Local Storage & Backup'),
         const SizedBox(height: AppSpacing.s2),
         Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
             boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
-          child: Column(
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -778,6 +799,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             ],
           ),
         ),
+      ),
 
         const SizedBox(height: AppSpacing.s6),
 
@@ -785,12 +807,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         _SectionLabel(text: 'About'),
         const SizedBox(height: AppSpacing.s2),
         Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
             boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
-          child: Column(
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
             children: [
               ListTile(
                 leading: TackIcon(
@@ -823,6 +848,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             ],
           ),
         ),
+      ),
       ],
     );
   }
@@ -902,6 +928,7 @@ class _ThemeSegmentedControl extends StatelessWidget {
     ];
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: tokens.canvasSunken,
@@ -911,45 +938,48 @@ class _ThemeSegmentedControl extends StatelessWidget {
         children: modes.map((entry) {
           final isSelected = themeProv.themeMode == entry.$1;
           return Expanded(
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                themeProv.setThemeMode(entry.$1);
-              },
-              borderRadius: AppSpacing.roundedPill,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 40),
-                child: AnimatedContainer(
-                  duration: AppSpacing.durationFast,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? tokens.actionPrimary
-                        : Colors.transparent,
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TackIcon(
-                        entry.$3,
-                        size: 15,
-                        color: isSelected
-                            ? tokens.actionPrimaryFg
-                            : tokens.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        entry.$2,
-                        style: AppTypography.label(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  themeProv.setThemeMode(entry.$1);
+                },
+                borderRadius: AppSpacing.roundedPill,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 40),
+                  child: AnimatedContainer(
+                    duration: AppSpacing.durationFast,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? tokens.actionPrimary
+                          : Colors.transparent,
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TackIcon(
+                          entry.$3,
+                          size: 15,
                           color: isSelected
                               ? tokens.actionPrimaryFg
                               : tokens.textSecondary,
-                          weight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          entry.$2,
+                          style: AppTypography.label(
+                            color: isSelected
+                                ? tokens.actionPrimaryFg
+                                : tokens.textSecondary,
+                            weight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

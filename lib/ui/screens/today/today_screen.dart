@@ -305,6 +305,7 @@ class _WeekStripCard extends StatelessWidget {
         borderRadius: AppSpacing.roundedLg,
         boxShadow: AppSpacing.elev1(tokens.isDark),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Row(
         children: List.generate(7, (i) {
           final dayDate = monday.add(Duration(days: i));
@@ -327,45 +328,48 @@ class _WeekStripCard extends StatelessWidget {
                   color: isToday ? tokens.canvasSunken : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _dayLabels[i],
-                      style: AppTypography.caption(
-                        color: isToday
-                            ? tokens.textSecondary
-                            : (isPast
-                                ? tokens.textTertiary.withValues(alpha: 0.7)
-                                : tokens.textTertiary),
-                        weight: isToday ? FontWeight.w600 : FontWeight.w500,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _dayLabels[i],
+                        style: AppTypography.caption(
+                          color: isToday
+                              ? tokens.textSecondary
+                              : (isPast
+                                  ? tokens.textTertiary.withValues(alpha: 0.7)
+                                  : tokens.textTertiary),
+                          weight: isToday ? FontWeight.w600 : FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${dayDate.day}',
-                      style: AppTypography.titleSm(
-                        color: isToday
-                            ? tokens.textPrimary
-                            : (isPast
-                                ? tokens.textTertiary
-                                : tokens.textSecondary),
-                        fontSize: 16,
-                        weight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      const SizedBox(height: 4),
+                      Text(
+                        '${dayDate.day}',
+                        style: AppTypography.titleSm(
+                          color: isToday
+                              ? tokens.textPrimary
+                              : (isPast
+                                  ? tokens.textTertiary
+                                  : tokens.textSecondary),
+                          fontSize: 16,
+                          weight: isToday ? FontWeight.w700 : FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isToday && hasDailyNote
-                            ? tokens.accentPin
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
+                      const SizedBox(height: 3),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isToday && hasDailyNote
+                              ? tokens.accentPin
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -458,65 +462,64 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                     color: softTint,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 3.5,
-                          decoration: BoxDecoration(
-                            color: accentColor,
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 3.5,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: AppSpacing.roundedPill,
                         ),
-                        const SizedBox(width: AppSpacing.s3),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Today's Daily Note",
-                                style: AppTypography.titleSm(
-                                  color: tokens.textPrimary,
-                                  fontSize: 16,
-                                ),
+                      ),
+                      const SizedBox(width: AppSpacing.s3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Today's Daily Note",
+                              style: AppTypography.titleSm(
+                                color: tokens.textPrimary,
+                                fontSize: 16,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                hasNote &&
-                                        summary.isNotEmpty &&
-                                        summary != 'Empty note'
-                                    ? summary
-                                    : 'Tap to start today’s note — open tasks carry forward automatically.',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodySm(
-                                  color: accentColor.withValues(alpha: 0.85),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.s2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.14),
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
-                          child: Text(
-                            hasNote ? 'Open' : 'Start',
-                            style: AppTypography.caption(
-                              color: accentColor,
-                              weight: FontWeight.w700,
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              hasNote &&
+                                      summary.isNotEmpty &&
+                                      summary != 'Empty note'
+                                  ? summary
+                                  : 'Tap to start today’s note — open tasks carry forward automatically.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySm(
+                                color: accentColor.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.14),
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          hasNote ? 'Open' : 'Start',
+                          style: AppTypography.caption(
+                            color: accentColor,
+                            weight: FontWeight.w700,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -565,6 +568,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
         borderRadius: AppSpacing.roundedLg,
         boxShadow: AppSpacing.elev1(tokens.isDark),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -658,7 +662,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
-                  count > 0 ? '$label ($count)' : label,
+                  label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.caption(
@@ -1195,43 +1199,42 @@ class _WorthRevisitingCard extends StatelessWidget {
                     color: softTint,
                     borderRadius: AppSpacing.roundedSm,
                   ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 3.5,
-                          decoration: BoxDecoration(
-                            color: accentColor,
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 3.5,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: AppSpacing.roundedPill,
                         ),
-                        const SizedBox(width: AppSpacing.s3),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                note.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.titleSm(
-                                  color: tokens.textPrimary,
-                                ),
+                      ),
+                      const SizedBox(width: AppSpacing.s3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              note.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.titleSm(
+                                color: tokens.textPrimary,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                note.getSummary(),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodySm(
-                                  color: tokens.textSecondary,
-                                ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              note.getSummary(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySm(
+                                color: tokens.textSecondary,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],

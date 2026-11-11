@@ -43,6 +43,7 @@ class AppSpacing {
   static int gridColumnsForWidth(double screenWidth) {
     if (screenWidth >= 840) return 4;
     if (screenWidth >= 600) return 3;
+    if (screenWidth < 340) return 1;
     return 2;
   }
 
@@ -108,22 +109,23 @@ class AppSpacing {
   /// `elev/0` — Flat content separated by 1dp hairlines (no shadow).
   static const List<BoxShadow> elev0 = [];
 
-  /// `elev/1` — Soft diffused shadow on white cards floating over #F3F4F6 canvas (blur 20, y 6, alpha 0.06).
+  /// `elev/1` — Soft diffused shadow on white cards floating over #F3F4F6 canvas (blur 14, y 3, alpha 0.04-0.05).
+  /// Sized specifically to prevent GPU offscreen buffer bounding-box clipping artifacts on Android.
   static List<BoxShadow> elev1([bool isDark = false]) => [
         BoxShadow(
-          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.30 : 0.06),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
+          color: isDark ? const Color(0x38000000) : const Color(0x0C000000),
+          blurRadius: 14,
+          offset: const Offset(0, 3),
           spreadRadius: 0,
         ),
       ];
 
-  /// `elev/2` — Bottom sheets, floating nav pill, dialogs (blur 26, y 10, alpha 0.10).
+  /// `elev/2` — Bottom sheets, floating nav pill, dialogs (blur 20, y 6, alpha 0.08-0.10).
   static List<BoxShadow> elev2([bool isDark = false]) => [
         BoxShadow(
-          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.40 : 0.10),
-          blurRadius: 26,
-          offset: const Offset(0, 10),
+          color: isDark ? const Color(0x4D000000) : const Color(0x14000000),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
           spreadRadius: 0,
         ),
       ];

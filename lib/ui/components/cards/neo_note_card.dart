@@ -9,14 +9,13 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 
-/// Soft Monochrome Note Grid Card (`docs/design/11-reference-ui-style.md` §4, Screenshot 1 & 4).
+/// Clean, Soft Monochrome Note Grid Card (`docs/design/11-reference-ui-style.md`, Screenshots 1 & 4).
 ///
-/// Anatomy:
-/// - Outer Container: `surface/primary` (`#FFFFFF` / `#18191C`), `r-md` (`18dp`), soft diffused shadow (`elev/1`)
-/// - Top Header Row: Tag/Folder pill (or `NOTE` label) on the left + mono date (`12 NOV`) & `TackPinBadge` on the right
-/// - Title (`title-sm`, `text/primary`, max 2 lines)
-/// - Inner Tinted Sub-Card (`softBackground`, `10dp` radius) with a `3.5dp` vertical accent bar on the left,
-///   body snippet, and a compact word-count pill (`42w`)
+/// Designed to be calm and uncluttered:
+/// - Pure white / soft carbon surface (`radius: 18dp`, diffused elevation)
+/// - Top meta row: subtle custom tag/folder (only if set), date, and pin badge (only if favorited)
+/// - Prominent, readable title
+/// - Clean content snippet preview (no redundant nested boxes, badges, or word-count pills)
 class NeoNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
@@ -54,18 +53,14 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
             ? '${widget.item.iconEmoji} ${widget.item.title}'
             : (widget.item.title.trim().isEmpty ? 'Untitled' : widget.item.title);
 
-    final firstTag = (widget.item is TextNote &&
+    final String? customTag = (widget.item is TextNote &&
             (widget.item as TextNote).tags.isNotEmpty)
         ? '#${(widget.item as TextNote).tags.first}'
         : (widget.item.folderName != null &&
                 widget.item.folderName!.isNotEmpty &&
                 widget.item.folderName != 'All Notes'
             ? widget.item.folderName!
-            : 'NOTE');
-
-    final wordCount = widget.item is TextNote
-        ? (widget.item as TextNote).wordCount
-        : summary.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+            : null);
 
     return AnimatedScale(
       scale: _isPressed ? 0.98 : 1.0,
@@ -74,7 +69,6 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: AppSpacing.cardMinHeight,
-          maxHeight: 224.0,
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -107,33 +101,36 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                     }
                   : null,
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. Top Meta Row: Category/Tag Pill + Date + Pin Badge
+                    // 1. Top Meta Row: Custom Tag (if any) + Date + Pin Badge (if favorited)
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: softTint,
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
-                          child: Text(
-                            firstTag,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.caption(
-                              color: accentColor,
-                              weight: FontWeight.w600,
+                        if (customTag != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: softTint,
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                            child: Text(
+                              customTag,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption(
+                                color: accentColor,
+                                weight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                        ],
                         const Spacer(),
                         Text(
                           DateFormatter.formatTimestamp(widget.item.updatedAt)
@@ -145,89 +142,37 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                         ),
                         if (widget.item.isFavorite) ...[
                           const SizedBox(width: 6),
-                          TackPinBadge(color: tokens.accentPin, size: 13),
+                          TackPinBadge(color: tokens.accentPin, size: 12),
                         ],
                       ],
                     ),
 
-                    const SizedBox(height: AppSpacing.s2),
+                    const SizedBox(height: 8),
 
                     // 2. Note Title
                     Text(
                       displayTitle,
                       style: AppTypography.titleSm(
                         color: tokens.textPrimary,
-                        fontSize: 16,
+                        fontSize: 15.5,
+                        weight: FontWeight.w700,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: AppSpacing.s2),
-
-                    // 3. Regent-Style Tinted Inner Block with 3.5dp Leading Bar
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 9,
+                    // 3. Clean Text Snippet Preview (only when content exists)
+                    if (hasDistinctSummary) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        summary,
+                        style: AppTypography.bodySm(
+                          color: tokens.textSecondary,
                         ),
-                        decoration: BoxDecoration(
-                          color: softTint,
-                          borderRadius: AppSpacing.roundedSm,
-                        ),
-                        child: IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Container(
-                                width: 3.0,
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  borderRadius: AppSpacing.roundedPill,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  hasDistinctSummary ? summary : 'Tap to write…',
-                                  style: AppTypography.bodySm(
-                                    color: hasDistinctSummary
-                                        ? tokens.textSecondary
-                                        : tokens.textTertiary,
-                                  ),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (wordCount > 0) ...[
-                                const SizedBox(width: 6),
-                                Align(
-                                  alignment: Alignment.topRight,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withValues(alpha: 0.14),
-                                      borderRadius: AppSpacing.roundedPill,
-                                    ),
-                                    child: Text(
-                                      '${wordCount}w',
-                                      style: AppTypography.caption(
-                                        color: accentColor,
-                                        weight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

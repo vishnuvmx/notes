@@ -237,19 +237,23 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
                     boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < matchingCommands.length; i++) ...[
-                        if (i > 0)
-                          Divider(height: 1, color: tokens.borderSubtle),
-                        _CommandRow(entry: matchingCommands[i]),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < matchingCommands.length; i++) ...[
+                          if (i > 0)
+                            Divider(height: 1, color: tokens.borderSubtle),
+                          _CommandRow(entry: matchingCommands[i]),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s5),
@@ -260,17 +264,20 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 _GroupHeader(title: 'Tasks (${matchingTasks.length})'),
                 const SizedBox(height: AppSpacing.s2),
                 Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
                     boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < matchingTasks.length; i++) ...[
-                        if (i > 0)
-                          Divider(height: 1, color: tokens.borderSubtle),
-                        ListTile(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < matchingTasks.length; i++) ...[
+                          if (i > 0)
+                            Divider(height: 1, color: tokens.borderSubtle),
+                          ListTile(
                           leading: IconButton(
                             icon: TackIcon(
                               TackIcons.taskOpen,
@@ -306,6 +313,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                     ],
                   ),
                 ),
+              ),
                 const SizedBox(height: AppSpacing.s5),
               ],
 
@@ -318,23 +326,27 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
                     boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < matchingNotes.length; i++) ...[
-                        if (i > 0)
-                          Divider(height: 1, color: tokens.borderSubtle),
-                        _SearchResultItemRow(
-                          item: matchingNotes[i],
-                          query: q,
-                          onTap: () => widget.onOpenItem(matchingNotes[i]),
-                        ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < matchingNotes.length; i++) ...[
+                          if (i > 0)
+                            Divider(height: 1, color: tokens.borderSubtle),
+                          _SearchResultItemRow(
+                            item: matchingNotes[i],
+                            query: q,
+                            onTap: () => widget.onOpenItem(matchingNotes[i]),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s5),
@@ -349,23 +361,27 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
                     boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < matchingBoards.length; i++) ...[
-                        if (i > 0)
-                          Divider(height: 1, color: tokens.borderSubtle),
-                        _SearchResultItemRow(
-                          item: matchingBoards[i],
-                          query: q,
-                          onTap: () => widget.onOpenItem(matchingBoards[i]),
-                        ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < matchingBoards.length; i++) ...[
+                          if (i > 0)
+                            Divider(height: 1, color: tokens.borderSubtle),
+                          _SearchResultItemRow(
+                            item: matchingBoards[i],
+                            query: q,
+                            onTap: () => widget.onOpenItem(matchingBoards[i]),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ],

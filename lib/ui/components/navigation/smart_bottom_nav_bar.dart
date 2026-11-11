@@ -55,6 +55,7 @@ class SmartBottomNavBar extends StatelessWidget {
                 Expanded(
                   child: Container(
                     height: 56,
+                    clipBehavior: Clip.antiAlias,
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: tokens.canvasSunken,
@@ -112,9 +113,6 @@ class SmartBottomNavBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected ? tokens.surfacePrimary : Colors.transparent,
                 borderRadius: AppSpacing.roundedPill,
-                boxShadow: isSelected
-                    ? AppSpacing.elev1(tokens.isDark)
-                    : AppSpacing.elev0,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

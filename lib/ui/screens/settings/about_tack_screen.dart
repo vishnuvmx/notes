@@ -24,10 +24,16 @@ class _AboutTackScreenState extends State<AboutTackScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -65,6 +71,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
               vertical: AppSpacing.s2,
             ),
             child: Container(
+              clipBehavior: Clip.antiAlias,
               padding: const EdgeInsets.all(AppSpacing.s5),
               decoration: BoxDecoration(
                 color: tokens.surfacePrimary,
@@ -154,8 +161,12 @@ class _AboutTackScreenState extends State<AboutTackScreen>
             ),
             child: TabBar(
               controller: _tabController,
+              onTap: (_) => HapticFeedback.selectionClick(),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              splashBorderRadius: AppSpacing.roundedPill,
               indicator: BoxDecoration(
                 color: tokens.actionPrimary,
                 borderRadius: AppSpacing.roundedPill,
@@ -180,8 +191,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
           const SizedBox(height: AppSpacing.s2),
 
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: IndexedStack(
+              index: _tabController.index,
               children: [
                 _buildStackJourneyTab(tokens),
                 _buildOpenSourceTab(tokens),
@@ -270,6 +281,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     final softBg = palette.resolveSoftBackground(tokens.isDark);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
@@ -446,6 +458,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
 
   Widget _buildPackageCard(_OssPackage pkg, TackTokens tokens) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(

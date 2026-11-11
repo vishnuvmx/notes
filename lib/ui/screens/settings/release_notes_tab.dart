@@ -208,32 +208,35 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
               final selected = _selectedCategory == cat;
               return Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.s2),
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _selectedCategory = cat);
-                  },
-                  borderRadius: AppSpacing.roundedPill,
-                  child: AnimatedContainer(
-                    duration: AppSpacing.durationFast,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.s4,
-                      vertical: AppSpacing.s2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: selected ? tokens.actionPrimary : tokens.surfacePrimary,
-                      borderRadius: AppSpacing.roundedPill,
-                      boxShadow: selected
-                          ? AppSpacing.elev1(tokens.isDark)
-                          : AppSpacing.elev0,
-                    ),
-                    child: Text(
-                      cat.label,
-                      style: AppTypography.label(
-                        color: selected
-                            ? tokens.actionPrimaryFg
-                            : tokens.textSecondary,
-                        weight: selected ? FontWeight.w600 : FontWeight.w500,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedCategory = cat);
+                    },
+                    borderRadius: AppSpacing.roundedPill,
+                    child: AnimatedContainer(
+                      duration: AppSpacing.durationFast,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s4,
+                        vertical: AppSpacing.s2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: selected ? tokens.actionPrimary : tokens.surfacePrimary,
+                        borderRadius: AppSpacing.roundedPill,
+                        border: selected
+                            ? null
+                            : Border.all(color: tokens.borderSubtle, width: 1),
+                      ),
+                      child: Text(
+                        cat.label,
+                        style: AppTypography.label(
+                          color: selected
+                              ? tokens.actionPrimaryFg
+                              : tokens.textSecondary,
+                          weight: selected ? FontWeight.w600 : FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -257,6 +260,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
 
   Widget _buildHeroReleaseBanner(TackTokens tokens) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(AppSpacing.s5),
       decoration: BoxDecoration(
         color: tokens.surfacePrimary,
@@ -365,6 +369,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     final softBg = palette.resolveSoftBackground(tokens.isDark);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
@@ -467,6 +472,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
 
   Widget _buildPreviousVersionCard(TackTokens tokens) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
         color: tokens.surfacePrimary,

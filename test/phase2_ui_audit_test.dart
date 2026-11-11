@@ -13,6 +13,7 @@ import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
 import 'package:notes/ui/components/inputs/app_search_field.dart';
 import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
 import 'package:notes/ui/screens/editor/note_editor_screen.dart';
+import 'package:notes/ui/screens/settings/settings_screen.dart';
 
 class _MockWorkspaceRepo extends IWorkspaceRepository {
   final List<BaseWorkspaceItem> _store = [];
@@ -382,6 +383,49 @@ Footer text.
       await tester.tap(find.byKey(const ValueKey('nav_capture_fab')));
       await tester.pump();
       expect(captureTapped, isTrue);
+    });
+
+    testWidgets('7. ProfileSettingsScreen switches between tabs with IndexedStack, clipBehavior, and clean TabBar', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final workspaceProvider = WorkspaceProvider(repo);
+      final themeProvider = ThemeProvider();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: workspaceProvider),
+            ChangeNotifierProvider.value(value: themeProvider),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const ProfileSettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // TabBar must have NoSplash and transparent overlay
+      final tabBarFinder = find.byType(TabBar);
+      expect(tabBarFinder, findsOneWidget);
+      final tabBar = tester.widget<TabBar>(tabBarFinder);
+      expect(tabBar.splashFactory, equals(NoSplash.splashFactory));
+
+      // Uses IndexedStack (not TabBarView which creates sliding shadow bounding box glitches)
+      expect(find.byType(IndexedStack), findsOneWidget);
+      expect(find.byType(TabBarView), findsNothing);
+
+      // Initially shows Profile & Settings content
+      expect(find.text('Trash & Deleted Items'), findsOneWidget);
+      expect(find.text('Carry forward unfinished tasks'), findsOneWidget);
+
+      // Switch to What's New tab
+      await tester.tap(find.text("What's New"));
+      await tester.pumpAndSettle();
+
+      // IndexedStack index updated to 1, showing What's New content
+      final indexedStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
+      expect(indexedStack.index, 1);
+      expect(find.text('v2.0.0  •  MAJOR UPDATE'), findsOneWidget);
     });
   });
 }

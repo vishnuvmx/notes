@@ -40,8 +40,6 @@ class _BoardGridCardState extends State<BoardGridCard> {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.board.paletteId);
     final bandColor = palette.resolveCardColor(tokens.isDark);
-    final accentColor = palette.resolveAccentColor(tokens.isDark);
-    final softTint = palette.resolveSoftBackground(tokens.isDark);
     final displayTitle =
         (widget.board.iconEmoji != null && widget.board.iconEmoji!.isNotEmpty)
             ? '${widget.board.iconEmoji} ${widget.board.title}'
@@ -89,49 +87,11 @@ class _BoardGridCardState extends State<BoardGridCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. Top Meta Row
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: softTint,
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          'BOARD',
-                          style: AppTypography.caption(
-                            color: accentColor,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        DateFormatter.formatTimestamp(widget.board.updatedAt)
-                            .toUpperCase(),
-                        style: AppTypography.mono(
-                          fontSize: 10.5,
-                          color: tokens.textTertiary,
-                        ),
-                      ),
-                      if (widget.board.isFavorite) ...[
-                        const SizedBox(width: 6),
-                        TackPinBadge(color: tokens.accentPin, size: 13),
-                      ],
-                    ],
-                  ),
-
-                  const SizedBox(height: AppSpacing.s2),
-
-                  // 2. Inset 108dp Grid-Paper Mini-Canvas Thumbnail
+                  // 1. Inset Mini-Canvas Thumbnail
                   ClipRRect(
                     borderRadius: AppSpacing.roundedSm,
                     child: SizedBox(
-                      height: 108,
+                      height: 104,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: tokens.canvasSunken,
@@ -148,9 +108,9 @@ class _BoardGridCardState extends State<BoardGridCard> {
                     ),
                   ),
 
-                  const SizedBox(height: AppSpacing.s2),
+                  const SizedBox(height: 10),
 
-                  // 3. Title + Node Count Pill
+                  // 2. Title & Pin Badge
                   Row(
                     children: [
                       Expanded(
@@ -161,28 +121,27 @@ class _BoardGridCardState extends State<BoardGridCard> {
                           style: AppTypography.titleSm(
                             color: tokens.textPrimary,
                             fontSize: 15.5,
+                            weight: FontWeight.w700,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: softTint,
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          '${widget.board.nodes.length}n',
-                          style: AppTypography.caption(
-                            color: accentColor,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      if (widget.board.isFavorite) ...[
+                        const SizedBox(width: 6),
+                        TackPinBadge(color: tokens.accentPin, size: 12),
+                      ],
                     ],
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  // 3. Calm Metadata Subtitle
+                  Text(
+                    '${widget.board.nodes.length} ${widget.board.nodes.length == 1 ? 'node' : 'nodes'}  •  ${DateFormatter.formatTimestamp(widget.board.updatedAt)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: tokens.textTertiary,
+                    ),
                   ),
                 ],
               ),

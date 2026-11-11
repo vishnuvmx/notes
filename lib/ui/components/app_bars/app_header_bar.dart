@@ -31,7 +31,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(
-        tagline != null && tagline!.isNotEmpty ? 72 : AppSpacing.appBarHeight,
+        tagline != null && tagline!.isNotEmpty ? 78 : AppSpacing.appBarHeight,
       );
 
   @override
@@ -45,7 +45,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       backgroundColor: tokens.canvasPrimary,
       automaticallyImplyLeading: false,
-      toolbarHeight: hasTagline ? 72 : AppSpacing.appBarHeight,
+      toolbarHeight: hasTagline ? 78 : AppSpacing.appBarHeight,
       titleSpacing: AppSpacing.s5,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,6 +120,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             icon: Container(
               width: 38,
               height: 38,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: tokens.surfacePrimary,
                 borderRadius: BorderRadius.circular(12),

@@ -91,6 +91,17 @@ class TackApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeProv.themeMode,
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          final clampedScaler = media.textScaler.clamp(
+            minScaleFactor: 0.85,
+            maxScaleFactor: 1.25,
+          );
+          return MediaQuery(
+            data: media.copyWith(textScaler: clampedScaler),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const TackRootNavigator(),
       ),
     );

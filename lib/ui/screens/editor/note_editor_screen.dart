@@ -78,13 +78,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   bool _isSaving = false;
   Timer? _saveDebounce;
 
-  // In-Note Find & Replace State
-  bool _isSearching = false;
-  bool _showReplace = false;
-  final TextEditingController _searchQueryController = TextEditingController();
-  final TextEditingController _replaceQueryController = TextEditingController();
-  final List<int> _searchMatches = [];
-  int _currentMatchIndex = 0;
   int? _dismissedWikiTriggerOffset;
 
   @override
@@ -243,8 +236,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     _contentController.dispose();
     _newTagController.dispose();
     _contentFocusNode.dispose();
-    _searchQueryController.dispose();
-    _replaceQueryController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -310,10 +301,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
-    if (_isSearching) {
-      _closeSearch();
-      return;
-    }
     // Discard untouched empty draft on Back (`05-information-architecture.md` §2.2 D2)
     if (_isUntouchedEmptyDraft) {
       _saveDebounce?.cancel();
@@ -1131,85 +1118,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     );
   }
 
-  void _onSearchQueryChanged(String query) {
-    _searchMatches.clear();
-    _currentMatchIndex = 0;
-    if (query.trim().isNotEmpty) {
-      final text = _contentController.text.toLowerCase();
-      final q = query.toLowerCase();
-      int startIndex = 0;
-      while ((startIndex = text.indexOf(q, startIndex)) != -1) {
-        _searchMatches.add(startIndex);
-        startIndex += q.length;
-      }
-    }
-    setState(() {});
-    if (_searchMatches.isNotEmpty) {
-      _jumpToMatch(0);
-    }
-  }
-
-  void _jumpToMatch(int index) {
-    if (_searchMatches.isEmpty) return;
-    _currentMatchIndex = index.clamp(0, _searchMatches.length - 1);
-    final matchStart = _searchMatches[_currentMatchIndex];
-    final matchLength = _searchQueryController.text.length;
-    _contentController.selection = TextSelection(
-      baseOffset: matchStart,
-      extentOffset: matchStart + matchLength,
-    );
-    setState(() {});
-  }
-
-  void _nextMatch() {
-    if (_searchMatches.isEmpty) return;
-    final next = (_currentMatchIndex + 1) % _searchMatches.length;
-    _jumpToMatch(next);
-  }
-
-  void _prevMatch() {
-    if (_searchMatches.isEmpty) return;
-    final prev = (_currentMatchIndex - 1 + _searchMatches.length) % _searchMatches.length;
-    _jumpToMatch(prev);
-  }
-
-  void _replaceCurrentMatch() {
-    if (_searchMatches.isEmpty) return;
-    final query = _searchQueryController.text;
-    final replacement = _replaceQueryController.text;
-    final matchStart = _searchMatches[_currentMatchIndex];
-    final text = _contentController.text;
-
-    final newText = text.replaceRange(matchStart, matchStart + query.length, replacement);
-    _contentController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: matchStart + replacement.length),
-    );
-    _saveNote();
-    _onSearchQueryChanged(query);
-  }
-
-  void _replaceAllMatches() {
-    if (_searchMatches.isEmpty) return;
-    final query = _searchQueryController.text;
-    final replacement = _replaceQueryController.text;
-    final text = _contentController.text;
-    final newText = text.replaceAll(query, replacement);
-    _contentController.text = newText;
-    _saveNote();
-    _onSearchQueryChanged(query);
-  }
-
-  void _closeSearch() {
-    setState(() {
-      _isSearching = false;
-      _showReplace = false;
-      _searchMatches.clear();
-      _searchQueryController.clear();
-      _replaceQueryController.clear();
-    });
-  }
-
   void _showShareExportSheet() {
     final title = _titleController.text;
     final content = _contentController.text;
@@ -1668,7 +1576,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final hasHeadings = WikiLinkService.extractHeadings(content).isNotEmpty;
 
     return PopScope(
-      canPop: !_isSearching && !_isEditingMode,
+      canPop: !_isEditingMode,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           _flushSave();
@@ -1761,37 +1669,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             },
           ),
 
-          // In-Note Find & Replace Trigger
-          IconButton(
-            icon: TackIcon(
-              _isSearching ? TackIcons.close : TackIcons.search,
-              size: 20,
-              color: _isSearching
-                  ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)
-                  : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-            ),
-            tooltip: _isSearching ? 'Close Search' : 'Find & Replace',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              if (_isSearching) {
-                _closeSearch();
-              } else {
-                setState(() => _isSearching = true);
-              }
-            },
-          ),
-
-          // Palette trigger
-          IconButton(
-            icon: const TackIcon(TackIcons.palette, size: 20),
-            tooltip: 'Colors',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _showColorPicker();
-            },
-          ),
-
-          // iOS-Style Overflow Menu (Favorite, Graph, Folder, Template, Share, Trash)
+          // iOS-Style Overflow Menu (Palette, Favorite, Graph, Folder, Template, Share, Trash)
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: IosThreeDotMenu<String>(
@@ -1799,7 +1677,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               icon: TackIcons.more,
               iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               onSelected: (val) async {
-                if (val == 'favorite') {
+                if (val == 'palette') {
+                  HapticFeedback.lightImpact();
+                  _showColorPicker();
+                } else if (val == 'favorite') {
                   workspace.toggleFavorite(widget.item.id);
                   setState(() {});
                 } else if (val == 'local_graph') {
@@ -1831,6 +1712,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 }
               },
               items: [
+                const IosMenuItem(
+                  value: 'palette',
+                  title: 'Color Palette',
+                  icon: TackIcons.palette,
+                ),
                 IosMenuItem(
                   value: 'favorite',
                   title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
@@ -1880,10 +1766,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Docked Find & Replace Bar
-            if (_isSearching)
-              _buildFindAndReplaceBar(isDark: isDark, palette: palette),
-
             // Scrollable Note Document (constrained to 720dp reading measure on wide screens)
             Expanded(
               child: SingleChildScrollView(
@@ -1897,29 +1779,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    // Reader Mode Banner Indicator (Tap for detailed note stats)
-                    if (!_isEditingMode)
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _showNoteStatisticsSheet();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurfaceAlt : Colors.white.withValues(alpha: 0.8),
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
-                          child: Text(
-                            'Reader Mode  •  $readTime min read',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-
                     // Breadcrumbs, Folder & Hierarchy Bar
                     if (_folderName != null ||
                         breadcrumbs.isNotEmpty ||
@@ -1987,20 +1846,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
 
-                    // Screenshot 4 ("Design Ideas") Metadata Pill Row:
-                    // [Folder Tinted Pill]  [N Words Pill]  [Xm read Pill]  [Checklist Pill]
+                    // Screenshot 4 ("Design Ideas") Minimalist Metadata Row
                     Wrap(
                       spacing: 8,
-                      runSpacing: 6,
+                      runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (_folderName != null && _folderName!.isNotEmpty)
+                        if (_folderName != null &&
+                            _folderName!.isNotEmpty &&
+                            _folderName != 'All Notes')
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
+                              horizontal: 8,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: palette.resolveSoftBackground(isDark),
@@ -2011,15 +1871,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               children: [
                                 TackIcon(
                                   TackIcons.folder,
-                                  size: 12,
+                                  size: 11,
                                   color: palette.resolveAccentColor(isDark),
                                 ),
-                                const SizedBox(width: 5),
+                                const SizedBox(width: 4),
                                 Text(
                                   _folderName!,
                                   style: AppTypography.caption(
                                     color: palette.resolveAccentColor(isDark),
-                                    weight: FontWeight.w700,
+                                    weight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -2030,72 +1890,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             HapticFeedback.lightImpact();
                             _showNoteStatisticsSheet();
                           },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.canvasSunken,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                            child: Text(
-                              '$wordCount ${wordCount == 1 ? 'Word' : 'Words'}',
-                              style: AppTypography.caption(
-                                color: tokens.textSecondary,
-                                weight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            _showNoteStatisticsSheet();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.canvasSunken,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                            child: Text(
-                              '${readTime}m read',
-                              style: AppTypography.caption(
-                                color: tokens.textSecondary,
-                                weight: FontWeight.w600,
-                              ),
+                          child: Text(
+                            '$wordCount ${wordCount == 1 ? 'word' : 'words'}  •  ${readTime}m read',
+                            style: AppTypography.caption(
+                              color: tokens.textSecondary,
+                              weight: FontWeight.w500,
                             ),
                           ),
                         ),
                         if (totalChecklists > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
+                          Text(
+                            allChecklistsCompleted
+                                ? '•  ✓ All done'
+                                : '•  $completedChecklists/$totalChecklists tasks',
+                            style: AppTypography.caption(
                               color: allChecklistsCompleted
-                                  ? (isDark
-                                      ? AppColors.pastelLimeLight
-                                          .withValues(alpha: 0.2)
-                                      : AppColors.pastelLimeSoft)
-                                  : tokens.canvasSunken,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                            child: Text(
-                              allChecklistsCompleted
-                                  ? '✓ All done'
-                                  : '✓ $completedChecklists/$totalChecklists tasks',
-                              style: AppTypography.caption(
-                                color: allChecklistsCompleted
-                                    ? tokens.success
-                                    : tokens.textSecondary,
-                                weight: FontWeight.w700,
-                              ),
+                                  ? tokens.success
+                                  : tokens.textTertiary,
+                              weight: FontWeight.w600,
                             ),
                           ),
                       ],
@@ -2401,179 +2213,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       ),
     ),
   );
-  }
-
-  Widget _buildFindAndReplaceBar({required bool isDark, required TackColorPalette palette}) {
-    final matchCount = _searchMatches.length;
-    final matchText = _searchQueryController.text.isEmpty
-        ? ''
-        : (matchCount == 0 ? 'No matches' : '${_currentMatchIndex + 1} of $matchCount');
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const SizedBox(width: 4),
-              TackIcon(
-                TackIcons.search,
-                size: 16,
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _searchQueryController,
-                  autofocus: true,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: AppTypography.fontFamily,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Find in note...',
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      fontFamily: AppTypography.fontFamily,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: _onSearchQueryChanged,
-                ),
-              ),
-              if (matchText.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    matchText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: matchCount > 0
-                          ? (isDark ? AppColors.pastelAmberLight : AppColors.pastelAmberDark)
-                          : AppColors.error,
-                    ),
-                  ),
-                ),
-              IconButton(
-                icon: const TackIcon(TackIcons.chevronUp, size: 16),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                tooltip: 'Previous match',
-                onPressed: matchCount > 0 ? _prevMatch : null,
-              ),
-              IconButton(
-                icon: const TackIcon(TackIcons.chevronDown, size: 16),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                tooltip: 'Next match',
-                onPressed: matchCount > 0 ? _nextMatch : null,
-              ),
-              IconButton(
-                icon: TackIcon(
-                  TackIcons.edit,
-                  size: 16,
-                  color: _showReplace
-                      ? (isDark ? AppColors.accentAmber : AppColors.accentOrange)
-                      : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-                ),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                tooltip: 'Toggle Replace',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  setState(() => _showReplace = !_showReplace);
-                },
-              ),
-              IconButton(
-                icon: const TackIcon(TackIcons.close, size: 16),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                tooltip: 'Close',
-                onPressed: _closeSearch,
-              ),
-            ],
-          ),
-          if (_showReplace) ...[
-            const SizedBox(height: 6),
-            Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const SizedBox(width: 4),
-                TackIcon(
-                  TackIcons.redo,
-                  size: 16,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _replaceQueryController,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontFamily: AppTypography.fontFamily,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Replace with...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        fontFamily: AppTypography.fontFamily,
-                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                      ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onPressed: matchCount > 0 ? _replaceCurrentMatch : null,
-                  child: const Text('Replace', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                ),
-                const SizedBox(width: 4),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  onPressed: matchCount > 0 ? _replaceAllMatches : null,
-                  child: const Text('All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   Widget _buildBreadcrumbAndHierarchyBar({

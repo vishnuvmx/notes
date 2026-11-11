@@ -229,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Container(
                     width: 38,
                     height: 38,
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: tokens.surfacePrimary,
                       borderRadius: BorderRadius.circular(12),
