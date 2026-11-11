@@ -21,6 +21,7 @@ class NeoNoteCard extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isGrid;
+  final bool showContentPreview;
 
   const NeoNoteCard({
     super.key,
@@ -28,6 +29,7 @@ class NeoNoteCard extends StatefulWidget {
     required this.onTap,
     this.onLongPress,
     this.isGrid = true,
+    this.showContentPreview = false,
   });
 
   @override
@@ -67,8 +69,10 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.cardMinHeight,
+        constraints: BoxConstraints(
+          minHeight: widget.showContentPreview
+              ? AppSpacing.cardMinHeight
+              : AppSpacing.cardMinHeightCompact,
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -161,8 +165,8 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    // 3. Clean Text Snippet Preview (only when content exists)
-                    if (hasDistinctSummary) ...[
+                    // 3. Optional Content Snippet Preview (hidden by default on home/note grids per user request)
+                    if (widget.showContentPreview && hasDistinctSummary) ...[
                       const SizedBox(height: 6),
                       Text(
                         summary,

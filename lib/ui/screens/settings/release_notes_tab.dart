@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../components/layout/z_order_column.dart';
 
 enum _ReleaseCategory {
   all('All'),
@@ -189,6 +190,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
         : _v2Entries.where((e) => e.category == _selectedCategory).toList();
 
     return ListView(
+      clipBehavior: Clip.none,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s5,
         AppSpacing.s3,
@@ -196,64 +198,70 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
         AppSpacing.s9,
       ),
       children: [
-        // 1. Hero Release Card (v2.0.0)
-        _buildHeroReleaseBanner(tokens),
-        const SizedBox(height: AppSpacing.s4),
+        ZOrderColumn(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. Hero Release Card (v2.0.0)
+            _buildHeroReleaseBanner(tokens),
+            const SizedBox(height: AppSpacing.s4),
 
-        // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _ReleaseCategory.values.map((cat) {
-              final selected = _selectedCategory == cat;
-              return Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.s2),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedCategory = cat);
-                    },
-                    borderRadius: AppSpacing.roundedPill,
-                    child: AnimatedContainer(
-                      duration: AppSpacing.durationFast,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s4,
-                        vertical: AppSpacing.s2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected ? tokens.actionPrimary : tokens.surfacePrimary,
+            // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
+            SingleChildScrollView(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _ReleaseCategory.values.map((cat) {
+                  final selected = _selectedCategory == cat;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.s2),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedCategory = cat);
+                        },
                         borderRadius: AppSpacing.roundedPill,
-                        border: selected
-                            ? null
-                            : Border.all(color: tokens.borderSubtle, width: 1),
-                      ),
-                      child: Text(
-                        cat.label,
-                        style: AppTypography.label(
-                          color: selected
-                              ? tokens.actionPrimaryFg
-                              : tokens.textSecondary,
-                          weight: selected ? FontWeight.w600 : FontWeight.w500,
+                        child: AnimatedContainer(
+                          duration: AppSpacing.durationFast,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s4,
+                            vertical: AppSpacing.s2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected ? tokens.actionPrimary : tokens.surfacePrimary,
+                            borderRadius: AppSpacing.roundedPill,
+                            border: selected
+                                ? null
+                                : Border.all(color: tokens.borderSubtle, width: 1),
+                          ),
+                          child: Text(
+                            cat.label,
+                            style: AppTypography.label(
+                              color: selected
+                                  ? tokens.actionPrimaryFg
+                                  : tokens.textSecondary,
+                              weight: selected ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+
+            // 3. Major Feature Cards
+            ...filtered.map((entry) => _buildReleaseCard(entry, tokens)),
+
+            const SizedBox(height: AppSpacing.s3),
+
+            // 4. Previous Milestone Card (v1.0.0)
+            _buildPreviousVersionCard(tokens),
+          ],
         ),
-        const SizedBox(height: AppSpacing.s4),
-
-        // 3. Major Feature Cards
-        ...filtered.map((entry) => _buildReleaseCard(entry, tokens)),
-
-        const SizedBox(height: AppSpacing.s3),
-
-        // 4. Previous Milestone Card (v1.0.0)
-        _buildPreviousVersionCard(tokens),
       ],
     );
   }

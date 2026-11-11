@@ -69,8 +69,9 @@ class AppSpacing {
   /// Card object-color leading band width (6dp per 07-design-system.md §7).
   static const double cardColorBandWidth = 6.0;
 
-  /// Card minimum height (intrinsic, min 120dp per 07-design-system.md §4.3).
+  /// Card minimum height (intrinsic, min 120dp for boards, 80dp compact for notes).
   static const double cardMinHeight = 120.0;
+  static const double cardMinHeightCompact = 80.0;
   static const double cardMaxHeight = 200.0;
 
   // ================= Radii (07-design-system.md §5) =================

@@ -13,6 +13,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/layout/z_order_column.dart';
 import '../folders/folder_view_screen.dart';
 import 'about_tack_screen.dart';
 import 'release_notes_tab.dart';
@@ -438,6 +439,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     final totalItems = totalActive + trashCount + workspace.archivedItems.length;
 
     return ListView(
+      clipBehavior: Clip.none,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s5,
         AppSpacing.s3,
@@ -445,15 +447,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         AppSpacing.s9,
       ),
       children: [
-        // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
-        Container(
-          clipBehavior: Clip.antiAlias,
-          padding: const EdgeInsets.all(AppSpacing.s4),
-          decoration: BoxDecoration(
-            color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
-          ),
+        ZOrderColumn(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
+            Container(
+              clipBehavior: Clip.antiAlias,
+              padding: const EdgeInsets.all(AppSpacing.s4),
+              decoration: BoxDecoration(
+                color: tokens.surfacePrimary,
+                borderRadius: AppSpacing.roundedMd,
+                boxShadow: AppSpacing.elev1(tokens.isDark),
+              ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -849,6 +854,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           ),
         ),
       ),
+          ],
+        ),
       ],
     );
   }

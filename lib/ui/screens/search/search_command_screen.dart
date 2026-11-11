@@ -13,6 +13,7 @@ import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
 import '../../components/inputs/app_search_field.dart';
+import '../../components/layout/z_order_column.dart';
 import '../folders/folder_view_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -185,6 +186,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         ),
         Expanded(
           child: ListView(
+            clipBehavior: Clip.none,
             padding: EdgeInsets.fromLTRB(
               gutter,
               AppSpacing.s2,
@@ -192,8 +194,11 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
               AppSpacing.s9,
             ),
             children: [
-              if (hasNoResults)
-                Padding(
+              ZOrderColumn(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (hasNoResults)
+                    Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
                   child: Column(
                     children: [
@@ -387,9 +392,11 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
               ],
             ],
           ),
-        ),
-      ],
-    );
+        ],
+      ),
+    ),
+  ],
+);
   }
 }
 

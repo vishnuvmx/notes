@@ -17,6 +17,7 @@ import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/responsive_card_grid.dart';
 import '../../components/dialogs_sheets/app_bottom_sheet.dart';
 import '../../components/dialogs_sheets/card_peek_sheet.dart';
+import '../../components/layout/z_order_column.dart';
 import '../editor/note_editor_screen.dart';
 import '../whiteboard/whiteboard_canvas_screen.dart';
 
@@ -73,6 +74,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final revisitNote = workspace.worthRevisitingNote;
 
     return CustomScrollView(
+      clipBehavior: Clip.none,
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
@@ -84,103 +86,106 @@ class _TodayScreenState extends State<TodayScreen> {
             gutter,
             AppSpacing.s4,
           ),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              // 1. Horizontal Week Strip Card (Screenshot 2)
-              _WeekStripCard(
-                now: now,
-                hasDailyNote: existingDaily != null,
-                onTapToday: () async {
-                  HapticFeedback.lightImpact();
-                  final isNew = existingDaily == null;
-                  final note = await workspace.openOrCreateTodaysNote();
-                  widget.onOpenItem(note, startInEditMode: isNew);
-                },
-              ),
+          sliver: SliverToBoxAdapter(
+            child: ZOrderColumn(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Horizontal Week Strip Card (Screenshot 2)
+                _WeekStripCard(
+                  now: now,
+                  hasDailyNote: existingDaily != null,
+                  onTapToday: () async {
+                    HapticFeedback.lightImpact();
+                    final isNew = existingDaily == null;
+                    final note = await workspace.openOrCreateTodaysNote();
+                    widget.onOpenItem(note, startInEditMode: isNew);
+                  },
+                ),
 
-              const SizedBox(height: AppSpacing.s4),
+                const SizedBox(height: AppSpacing.s5),
 
-              // 2. Today's Daily Note Hero Card (Screenshot 1 & 3)
-              _TodaysDailyNoteCard(
-                now: now,
-                existingDaily: existingDaily,
-                dateLabel: DateFormatter.formatOrdinalDate(now),
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  final isNew = existingDaily == null;
-                  final note = await workspace.openOrCreateTodaysNote();
-                  widget.onOpenItem(note, startInEditMode: isNew);
-                },
-              ),
+                // 2. Today's Daily Note Hero Card (Screenshot 1 & 3)
+                _TodaysDailyNoteCard(
+                  now: now,
+                  existingDaily: existingDaily,
+                  dateLabel: DateFormatter.formatOrdinalDate(now),
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    final isNew = existingDaily == null;
+                    final note = await workspace.openOrCreateTodaysNote();
+                    widget.onOpenItem(note, startInEditMode: isNew);
+                  },
+                ),
 
-              const SizedBox(height: AppSpacing.s4),
+                const SizedBox(height: AppSpacing.s5),
 
-              // 3. DailyLoop Segmented Tasks & Inbox Triage Card (Screenshot 2)
-              _SegmentedTasksAndInboxCard(
-                activeTab: _activeTab,
-                onSelectTab: (tab) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _activeTab = tab);
-                },
-                openTasks: openTasks,
-                completedTasks: completedTasks,
-                inboxItems: inbox,
-                collapsedGroups: _collapsedGroups,
-                onToggleGroup: (groupTitle) {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    if (_collapsedGroups.contains(groupTitle)) {
-                      _collapsedGroups.remove(groupTitle);
-                    } else {
-                      _collapsedGroups.add(groupTitle);
-                    }
-                  });
-                },
-                onToggleTask: (task) {
-                  HapticFeedback.selectionClick();
-                  workspace.toggleTask(task);
-                },
-                onOpenSourceNote: (noteId) {
-                  final note = workspace.getItemByIdSync(noteId);
-                  if (note != null) widget.onOpenItem(note);
-                },
-                onOpenInboxItem: (item) => widget.onOpenItem(item),
-              ),
+                // 3. DailyLoop Segmented Tasks & Inbox Triage Card (Screenshot 2)
+                _SegmentedTasksAndInboxCard(
+                  activeTab: _activeTab,
+                  onSelectTab: (tab) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _activeTab = tab);
+                  },
+                  openTasks: openTasks,
+                  completedTasks: completedTasks,
+                  inboxItems: inbox,
+                  collapsedGroups: _collapsedGroups,
+                  onToggleGroup: (groupTitle) {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      if (_collapsedGroups.contains(groupTitle)) {
+                        _collapsedGroups.remove(groupTitle);
+                      } else {
+                        _collapsedGroups.add(groupTitle);
+                      }
+                    });
+                  },
+                  onToggleTask: (task) {
+                    HapticFeedback.selectionClick();
+                    workspace.toggleTask(task);
+                  },
+                  onOpenSourceNote: (noteId) {
+                    final note = workspace.getItemByIdSync(noteId);
+                    if (note != null) widget.onOpenItem(note);
+                  },
+                  onOpenInboxItem: (item) => widget.onOpenItem(item),
+                ),
 
-              // 4. Pinned Section Header
-              if (pinned.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.s6),
-                Row(
-                  children: [
-                    TackPinBadge(color: tokens.accentPin, size: 13),
-                    const SizedBox(width: AppSpacing.s2),
-                    Text(
-                      'Pinned notes',
-                      style: AppTypography.titleSm(color: tokens.textPrimary),
-                    ),
-                    const SizedBox(width: AppSpacing.s2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+                // 4. Pinned Section Header
+                if (pinned.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s6),
+                  Row(
+                    children: [
+                      TackPinBadge(color: tokens.accentPin, size: 13),
+                      const SizedBox(width: AppSpacing.s2),
+                      Text(
+                        'Pinned notes',
+                        style: AppTypography.titleSm(color: tokens.textPrimary),
                       ),
-                      decoration: BoxDecoration(
-                        color: tokens.surfacePrimary,
-                        borderRadius: AppSpacing.roundedPill,
-                      ),
-                      child: Text(
-                        '${pinned.length}',
-                        style: AppTypography.caption(
-                          color: tokens.textSecondary,
-                          weight: FontWeight.w600,
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.surfacePrimary,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          '${pinned.length}',
+                          style: AppTypography.caption(
+                            color: tokens.textSecondary,
+                            weight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.s3),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.s3),
+                ],
               ],
-            ]),
+            ),
           ),
         ),
 

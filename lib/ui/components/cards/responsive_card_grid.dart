@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../layout/z_order_column.dart';
 
 /// Responsive multi-column masonry card grid for Paper & Pin (`07-design-system.md` §4.3).
 /// Distributes intrinsic-height cards across 2/3/4 columns without external package dependencies.
@@ -35,6 +36,7 @@ class ResponsiveCardGrid extends StatelessWidget {
       );
     }
     return SingleChildScrollView(
+      clipBehavior: Clip.none,
       physics: physics ?? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: padding,
       child: columns,
@@ -59,7 +61,7 @@ class ResponsiveCardGrid extends StatelessWidget {
         for (var c = 0; c < colCount; c++) ...[
           if (c > 0) SizedBox(width: crossAxisSpacing),
           Expanded(
-            child: Column(
+            child: ZOrderColumn(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: columnChildren[c],

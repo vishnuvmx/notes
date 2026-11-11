@@ -9,8 +9,10 @@ import 'package:notes/domain/models/text_note.dart';
 import 'package:notes/domain/services/markdown_table_service.dart';
 import 'package:notes/state/theme_provider.dart';
 import 'package:notes/state/workspace_provider.dart';
+import 'package:notes/ui/components/cards/neo_note_card.dart';
 import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
 import 'package:notes/ui/components/inputs/app_search_field.dart';
+import 'package:notes/ui/components/layout/z_order_column.dart';
 import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
 import 'package:notes/ui/screens/editor/note_editor_screen.dart';
 import 'package:notes/ui/screens/settings/settings_screen.dart';
@@ -426,6 +428,88 @@ Footer text.
       final indexedStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
       expect(indexedStack.index, 1);
       expect(find.text('v2.0.0  •  MAJOR UPDATE'), findsOneWidget);
+    });
+
+    testWidgets('8. NeoNoteCard does not render body content inside preview on home screen', (tester) async {
+      final now = DateTime.now();
+      final note = TextNote(
+        id: 'test_note_1',
+        title: 'Project Architecture',
+        content: 'Detailed hidden body content that should never appear on the home preview card.',
+        tags: const ['design'],
+        paletteId: 'peach',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Center(
+              child: NeoNoteCard(
+                item: note,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Title and Tag must be visible
+      expect(find.text('Project Architecture'), findsOneWidget);
+      expect(find.text('#design'), findsOneWidget);
+
+      // Body text snippet MUST NOT be present
+      expect(find.textContaining('Detailed hidden body content'), findsNothing);
+    });
+
+    testWidgets('9. ZOrderColumn renders children in reverse paint order for unclipped drop shadows', (tester) async {
+      bool firstTapped = false;
+      bool secondTapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: ZOrderColumn(
+              children: [
+                GestureDetector(
+                  onTap: () => firstTapped = true,
+                  child: Container(
+                    height: 100,
+                    width: 200,
+                    color: Colors.blue,
+                    child: const Text('Top Card'),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => secondTapped = true,
+                  child: Container(
+                    height: 100,
+                    width: 200,
+                    color: Colors.green,
+                    child: const Text('Bottom Card'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Top Card'), findsOneWidget);
+      expect(find.text('Bottom Card'), findsOneWidget);
+
+      await tester.tap(find.text('Top Card'));
+      await tester.pump();
+      expect(firstTapped, isTrue);
+
+      await tester.tap(find.text('Bottom Card'));
+      await tester.pump();
+      expect(secondTapped, isTrue);
     });
   });
 }
