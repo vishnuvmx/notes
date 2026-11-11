@@ -87,7 +87,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
       _CommandEntry(
         icon: TackIcons.moon,
         title: 'Switch Theme (System / Light / Dark)',
-        subtitle: 'Toggle Paper & Pin light or dark appearance',
+        subtitle: 'Toggle Soft Monochrome light or dark appearance',
         keywords: 'theme dark mode light mode appearance',
         onExecute: () => themeProv.toggleTheme(context),
       ),
@@ -240,7 +240,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
-                    border: Border.all(color: tokens.borderSubtle, width: 1),
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Column(
                     children: [
@@ -263,7 +263,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
-                    border: Border.all(color: tokens.borderSubtle, width: 1),
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Column(
                     children: [
@@ -321,7 +321,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
-                    border: Border.all(color: tokens.borderSubtle, width: 1),
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Column(
                     children: [
@@ -352,7 +352,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                   decoration: BoxDecoration(
                     color: tokens.surfacePrimary,
                     borderRadius: AppSpacing.roundedMd,
-                    border: Border.all(color: tokens.borderSubtle, width: 1),
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Column(
                     children: [

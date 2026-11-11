@@ -9,15 +9,14 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 
-/// Paper & Pin Note Grid Card (`07-design-system.md` §7, `10-design.md` §5.1).
+/// Soft Monochrome Note Grid Card (`docs/design/11-reference-ui-style.md` §4, Screenshot 1 & 4).
 ///
 /// Anatomy:
-/// - Container: `surface/primary`, `1dp` `border/subtle`, `r-md` (`12dp`), `elev/1`
-/// - Color index band: `6dp` left vertical strip in the note's `object/<palette>` fill
-/// - Padding: `14dp` (`16dp` left of text after the `6dp` band)
+/// - Outer Container: `surface/primary` (`#FFFFFF` / `#18191C`), `r-md` (`18dp`), soft diffused shadow (`elev/1`)
+/// - Top Header Row: Tag/Folder pill (or `NOTE` label) on the left + mono date (`12 NOV`) & `TackPinBadge` on the right
 /// - Title (`title-sm`, `text/primary`, max 2 lines)
-/// - Body preview (`body-sm`, `text/secondary`, max 3 lines, Markdown stripped)
-/// - Footer row: relative date (`caption`, `text/tertiary`) + `TackPinBadge` when pinned
+/// - Inner Tinted Sub-Card (`softBackground`, `10dp` radius) with a `3.5dp` vertical accent bar on the left,
+///   body snippet, and a compact word-count pill (`42w`)
 class NeoNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
@@ -43,37 +42,47 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.item.paletteId);
-    final bandColor = palette.resolveCardColor(tokens.isDark);
+    final accentColor = palette.resolveAccentColor(tokens.isDark);
+    final softTint = palette.resolveSoftBackground(tokens.isDark);
     final summary = widget.item.getSummary();
     final hasDistinctSummary = summary.trim().isNotEmpty &&
-        summary.trim().toLowerCase() != widget.item.title.trim().toLowerCase();
+        summary.trim().toLowerCase() != widget.item.title.trim().toLowerCase() &&
+        summary != 'Empty note';
 
     final displayTitle =
         (widget.item.iconEmoji != null && widget.item.iconEmoji!.isNotEmpty)
             ? '${widget.item.iconEmoji} ${widget.item.title}'
             : (widget.item.title.trim().isEmpty ? 'Untitled' : widget.item.title);
 
-    final firstTag = (widget.item is TextNote && (widget.item as TextNote).tags.isNotEmpty)
-        ? (widget.item as TextNote).tags.first
-        : null;
+    final firstTag = (widget.item is TextNote &&
+            (widget.item as TextNote).tags.isNotEmpty)
+        ? '#${(widget.item as TextNote).tags.first}'
+        : (widget.item.folderName != null &&
+                widget.item.folderName!.isNotEmpty &&
+                widget.item.folderName != 'All Notes'
+            ? widget.item.folderName!
+            : 'NOTE');
+
+    final wordCount = widget.item is TextNote
+        ? (widget.item as TextNote).wordCount
+        : summary.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
 
     return AnimatedScale(
-      scale: _isPressed ? 0.985 : 1.0,
+      scale: _isPressed ? 0.98 : 1.0,
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: AppSpacing.cardMinHeight,
-          maxHeight: AppSpacing.cardMaxHeight,
+          maxHeight: 224.0,
         ),
         child: Container(
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
-            border: Border.all(
-              color: _isPressed ? tokens.borderStrong : tokens.borderSubtle,
-              width: 1,
-            ),
+            border: _isPressed
+                ? Border.all(color: tokens.borderStrong, width: 1)
+                : null,
             boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
           clipBehavior: Clip.antiAlias,
@@ -97,86 +106,125 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                       widget.onLongPress!();
                     }
                   : null,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 6dp leading object-color index band
-                    Container(
-                      width: AppSpacing.cardColorBandWidth,
-                      color: bandColor,
+                    // 1. Top Meta Row: Category/Tag Pill + Date + Pin Badge
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: softTint,
+                            borderRadius: AppSpacing.roundedPill,
+                          ),
+                          child: Text(
+                            firstTag,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.caption(
+                              color: accentColor,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          DateFormatter.formatTimestamp(widget.item.updatedAt)
+                              .toUpperCase(),
+                          style: AppTypography.mono(
+                            fontSize: 10.5,
+                            color: tokens.textTertiary,
+                          ),
+                        ),
+                        if (widget.item.isFavorite) ...[
+                          const SizedBox(width: 6),
+                          TackPinBadge(color: tokens.accentPin, size: 13),
+                        ],
+                      ],
                     ),
 
-                    // Card body
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.s4,
-                          14,
-                          14,
-                          14,
+                    const SizedBox(height: AppSpacing.s2),
+
+                    // 2. Note Title
+                    Text(
+                      displayTitle,
+                      style: AppTypography.titleSm(
+                        color: tokens.textPrimary,
+                        fontSize: 16,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    const SizedBox(height: AppSpacing.s2),
+
+                    // 3. Regent-Style Tinted Inner Block with 3.5dp Leading Bar
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Top: Title + Body Preview
-                            Flexible(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    displayTitle,
-                                    style: AppTypography.titleSm(
-                                      color: tokens.textPrimary,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (hasDistinctSummary) ...[
-                                    const SizedBox(height: AppSpacing.s1),
-                                    Flexible(
-                                      child: Text(
-                                        summary,
-                                        style: AppTypography.bodySm(
-                                          color: tokens.textSecondary,
-                                        ),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                        decoration: BoxDecoration(
+                          color: softTint,
+                          borderRadius: AppSpacing.roundedSm,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                width: 3.0,
+                                decoration: BoxDecoration(
+                                  color: accentColor,
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
                               ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.s2),
-
-                            // Bottom: Relative date + tag/folder + Pin Red badge
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    firstTag != null
-                                        ? '${DateFormatter.formatTimestamp(widget.item.updatedAt)} · #$firstTag'
-                                        : DateFormatter.formatTimestamp(
-                                            widget.item.updatedAt,
-                                          ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.caption(
-                                      color: tokens.textTertiary,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  hasDistinctSummary ? summary : 'Tap to write…',
+                                  style: AppTypography.bodySm(
+                                    color: hasDistinctSummary
+                                        ? tokens.textSecondary
+                                        : tokens.textTertiary,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (wordCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withValues(alpha: 0.14),
+                                      borderRadius: AppSpacing.roundedPill,
+                                    ),
+                                    child: Text(
+                                      '${wordCount}w',
+                                      style: AppTypography.caption(
+                                        color: accentColor,
+                                        weight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                if (widget.item.isFavorite) ...[
-                                  const SizedBox(width: AppSpacing.s2),
-                                  TackPinBadge(color: tokens.accentPin),
-                                ],
                               ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

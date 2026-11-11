@@ -10,73 +10,73 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // ================= Light Semantic Tokens (Paper & Pin) =================
-  /// `bg/canvas` — Warm paper app background (#F7F6F3)
-  static const Color lightCanvas = Color(0xFFF7F6F3);
+  // ================= Light Semantic Tokens (Soft Monochrome & Coral Pin) =================
+  /// `bg/canvas` — Soft cool-neutral gray app background (#F3F4F6, Screenshot 1 & 2)
+  static const Color lightCanvas = Color(0xFFF3F4F6);
 
-  /// `bg/surface` — Cards, sheets, inputs (#FFFFFF)
+  /// `bg/surface` — Pure crisp white cards, sheets, floating pills (#FFFFFF)
   static const Color lightSurface = Color(0xFFFFFFFF);
 
-  /// `bg/sunken` — Wells, code blocks, selected rows (#EFEDE8)
-  static const Color lightSunken = Color(0xFFEFEDE8);
+  /// `bg/sunken` — Segmented control tracks, week-strip active day, pill wells (#EAECEF)
+  static const Color lightSunken = Color(0xFFEAECEF);
 
-  /// `border/subtle` — 1dp hairlines on content (#E4E1DA)
-  static const Color lightBorderSubtle = Color(0xFFE4E1DA);
+  /// `border/subtle` — Delicate card & divider hairlines (#E5E7EB)
+  static const Color lightBorderSubtle = Color(0xFFE5E7EB);
 
-  /// `border/strong` — Input outlines, visible dividers (#CFCBC2, >= 3:1 on canvas)
-  static const Color lightBorderStrong = Color(0xFFCFCBC2);
+  /// `border/strong` — Input outlines, visible dividers (#CFD4DC)
+  static const Color lightBorderStrong = Color(0xFFCFD4DC);
 
-  /// `text/primary` — Body, titles (#1B1A17, 16.1:1 on canvas)
-  static const Color lightTextPrimary = Color(0xFF1B1A17);
+  /// `text/primary` — Deep ink near-black (#111214)
+  static const Color lightTextPrimary = Color(0xFF111214);
 
-  /// `text/secondary` — Supporting text (#55514A, 7.3:1 on canvas)
-  static const Color lightTextSecondary = Color(0xFF55514A);
+  /// `text/secondary` — Balanced neutral gray (#6B707B)
+  static const Color lightTextSecondary = Color(0xFF6B707B);
 
-  /// `text/tertiary` — Timestamps, hints (#6B665D, 5.27:1 on canvas, 5.7:1 on white)
-  static const Color lightTextTertiary = Color(0xFF6B665D);
+  /// `text/tertiary` — Muted timestamps, hints (#8E939E)
+  static const Color lightTextTertiary = Color(0xFF8E939E);
 
-  /// `accent/pin` — Pin motif, active-slot dot, brand moments (#D92D20)
-  static const Color lightAccentPin = Color(0xFFD92D20);
+  /// `accent/pin` — Regent Coral Red (#EF5B5B)
+  static const Color lightAccentPin = Color(0xFFEF5B5B);
 
-  /// `accent/pin-text` — Red used as text/links (#C2271B, 5.4:1 on canvas)
-  static const Color lightAccentPinText = Color(0xFFC2271B);
+  /// `accent/pin-text` — Accessible coral-red text/links (#D63D3D)
+  static const Color lightAccentPinText = Color(0xFFD63D3D);
 
-  /// `action/primary` — Primary button fill (#1B1A17 ink)
-  static const Color lightActionPrimary = Color(0xFF1B1A17);
+  /// `action/primary` — Solid ink black primary button & active pill fill (#111214)
+  static const Color lightActionPrimary = Color(0xFF111214);
 
-  // ================= Dark Semantic Tokens (Warm Charcoal) =================
-  /// `bg/canvas` — Warm charcoal app background (#141311)
-  static const Color darkCanvas = Color(0xFF141311);
+  // ================= Dark Semantic Tokens (Soft Carbon Monochrome) =================
+  /// `bg/canvas` — Deep carbon app background (#0F1012, Screenshot 3 dark card)
+  static const Color darkCanvas = Color(0xFF0F1012);
 
-  /// `bg/surface` — Cards, sheets, inputs (#1D1C19)
-  static const Color darkSurface = Color(0xFF1D1C19);
+  /// `bg/surface` — Elevated dark card surface (#18191C)
+  static const Color darkSurface = Color(0xFF18191C);
 
-  /// `bg/sunken` — Wells, code blocks, selected rows (#0E0D0C)
-  static const Color darkSunken = Color(0xFF0E0D0C);
+  /// `bg/sunken` — Segmented control track & wells (#222429)
+  static const Color darkSunken = Color(0xFF222429);
 
-  /// `border/subtle` — 1dp hairlines on content (#2A2824)
-  static const Color darkBorderSubtle = Color(0xFF2A2824);
+  /// `border/subtle` — 1dp hairlines (#272930)
+  static const Color darkBorderSubtle = Color(0xFF272930);
 
-  /// `border/strong` — Input outlines, visible dividers (#3B3833)
-  static const Color darkBorderStrong = Color(0xFF3B3833);
+  /// `border/strong` — Input outlines, visible dividers (#383B44)
+  static const Color darkBorderStrong = Color(0xFF383B44);
 
-  /// `text/primary` — Body, titles (#F2F0EB, 16.3:1 on canvas)
-  static const Color darkTextPrimary = Color(0xFFF2F0EB);
+  /// `text/primary` — Crisp off-white (#F5F6F8)
+  static const Color darkTextPrimary = Color(0xFFF5F6F8);
 
-  /// `text/secondary` — Supporting text (#B3AEA3, 8.4:1 on canvas)
-  static const Color darkTextSecondary = Color(0xFFB3AEA3);
+  /// `text/secondary` — Supporting gray (#A0A5B1)
+  static const Color darkTextSecondary = Color(0xFFA0A5B1);
 
-  /// `text/tertiary` — Timestamps, hints (#8F8A80, 5.41:1 on canvas, 4.96:1 on surface)
-  static const Color darkTextTertiary = Color(0xFF8F8A80);
+  /// `text/tertiary` — Timestamps, hints (#7A7F8C)
+  static const Color darkTextTertiary = Color(0xFF7A7F8C);
 
-  /// `accent/pin` — Pin motif, active-slot dot, brand moments (#FF6B5E, 6.65:1 on dark canvas)
-  static const Color darkAccentPin = Color(0xFFFF6B5E);
+  /// `accent/pin` — Coral accent in dark mode (#FF6E6E)
+  static const Color darkAccentPin = Color(0xFFFF6E6E);
 
-  /// `accent/pin-text` — Red used as text/links in dark mode (#FF6B5E)
-  static const Color darkAccentPinText = Color(0xFFFF6B5E);
+  /// `accent/pin-text` — Coral text in dark mode (#FF6E6E)
+  static const Color darkAccentPinText = Color(0xFFFF6E6E);
 
-  /// `action/primary` — Primary button fill in dark mode (#F2F0EB)
-  static const Color darkActionPrimary = Color(0xFFF2F0EB);
+  /// `action/primary` — Primary button fill in dark mode (#F5F6F8)
+  static const Color darkActionPrimary = Color(0xFFF5F6F8);
 
   // ================= State Tokens (Light & Dark) =================
   static const Color lightStateSuccess = Color(0xFF1A7F5A); // 4.97:1 on white

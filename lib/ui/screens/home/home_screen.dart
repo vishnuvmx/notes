@@ -15,10 +15,10 @@ import '../../components/cards/responsive_card_grid.dart';
 import '../../components/dialogs_sheets/app_bottom_sheet.dart';
 import '../../components/dialogs_sheets/card_peek_sheet.dart';
 import '../../components/dialogs_sheets/create_item_sheet.dart';
-import '../../components/dialogs_sheets/you_sheet.dart';
 import '../../components/feedback/empty_state_widget.dart';
 import '../../components/navigation/smart_bottom_nav_bar.dart';
 import '../search/search_command_screen.dart';
+import '../settings/profile_settings_screen.dart';
 import '../today/today_screen.dart';
 
 /// Main 5-Slot Application Shell for Tack (`05-information-architecture.md` §2.1, `10-design.md` §4).
@@ -210,6 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppHeaderBar(
           title: _titleForTab(activeTab),
           subtitle: _subtitleForTab(activeTab, workspace),
+          tagline: activeTab == 0 ? "Let's make progress today!" : null,
           trailingAction: (activeTab == 1 || activeTab == 3)
               ? IconButton(
                   key: const ValueKey('header_sort_button'),
@@ -223,15 +224,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       AppSpacing.minTouchTarget,
                       AppSpacing.minTouchTarget,
                     ),
+                    padding: EdgeInsets.zero,
                   ),
-                  icon: TackIcon(
-                    TackIcons.sort,
-                    size: 20,
-                    color: tokens.textPrimary,
+                  icon: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: tokens.surfacePrimary,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppSpacing.elev1(tokens.isDark),
+                    ),
+                    child: Center(
+                      child: TackIcon(
+                        TackIcons.sort,
+                        size: 18,
+                        color: tokens.textPrimary,
+                      ),
+                    ),
                   ),
                 )
               : null,
-          onOpenYouSheet: () => YouSheet.show(context),
+          onOpenProfileSettings: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ProfileSettingsScreen(),
+              ),
+            );
+          },
         ),
         body: workspace.isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -609,16 +628,14 @@ class _LibraryFilterChip extends StatelessWidget {
           onTap();
         },
         borderRadius: AppSpacing.roundedPill,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppSpacing.durationFast,
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
           decoration: BoxDecoration(
             color: bg,
             borderRadius: AppSpacing.roundedPill,
-            border: Border.all(
-              color: isSelected ? tokens.actionPrimary : tokens.borderSubtle,
-              width: 1,
-            ),
+            boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

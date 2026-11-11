@@ -9,7 +9,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/frontmatter_service.dart';
 import '../dialogs_sheets/app_bottom_sheet.dart';
 
-/// Zero-clutter Obsidian / Figma-Specs Frontmatter Properties Bar.
+/// Zero-clutter YAML Frontmatter Properties Bar.
 ///
 /// - When the note has NO frontmatter properties:
 ///   - Hidden completely in Reader Mode (zero noise).

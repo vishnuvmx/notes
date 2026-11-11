@@ -273,9 +273,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               vertical: AppSpacing.s3,
             ),
             decoration: BoxDecoration(
-              color: tokens.canvasPrimary,
+              color: tokens.canvasSunken,
               borderRadius: AppSpacing.roundedMd,
-              border: Border.all(color: tokens.borderSubtle, width: 1),
             ),
             child: TextField(
               key: const ValueKey('capture_sheet_input'),

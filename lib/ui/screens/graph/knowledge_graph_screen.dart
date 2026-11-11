@@ -62,7 +62,7 @@ class _GraphEdge {
   });
 }
 
-/// Interactive 2D Local & Global Knowledge Graph (Obsidian-inspired, 100% offline).
+/// Interactive 2D Local & Global Knowledge Graph (100% offline).
 /// Visualizes `[[Wiki-Links]]`, `![[Embeds]]`, Whiteboard Spec Cards, Sub-Note
 /// hierarchies, and `#tag` hubs with tactile Neo-Pop styling.
 class KnowledgeGraphScreen extends StatefulWidget {

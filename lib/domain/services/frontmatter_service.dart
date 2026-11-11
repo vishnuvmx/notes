@@ -1,4 +1,4 @@
-/// Service for parsing and updating Obsidian / Figma-Specs compatible
+/// Service for parsing and updating portable
 /// YAML frontmatter (`--- ... ---`) at the top of Markdown notes.
 ///
 /// Keeps Tack 100% local-first and `.md`-portable without needing any database.

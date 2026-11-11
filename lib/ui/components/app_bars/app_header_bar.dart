@@ -6,34 +6,38 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// Top header app bar for Tack's 4 main views (`Today`, `Library`, `Boards`, `Search`).
-/// Adheres to `05-information-architecture.md` §2.1 & `07-design-system.md` §7:
-/// - 56dp height on `canvas/primary`
-/// - Screen title (`title-lg`) on the left
-/// - At most 2 actions (`48x48dp`) on the right, including the **You** sheet trigger
-/// - Retires the static "Welcome back 👋" greeting, drawer mascot, and header theme toggle
+/// Soft Monochrome Header App Bar for Tack's 4 main views (`Today`, `Library`, `Boards`, `Search`).
+/// Styled after `docs/design/11-reference-ui-style.md` (Screenshot 2 & 3):
+/// - Bold title + optional count pill on the left
+/// - Optional editorial italic serif tagline below the title (e.g. "Let's make progress today!")
+/// - Soft white squircle icon buttons on the right with diffused elevation
 class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String? subtitle;
+  final String? tagline;
   final Widget? trailingAction;
-  final VoidCallback onOpenYouSheet;
+  final VoidCallback onOpenProfileSettings;
   final bool primary;
 
   const AppHeaderBar({
     super.key,
     required this.title,
     this.subtitle,
+    this.tagline,
     this.trailingAction,
-    required this.onOpenYouSheet,
+    required this.onOpenProfileSettings,
     this.primary = true,
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(AppSpacing.appBarHeight);
+  Size get preferredSize => Size.fromHeight(
+        tagline != null && tagline!.isNotEmpty ? 72 : AppSpacing.appBarHeight,
+      );
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final hasTagline = tagline != null && tagline!.isNotEmpty;
 
     return AppBar(
       primary: primary,
@@ -41,36 +45,54 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       backgroundColor: tokens.canvasPrimary,
       automaticallyImplyLeading: false,
-      toolbarHeight: AppSpacing.appBarHeight,
+      toolbarHeight: hasTagline ? 72 : AppSpacing.appBarHeight,
       titleSpacing: AppSpacing.s5,
-      title: Row(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(
-            child: Text(
-              title,
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleLg(color: tokens.textPrimary),
+                ),
+              ),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(width: AppSpacing.s2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.surfacePrimary,
+                    borderRadius: AppSpacing.roundedPill,
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                  ),
+                  child: Text(
+                    subtitle!,
+                    style: AppTypography.caption(
+                      color: tokens.textSecondary,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (hasTagline) ...[
+            const SizedBox(height: 1),
+            Text(
+              tagline!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.titleLg(color: tokens.textPrimary),
-            ),
-          ),
-          if (subtitle != null && subtitle!.isNotEmpty) ...[
-            const SizedBox(width: AppSpacing.s3),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s2,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: tokens.canvasSunken,
-                borderRadius: AppSpacing.roundedPill,
-                border: Border.all(color: tokens.borderSubtle, width: 1),
-              ),
-              child: Text(
-                subtitle!,
-                style: AppTypography.caption(
-                  color: tokens.textSecondary,
-                  weight: FontWeight.w500,
-                ),
+              style: AppTypography.serifItalic(
+                color: tokens.textSecondary,
+                fontSize: 15.5,
               ),
             ),
           ],
@@ -80,14 +102,14 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
         ?trailingAction,
         Semantics(
           button: true,
-          label: 'You — Settings, Backup, and Trash',
+          label: 'Profile & Settings',
           child: IconButton(
             key: const ValueKey('header_you_button'),
             onPressed: () {
               HapticFeedback.selectionClick();
-              onOpenYouSheet();
+              onOpenProfileSettings();
             },
-            tooltip: 'You & Settings',
+            tooltip: 'Profile & Settings',
             style: IconButton.styleFrom(
               minimumSize: const Size(
                 AppSpacing.minTouchTarget,
@@ -96,12 +118,12 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               padding: EdgeInsets.zero,
             ),
             icon: Container(
-              width: 34,
-              height: 34,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: tokens.surfacePrimary,
-                shape: BoxShape.circle,
-                border: Border.all(color: tokens.borderSubtle, width: 1),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppSpacing.elev1(tokens.isDark),
               ),
               child: Center(
                 child: TackIcon(
@@ -113,7 +135,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.s2),
+        const SizedBox(width: AppSpacing.s3),
       ],
     );
   }

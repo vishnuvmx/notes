@@ -179,7 +179,7 @@ class WikiLinkService {
       }
     }
 
-    // 3. YAML frontmatter alias match (Obsidian compatibility)
+    // 3. YAML frontmatter alias match
     for (final item in items) {
       if (item.isTrash) continue;
       String? content;

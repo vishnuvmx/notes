@@ -138,7 +138,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         continue;
       }
 
-      // 0b. HTML <details> / <summary> Toggle Block (Notion / GitHub / Obsidian portable)
+      // 0b. HTML <details> / <summary> Toggle Block (portable Markdown/HTML)
       if (RegExp(r'^<details(\s+open)?\s*>', caseSensitive: false).hasMatch(trimmed)) {
         final defaultOpen = RegExp(r'^<details\s+open', caseSensitive: false).hasMatch(trimmed);
         String summaryTitle = 'Toggle details';

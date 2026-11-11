@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -12,31 +13,38 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
+import '../folders/folder_view_screen.dart';
 import 'about_tack_screen.dart';
 import 'release_notes_tab.dart';
 
-/// Clean, editorial Settings & Backup screen (`05-information-architecture.md` §6).
+/// Clean, editorial Profile & Settings screen (`05-information-architecture.md` §6).
 ///
 /// Features:
-/// - **Appearance**: Theme selector (`System` · `Light` · `Dark`)
+/// - **Profile & Workspace Hero**: Avatar, customizable name, status, and 4 stat pills
+/// - **Trash**: Direct navigation with active item count badge
+/// - **Appearance**: Soft Monochrome theme selector (`System` · `Light` · `Dark`)
 /// - **Daily Desk**: Real interactive switch for **Carry forward unfinished tasks**
 /// - **Storage & Backup**: Accurate counts of all items (including Trash), Export JSON, Restore JSON
 /// - **About & Release Notes**
-class SettingsScreen extends StatefulWidget {
+class ProfileSettingsScreen extends StatefulWidget {
   final int initialTabIndex;
 
-  const SettingsScreen({
+  const ProfileSettingsScreen({
     super.key,
     this.initialTabIndex = 0,
   });
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
+/// Backwards compatibility alias for existing routes and callers.
+typedef SettingsScreen = ProfileSettingsScreen;
+
+class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  String _userName = 'Karthik';
 
   @override
   void initState() {
@@ -46,12 +54,88 @@ class _SettingsScreenState extends State<SettingsScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex.clamp(0, 1),
     );
+    _loadProfileName();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadProfileName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('user_profile_name');
+      if (saved != null && saved.trim().isNotEmpty && mounted) {
+        setState(() => _userName = saved.trim());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _editProfileName() async {
+    final controller = TextEditingController(text: _userName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogCtx) {
+        final tokens = dialogCtx.tokens;
+        return AlertDialog(
+          backgroundColor: tokens.surfacePrimary,
+          shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedLg),
+          title: Text(
+            'Edit Profile Name',
+            style: AppTypography.titleSm(color: tokens.textPrimary),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: AppTypography.body(color: tokens.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter your name…',
+              hintStyle: AppTypography.body(color: tokens.textTertiary),
+              filled: true,
+              fillColor: tokens.canvasSunken,
+              border: OutlineInputBorder(
+                borderRadius: AppSpacing.roundedSm,
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: Text(
+                'Cancel',
+                style: AppTypography.label(color: tokens.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: tokens.actionPrimary,
+                foregroundColor: tokens.actionPrimaryFg,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppSpacing.roundedPill,
+                ),
+              ),
+              onPressed: () {
+                final trimmed = controller.text.trim();
+                Navigator.of(dialogCtx).pop(trimmed.isEmpty ? 'Karthik' : trimmed);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+
+    if (newName != null && newName != _userName && mounted) {
+      setState(() => _userName = newName);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_profile_name', newName);
+      } catch (_) {}
+    }
   }
 
   Future<void> _exportBackup(BuildContext context) async {
@@ -263,6 +347,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       backgroundColor: tokens.canvasPrimary,
       appBar: AppBar(
         backgroundColor: tokens.canvasPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: TackIcon(TackIcons.back, size: 20, color: tokens.textPrimary),
           onPressed: () {
@@ -272,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           tooltip: 'Back',
         ),
         title: Text(
-          'Settings & Backup',
+          'Profile & Settings',
           style: AppTypography.title(color: tokens.textPrimary),
         ),
       ),
@@ -285,11 +371,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               AppSpacing.s5,
               AppSpacing.s2,
             ),
-            padding: const EdgeInsets.all(3),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedSm,
-              border: Border.all(color: tokens.borderSubtle, width: 1),
+              borderRadius: AppSpacing.roundedPill,
             ),
             child: TabBar(
               controller: _tabController,
@@ -297,22 +382,21 @@ class _SettingsScreenState extends State<SettingsScreen>
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               indicator: BoxDecoration(
-                color: tokens.surfacePrimary,
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: AppSpacing.elev1(tokens.isDark),
+                color: tokens.actionPrimary,
+                borderRadius: AppSpacing.roundedPill,
               ),
-              labelColor: tokens.textPrimary,
-              unselectedLabelColor: tokens.textTertiary,
+              labelColor: tokens.actionPrimaryFg,
+              unselectedLabelColor: tokens.textSecondary,
               labelStyle: AppTypography.label(
-                color: tokens.textPrimary,
-                weight: FontWeight.w600,
+                color: tokens.actionPrimaryFg,
+                weight: FontWeight.w700,
               ),
               unselectedLabelStyle: AppTypography.label(
-                color: tokens.textTertiary,
+                color: tokens.textSecondary,
                 weight: FontWeight.w500,
               ),
               tabs: const [
-                Tab(text: 'Preferences'),
+                Tab(text: 'Profile & Settings'),
                 Tab(text: "What's New"),
               ],
             ),
@@ -337,8 +421,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     WorkspaceProvider workspace,
     TackTokens tokens,
   ) {
-    final totalActive = workspace.allActiveItems.length;
+    final noteCount = workspace.libraryNotes.length;
+    final boardCount = workspace.boardItems.length;
+    final taskCount = workspace.openTasks.length;
     final trashCount = workspace.trashItems.length;
+    final totalActive = workspace.allActiveItems.length;
     final totalItems = totalActive + trashCount + workspace.archivedItems.length;
 
     return ListView(
@@ -349,21 +436,242 @@ class _SettingsScreenState extends State<SettingsScreen>
         AppSpacing.s9,
       ),
       children: [
-        // 1. Appearance
+        // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          decoration: BoxDecoration(
+            color: tokens.surfacePrimary,
+            borderRadius: AppSpacing.roundedMd,
+            boxShadow: AppSpacing.elev1(tokens.isDark),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: tokens.actionPrimary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _userName.isNotEmpty
+                                ? _userName[0].toUpperCase()
+                                : 'K',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: tokens.actionPrimaryFg,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: tokens.accentPin,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: tokens.surfacePrimary,
+                              width: 2.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: AppSpacing.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _userName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.title(
+                                  color: tokens.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: _editProfileName,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: tokens.canvasSunken,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: TackIcon(
+                                  TackIcons.editSvg,
+                                  size: 13,
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Local & offline-first • Paper & Pin',
+                          style: AppTypography.caption(
+                            color: tokens.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatMetricPill(
+                      label: 'Notes',
+                      count: '$noteCount',
+                      tokens: tokens,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(
+                    child: _StatMetricPill(
+                      label: 'Boards',
+                      count: '$boardCount',
+                      tokens: tokens,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(
+                    child: _StatMetricPill(
+                      label: 'Tasks',
+                      count: '$taskCount',
+                      tokens: tokens,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(
+                    child: _StatMetricPill(
+                      label: 'Trash',
+                      count: '$trashCount',
+                      tokens: tokens,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.s4),
+
+        // 2. Trash Navigation Tile
+        Container(
+          decoration: BoxDecoration(
+            color: tokens.surfacePrimary,
+            borderRadius: AppSpacing.roundedMd,
+            boxShadow: AppSpacing.elev1(tokens.isDark),
+          ),
+          child: ListTile(
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: tokens.accentPin.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: TackIcon(
+                  TackIcons.trash,
+                  size: 18,
+                  color: tokens.accentPin,
+                ),
+              ),
+            ),
+            title: Text(
+              'Trash & Deleted Items',
+              style: AppTypography.body(
+                color: tokens.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+            subtitle: Text(
+              'Restore or permanently delete items',
+              style: AppTypography.caption(color: tokens.textSecondary),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (trashCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: tokens.accentPin.withValues(alpha: 0.15),
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    child: Text(
+                      '$trashCount',
+                      style: AppTypography.caption(
+                        color: tokens.accentPin,
+                        weight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                TackIcon(
+                  TackIcons.chevronRight,
+                  size: 16,
+                  color: tokens.textTertiary,
+                ),
+              ],
+            ),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const FolderViewScreen(
+                    folderType: FolderType.trash,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.s6),
+
+        // 3. Appearance
         _SectionLabel(text: 'Appearance'),
         const SizedBox(height: AppSpacing.s2),
         _ThemeSegmentedControl(themeProv: themeProv),
 
         const SizedBox(height: AppSpacing.s6),
 
-        // 2. Daily Desk Behavior
+        // 4. Daily Desk Behavior
         _SectionLabel(text: 'Today & Daily Note'),
         const SizedBox(height: AppSpacing.s2),
         Container(
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
-            border: Border.all(color: tokens.borderSubtle, width: 1),
+            boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
           child: SwitchListTile(
             title: Text(
@@ -389,14 +697,14 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         const SizedBox(height: AppSpacing.s6),
 
-        // 3. Storage & Backup
+        // 5. Storage & Backup
         _SectionLabel(text: 'Local Storage & Backup'),
         const SizedBox(height: AppSpacing.s2),
         Container(
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
-            border: Border.all(color: tokens.borderSubtle, width: 1),
+            boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -473,14 +781,14 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         const SizedBox(height: AppSpacing.s6),
 
-        // 4. About
+        // 6. About
         _SectionLabel(text: 'About'),
         const SizedBox(height: AppSpacing.s2),
         Container(
           decoration: BoxDecoration(
             color: tokens.surfacePrimary,
             borderRadius: AppSpacing.roundedMd,
-            border: Border.all(color: tokens.borderSubtle, width: 1),
+            boxShadow: AppSpacing.elev1(tokens.isDark),
           ),
           child: Column(
             children: [
@@ -498,7 +806,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
                 subtitle: Text(
-                  'Paper & Pin design system & open-source libraries',
+                  'Soft Monochrome design system & open-source libraries',
                   style: AppTypography.caption(color: tokens.textSecondary),
                 ),
                 trailing: TackIcon(
@@ -516,6 +824,47 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StatMetricPill extends StatelessWidget {
+  final String label;
+  final String count;
+  final TackTokens tokens;
+
+  const _StatMetricPill({
+    required this.label,
+    required this.count,
+    required this.tokens,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s2,
+        vertical: AppSpacing.s2,
+      ),
+      decoration: BoxDecoration(
+        color: tokens.canvasSunken,
+        borderRadius: AppSpacing.roundedSm,
+      ),
+      child: Column(
+        children: [
+          Text(
+            count,
+            style: AppTypography.titleSm(color: tokens.textPrimary),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption(color: tokens.textTertiary),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -553,11 +902,10 @@ class _ThemeSegmentedControl extends StatelessWidget {
     ];
 
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: tokens.canvasSunken,
-        borderRadius: AppSpacing.roundedSm,
-        border: Border.all(color: tokens.borderSubtle, width: 1),
+        borderRadius: AppSpacing.roundedPill,
       ),
       child: Row(
         children: modes.map((entry) {
@@ -568,39 +916,36 @@ class _ThemeSegmentedControl extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 themeProv.setThemeMode(entry.$1);
               },
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: AppSpacing.roundedPill,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 40),
                 child: AnimatedContainer(
                   duration: AppSpacing.durationFast,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? tokens.surfacePrimary
+                        ? tokens.actionPrimary
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    boxShadow: isSelected
-                        ? AppSpacing.elev1(tokens.isDark)
-                        : AppSpacing.elev0,
+                    borderRadius: AppSpacing.roundedPill,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TackIcon(
                         entry.$3,
-                        size: 16,
+                        size: 15,
                         color: isSelected
-                            ? tokens.textPrimary
-                            : tokens.textTertiary,
+                            ? tokens.actionPrimaryFg
+                            : tokens.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         entry.$2,
                         style: AppTypography.label(
                           color: isSelected
-                              ? tokens.textPrimary
-                              : tokens.textTertiary,
+                              ? tokens.actionPrimaryFg
+                              : tokens.textSecondary,
                           weight: isSelected
-                              ? FontWeight.w600
+                              ? FontWeight.w700
                               : FontWeight.w500,
                         ),
                       ),

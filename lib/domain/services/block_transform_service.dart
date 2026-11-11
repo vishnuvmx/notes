@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-/// Block types supported by Tack's Figma-Specs / Notion-style "Turn Into" engine.
+/// Block types supported by Tack's "Turn Into" block transformation engine.
 enum BlockKind {
   paragraph('Paragraph', 'Plain body text'),
   h1('Heading 1', 'Large section title (#)'),

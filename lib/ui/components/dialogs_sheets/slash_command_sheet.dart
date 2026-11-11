@@ -11,7 +11,7 @@ import '../../../domain/services/wiki_link_service.dart';
 import '../inputs/app_search_field.dart';
 import 'app_bottom_sheet.dart';
 
-/// Definition of a `/` Slash Block Command inspired by Figma Specs & Notion.
+/// Definition of a `/` Slash Block Command.
 class SlashCommandItem {
   final String id;
   final String command; // e.g. 'spec', 'h1', 'todo'
@@ -76,7 +76,7 @@ class SlashCommandsCatalog {
       id: 'spec',
       command: 'spec',
       label: 'Spec Brief',
-      subtitle: 'Figma Specs-style structured PRD outline',
+      subtitle: 'Structured PRD outline with goals & requirements',
       icon: LucideIcons.fileCheck2,
       accentColor: Color(0xFF1BA5BA),
       markdownSnippet:
@@ -307,7 +307,7 @@ class SlashCommandInlineBar extends StatelessWidget {
   }
 }
 
-/// Unified Bottom Sheet for Slash (`/`) Insert Blocks + Figma-Specs / Notion "Turn Into" & Line Moves.
+/// Unified Bottom Sheet for Slash (`/`) Insert Blocks + "Turn Into" & Line Moves.
 class SlashAndBlockActionsSheet extends StatefulWidget {
   final BlockKind currentBlockKind;
   final ValueChanged<SlashCommandItem> onInsertCommand;

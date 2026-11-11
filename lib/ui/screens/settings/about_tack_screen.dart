@@ -6,10 +6,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// Comprehensive About Tack screen showcasing:
+/// Comprehensive About Tack screen styled in Soft Monochrome:
 /// 1. The Tech Stack journey and architectural evolution from start to now.
 /// 2. Open-source libraries and packages used with descriptions and licenses.
-/// 3. Offline-first privacy and local storage principles.
 class AboutTackScreen extends StatefulWidget {
   const AboutTackScreen({super.key});
 
@@ -17,7 +16,8 @@ class AboutTackScreen extends StatefulWidget {
   State<AboutTackScreen> createState() => _AboutTackScreenState();
 }
 
-class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProviderStateMixin {
+class _AboutTackScreenState extends State<AboutTackScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -34,18 +34,17 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: tokens.canvasPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: tokens.canvasPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: const TackIcon(TackIcons.back, size: 22),
+          icon: TackIcon(TackIcons.back, size: 20, color: tokens.textPrimary),
           onPressed: () {
             HapticFeedback.lightImpact();
             Navigator.of(context).pop();
@@ -54,67 +53,47 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
         ),
         title: Text(
           'About Tack',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
+          style: AppTypography.title(color: tokens.textPrimary),
         ),
       ),
       body: Column(
         children: [
           // Header Hero Card
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s5,
+              vertical: AppSpacing.s2,
+            ),
             child: Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.s5),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.25)
-                        : const Color(0xFF191A23).withValues(alpha: 0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: tokens.surfacePrimary,
+                borderRadius: AppSpacing.roundedLg,
+                boxShadow: AppSpacing.elev1(tokens.isDark),
               ),
               child: Row(
                 children: [
-                  // App Brand Icon Container
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.accentAmber.withValues(alpha: isDark ? 0.2 : 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.accentAmber.withValues(alpha: 0.4),
-                        width: 1.2,
-                      ),
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedMd,
                     ),
                     child: Center(
                       child: Image.asset(
                         'icon.png',
-                        width: 36,
-                        height: 36,
-                        errorBuilder: (context, error, stackTrace) => const TackIcon(
+                        width: 34,
+                        height: 34,
+                        errorBuilder: (context, error, stackTrace) => TackIcon(
                           TackIcons.notes,
-                          size: 30,
-                          color: AppColors.accentAmber,
+                          size: 28,
+                          color: tokens.accentPin,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.s4),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,43 +102,36 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
                           children: [
                             Text(
                               'Tack',
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.6,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              style: AppTypography.titleLg(
+                                color: tokens.textPrimary,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.s2),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppColors.pastelCyanLight.withValues(alpha: isDark ? 0.25 : 0.18),
-                                borderRadius: BorderRadius.circular(6),
+                                color: tokens.actionPrimary,
+                                borderRadius: AppSpacing.roundedPill,
                               ),
                               child: Text(
                                 'v2.0.0',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                  color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+                                style: AppTypography.caption(
+                                  color: tokens.actionPrimaryFg,
+                                  weight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
-                          'Tactile Workspace, Flowcharts & Notes',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.2,
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                          'Soft Monochrome Notes, Tasks & Visual Boards',
+                          style: AppTypography.serifItalic(
+                            color: tokens.textSecondary,
+                            fontSize: 15,
                           ),
                         ),
                       ],
@@ -170,44 +142,33 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s2),
 
-          // Segmented Tab Selector
+          // Black-Pill Segmented Tab Selector (matching Screenshot 2)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s5),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF1F5),
-              borderRadius: BorderRadius.circular(14),
+              color: tokens.canvasSunken,
+              borderRadius: AppSpacing.roundedPill,
             ),
             child: TabBar(
               controller: _tabController,
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               indicator: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: tokens.actionPrimary,
+                borderRadius: AppSpacing.roundedPill,
               ),
-              labelColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              unselectedLabelColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              labelStyle: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                letterSpacing: -0.2,
+              labelColor: tokens.actionPrimaryFg,
+              unselectedLabelColor: tokens.textSecondary,
+              labelStyle: AppTypography.label(
+                color: tokens.actionPrimaryFg,
+                weight: FontWeight.w600,
               ),
-              unselectedLabelStyle: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                letterSpacing: -0.2,
+              unselectedLabelStyle: AppTypography.label(
+                color: tokens.textSecondary,
+                weight: FontWeight.w500,
               ),
               tabs: const [
                 Tab(text: 'Stack & Journey'),
@@ -216,15 +177,14 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s2),
 
-          // Tab Views
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildStackJourneyTab(isDark),
-                _buildOpenSourceTab(isDark),
+                _buildStackJourneyTab(tokens),
+                _buildOpenSourceTab(tokens),
               ],
             ),
           ),
@@ -233,158 +193,156 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
     );
   }
 
-  // ================= 1. Stack & Journey Tab =================
-  Widget _buildStackJourneyTab(bool isDark) {
+  Widget _buildStackJourneyTab(TackTokens tokens) {
     final stages = [
       _JourneyStage(
         phase: 'Stage 1',
         title: 'Core OOP Domain Modeling',
-        color: AppColors.pastelPeachLight,
+        paletteId: 'peach',
         icon: TackIcons.notes,
         description:
-            'Engineered strict Object-Oriented Dart abstractions. Created abstract `BaseWorkspaceItem` '
-            'with dynamic polymorphism across `TextNote`, `StickyNote`, `WhiteboardCanvasItem`, and `ClipboardItem`.',
+            'Engineered strict Object-Oriented Dart abstractions with `BaseWorkspaceItem` '
+            'polymorphism across `TextNote`, `StickyNote`, `WhiteboardCanvasItem`, and `ClipboardItem`.',
       ),
       _JourneyStage(
         phase: 'Stage 2',
         title: 'Decoupled Repository & Storage',
-        color: AppColors.pastelAmberLight,
+        paletteId: 'amber',
         icon: TackIcons.exportData,
         description:
-            'Implemented Clean Architecture with `IWorkspaceRepository` and atomic JSON file persistence. '
-            'Provides offline-first storage with local on-device persistence.',
+            'Implemented Clean Architecture with `IWorkspaceRepository`, corrupt-store recovery, '
+            'and atomic offline-first JSON persistence.',
       ),
       _JourneyStage(
         phase: 'Stage 3',
-        title: 'Tactile Android Design System',
-        color: AppColors.pastelCyanLight,
+        title: 'Soft Monochrome Design System',
+        paletteId: 'coral',
         icon: TackIcons.palette,
         description:
-            'Crafted the signature stationery aesthetic: 8 curated sticky pastels, DM Sans typography (-2% tracking), '
-            'soft diffused drop shadows, 48dp ergonomics, and micro-press physics animations.',
+            'Crafted a calm neutral-canvas aesthetic with ink primary buttons, editorial Newsreader '
+            'serif accents, DM Sans UI hierarchy, and tinted sub-cards.',
       ),
       _JourneyStage(
         phase: 'Stage 4',
         title: 'Flowchart Whiteboard Canvas',
-        color: AppColors.pastelLimeLight,
+        paletteId: 'lime',
         icon: TackIcons.whiteboard,
         description:
-            'Constructed a 6000px virtual infinite canvas with 2D matrix transformations, magnetic 20px snap-to-grid, '
-            'flowchart shapes (Start/End, Process, Decision, I/O), Bézier edge routing, and a live radar minimap.',
+            'Constructed a 6000px virtual infinite canvas with 2D matrix transformations, magnetic snap-to-grid, '
+            'flowchart shapes, live Spec Cards, and Bézier edge routing.',
       ),
       _JourneyStage(
         phase: 'Stage 5',
-        title: 'Clipboard Studio & Rich Export',
-        color: AppColors.pastelLavenderLight,
-        icon: TackIcons.clipboard,
+        title: 'Today Desk & Inbox Triage',
+        paletteId: 'lavender',
+        icon: TackIcons.today,
         description:
-            'Integrated seamless clipboard history capture, multi-line snippet management, interactive checklists, '
-            'and native vector PDF + high-resolution PNG document generation.',
+            'Integrated daily note carry-forward, 1-tap inbox capture triage, cross-note open task checklists, '
+            'and vector PDF + PNG document generation.',
       ),
       _JourneyStage(
         phase: 'Stage 6',
         title: 'ABI Split & Performance Polish',
-        color: AppColors.pastelRoseLight,
+        paletteId: 'cyan',
         icon: TackIcons.bolt,
         description:
             'Optimized release binaries with ABI-split compilation (ARM64, ARMv7, x86_64), icon tree-shaking '
-            '(reducing icon fonts by >98%), and gesture navigation safe-area clearances.',
+            '(>96% reduction), and edge-to-edge gesture clearances.',
       ),
     ];
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s5,
+        vertical: AppSpacing.s3,
+      ),
       physics: const BouncingScrollPhysics(),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'HOW WE BUILT TACK (FROM START TO NOW)',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-            ),
-          ),
-        ),
-        ...stages.map((stage) => _buildStageCard(stage, isDark)),
-        const SizedBox(height: 20),
+        ...stages.map((stage) => _buildStageCard(stage, tokens)),
+        const SizedBox(height: AppSpacing.s6),
       ],
     );
   }
 
-  Widget _buildStageCard(_JourneyStage stage, bool isDark) {
+  Widget _buildStageCard(_JourneyStage stage, TackTokens tokens) {
+    final palette = AppColors.getPaletteById(stage.paletteId);
+    final accent = palette.resolveAccentColor(tokens.isDark);
+    final softBg = palette.resolveSoftBackground(tokens.isDark);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s3),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-          width: 1,
-        ),
+        color: tokens.surfacePrimary,
+        borderRadius: AppSpacing.roundedMd,
+        boxShadow: AppSpacing.elev1(tokens.isDark),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: stage.color.withValues(alpha: isDark ? 0.22 : 0.16),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: TackIcon(
-                stage.icon,
-                size: 18,
-                color: isDark ? stage.color : AppColors.primaryDark,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                stage.phase.toUpperCase(),
+                style: AppTypography.mono(
+                  fontSize: 11,
+                  weight: FontWeight.w600,
+                  color: tokens.textTertiary,
+                ),
               ),
-            ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: softBg,
+                  borderRadius: AppSpacing.roundedPill,
+                ),
+                child: TackIcon(stage.icon, size: 14, color: accent),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      stage.title,
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
+          const SizedBox(height: AppSpacing.s2),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s3),
+            decoration: BoxDecoration(
+              color: softBg,
+              borderRadius: AppSpacing.roundedSm,
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 3.5,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: AppSpacing.roundedPill,
                     ),
-                    Text(
-                      stage.phase,
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  stage.description,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12.5,
-                    height: 1.45,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          stage.title,
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          stage.description,
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -392,94 +350,79 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
     );
   }
 
-  // ================= 2. Open Source Libraries Tab =================
-  Widget _buildOpenSourceTab(bool isDark) {
+  Widget _buildOpenSourceTab(TackTokens tokens) {
     final packages = [
-      _OssPackage(
+      const _OssPackage(
         name: 'flutter',
         author: 'Google LLC',
         version: 'SDK 3.29.0',
         license: 'BSD-3-Clause',
         role: 'Cross-platform reactive UI framework and rendering engine.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'provider',
         author: 'Remi Rousselet',
         version: '^6.1.2',
         license: 'MIT',
         role: 'State management and dependency injection for workspace and themes.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'google_fonts',
         author: 'Material Design & Google',
         version: '^8.2.1',
         license: 'Apache-2.0 / OFL',
-        role: 'Typography engine delivering DM Sans modern geometric letterforms.',
+        role: 'Typography engine delivering DM Sans, Newsreader, and JetBrains Mono.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'lucide_icons_flutter',
         author: 'Lucide Team',
         version: '^3.1.19',
         license: 'ISC',
-        role: 'Minimalist, rounded-cap SVG iconography across workspace controls.',
+        role: 'Minimalist, rounded-cap iconography across workspace controls.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'flutter_svg',
         author: 'Dan Field & Community',
         version: '^2.3.0',
         license: 'MIT',
         role: 'Scalable vector graphics rendering for app badges and brand assets.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'pdf & printing',
         author: 'David PHAM-VAN',
         version: '^3.13.0 / ^5.15.0',
         license: 'Apache-2.0',
         role: 'Native multi-page document layout and vector PDF export engine.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'share_plus',
         author: 'Flutter Community',
         version: '^13.3.0',
         license: 'BSD-3-Clause',
         role: 'Android platform sharing intents for backups, notes, and exports.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'path_provider',
         author: 'Flutter Team',
         version: '^2.1.6',
         license: 'BSD-3-Clause',
         role: 'Android file system directory resolution for offline JSON storage.',
       ),
-      _OssPackage(
-        name: 'image_picker',
-        author: 'Flutter Team',
-        version: '^1.2.3',
-        license: 'BSD-3-Clause',
-        role: 'Device gallery and camera integration for whiteboard media nodes.',
+      const _OssPackage(
+        name: 'image_picker & image',
+        author: 'Flutter Team & Brendan Duncan',
+        version: '^1.2.3 / ^4.9.2',
+        license: 'BSD-3-Clause / Apache-2.0',
+        role: 'Device media integration and pure Dart PNG rasterization.',
       ),
-      _OssPackage(
-        name: 'image',
-        author: 'Brendan Duncan',
-        version: '^4.9.2',
-        license: 'Apache-2.0',
-        role: 'Pure Dart pixel processing and PNG rasterization generator.',
-      ),
-      _OssPackage(
-        name: 'vector_math',
-        author: 'Dart Team',
-        version: '^2.1.4',
-        license: 'BSD-3-Clause',
-        role: '2D/3D affine transformation matrices for whiteboard zooming and panning.',
-      ),
-      _OssPackage(
+      const _OssPackage(
         name: 'shared_preferences',
         author: 'Flutter Team',
         version: '^2.5.5',
         license: 'BSD-3-Clause',
         role: 'Lightweight on-device persistent key-value store for app settings.',
       ),
-      _OssPackage(
+      const _OssPackage(
         name: 'url_launcher',
         author: 'Flutter Team',
         version: '^6.3.2',
@@ -489,39 +432,26 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
     ];
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s5,
+        vertical: AppSpacing.s3,
+      ),
       physics: const BouncingScrollPhysics(),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'OPEN SOURCE PACKAGES & ATTRIBUTIONS',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-            ),
-          ),
-        ),
-        ...packages.map((pkg) => _buildPackageCard(pkg, isDark)),
-        const SizedBox(height: 20),
+        ...packages.map((pkg) => _buildPackageCard(pkg, tokens)),
+        const SizedBox(height: AppSpacing.s6),
       ],
     );
   }
 
-  Widget _buildPackageCard(_OssPackage pkg, bool isDark) {
+  Widget _buildPackageCard(_OssPackage pkg, TackTokens tokens) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.s3),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-          width: 1,
-        ),
+        color: tokens.surfacePrimary,
+        borderRadius: AppSpacing.roundedMd,
+        boxShadow: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,27 +461,22 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
             children: [
               Text(
                 pkg.name,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                style: AppTypography.titleSm(
+                  color: tokens.textPrimary,
+                  fontSize: 15,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F6),
-                  borderRadius: BorderRadius.circular(6),
+                  color: tokens.canvasSunken,
+                  borderRadius: AppSpacing.roundedPill,
                 ),
                 child: Text(
                   pkg.license,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.pastelCyanLight : AppColors.pastelCyanDark,
+                  style: AppTypography.caption(
+                    color: tokens.textSecondary,
+                    weight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -560,22 +485,12 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
           const SizedBox(height: 3),
           Text(
             '${pkg.author}  •  ${pkg.version}',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-            ),
+            style: AppTypography.caption(color: tokens.textTertiary),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
             pkg.role,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              height: 1.35,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
+            style: AppTypography.bodySm(color: tokens.textSecondary),
           ),
         ],
       ),
@@ -586,14 +501,14 @@ class _AboutTackScreenState extends State<AboutTackScreen> with SingleTickerProv
 class _JourneyStage {
   final String phase;
   final String title;
-  final Color color;
+  final String paletteId;
   final IconData icon;
   final String description;
 
   const _JourneyStage({
     required this.phase,
     required this.title,
-    required this.color,
+    required this.paletteId,
     required this.icon,
     required this.description,
   });

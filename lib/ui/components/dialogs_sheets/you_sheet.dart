@@ -8,25 +8,21 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
 import '../../screens/folders/folder_view_screen.dart';
-import '../../screens/settings/settings_screen.dart';
+import '../../screens/settings/profile_settings_screen.dart';
 import 'app_bottom_sheet.dart';
 
-/// The **You** sheet (`05-information-architecture.md` §2.1 & §6).
+/// The **You** / Profile Settings entry point (`05-information-architecture.md` §2.1 & §6).
 ///
-/// Replaces the retired Navigation Drawer with a calm, single-tap sheet
-/// reachable from the top bar's `You` button:
-/// - Workspace overview metrics (Notes, Boards, Open Tasks, Inbox)
-/// - **Trash** (with trashed items count badge)
-/// - **Settings & Backup** (Theme, Carry-forward tasks, JSON Export/Import)
-/// - **About Tack**
+/// Navigates directly to the dedicated [ProfileSettingsScreen].
 class YouSheet extends StatelessWidget {
   const YouSheet({super.key});
 
   static Future<void> show(BuildContext context) {
     HapticFeedback.selectionClick();
-    return AppBottomSheet.show<void>(
-      context: context,
-      builder: (ctx) => const YouSheet(),
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ProfileSettingsScreen(),
+      ),
     );
   }
 
@@ -197,7 +193,7 @@ class YouSheet extends StatelessWidget {
                   TackPinBadge(color: tokens.accentPin, size: 12),
                   const SizedBox(width: AppSpacing.s2),
                   Text(
-                    'Tack · Paper & Pin Edition',
+                    'Tack · Soft Monochrome Edition',
                     style: AppTypography.title(color: tokens.textPrimary),
                   ),
                 ],
@@ -209,9 +205,9 @@ class YouSheet extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s4),
               Text(
-                '• Today desk with Daily Note, Inbox triage, and Open Tasks\n'
+                '• Today desk with Week Strip, Daily Note, Inbox triage, and Open Tasks\n'
                 '• Bidirectional [[Wiki-links]], backlinks, and Spec Cards on Boards\n'
-                '• Warm Paper & Pin design system with full offline storage',
+                '• Soft Monochrome & Coral design system with full offline storage',
                 style: AppTypography.bodySm(color: tokens.textPrimary),
               ),
             ],
@@ -240,9 +236,8 @@ class _StatPill extends StatelessWidget {
         vertical: AppSpacing.s3,
       ),
       decoration: BoxDecoration(
-        color: tokens.canvasPrimary,
+        color: tokens.canvasSunken,
         borderRadius: AppSpacing.roundedSm,
-        border: Border.all(color: tokens.borderSubtle, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

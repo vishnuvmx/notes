@@ -37,12 +37,30 @@ class AppTypography {
     double fontSize = 32,
     FontWeight? weight,
     FontWeight fontWeight = FontWeight.w600,
+    FontStyle fontStyle = FontStyle.normal,
   }) {
     return GoogleFonts.newsreader(
       fontSize: fontSize,
       height: 38 / 32,
       fontWeight: weight ?? fontWeight,
+      fontStyle: fontStyle,
       letterSpacing: -(fontSize * 0.01),
+      color: color,
+    );
+  }
+
+  /// `serifItalic` — Editorial italic serif subtitle ("Let's make progress today!", Screenshot 2)
+  static TextStyle serifItalic({
+    Color? color,
+    double fontSize = 16,
+    FontWeight fontWeight = FontWeight.w400,
+  }) {
+    return GoogleFonts.newsreader(
+      fontSize: fontSize,
+      height: 22 / 16,
+      fontWeight: fontWeight,
+      fontStyle: FontStyle.italic,
+      letterSpacing: -0.1,
       color: color,
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Local-first Note & Spec Template definition (Figma Specs Briefs + Notion + Obsidian).
+/// Local-first Note & Spec Template definition.
 class NoteTemplate {
   final String id;
   final String name;
@@ -70,9 +70,9 @@ class NoteTemplateService {
       bodyTemplate: '',
     ),
     NoteTemplate(
-      id: 'figma_spec_prd',
+      id: 'spec_prd',
       name: 'Product Spec (PRD)',
-      subtitle: 'Figma Specs brief with goals, flows & criteria',
+      subtitle: 'Structured product brief with goals, flows & criteria',
       iconEmoji: '📐',
       paletteId: 'cyan',
       titlePattern: 'Spec: {{title}}',

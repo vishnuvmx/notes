@@ -6,8 +6,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 
-/// 5-Destination Bottom Navigation Bar (`05-information-architecture.md` §2.1, `07-design-system.md` §7):
-/// `[ Today ]  [ Library ]  [ (+) Capture ]  [ Boards ]  [ Search ]`
+/// Soft Monochrome Floating Pill Bottom Navigation Bar + Detached Circular (+) FAB
+/// (`docs/design/11-reference-ui-style.md` §3–4, Screenshot 2):
+/// `( [ Today ]  [ Library ]  [ Boards ]  [ Search ] )    ( + )`
 class SmartBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -25,6 +26,8 @@ class SmartBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final gutter = AppSpacing.screenGutter(screenWidth);
 
     final navItems = [
       (icon: TackIcons.today, label: 'Today', index: 0, badge: inboxCount),
@@ -33,38 +36,46 @@ class SmartBottomNavBar extends StatelessWidget {
       (icon: TackIcons.search, label: 'Search', index: 4, badge: 0),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: tokens.surfacePrimary,
-        border: Border(
-          top: BorderSide(
-            color: tokens.borderSubtle,
-            width: 1,
-          ),
-        ),
-      ),
+    return ColoredBox(
+      color: tokens.canvasPrimary,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: AppSpacing.bottomBarHeight,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // 0. Today
-              _buildNavItem(context, navItems[0], tokens),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            gutter,
+            AppSpacing.s2,
+            gutter,
+            AppSpacing.s3,
+          ),
+          child: SizedBox(
+            height: 58,
+            child: Row(
+              children: [
+                // 1. Floating Pill Dock (Today · Library · Boards · Search)
+                Expanded(
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedPill,
+                      boxShadow: AppSpacing.elev1(tokens.isDark),
+                    ),
+                    child: Row(
+                      children: [
+                        for (final item in navItems)
+                          _buildNavItem(context, item, tokens),
+                      ],
+                    ),
+                  ),
+                ),
 
-              // 1. Library
-              _buildNavItem(context, navItems[1], tokens),
+                const SizedBox(width: AppSpacing.s3),
 
-              // 2. Center (+) Capture Button (56x56dp in action/primary)
-              _buildCenterCaptureButton(context, tokens),
-
-              // 3. Boards
-              _buildNavItem(context, navItems[2], tokens),
-
-              // 4. Search
-              _buildNavItem(context, navItems[3], tokens),
-            ],
+                // 2. Detached Circular (+) Capture Button (56x56dp Ink Black)
+                _buildDetachedCaptureFab(context, tokens),
+              ],
+            ),
           ),
         ),
       ),
@@ -77,78 +88,84 @@ class SmartBottomNavBar extends StatelessWidget {
     TackTokens tokens,
   ) {
     final isSelected = currentIndex == item.index;
-    final iconColor = isSelected ? tokens.textPrimary : tokens.textTertiary;
+    final fgColor = isSelected ? tokens.textPrimary : tokens.textSecondary;
 
     return Expanded(
       child: Semantics(
         button: true,
         selected: isSelected,
         label: item.label,
-        child: InkWell(
-          key: ValueKey('nav_item_${item.index}'),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap(item.index);
-          },
-          borderRadius: AppSpacing.roundedSm,
-          child: SizedBox(
-            height: AppSpacing.bottomBarHeight,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    TackIcon(
-                      item.icon,
-                      size: 22,
-                      color: iconColor,
-                      style: isSelected
-                          ? HeroIconStyle.solid
-                          : HeroIconStyle.outline,
-                    ),
-                    if (item.badge > 0)
-                      Positioned(
-                        top: -3,
-                        right: -6,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: tokens.accentPin,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: tokens.surfacePrimary,
-                              width: 1.2,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: ValueKey('nav_item_${item.index}'),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap(item.index);
+            },
+            borderRadius: AppSpacing.roundedPill,
+            child: AnimatedContainer(
+              duration: AppSpacing.durationFast,
+              curve: AppSpacing.curveStandard,
+              height: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? tokens.surfacePrimary : Colors.transparent,
+                borderRadius: AppSpacing.roundedPill,
+                boxShadow: isSelected
+                    ? AppSpacing.elev1(tokens.isDark)
+                    : AppSpacing.elev0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      TackIcon(
+                        item.icon,
+                        size: 17,
+                        color: fgColor,
+                        style: isSelected
+                            ? HeroIconStyle.solid
+                            : HeroIconStyle.outline,
+                      ),
+                      if (item.badge > 0)
+                        Positioned(
+                          top: -3,
+                          right: -5,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: tokens.accentPin,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? tokens.surfacePrimary
+                                    : tokens.canvasSunken,
+                                width: 1.2,
+                              ),
                             ),
                           ),
                         ),
+                    ],
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: fgColor,
+                        weight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.caption(
-                    color: iconColor,
-                    weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                // Signature Pin Red dot under the active tab (`07` §7)
-                AnimatedContainer(
-                  duration: AppSpacing.durationFast,
-                  curve: AppSpacing.curveStandard,
-                  width: isSelected ? 4 : 0,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isSelected ? tokens.accentPin : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -156,36 +173,33 @@ class SmartBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildCenterCaptureButton(BuildContext context, TackTokens tokens) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
-      child: Semantics(
-        button: true,
-        label: 'Capture thought, note, or board',
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: tokens.actionPrimary,
-            shape: BoxShape.circle,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              key: const ValueKey('nav_capture_fab'),
-              customBorder: const CircleBorder(),
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                onFabTap();
-              },
-              child: Center(
-                child: TackIcon(
-                  TackIcons.plus,
-                  size: 22,
-                  color: tokens.actionPrimaryFg,
-                ),
+  Widget _buildDetachedCaptureFab(BuildContext context, TackTokens tokens) {
+    return Semantics(
+      button: true,
+      label: 'Capture thought, note, or board',
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: tokens.actionPrimary,
+          shape: BoxShape.circle,
+          boxShadow: AppSpacing.elev2(tokens.isDark),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            key: const ValueKey('nav_capture_fab'),
+            customBorder: const CircleBorder(),
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              onFabTap();
+            },
+            child: Center(
+              child: TackIcon(
+                TackIcons.plus,
+                size: 24,
+                color: tokens.actionPrimaryFg,
               ),
             ),
           ),

@@ -9,14 +9,13 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/whiteboard_item.dart';
 
-/// Board Grid Card (`07-design-system.md` §7, `04-feature-strategy.md` M8/F7).
+/// Soft Monochrome Board Grid Card (`docs/design/11-reference-ui-style.md` §4).
 ///
 /// Anatomy:
-/// - Outer container: `surface/primary`, `1dp` `border/subtle`, `r-md` (`12dp`), `elev/1`
-/// - Top `120dp`: live mini-canvas thumbnail (`CustomPaint` of actual node shapes and
-///   connector edges in their object colours) on `canvas/sunken`
-/// - Bottom section: board title (`title-sm`, 1 line) + node/link count & updated date (`caption`)
-///   + `TackPinBadge` if pinned
+/// - Outer container: `surface/primary`, `r-md` (`18dp`), soft diffused shadow (`elev/1`)
+/// - Top header row: `BOARD` tinted pill + relative date + `TackPinBadge` if pinned
+/// - Inset rounded `112dp` mini-canvas thumbnail (`CustomPaint` on grid-paper `canvas/sunken`)
+/// - Bottom row: board title (`title-sm`) + node count pill (`3n`)
 class BoardGridCard extends StatefulWidget {
   final WhiteboardCanvasItem board;
   final VoidCallback onTap;
@@ -41,6 +40,8 @@ class _BoardGridCardState extends State<BoardGridCard> {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.board.paletteId);
     final bandColor = palette.resolveCardColor(tokens.isDark);
+    final accentColor = palette.resolveAccentColor(tokens.isDark);
+    final softTint = palette.resolveSoftBackground(tokens.isDark);
     final displayTitle =
         (widget.board.iconEmoji != null && widget.board.iconEmoji!.isNotEmpty)
             ? '${widget.board.iconEmoji} ${widget.board.title}'
@@ -49,17 +50,16 @@ class _BoardGridCardState extends State<BoardGridCard> {
                 : widget.board.title);
 
     return AnimatedScale(
-      scale: _isPressed ? 0.985 : 1.0,
+      scale: _isPressed ? 0.98 : 1.0,
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
       child: Container(
         decoration: BoxDecoration(
           color: tokens.surfacePrimary,
           borderRadius: AppSpacing.roundedMd,
-          border: Border.all(
-            color: _isPressed ? tokens.borderStrong : tokens.borderSubtle,
-            width: 1,
-          ),
+          border: _isPressed
+              ? Border.all(color: tokens.borderStrong, width: 1)
+              : null,
           boxShadow: AppSpacing.elev1(tokens.isDark),
         ),
         clipBehavior: Clip.antiAlias,
@@ -83,86 +83,109 @@ class _BoardGridCardState extends State<BoardGridCard> {
                     widget.onLongPress!();
                   }
                 : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Top 120dp live mini-canvas thumbnail
-                SizedBox(
-                  height: 120,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: tokens.canvasSunken,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: tokens.borderSubtle,
-                          width: 1,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. Top Meta Row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: softTint,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          'BOARD',
+                          style: AppTypography.caption(
+                            color: accentColor,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        DateFormatter.formatTimestamp(widget.board.updatedAt)
+                            .toUpperCase(),
+                        style: AppTypography.mono(
+                          fontSize: 10.5,
+                          color: tokens.textTertiary,
+                        ),
+                      ),
+                      if (widget.board.isFavorite) ...[
+                        const SizedBox(width: 6),
+                        TackPinBadge(color: tokens.accentPin, size: 13),
+                      ],
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.s2),
+
+                  // 2. Inset 108dp Grid-Paper Mini-Canvas Thumbnail
+                  ClipRRect(
+                    borderRadius: AppSpacing.roundedSm,
+                    child: SizedBox(
+                      height: 108,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: tokens.canvasSunken,
+                        ),
+                        child: CustomPaint(
+                          painter: _BoardMiniThumbnailPainter(
+                            nodes: widget.board.nodes,
+                            edges: widget.board.edges,
+                            tokens: tokens,
+                            accentBandColor: bandColor,
+                          ),
                         ),
                       ),
                     ),
-                    child: CustomPaint(
-                      painter: _BoardMiniThumbnailPainter(
-                        nodes: widget.board.nodes,
-                        edges: widget.board.edges,
-                        tokens: tokens,
-                        accentBandColor: bandColor,
-                      ),
-                    ),
                   ),
-                ),
 
-                // Bottom info bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.s3,
-                    AppSpacing.s3,
-                    AppSpacing.s3,
-                    AppSpacing.s3,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: AppSpacing.s2),
+
+                  // 3. Title + Node Count Pill
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: bandColor,
-                              shape: BoxShape.circle,
-                            ),
+                      Expanded(
+                        child: Text(
+                          displayTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            fontSize: 15.5,
                           ),
-                          const SizedBox(width: AppSpacing.s2),
-                          Expanded(
-                            child: Text(
-                              displayTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.titleSm(
-                                color: tokens.textPrimary,
-                              ),
-                            ),
-                          ),
-                          if (widget.board.isFavorite) ...[
-                            const SizedBox(width: AppSpacing.s2),
-                            TackPinBadge(color: tokens.accentPin),
-                          ],
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${widget.board.nodes.length} node${widget.board.nodes.length == 1 ? '' : 's'} · ${DateFormatter.formatTimestamp(widget.board.updatedAt)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.caption(
-                          color: tokens.textTertiary,
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: softTint,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          '${widget.board.nodes.length}n',
+                          style: AppTypography.caption(
+                            color: accentColor,
+                            weight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -186,15 +209,16 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Subtle dot grid background
-    final dotPaint = Paint()
-      ..color = tokens.borderSubtle.withValues(alpha: 0.7)
-      ..style = PaintingStyle.fill;
-    const step = 14.0;
-    for (double x = 10; x < size.width; x += step) {
-      for (double y = 10; y < size.height; y += step) {
-        canvas.drawCircle(Offset(x, y), 0.9, dotPaint);
-      }
+    // 1. Subtle grid-paper lines (matching Screenshot 1 right-side grid paper)
+    final gridPaint = Paint()
+      ..color = tokens.borderSubtle.withValues(alpha: 0.65)
+      ..strokeWidth = 0.7;
+    const step = 16.0;
+    for (double x = step; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = step; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
     if (nodes.isEmpty) return;
@@ -214,10 +238,11 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
 
     final contentW = math.max(maxX - minX, 200.0);
     final contentH = math.max(maxY - minY, 120.0);
-    const pad = 14.0;
+    const pad = 12.0;
     final availW = math.max(size.width - pad * 2, 20.0);
     final availH = math.max(size.height - pad * 2, 20.0);
-    final scale = math.min(availW / contentW, availH / contentH).clamp(0.06, 0.42);
+    final scale =
+        math.min(availW / contentW, availH / contentH).clamp(0.06, 0.42);
 
     final scaledW = contentW * scale;
     final scaledH = contentH * scale;
@@ -288,7 +313,8 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
           canvas.drawCircle(rect.center, r, strokePaint);
           break;
         default:
-          final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
+          final rrect =
+              RRect.fromRectAndRadius(rect, const Radius.circular(3));
           canvas.drawRRect(rrect, fillPaint);
           canvas.drawRRect(rrect, strokePaint);
           break;
@@ -303,4 +329,3 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
         oldDelegate.tokens != tokens;
   }
 }
-

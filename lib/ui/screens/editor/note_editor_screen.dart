@@ -1562,7 +1562,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       return;
     }
 
-    // Create & open new linked note on 1 tap (Obsidian workflow)
+    // Create & open new linked note on 1 tap
     final created = await workspace.createQuickItem(
       title: link.target,
       type: ItemType.note,
@@ -1920,7 +1920,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         ),
                       ),
 
-                    // Breadcrumbs, Folder & Hierarchy Bar (Notion / Obsidian)
+                    // Breadcrumbs, Folder & Hierarchy Bar
                     if (_folderName != null ||
                         breadcrumbs.isNotEmpty ||
                         _isEditingMode ||
@@ -1930,6 +1930,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         isDark: isDark,
                         palette: palette,
                       ),
+
+                    // Date stamp above title (Screenshot 4 editorial style)
+                    Text(
+                      DateFormatter.formatOrdinalDate(widget.item.updatedAt),
+                      style: AppTypography.cardDateStyle(
+                        color: tokens.textTertiary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
 
                     // Large Note Title (with optional Emoji Icon)
                     Row(
@@ -1952,9 +1962,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               ? TextField(
                                   controller: _titleController,
                                   style: theme.textTheme.displaySmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.6,
-                                    height: 1.2,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.7,
+                                    height: 1.18,
                                   ),
                                   maxLines: null,
                                   decoration: const InputDecoration(
@@ -1977,49 +1987,117 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 10),
 
-                    // Ordinal Date Stamp & Checklist Progress
-                    Row(
+                    // Screenshot 4 ("Design Ideas") Metadata Pill Row:
+                    // [Folder Tinted Pill]  [N Words Pill]  [Xm read Pill]  [Checklist Pill]
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(
-                          DateFormatter.formatOrdinalDate(widget.item.updatedAt),
-                          style: AppTypography.cardDateStyle(
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            fontSize: 13,
+                        if (_folderName != null && _folderName!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.resolveSoftBackground(isDark),
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TackIcon(
+                                  TackIcons.folder,
+                                  size: 12,
+                                  color: palette.resolveAccentColor(isDark),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _folderName!,
+                                  style: AppTypography.caption(
+                                    color: palette.resolveAccentColor(isDark),
+                                    weight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _showNoteStatisticsSheet();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.canvasSunken,
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                            child: Text(
+                              '$wordCount ${wordCount == 1 ? 'Word' : 'Words'}',
+                              style: AppTypography.caption(
+                                color: tokens.textSecondary,
+                                weight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                        if (totalChecklists > 0) ...[
-                          const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _showNoteStatisticsSheet();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.canvasSunken,
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                            child: Text(
+                              '${readTime}m read',
+                              style: AppTypography.caption(
+                                color: tokens.textSecondary,
+                                weight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (totalChecklists > 0)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: allChecklistsCompleted
-                                  ? (isDark ? AppColors.pastelLimeLight.withValues(alpha: 0.2) : AppColors.pastelLimeSoft)
-                                  : (isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: allChecklistsCompleted
-                                    ? AppColors.pastelLimeLight
-                                    : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                                width: 0.8,
-                              ),
+                                  ? (isDark
+                                      ? AppColors.pastelLimeLight
+                                          .withValues(alpha: 0.2)
+                                      : AppColors.pastelLimeSoft)
+                                  : tokens.canvasSunken,
+                              borderRadius: AppSpacing.roundedPill,
                             ),
                             child: Text(
                               allChecklistsCompleted
-                                  ? '✓ All done!'
-                                  : '✓ $completedChecklists/$totalChecklists done',
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                  ? '✓ All done'
+                                  : '✓ $completedChecklists/$totalChecklists tasks',
+                              style: AppTypography.caption(
                                 color: allChecklistsCompleted
-                                    ? (isDark ? AppColors.pastelLimeLight : const Color(0xFF386616))
-                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    ? tokens.success
+                                    : tokens.textSecondary,
+                                weight: FontWeight.w700,
                               ),
                             ),
                           ),
-                        ],
                       ],
                     ),
                     if (widget.item is TextNote && (widget.item as TextNote).sourceApp != null) ...[
@@ -2149,7 +2227,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                        ],
                      ),
 
-                     // Structured YAML Frontmatter Properties Bar (Obsidian / Figma Specs)
+                     // Structured YAML Frontmatter Properties Bar
                      FrontmatterPropertiesBar(
                        rawContent: _contentController.text,
                        paletteId: _paletteId,

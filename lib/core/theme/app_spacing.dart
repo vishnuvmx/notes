@@ -77,22 +77,22 @@ class AppSpacing {
   static const double radiusXs = 4.0;
   static const double rXs = radiusXs;
 
-  /// `radius/sm` — 8dp (buttons, inputs, chips, property pills)
-  static const double radiusSm = 8.0;
+  /// `radius/sm` — 10dp (buttons, inputs, chips, property pills)
+  static const double radiusSm = 10.0;
   static const double rSm = radiusSm;
 
-  /// `radius/md` — 12dp (cards, menus, popovers)
-  static const double radiusMd = 12.0;
+  /// `radius/md` — 18dp (soft monochrome cards, menus, popovers — per 11-reference-ui-style.md)
+  static const double radiusMd = 18.0;
   static const double rMd = radiusMd;
 
-  /// `radius/lg` — 16dp (sheet top corners, dialogs)
-  static const double radiusLg = 16.0;
+  /// `radius/lg` — 24dp (sheet top corners, hero cards, dialogs)
+  static const double radiusLg = 24.0;
   static const double rLg = radiusLg;
 
   /// Legacy alias mapped to radiusLg
-  static const double radiusXl = 16.0;
+  static const double radiusXl = 24.0;
 
-  /// `radius/pill` — 999dp (tags and the Capture button only)
+  /// `radius/pill` — 999dp (tags, floating nav bar, and the Capture button)
   static const double radiusPill = 999.0;
 
   static const BorderRadius roundedXs = BorderRadius.all(Radius.circular(radiusXs));
@@ -104,26 +104,26 @@ class AppSpacing {
   static const BorderRadius sheetTopRadius =
       BorderRadius.vertical(top: Radius.circular(radiusLg));
 
-  // ================= Elevation & Scrim (07-design-system.md §5) =================
+  // ================= Elevation & Scrim (11-reference-ui-style.md §4) =================
   /// `elev/0` — Flat content separated by 1dp hairlines (no shadow).
   static const List<BoxShadow> elev0 = [];
 
-  /// `elev/1` — Floating menus, selection bar, popovers, Capture button (blur 16, y 6, alpha 0.10).
+  /// `elev/1` — Soft diffused shadow on white cards floating over #F3F4F6 canvas (blur 20, y 6, alpha 0.06).
   static List<BoxShadow> elev1([bool isDark = false]) => [
         BoxShadow(
-          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.28 : 0.10),
-          blurRadius: 16,
+          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.30 : 0.06),
+          blurRadius: 20,
           offset: const Offset(0, 6),
           spreadRadius: 0,
         ),
       ];
 
-  /// `elev/2` — Bottom sheets, dialogs (blur 24, y 8, alpha 0.12).
+  /// `elev/2` — Bottom sheets, floating nav pill, dialogs (blur 26, y 10, alpha 0.10).
   static List<BoxShadow> elev2([bool isDark = false]) => [
         BoxShadow(
-          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.36 : 0.12),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
+          color: const Color(0xFF000000).withValues(alpha: isDark ? 0.40 : 0.10),
+          blurRadius: 26,
+          offset: const Offset(0, 10),
           spreadRadius: 0,
         ),
       ];

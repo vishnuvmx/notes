@@ -9,7 +9,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../domain/services/markdown_table_service.dart';
 import 'app_bottom_sheet.dart';
 
-/// Touch-first Visual Markdown Table Editor Sheet (Notion / Obsidian / Figma Specs).
+/// Touch-first Visual Markdown Table Editor Sheet.
 ///
 /// Allows direct cell editing, adding/removing rows and columns, cycling column
 /// alignment (`left`, `center`, `right`), and saving cleanly back to GFM pipe syntax.

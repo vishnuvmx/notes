@@ -86,6 +86,7 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
     final workspace = context.watch<WorkspaceProvider>();
     final palette = AppColors.getPaletteById(_currentItem.paletteId);
     final bandColor = palette.resolveCardColor(tokens.isDark);
+    final softFill = palette.resolveSoftBackground(tokens.isDark);
     final summary = _currentItem.getSummary();
 
     return SingleChildScrollView(
@@ -99,72 +100,72 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. 3-line Content Peek Card
+          // 1. Regent-style 3-line Content Peek Card
           Container(
+            padding: const EdgeInsets.all(AppSpacing.s3),
             decoration: BoxDecoration(
-              color: tokens.canvasPrimary,
+              color: softFill,
               borderRadius: AppSpacing.roundedMd,
-              border: Border.all(color: tokens.borderSubtle, width: 1),
             ),
-            clipBehavior: Clip.antiAlias,
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Container(
                     width: AppSpacing.cardColorBandWidth,
-                    color: bandColor,
+                    decoration: BoxDecoration(
+                      color: bandColor,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.s3),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.s4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _currentItem.title.trim().isEmpty
-                                      ? 'Untitled'
-                                      : _currentItem.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.titleSm(
-                                    color: tokens.textPrimary,
-                                  ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _currentItem.title.trim().isEmpty
+                                    ? 'Untitled'
+                                    : _currentItem.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleSm(
+                                  color: tokens.textPrimary,
                                 ),
                               ),
-                              if (_currentItem.isFavorite)
-                                TackPinBadge(color: tokens.accentPin),
-                            ],
-                          ),
-                          if (summary.trim().isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.s1),
-                            Text(
-                              summary,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodySm(
-                                color: tokens.textSecondary,
-                              ),
                             ),
+                            if (_currentItem.isFavorite)
+                              TackPinBadge(color: tokens.accentPin),
                           ],
-                          const SizedBox(height: AppSpacing.s2),
+                        ),
+                        if (summary.trim().isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.s1),
                           Text(
-                            [
-                              _currentItem.type.label,
-                              if (_currentItem.folderName != null &&
-                                  _currentItem.folderName!.isNotEmpty)
-                                _currentItem.folderName!,
-                              'Updated ${DateFormatter.formatTimestamp(_currentItem.updatedAt)}',
-                            ].join(' · '),
-                            style: AppTypography.caption(
-                              color: tokens.textTertiary,
+                            summary,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodySm(
+                              color: tokens.textSecondary,
                             ),
                           ),
                         ],
-                      ),
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(
+                          [
+                            _currentItem.type.label,
+                            if (_currentItem.folderName != null &&
+                                _currentItem.folderName!.isNotEmpty)
+                              _currentItem.folderName!,
+                            'Updated ${DateFormatter.formatTimestamp(_currentItem.updatedAt)}',
+                          ].join(' · '),
+                          style: AppTypography.caption(
+                            color: tokens.textTertiary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
