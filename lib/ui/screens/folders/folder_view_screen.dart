@@ -14,6 +14,7 @@ import '../../components/cards/board_grid_card.dart';
 import '../../components/cards/neo_note_card.dart';
 import '../../components/cards/responsive_card_grid.dart';
 import '../../components/dialogs_sheets/app_bottom_sheet.dart';
+import '../../components/dialogs_sheets/app_floating_dialog.dart';
 import '../../components/dialogs_sheets/card_peek_sheet.dart';
 import '../../components/feedback/empty_state_widget.dart';
 import '../today/today_screen.dart';
@@ -52,31 +53,16 @@ class FolderViewScreen extends StatelessWidget {
     WorkspaceProvider workspace,
     BaseWorkspaceItem item,
   ) async {
-    final tokens = context.tokens;
-    final confirmed = await showDialog<bool>(
+    final title = item.title.trim().isEmpty ? 'Untitled' : item.title;
+    final confirmed = await AppFloatingDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete permanently?'),
-        content: Text(
-          '"${item.title.trim().isEmpty ? 'Untitled' : item.title}" will be permanently deleted and cannot be recovered.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: tokens.danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete Forever'),
-          ),
-        ],
-      ),
+      title: 'Delete permanently?',
+      message: '"$title" will be permanently deleted and cannot be recovered.',
+      confirmLabel: 'Delete Forever',
+      isDestructive: true,
+      icon: TackIcons.trash,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await workspace.deletePermanently(item.id);
     }
   }
@@ -85,31 +71,15 @@ class FolderViewScreen extends StatelessWidget {
     BuildContext context,
     WorkspaceProvider workspace,
   ) async {
-    final tokens = context.tokens;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppFloatingDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Empty Trash?'),
-        content: const Text(
-          'All items in Trash will be permanently deleted. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: tokens.danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Empty Trash'),
-          ),
-        ],
-      ),
+      title: 'Empty Trash?',
+      message: 'All items in Trash will be permanently deleted. This cannot be undone.',
+      confirmLabel: 'Empty Trash',
+      isDestructive: true,
+      icon: TackIcons.trash,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await workspace.emptyTrash();
     }
   }

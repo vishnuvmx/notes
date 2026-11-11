@@ -91,6 +91,10 @@ class AppSpacing {
   static const double radiusLg = 24.0;
   static const double rLg = radiusLg;
 
+  /// `radius/modal` — 28dp (floating island modal card corners per reference UI)
+  static const double radiusModal = 28.0;
+  static const double rModal = radiusModal;
+
   /// Legacy alias mapped to radiusLg
   static const double radiusXl = 24.0;
 
@@ -101,10 +105,11 @@ class AppSpacing {
   static const BorderRadius roundedSm = BorderRadius.all(Radius.circular(radiusSm));
   static const BorderRadius roundedMd = BorderRadius.all(Radius.circular(radiusMd));
   static const BorderRadius roundedLg = BorderRadius.all(Radius.circular(radiusLg));
+  static const BorderRadius roundedModal = BorderRadius.all(Radius.circular(radiusModal));
   static const BorderRadius roundedXl = BorderRadius.all(Radius.circular(radiusXl));
   static const BorderRadius roundedPill = BorderRadius.all(Radius.circular(radiusPill));
   static const BorderRadius sheetTopRadius =
-      BorderRadius.vertical(top: Radius.circular(radiusLg));
+      BorderRadius.all(Radius.circular(radiusModal));
 
   // ================= Elevation & Scrim (11-reference-ui-style.md §4) =================
   /// `elev/0` — Flat content separated by 1dp hairlines (no shadow).
@@ -131,9 +136,20 @@ class AppSpacing {
         ),
       ];
 
-  /// `scrim` — Black alpha 0.40 behind sheets and dialogs.
-  static const Color scrim = Color(0x66000000);
+  /// `elev/modal` — Floating island modals and custom dialogs (blur 28, y 10, alpha 0.12-0.40).
+  static List<BoxShadow> elevModal([bool isDark = false]) => [
+        BoxShadow(
+          color: isDark ? const Color(0x66000000) : const Color(0x1F000000),
+          blurRadius: 28,
+          offset: const Offset(0, 10),
+          spreadRadius: 0,
+        ),
+      ];
+
+  /// `scrim` — Dark, semi-transparent dimmed background (0x99000000 = 60% black) per reference UI.
+  static const Color scrim = Color(0x99000000);
   static const Color scrimColor = scrim;
+  static const Color modalScrim = scrim;
 
   // Backwards-compatible shadow aliases
   static List<BoxShadow> get softShadowLight => elev0;

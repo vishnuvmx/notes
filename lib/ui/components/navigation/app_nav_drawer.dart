@@ -10,6 +10,7 @@ import '../../../domain/models/base_item.dart';
 import '../../../state/workspace_provider.dart';
 import '../../screens/editor/note_editor_screen.dart';
 import '../../screens/graph/knowledge_graph_screen.dart';
+import '../dialogs_sheets/app_floating_dialog.dart';
 
 /// Navigation Drawer for secondary destinations, Daily Notes, Knowledge Graph, and Folders.
 class AppNavDrawer extends StatelessWidget {
@@ -207,26 +208,15 @@ class AppNavDrawer extends StatelessWidget {
                           workspace.setSelectedFolder(folder);
                         },
                         onLongPress: () async {
-                          final confirm = await showDialog<bool>(
+                          final confirm = await AppFloatingDialog.confirm(
                             context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text('Remove "$folder"?'),
-                              content: const Text(
-                                'Notes inside this folder will stay safe in All Notes.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text('Remove'),
-                                ),
-                              ],
-                            ),
+                            title: 'Remove "$folder"?',
+                            message: 'Notes inside this folder will stay safe in All Notes.',
+                            confirmLabel: 'Remove',
+                            isDestructive: true,
+                            icon: TackIcons.folder,
                           );
-                          if (confirm == true) {
+                          if (confirm) {
                             await workspace.deleteFolder(folder);
                           }
                         },

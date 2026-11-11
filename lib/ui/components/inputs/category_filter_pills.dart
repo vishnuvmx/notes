@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/workspace_provider.dart';
+import '../dialogs_sheets/app_floating_dialog.dart';
 import 'tack_dropdown.dart';
 
 const String _kCreateNewFolderValue = '__create_new_folder__';
@@ -23,45 +24,16 @@ class CategoryFilterPills extends StatelessWidget {
     BuildContext context,
     WorkspaceProvider workspace,
   ) async {
-    final controller = TextEditingController();
-    try {
-      final created = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            'New Folder',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'e.g. Product Specs, Archive, Journal...',
-            ),
-            onSubmitted: (val) => Navigator.of(ctx).pop(val.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      );
-      if (created != null && created.isNotEmpty) {
-        await workspace.addFolder(created);
-        workspace.setSelectedFolder(created);
-      }
-    } finally {
-      controller.dispose();
+    final created = await AppFloatingDialog.prompt(
+      context: context,
+      title: 'New Folder',
+      hintText: 'e.g. Product Specs, Archive, Journal…',
+      confirmLabel: 'Create',
+      icon: TackIcons.folder,
+    );
+    if (created != null && created.isNotEmpty) {
+      await workspace.addFolder(created);
+      workspace.setSelectedFolder(created);
     }
   }
 

@@ -1,16 +1,18 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
-/// Canonical bottom sheet container adhering to Tack's Paper & Pin design system (`07` §7).
+/// Custom floating modal bottom sheet system inspired by tactile card designs (`11-reference-ui-style.md`).
 ///
 /// Guarantees:
-/// 1. Exactly ONE drag handle (`36×4dp` in `border/strong`).
-/// 2. Consistent `16dp` (`r-lg`) top corner radius on `surface/elevated`.
-/// 3. Zero Android gesture bar overlap or double bottom padding.
-/// 4. Smooth keyboard resize (`viewInsets` vs `viewPadding`).
-/// 5. Max height constraint (`90%`) to prevent obscuring the Android status bar.
+/// 1. Floating island card with 28dp rounded corners (`AppSpacing.roundedModal`) on all 4 sides.
+/// 2. Visible spacing from left, right, and bottom screen edges (16dp gutter + system gesture clearance).
+/// 3. Dark, semi-transparent dimmed background (60% dark scrim).
+/// 4. No default Android status bar, drag handle, or rectangular indicator line.
+/// 5. Smooth entrance and dismissal animations with keyboard avoidance.
+/// 6. Soft tactile surface with diffused elevation shadow.
 class AppBottomSheet {
   AppBottomSheet._();
 
@@ -19,76 +21,64 @@ class AppBottomSheet {
     required Widget Function(BuildContext sheetContext) builder,
     bool isDismissible = true,
     bool enableDrag = true,
-    bool showDragHandle = true,
-    double maxHeightFactor = 0.90,
+    bool showDragHandle = false,
+    double maxHeightFactor = 0.88,
     Color? backgroundColor,
     Color? barrierColor,
   }) {
     final tokens = context.tokens;
     final sheetBg = backgroundColor ?? tokens.surfaceElevated;
-    final scrim = barrierColor ?? AppSpacing.scrimColor;
+    final scrim = barrierColor ?? AppSpacing.modalScrim;
 
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       isDismissible: isDismissible,
       enableDrag: enableDrag,
-      showDragHandle: false, // AppBottomSheet renders the single canonical handle
+      showDragHandle: false, // Explicitly no rectangular drag handle line
       backgroundColor: Colors.transparent,
       barrierColor: scrim,
       builder: (modalContext) {
         final modalTokens = modalContext.tokens;
         final viewInsets = MediaQuery.viewInsetsOf(modalContext);
+        final viewPadding = MediaQuery.viewPaddingOf(modalContext);
         final screenHeight = MediaQuery.sizeOf(modalContext).height;
+        final isDark = modalTokens.isDark;
+
+        // Island bottom margin: 16dp + keyboard inset when typing, or 16dp + gesture bar when idle
+        final bottomOffset = viewInsets.bottom > 0
+            ? (viewInsets.bottom + AppSpacing.s4)
+            : math.max(AppSpacing.s4, viewPadding.bottom + AppSpacing.s2);
 
         return AnimatedPadding(
-          padding: EdgeInsets.only(bottom: viewInsets.bottom),
-          duration: AppSpacing.durationNormal,
+          padding: EdgeInsets.only(bottom: bottomOffset),
+          duration: AppSpacing.durationFast,
           curve: AppSpacing.curveStandard,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: screenHeight * maxHeightFactor,
             ),
             child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
               decoration: BoxDecoration(
                 color: sheetBg,
-                borderRadius: AppSpacing.sheetTopRadius,
-                boxShadow: AppSpacing.elev2(modalTokens.isDark),
+                borderRadius: AppSpacing.roundedModal,
+                boxShadow: AppSpacing.elevModal(isDark),
+                border: Border.all(
+                  color: modalTokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                  width: 0.8,
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: Material(
                 color: sheetBg,
-                child: SafeArea(
-                  top: false,
-                  bottom: viewInsets.bottom == 0,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (showDragHandle)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: AppSpacing.s3,
-                            bottom: AppSpacing.s2,
-                          ),
-                          child: Center(
-                            child: Semantics(
-                              label: 'Drag handle to dismiss',
-                              child: Container(
-                                width: 36,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: modalTokens.borderStrong,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      Flexible(
-                        child: builder(modalContext),
-                      ),
-                    ],
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: builder(modalContext),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -98,3 +88,6 @@ class AppBottomSheet {
     );
   }
 }
+
+/// Backwards compatibility alias for the custom floating modal.
+typedef AppFloatingModal = AppBottomSheet;

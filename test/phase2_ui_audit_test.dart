@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/domain/interfaces/i_workspace_repo.dart';
 import 'package:notes/domain/models/base_item.dart';
@@ -11,6 +12,7 @@ import 'package:notes/state/theme_provider.dart';
 import 'package:notes/state/workspace_provider.dart';
 import 'package:notes/ui/components/cards/neo_note_card.dart';
 import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
+import 'package:notes/ui/components/dialogs_sheets/app_floating_dialog.dart';
 import 'package:notes/ui/components/inputs/app_search_field.dart';
 import 'package:notes/ui/components/layout/z_order_column.dart';
 import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
@@ -138,7 +140,7 @@ void main() {
       expect(query, equals(''));
     });
 
-    testWidgets('2. AppBottomSheet has exactly one drag handle', (tester) async {
+    testWidgets('2. AppBottomSheet renders as a floating island modal with 28dp rounded corners and no drag handle', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme,
@@ -166,9 +168,19 @@ void main() {
 
       expect(find.text('Sheet Content'), findsOneWidget);
 
-      // Verify exactly one drag handle semantics widget is present
+      // Verify no drag handle semantics widget is present per reference UI requirements
       final handleFinder = find.bySemanticsLabel('Drag handle to dismiss');
-      expect(handleFinder, findsOneWidget);
+      expect(handleFinder, findsNothing);
+
+      // Verify floating modal card container has 28dp rounded corners and horizontal margin
+      final containerFinder = find.ancestor(
+        of: find.text('Sheet Content'),
+        matching: find.byType(Container),
+      ).first;
+      final container = tester.widget<Container>(containerFinder);
+      final decoration = container.decoration as BoxDecoration?;
+      expect(decoration?.borderRadius, equals(AppSpacing.roundedModal));
+      expect(container.margin, equals(const EdgeInsets.symmetric(horizontal: AppSpacing.s4)));
     });
 
     test('3. Table editor round-trip strips markdown asterisks and regenerates clean markdown', () {
@@ -510,6 +522,54 @@ Footer text.
       await tester.tap(find.text('Bottom Card'));
       await tester.pump();
       expect(secondTapped, isTrue);
+    });
+
+    testWidgets('10. AppFloatingDialog renders custom island card with 28dp radius and pill actions', (tester) async {
+      bool confirmed = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  confirmed = await AppFloatingDialog.confirm(
+                    context: ctx,
+                    title: 'Delete Note?',
+                    message: 'This note will be moved to trash.',
+                    confirmLabel: 'Move to Trash',
+                    isDestructive: true,
+                  );
+                },
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete Note?'), findsOneWidget);
+      expect(find.text('This note will be moved to trash.'), findsOneWidget);
+      expect(find.text('Move to Trash'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+
+      // Verify custom floating island card with 28dp rounded corners
+      final cardFinder = find.ancestor(
+        of: find.text('Delete Note?'),
+        matching: find.byType(Container),
+      ).first;
+      final card = tester.widget<Container>(cardFinder);
+      final decoration = card.decoration as BoxDecoration?;
+      expect(decoration?.borderRadius, equals(AppSpacing.roundedModal));
+
+      // Tap Confirm
+      await tester.tap(find.text('Move to Trash'));
+      await tester.pumpAndSettle();
+      expect(confirmed, isTrue);
     });
   });
 }

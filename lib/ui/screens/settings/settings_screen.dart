@@ -13,6 +13,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../state/theme_provider.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/dialogs_sheets/app_floating_dialog.dart';
 import '../../components/layout/z_order_column.dart';
 import '../folders/folder_view_screen.dart';
 import 'about_tack_screen.dart';
@@ -81,60 +82,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
   }
 
   Future<void> _editProfileName() async {
-    final controller = TextEditingController(text: _userName);
-    final newName = await showDialog<String>(
+    final newName = await AppFloatingDialog.prompt(
       context: context,
-      builder: (dialogCtx) {
-        final tokens = dialogCtx.tokens;
-        return AlertDialog(
-          backgroundColor: tokens.surfacePrimary,
-          shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedLg),
-          title: Text(
-            'Edit Profile Name',
-            style: AppTypography.titleSm(color: tokens.textPrimary),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: AppTypography.body(color: tokens.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Enter your name…',
-              hintStyle: AppTypography.body(color: tokens.textTertiary),
-              filled: true,
-              fillColor: tokens.canvasSunken,
-              border: OutlineInputBorder(
-                borderRadius: AppSpacing.roundedSm,
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(
-                'Cancel',
-                style: AppTypography.label(color: tokens.textSecondary),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tokens.actionPrimary,
-                foregroundColor: tokens.actionPrimaryFg,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-              ),
-              onPressed: () {
-                final trimmed = controller.text.trim();
-                Navigator.of(dialogCtx).pop(trimmed.isEmpty ? 'Karthik' : trimmed);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+      title: 'Edit Profile Name',
+      initialValue: _userName,
+      hintText: 'Enter your name…',
+      confirmLabel: 'Save',
+      icon: TackIcons.user,
     );
-    controller.dispose();
 
     if (newName != null && newName != _userName && mounted) {
       setState(() => _userName = newName);
@@ -193,7 +148,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     final tokens = context.tokens;
 
     try {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await AppFloatingDialog.showCustom<bool>(
         context: context,
         builder: (dialogCtx) {
           String? validationMessage;
@@ -241,73 +196,144 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
 
           return StatefulBuilder(
             builder: (context, setDialogState) {
-              return AlertDialog(
-                title: const Text('Restore Backup'),
-                content: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Paste a previously exported Tack JSON backup to merge and restore your workspace.',
-                        style: AppTypography.bodySm(
-                          color: tokens.textSecondary,
+              final isDark = tokens.isDark;
+              final viewInsets = MediaQuery.viewInsetsOf(dialogCtx);
+
+              return AnimatedPadding(
+                padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                duration: AppSpacing.durationFast,
+                curve: AppSpacing.curveStandard,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
+                      decoration: BoxDecoration(
+                        color: tokens.surfacePrimary,
+                        borderRadius: AppSpacing.roundedModal,
+                        boxShadow: AppSpacing.elevModal(isDark),
+                        border: Border.all(
+                          color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                          width: 0.8,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.s3),
-                      OutlinedButton.icon(
-                        icon: TackIcon(
-                          TackIcons.clipboard,
-                          size: 16,
-                          color: tokens.textPrimary,
-                        ),
-                        label: const Text('Paste from Clipboard'),
-                        onPressed: () async {
-                          final data =
-                              await Clipboard.getData(Clipboard.kTextPlain);
-                          final text = data?.text?.trim() ?? '';
-                          if (text.isNotEmpty) {
-                            controller.text = text;
-                            validateInput(text, setDialogState);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.s3),
-                      TextField(
-                        controller: controller,
-                        maxLines: 4,
-                        style: AppTypography.mono(color: tokens.textPrimary),
-                        onChanged: (val) => validateInput(val, setDialogState),
-                        decoration: const InputDecoration(
-                          hintText: 'Paste backup JSON content here…',
-                        ),
-                      ),
-                      if (validationMessage != null) ...[
-                        const SizedBox(height: AppSpacing.s2),
-                        Text(
-                          validationMessage!,
-                          style: AppTypography.caption(
-                            color: isValid ? tokens.success : tokens.danger,
-                            weight: FontWeight.w600,
+                      clipBehavior: Clip.antiAlias,
+                      child: Material(
+                        color: tokens.surfacePrimary,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.s6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Restore Backup',
+                                style: AppTypography.titleSm(
+                                  color: tokens.textPrimary,
+                                  weight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.s2),
+                              Text(
+                                'Paste a previously exported Tack JSON backup to merge and restore your workspace.',
+                                style: AppTypography.bodySm(
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.s3),
+                              OutlinedButton.icon(
+                                icon: TackIcon(
+                                  TackIcons.clipboard,
+                                  size: 16,
+                                  color: tokens.textPrimary,
+                                ),
+                                label: const Text('Paste from Clipboard'),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: tokens.borderSubtle),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final data =
+                                      await Clipboard.getData(Clipboard.kTextPlain);
+                                  final text = data?.text?.trim() ?? '';
+                                  if (text.isNotEmpty) {
+                                    controller.text = text;
+                                    validateInput(text, setDialogState);
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.s3),
+                              TextField(
+                                controller: controller,
+                                maxLines: 4,
+                                style: AppTypography.mono(color: tokens.textPrimary),
+                                onChanged: (val) => validateInput(val, setDialogState),
+                                decoration: InputDecoration(
+                                  hintText: 'Paste backup JSON content here…',
+                                  hintStyle: AppTypography.caption(color: tokens.textTertiary),
+                                  filled: true,
+                                  fillColor: tokens.canvasSunken,
+                                  border: OutlineInputBorder(
+                                    borderRadius: AppSpacing.roundedSm,
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                              if (validationMessage != null) ...[
+                                const SizedBox(height: AppSpacing.s2),
+                                Text(
+                                  validationMessage!,
+                                  style: AppTypography.caption(
+                                    color: isValid ? tokens.success : tokens.danger,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: AppSpacing.s6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size.fromHeight(46),
+                                        side: BorderSide(color: tokens.borderSubtle),
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: AppSpacing.roundedPill,
+                                        ),
+                                      ),
+                                      onPressed: () => Navigator.of(dialogCtx).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.s3),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        minimumSize: const Size.fromHeight(46),
+                                        backgroundColor: tokens.actionPrimary,
+                                        foregroundColor: tokens.actionPrimaryFg,
+                                        elevation: 0,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: AppSpacing.roundedPill,
+                                        ),
+                                      ),
+                                      onPressed: isValid
+                                          ? () => Navigator.of(dialogCtx).pop(true)
+                                          : null,
+                                      child: const Text('Restore'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ],
+                      ),
+                    ),
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogCtx).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: isValid
-                        ? () => Navigator.of(dialogCtx).pop(true)
-                        : null,
-                    child: const Text('Restore'),
-                  ),
-                ],
               );
             },
           );

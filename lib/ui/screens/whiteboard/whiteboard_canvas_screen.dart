@@ -23,6 +23,8 @@ import '../../../domain/models/sticky_note.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../domain/models/whiteboard_item.dart';
 import '../../../state/workspace_provider.dart';
+import '../../components/dialogs_sheets/app_bottom_sheet.dart';
+import '../../components/dialogs_sheets/app_floating_dialog.dart';
 import '../../components/inputs/tack_dropdown.dart';
 import '../editor/note_editor_screen.dart';
 
@@ -1108,58 +1110,145 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   void _editNodeText(CanvasNode node) {
     final controller = TextEditingController(text: node.text);
     final isSpec = node.shapeType == CanvasNodeType.specCard;
-    showDialog(
+    AppFloatingDialog.showCustom(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(isSpec ? 'Edit Spec Card' : 'Edit Node Text'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: isSpec
-                ? 6
-                : node.shapeType == CanvasNodeType.sticky
-                    ? 4
-                    : 1,
-            decoration: InputDecoration(
-              hintText: isSpec
-                  ? 'Spec summary, acceptance criteria, edge cases...'
-                  : 'Enter node label...',
-            ),
-            onSubmitted: isSpec
-                ? null
-                : (val) {
-                    _saveNodeText(node, val);
-                    Navigator.of(context).pop();
-                  },
-          ),
-          actions: [
-            if (isSpec || node.shapeType == CanvasNodeType.sticky)
-              TextButton.icon(
-                onPressed: () {
-                  _saveNodeText(node, controller.text);
-                  Navigator.of(context).pop();
-                  final updatedNode = _nodes.firstWhere(
-                    (n) => n.id == node.id,
-                    orElse: () => node.copyWith(text: controller.text.trim()),
-                  );
-                  _openOrPromoteSpecNode(updatedNode);
-                },
-                icon: const TackIcon(TackIcons.notes, size: 15),
-                label: Text(node.linkedNoteId != null ? 'Open Note' : 'Open as Note'),
+      builder: (dialogCtx) {
+        final tokens = dialogCtx.tokens;
+        final isDark = tokens.isDark;
+        final viewInsets = MediaQuery.viewInsetsOf(dialogCtx);
+
+        return AnimatedPadding(
+          padding: EdgeInsets.only(bottom: viewInsets.bottom),
+          duration: AppSpacing.durationFast,
+          curve: AppSpacing.curveStandard,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
+                decoration: BoxDecoration(
+                  color: tokens.surfacePrimary,
+                  borderRadius: AppSpacing.roundedModal,
+                  boxShadow: AppSpacing.elevModal(isDark),
+                  border: Border.all(
+                    color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                    width: 0.8,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: tokens.surfacePrimary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.s6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          isSpec ? 'Edit Spec Card' : 'Edit Node Text',
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          maxLines: isSpec
+                              ? 6
+                              : node.shapeType == CanvasNodeType.sticky
+                                  ? 4
+                                  : 1,
+                          style: AppTypography.body(color: tokens.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: isSpec
+                                ? 'Spec summary, acceptance criteria, edge cases...'
+                                : 'Enter node label...',
+                            hintStyle: AppTypography.body(color: tokens.textTertiary),
+                            filled: true,
+                            fillColor: tokens.canvasSunken,
+                            border: OutlineInputBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onSubmitted: isSpec
+                              ? null
+                              : (val) {
+                                  _saveNodeText(node, val);
+                                  Navigator.of(dialogCtx).pop();
+                                },
+                        ),
+                        const SizedBox(height: AppSpacing.s5),
+                        if (isSpec || node.shapeType == CanvasNodeType.sticky) ...[
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: tokens.borderSubtle),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: AppSpacing.roundedPill,
+                              ),
+                            ),
+                            onPressed: () {
+                              _saveNodeText(node, controller.text);
+                              Navigator.of(dialogCtx).pop();
+                              final updatedNode = _nodes.firstWhere(
+                                (n) => n.id == node.id,
+                                orElse: () => node.copyWith(text: controller.text.trim()),
+                              );
+                              _openOrPromoteSpecNode(updatedNode);
+                            },
+                            icon: const TackIcon(TackIcons.notes, size: 15),
+                            label: Text(
+                              node.linkedNoteId != null ? 'Open Note' : 'Open as Note',
+                              style: AppTypography.label(color: tokens.textPrimary),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.s3),
+                        ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(46),
+                                  side: BorderSide(color: tokens.borderSubtle),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.of(dialogCtx).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s3),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(46),
+                                  backgroundColor: tokens.actionPrimary,
+                                  foregroundColor: tokens.actionPrimaryFg,
+                                  elevation: 0,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  _saveNodeText(node, controller.text);
+                                  Navigator.of(dialogCtx).pop();
+                                },
+                                child: const Text('Save'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                _saveNodeText(node, controller.text);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -1229,13 +1318,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         .where((i) => !i.isTrash && (i is TextNote || i is StickyNote))
         .toList();
 
-    showModalBottomSheet<void>(
+    AppBottomSheet.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (sheetCtx) {
         String search = '';
         return StatefulBuilder(
@@ -1247,76 +1331,59 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         n.title.toLowerCase().contains(search.toLowerCase()) ||
                         n.getSummary().toLowerCase().contains(search.toLowerCase()))
                     .toList();
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 14,
-                  bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.s5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                          borderRadius: BorderRadius.circular(999),
+                          color: AppColors.pastelCyanLight.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const TackIcon(
+                          TackIcons.notes,
+                          size: 18,
+                          color: AppColors.pastelCyanLight,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.pastelCyanLight.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const TackIcon(
-                            TackIcons.notes,
-                            size: 18,
-                            color: AppColors.pastelCyanLight,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Canvas Spec Card',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.4,
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.lightTextPrimary,
-                                ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Canvas Spec Card',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.4,
+                                color: isDark
+                                    ? AppColors.darkTextPrimary
+                                    : AppColors.lightTextPrimary,
                               ),
-                              Text(
-                                'Write a structured spec on the board or pin a live note',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 12,
-                                  letterSpacing: -0.2,
-                                  color: isDark
-                                      ? AppColors.darkTextMuted
-                                      : AppColors.lightTextMuted,
-                                ),
+                            ),
+                            Text(
+                              'Write a structured spec on the board or pin a live note',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 12,
+                                letterSpacing: -0.2,
+                                color: isDark
+                                    ? AppColors.darkTextMuted
+                                    : AppColors.lightTextMuted,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                     const SizedBox(height: 14),
                     InkWell(
                       onTap: () {
@@ -1499,13 +1566,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     ],
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+              );
+            },
+          );
+        },
+      );
+    }
 
   void _saveNodeText(CanvasNode node, String rawText) {
     final newText = rawText.trim();
@@ -1613,68 +1679,133 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
   void _showEdgeEditDialog(CanvasEdge edge) {
     final controller = TextEditingController(text: edge.label ?? '');
-    showDialog(
+    AppFloatingDialog.showCustom(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Connector Line'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Edge Label',
-                  hintText: 'e.g. Yes, No, Approved',
+      builder: (dialogCtx) {
+        final tokens = dialogCtx.tokens;
+        final isDark = tokens.isDark;
+        final viewInsets = MediaQuery.viewInsetsOf(dialogCtx);
+
+        return AnimatedPadding(
+          padding: EdgeInsets.only(bottom: viewInsets.bottom),
+          duration: AppSpacing.durationFast,
+          curve: AppSpacing.curveStandard,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
+                decoration: BoxDecoration(
+                  color: tokens.surfacePrimary,
+                  borderRadius: AppSpacing.roundedModal,
+                  boxShadow: AppSpacing.elevModal(isDark),
+                  border: Border.all(
+                    color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                    width: 0.8,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: tokens.surfacePrimary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.s6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Connector Line',
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: AppTypography.body(color: tokens.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'e.g. Yes, No, Approved',
+                            hintStyle: AppTypography.body(color: tokens.textTertiary),
+                            filled: true,
+                            fillColor: tokens.canvasSunken,
+                            border: OutlineInputBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        Wrap(
+                          spacing: AppSpacing.s2,
+                          children: [
+                            ActionChip(
+                              label: const Text('Yes'),
+                              onPressed: () => controller.text = 'Yes',
+                            ),
+                            ActionChip(
+                              label: const Text('No'),
+                              onPressed: () => controller.text = 'No',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.s6),
+                        Row(
+                          children: [
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: tokens.danger,
+                                side: BorderSide(color: tokens.danger.withValues(alpha: 0.4)),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
+                              ),
+                              icon: TackIcon(TackIcons.trash, size: 16, color: tokens.danger),
+                              label: const Text('Delete'),
+                              onPressed: () {
+                                _history.recordSnapshot(_nodes, _edges);
+                                setState(() {
+                                  _edges.removeWhere((e) => e.id == edge.id);
+                                  _selectedEdgeId = null;
+                                });
+                                _saveCanvasState();
+                                Navigator.of(dialogCtx).pop();
+                              },
+                            ),
+                            const Spacer(),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: tokens.actionPrimary,
+                                foregroundColor: tokens.actionPrimaryFg,
+                                elevation: 0,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
+                              ),
+                              onPressed: () {
+                                final label = controller.text.trim();
+                                _history.recordSnapshot(_nodes, _edges);
+                                setState(() {
+                                  final index = _edges.indexWhere((e) => e.id == edge.id);
+                                  if (index >= 0) {
+                                    _edges[index] = _edges[index].copyWith(label: label.isEmpty ? null : label);
+                                  }
+                                });
+                                _saveCanvasState();
+                                Navigator.of(dialogCtx).pop();
+                              },
+                              child: const Text('Save'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  ActionChip(
-                    label: const Text('Yes'),
-                    onPressed: () => controller.text = 'Yes',
-                  ),
-                  const SizedBox(width: 8),
-                  ActionChip(
-                    label: const Text('No'),
-                    onPressed: () => controller.text = 'No',
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton.icon(
-              icon: const TackIcon(TackIcons.trash, size: 16, color: AppColors.error),
-              label: const Text('Delete', style: TextStyle(color: AppColors.error)),
-              onPressed: () {
-                _history.recordSnapshot(_nodes, _edges);
-                setState(() {
-                  _edges.removeWhere((e) => e.id == edge.id);
-                  _selectedEdgeId = null;
-                });
-                _saveCanvasState();
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final label = controller.text.trim();
-                _history.recordSnapshot(_nodes, _edges);
-                setState(() {
-                  final index = _edges.indexWhere((e) => e.id == edge.id);
-                  if (index >= 0) {
-                    _edges[index] = _edges[index].copyWith(label: label.isEmpty ? null : label);
-                  }
-                });
-                _saveCanvasState();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
@@ -2131,13 +2262,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     bool isTransparent = false;
     String selectedBgOption = 'dots'; // 'dots', 'grid', 'theme', 'white', 'dark'
 
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -2148,43 +2274,35 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             final mutedText = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
             final primaryText = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
 
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  left: AppSpacing.lg,
-                  right: AppSpacing.lg,
-                  top: AppSpacing.md,
-                  bottom: MediaQuery.paddingOf(context).bottom + 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header: Title and Close button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Export settings',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: primaryText,
-                          ),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.s5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: Title and Close button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Export settings',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: primaryText,
                         ),
-                        IconButton(
-                          icon: TackIcon(
-                            TackIcons.close,
-                            size: 18,
-                            color: mutedText,
-                          ),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          visualDensity: VisualDensity.compact,
-                          splashRadius: 18,
+                      ),
+                      IconButton(
+                        icon: TackIcon(
+                          TackIcons.close,
+                          size: 18,
+                          color: mutedText,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
 
                     // Section 1: Format pills (PNG, JPG, PDF)
                     Text(
@@ -2443,8 +2561,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                           backgroundColor: isDark ? AppColors.lightSurface : const Color(0xFF191A23),
                           foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: AppSpacing.roundedPill,
                           ),
                         ),
                         child: const Text(
@@ -2459,13 +2577,12 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+              );
+            },
+          );
+        },
+      );
+    }
 
   Widget _buildExportPill({
     required String label,

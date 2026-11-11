@@ -21,6 +21,7 @@ import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
 import '../../components/dialogs_sheets/app_bottom_sheet.dart';
+import '../../components/dialogs_sheets/app_floating_dialog.dart';
 import '../../components/dialogs_sheets/document_outline_sheet.dart';
 import '../../components/dialogs_sheets/ios_menu_button.dart';
 import '../../components/dialogs_sheets/note_statistics_sheet.dart';
@@ -592,41 +593,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Future<void> _handleSaveAsTemplate() async {
-    final nameController = TextEditingController(
-      text: _titleController.text.trim().isEmpty
-          ? 'Custom Template'
-          : _titleController.text.trim(),
-    );
-    final savedName = await showDialog<String>(
+    final initial = _titleController.text.trim().isEmpty
+        ? 'Custom Template'
+        : _titleController.text.trim();
+    final savedName = await AppFloatingDialog.prompt(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Save as Template',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
-          ),
-        ),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Template Name',
-            hintText: 'e.g. Sprint Retro, Feature Spec...',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(nameController.text.trim()),
-            child: const Text('Save Template'),
-          ),
-        ],
-      ),
+      title: 'Save as Template',
+      hintText: 'e.g. Sprint Retro, Feature Spec…',
+      initialValue: initial,
+      confirmLabel: 'Save Template',
+      icon: TackIcons.notes,
     );
     if (savedName != null && savedName.isNotEmpty) {
       await NoteTemplateService.saveCustomTemplate(
@@ -1044,39 +1020,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   void _showImageUrlDialog() async {
-    final urlController = TextEditingController();
-    try {
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Image Web Link'),
-          content: TextField(
-            controller: urlController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'https://example.com/image.png',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final url = urlController.text.trim();
-                if (url.isNotEmpty) {
-                  _insertImageMarkdown(url, alt: 'Web Image');
-                }
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Insert'),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      urlController.dispose();
+    final url = await AppFloatingDialog.prompt(
+      context: context,
+      title: 'Image Web Link',
+      hintText: 'https://example.com/image.png',
+      confirmLabel: 'Insert',
+      icon: LucideIcons.image,
+    );
+    if (url != null && url.isNotEmpty) {
+      _insertImageMarkdown(url, alt: 'Web Image');
     }
   }
 
