@@ -10,6 +10,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/models/base_item.dart';
 import '../../../domain/models/text_note.dart';
 import '../../../domain/services/note_export_service.dart';
+import '../../../domain/services/pinned_notification_service.dart';
 import '../../../state/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';

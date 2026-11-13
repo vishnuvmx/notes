@@ -60,13 +60,16 @@ class AppBottomSheet {
             ),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: sheetBg,
-                borderRadius: AppSpacing.roundedModal,
-                boxShadow: AppSpacing.elevModal(isDark),
-                border: Border.all(
-                  color: modalTokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                  width: 0.8,
+                shadows: AppSpacing.elevModal(isDark),
+                shape: SmoothRectangleBorder(
+                  borderRadius: AppSpacing.roundedModal,
+                  smoothness: 0.60,
+                  side: BorderSide(
+                    color: modalTokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                    width: 0.8,
+                  ),
                 ),
               ),
               clipBehavior: Clip.antiAlias,

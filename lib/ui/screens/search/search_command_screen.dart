@@ -243,10 +243,13 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 const SizedBox(height: AppSpacing.s2),
                 Container(
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedMd,
-                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                    shape: SmoothRectangleBorder(
+                      borderRadius: AppSpacing.roundedMd,
+                      smoothness: AppSpacing.defaultSmoothing,
+                    ),
+                    shadows: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -270,10 +273,13 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 const SizedBox(height: AppSpacing.s2),
                 Container(
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedMd,
-                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                    shape: SmoothRectangleBorder(
+                      borderRadius: AppSpacing.roundedMd,
+                      smoothness: AppSpacing.defaultSmoothing,
+                    ),
+                    shadows: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -332,10 +338,13 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 const SizedBox(height: AppSpacing.s2),
                 Container(
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedMd,
-                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                    shape: SmoothRectangleBorder(
+                      borderRadius: AppSpacing.roundedMd,
+                      smoothness: AppSpacing.defaultSmoothing,
+                    ),
+                    shadows: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -367,10 +376,13 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                 const SizedBox(height: AppSpacing.s2),
                 Container(
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedMd,
-                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                    shape: SmoothRectangleBorder(
+                      borderRadius: AppSpacing.roundedMd,
+                      smoothness: AppSpacing.defaultSmoothing,
+                    ),
+                    shadows: AppSpacing.elev1(tokens.isDark),
                   ),
                   child: Material(
                     color: Colors.transparent,

@@ -144,12 +144,15 @@ class _AppSearchFieldState extends State<AppSearchField> {
     return Container(
       margin: widget.margin,
       height: widget.height,
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        border: Border.all(
-          color: borderColor,
-          width: _isFocused ? 1.5 : 1.0,
+        shape: SmoothRectangleBorder(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(
+            color: borderColor,
+            width: _isFocused ? 1.5 : 1.0,
+          ),
         ),
       ),
       child: Row(

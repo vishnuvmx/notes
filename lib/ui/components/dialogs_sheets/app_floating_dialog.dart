@@ -67,13 +67,16 @@ class AppFloatingDialog {
             constraints: const BoxConstraints(maxWidth: 380),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: tokens.surfacePrimary,
-                borderRadius: AppSpacing.roundedModal,
-                boxShadow: AppSpacing.elevModal(isDark),
-                border: Border.all(
-                  color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                  width: 0.8,
+                shadows: AppSpacing.elevModal(isDark),
+                shape: SmoothRectangleBorder(
+                  borderRadius: AppSpacing.roundedModal,
+                  smoothness: 0.60,
+                  side: BorderSide(
+                    color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                    width: 0.8,
+                  ),
                 ),
               ),
               clipBehavior: Clip.antiAlias,
@@ -221,13 +224,16 @@ class AppFloatingDialog {
                 constraints: const BoxConstraints(maxWidth: 380),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedModal,
-                    boxShadow: AppSpacing.elevModal(isDark),
-                    border: Border.all(
-                      color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                      width: 0.8,
+                    shadows: AppSpacing.elevModal(isDark),
+                    shape: SmoothRectangleBorder(
+                      borderRadius: AppSpacing.roundedModal,
+                      smoothness: 0.60,
+                      side: BorderSide(
+                        color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                        width: 0.8,
+                      ),
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -367,3 +373,4 @@ class AppFloatingDialog {
     }
   }
 }
+

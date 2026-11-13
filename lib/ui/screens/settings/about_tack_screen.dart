@@ -73,19 +73,25 @@ class _AboutTackScreenState extends State<AboutTackScreen>
             child: Container(
               clipBehavior: Clip.antiAlias,
               padding: const EdgeInsets.all(AppSpacing.s5),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: tokens.surfacePrimary,
-                borderRadius: AppSpacing.roundedLg,
-                boxShadow: AppSpacing.elev1(tokens.isDark),
+                shape: SmoothRectangleBorder(
+                  borderRadius: AppSpacing.roundedLg,
+                  smoothness: AppSpacing.defaultSmoothing,
+                ),
+                shadows: AppSpacing.elev1(tokens.isDark),
               ),
               child: Row(
                 children: [
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(
+                    decoration: ShapeDecoration(
                       color: tokens.canvasSunken,
-                      borderRadius: AppSpacing.roundedMd,
+                      shape: SmoothRectangleBorder(
+                        borderRadius: AppSpacing.roundedMd,
+                        smoothness: AppSpacing.defaultSmoothing,
+                      ),
                     ),
                     child: Center(
                       child: Image.asset(
@@ -284,10 +290,13 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedMd,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
+        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,9 +325,12 @@ class _AboutTackScreenState extends State<AboutTackScreen>
           const SizedBox(height: AppSpacing.s2),
           Container(
             padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: softBg,
-              borderRadius: AppSpacing.roundedSm,
+              shape: SmoothRectangleBorder(
+                borderRadius: AppSpacing.roundedSm,
+                smoothness: AppSpacing.defaultSmoothing,
+              ),
             ),
             child: IntrinsicHeight(
               child: Row(
@@ -461,10 +473,13 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedMd,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
+        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -43,7 +43,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
     required this.items,
     required this.onSelected,
     this.size = 36,
-    this.icon = Icons.more_horiz_rounded,
+    this.icon = TackIcons.more,
     this.iconColor,
     this.tooltip = 'More options',
   });

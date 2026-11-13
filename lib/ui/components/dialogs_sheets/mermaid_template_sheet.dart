@@ -406,12 +406,12 @@ timeline
                         color: template.accentColor,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add, size: 14, color: Colors.white),
-                          SizedBox(width: 2),
-                          Text(
+                          Icon(TackIcons.plus, size: 14, color: Colors.white),
+                          const SizedBox(width: 2),
+                          const Text(
                             'Insert',
                             style: TextStyle(
                               color: Colors.white,

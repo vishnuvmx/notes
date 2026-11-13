@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'code_syntax_highlighter.dart';
 import 'mermaid/mermaid_diagram_card.dart';
 import 'whiteboard_embed_card.dart';
+import '../dialogs_sheets/app_bottom_sheet.dart';
 import '../dialogs_sheets/document_outline_sheet.dart';
 import '../dialogs_sheets/markdown_table_editor_sheet.dart';
 import '../../../core/utils/url_launcher_helper.dart';
@@ -56,6 +57,7 @@ class RichNoteContentView extends StatefulWidget {
 class _RichNoteContentViewState extends State<RichNoteContentView> {
   final Set<int> _foldedHeadingLines = <int>{};
   final Map<int, bool> _toggleOpenState = <int, bool>{};
+  _FootnoteCollection _footnoteCollection = const _FootnoteCollection.empty();
 
   String get content => widget.content;
   ValueChanged<String>? get onContentChanged => widget.onContentChanged;
@@ -118,10 +120,23 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     }
 
     final lines = content.split('\n');
+    final inheritedFootnotes = _FootnoteScope.maybeOf(context);
+    final footnoteCollection = _extractFootnotes(
+      lines,
+      parsedFrontmatter.contentStartLineIndex,
+      inherited: inheritedFootnotes,
+    );
+    _footnoteCollection = footnoteCollection;
+
     final widgets = <Widget>[];
 
     int i = parsedFrontmatter.contentStartLineIndex;
     while (i < lines.length) {
+      if (footnoteCollection.definitionLineIndices.contains(i)) {
+        i++;
+        continue;
+      }
+
       final line = lines[i];
       final trimmed = line.trim();
 
@@ -192,12 +207,20 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             normalizedLang == 'pie' ||
             normalizedLang == 'timeline' ||
             normalizedLang == 'sequence' ||
+            normalizedLang == 'sequencediagram' ||
+            normalizedLang == 'erdiagram' ||
+            normalizedLang == 'er' ||
+            normalizedLang == 'gantt' ||
+            normalizedLang == 'mindmap' ||
             (normalizedLang.isEmpty &&
                 (trimmedCode.startsWith('graph') ||
                     trimmedCode.startsWith('flowchart') ||
                     trimmedCode.startsWith('pie') ||
                     trimmedCode.startsWith('timeline') ||
-                    trimmedCode.startsWith('sequencediagram')));
+                    trimmedCode.startsWith('sequencediagram') ||
+                    trimmedCode.startsWith('erdiagram') ||
+                    trimmedCode.startsWith('gantt') ||
+                    trimmedCode.startsWith('mindmap')));
 
         if (isMermaid) {
           widgets.add(
@@ -353,16 +376,39 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         continue;
       }
 
+      // 5c. Definition Lists (Term line followed by `: Definition` lines)
+      if (!_isNonDefinitionTermLine(trimmed)) {
+        final firstDefStart = _findDefinitionStartLine(lines, i);
+        if (firstDefStart != -1) {
+          final parsedDefs = _consumeDefinitionList(lines, i);
+          widgets.add(
+            _wrapLineTap(
+              _buildDefinitionListWidget(context, parsedDefs.groups, isDark, theme),
+              i,
+            ),
+          );
+          i = parsedDefs.nextIndex;
+          continue;
+        }
+      }
+
       // 6. Line-based elements (Headings, Checklists, Lists, Paragraphs)
       widgets.add(_wrapLineTap(_buildLineWidget(context, line, i, isDark), i));
       i++;
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: widgets,
+    if (footnoteCollection.localDefinitions.isNotEmpty) {
+      widgets.add(_buildFootnotesSection(context, footnoteCollection, isDark, theme));
+    }
+
+    return _FootnoteScope(
+      collection: footnoteCollection,
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widgets,
+        ),
       ),
     );
   }
@@ -1042,6 +1088,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       children: CodeSyntaxHighlighter.highlight(
                         code,
                         isDark: isDark,
+                        language: lang,
                         baseStyle: codeTextStyle,
                       ),
                     ),
@@ -1339,8 +1386,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       color: Colors.black.withValues(alpha: 0.55),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.fullscreen_rounded,
+                    child: Icon(
+                      TackIcons.maximize,
                       size: 16,
                       color: Colors.white,
                     ),
@@ -1382,7 +1429,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.broken_image_outlined,
+            TackIcons.imageOff,
             size: 24,
             color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
           ),
@@ -1399,6 +1446,22 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     );
   }
 
+  // ─── Inline Recursive Parser + Sup/Sub + Footnotes ────────────────────────────
+
+  static final RegExp _footnoteRefRegex = RegExp(r'\[\^([^\[\]\s\n]+)\](?!:)');
+  static final RegExp _wikiTokenRegex = RegExp(r'!?\[\[[^\[\]\n]+\]\]');
+  static final RegExp _inlineImgRegex = RegExp(r'!\[[^\]\n]*\]\([^)\n]+\)');
+  static final RegExp _bareUrlRegex =
+      RegExp(r'https?:\/\/[^\s<]+[^<.,:;"\)\]\s]');
+  static final RegExp _inlineHtmlTagRegex = RegExp(
+    r'<(sup|sub|u)>(.*?)<\/\1>',
+    caseSensitive: false,
+  );
+  static final RegExp _hashTokenRegex = RegExp(r'#[a-zA-Z0-9_-]+');
+  static final RegExp _wordCharRegex = RegExp(r'[A-Za-z0-9_]');
+  static final RegExp _footnoteDefRegex = RegExp(r'^\s*\[\^([^\[\]\s\n]+)\]:(.*)$');
+  static final RegExp _defLineRegex = RegExp(r'^\s{0,3}:\s+(.+)$');
+
   Widget _buildRichTextSpans(
     String text,
     bool isDark,
@@ -1406,7 +1469,6 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     TextStyle? baseStyle,
     BuildContext? context,
   }) {
-    final spans = <InlineSpan>[];
     final defaultStyle = baseStyle ??
         theme.textTheme.bodyLarge?.copyWith(
           height: 1.5,
@@ -1415,432 +1477,1632 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           fontFamily: AppTypography.fontFamily,
         );
 
-    final pattern = RegExp(
-      r'(`[^`\n]+`)'
-      r'|(!?\[\[[^\[\]\n]+\]\])'
-      r'|(!\[[^\]\n]*\]\([^)\n]+\))'
-      r'|(\[[^\]\n]+\]\([^)\n]+\))'
-      r'|(https?:\/\/[^\s<]+[^<.,:;"\)\]\s])'
-      r'|(==.*?==)'
-      r'|(\*\*.*?\*\*)'
-      r'|(__.*?__)'
-      r'|(\*.*?\*)'
-      r'|(_.*?_)'
-      r'|(~~.*?~~)'
-      r'|(<u>.*?</u>)'
-      r'|(#[a-zA-Z0-9_-]+)',
-      dotAll: false,
+    final spans = _parseInlineSpans(
+      text,
+      isDark,
+      theme,
+      defaultStyle,
+      context: context,
+      depth: 0,
     );
-
-    int lastIndex = 0;
-    for (final match in pattern.allMatches(text)) {
-      if (match.start > lastIndex) {
-        spans.add(TextSpan(
-          text: text.substring(lastIndex, match.start),
-          style: defaultStyle,
-        ));
-      }
-
-      final matched = match.group(0)!;
-      if (matched.startsWith('`') && matched.endsWith('`') && matched.length >= 2) {
-        final codeText = matched.substring(1, matched.length - 1);
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: palette.resolveInlineCodeBg(isDark),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: palette.resolveTableBorder(isDark),
-                  width: 0.8,
-                ),
-              ),
-              child: Text(
-                codeText,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: (defaultStyle?.fontSize ?? 15) * 0.88,
-                  fontWeight: FontWeight.w600,
-                  color: palette.resolveInlineCodeText(isDark),
-                ),
-              ),
-            ),
-          ),
-        );
-      } else if ((matched.startsWith('[[') || matched.startsWith('![[')) &&
-          matched.endsWith(']]')) {
-        final parsedLink = WikiLinkService.parseToken(matched);
-        if (parsedLink != null) {
-          final targetItem = WikiLinkService.resolveTarget(parsedLink.target, workspaceItems);
-          final isBoard = targetItem is WhiteboardCanvasItem;
-          final exists = targetItem != null;
-          final linkPalette = exists ? AppColors.getPaletteById(targetItem.paletteId) : palette;
-          final linkAccent = linkPalette.resolveAccentColor(isDark);
-
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                child: Material(
-                  color: exists
-                      ? linkAccent.withValues(alpha: isDark ? 0.18 : 0.12)
-                      : (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F7)),
-                  borderRadius: BorderRadius.circular(7),
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onWikiLinkTap?.call(parsedLink);
-                    },
-                    borderRadius: BorderRadius.circular(7),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(7),
-                        border: Border.all(
-                          color: exists
-                              ? linkAccent.withValues(alpha: 0.45)
-                              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                          width: 0.9,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TackIcon(
-                            !exists
-                                ? TackIcons.plus
-                                : (isBoard ? TackIcons.whiteboardSvg : TackIcons.notesSvg),
-                            size: 11.5,
-                            color: exists ? linkAccent : AppColors.accentAmber,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              parsedLink.displayLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: (defaultStyle?.fontSize ?? 15) * 0.86,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                                color: exists
-                                    ? linkAccent
-                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        } else {
-          spans.add(TextSpan(text: matched, style: defaultStyle));
-        }
-      } else if (matched.startsWith('![') && matched.contains('](') && matched.endsWith(')')) {
-        final midIndex = matched.indexOf('](');
-        final alt = matched.substring(2, midIndex);
-        final url = matched.substring(midIndex + 2, matched.length - 1).trim();
-        final cleanUrl = url.replaceFirst(RegExp(r'^file://'), '');
-        final isNet = cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
-
-        Widget inlineImg;
-        if (isNet) {
-          inlineImg = Image.network(
-            cleanUrl,
-            height: 28,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const Icon(Icons.broken_image_rounded, size: 20),
-          );
-        } else if (!kIsWeb) {
-          final file = File(cleanUrl);
-          if (file.existsSync()) {
-            inlineImg = Image.file(file, height: 28, fit: BoxFit.cover);
-          } else {
-            inlineImg = const Icon(Icons.broken_image_rounded, size: 20);
-          }
-        } else {
-          inlineImg = const Icon(Icons.broken_image_rounded, size: 20);
-        }
-
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: GestureDetector(
-              onTap: () {
-                if (context != null) {
-                  _openImageLightbox(context, cleanUrl, alt);
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: inlineImg,
-                ),
-              ),
-            ),
-          ),
-        );
-      } else if (matched.startsWith('[') && matched.contains('](') && matched.endsWith(')')) {
-        final midIndex = matched.indexOf('](');
-        final label = matched.substring(1, midIndex);
-        final url = matched.substring(midIndex + 2, matched.length - 1);
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: InkWell(
-              onTap: () {
-                if (context != null) {
-                  UrlLauncherHelper.openUrl(context, url);
-                }
-              },
-              onLongPress: () {
-                Clipboard.setData(ClipboardData(text: url));
-                HapticFeedback.lightImpact();
-                if (context != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Link copied: $url'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: palette.resolveAccentColor(isDark),
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                        decorationColor: palette.resolveAccentColor(isDark),
-                        fontSize: defaultStyle?.fontSize,
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    TackIcon(
-                      TackIcons.link,
-                      size: 11,
-                      color: palette.resolveAccentColor(isDark),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      } else if (matched.startsWith('http://') || matched.startsWith('https://')) {
-        final url = matched;
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: InkWell(
-              onTap: () {
-                if (context != null) {
-                  UrlLauncherHelper.openUrl(context, url);
-                }
-              },
-              onLongPress: () {
-                Clipboard.setData(ClipboardData(text: url));
-                HapticFeedback.lightImpact();
-                if (context != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Link copied: $url'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      url,
-                      style: TextStyle(
-                        color: palette.resolveAccentColor(isDark),
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.underline,
-                        decorationColor: palette.resolveAccentColor(isDark),
-                        fontSize: defaultStyle?.fontSize,
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    TackIcon(
-                      TackIcons.link,
-                      size: 11,
-                      color: palette.resolveAccentColor(isDark),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      } else if (matched.startsWith('==') && matched.endsWith('==') && matched.length >= 4) {
-        final innerText = matched.substring(2, matched.length - 2);
-        final colonIdx = innerText.indexOf(':');
-        String displayText = innerText;
-        Color highlightBg;
-        if (colonIdx > 0 && colonIdx < 15) {
-          final prefix = innerText.substring(0, colonIdx).toLowerCase();
-          final known = AppColors.presetPalettes.any((p) => p.id == prefix);
-          if (known) {
-            displayText = innerText.substring(colonIdx + 1);
-            highlightBg = AppColors.getHighlightColor(prefix, isDark: isDark);
-          } else {
-            highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
-          }
-        } else {
-          highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
-        }
-
-        spans.add(TextSpan(
-          text: displayText,
-          style: defaultStyle?.copyWith(
-            backgroundColor: highlightBg,
-            fontWeight: FontWeight.w600,
-          ),
-        ));
-      } else if (matched.startsWith('**') && matched.endsWith('**') && matched.length >= 4) {
-        spans.add(TextSpan(
-          text: matched.substring(2, matched.length - 2),
-          style: defaultStyle?.copyWith(fontWeight: FontWeight.w800),
-        ));
-      } else if (matched.startsWith('__') && matched.endsWith('__') && matched.length >= 4) {
-        spans.add(TextSpan(
-          text: matched.substring(2, matched.length - 2),
-          style: defaultStyle?.copyWith(decoration: TextDecoration.underline),
-        ));
-      } else if (matched.startsWith('<u>') && matched.endsWith('</u>') && matched.length >= 7) {
-        spans.add(TextSpan(
-          text: matched.substring(3, matched.length - 4),
-          style: defaultStyle?.copyWith(decoration: TextDecoration.underline),
-        ));
-      } else if (matched.startsWith('*') && matched.endsWith('*') && matched.length >= 2) {
-        spans.add(TextSpan(
-          text: matched.substring(1, matched.length - 1),
-          style: defaultStyle?.copyWith(fontStyle: FontStyle.italic),
-        ));
-      } else if (matched.startsWith('_') && matched.endsWith('_') && matched.length >= 2) {
-        spans.add(TextSpan(
-          text: matched.substring(1, matched.length - 1),
-          style: defaultStyle?.copyWith(fontStyle: FontStyle.italic),
-        ));
-      } else if (matched.startsWith('~~') && matched.endsWith('~~') && matched.length >= 4) {
-        spans.add(TextSpan(
-          text: matched.substring(2, matched.length - 2),
-          style: defaultStyle?.copyWith(decoration: TextDecoration.lineThrough),
-        ));
-      } else if (matched.startsWith('#') && matched.length > 1) {
-        final hexColor = AppColors.tryParseHexColor(matched);
-        if (hexColor != null) {
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: hexColor.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: hexColor.withValues(alpha: 0.8),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: hexColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.25),
-                          width: 0.8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      matched,
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF18191F),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        } else {
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: palette.resolveSoftBackground(isDark),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: palette.resolveTableBorder(isDark),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  matched,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: palette.resolveAccentColor(isDark),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-      } else {
-        spans.add(TextSpan(text: matched, style: defaultStyle));
-      }
-
-      lastIndex = match.end;
-    }
-
-    if (lastIndex < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastIndex),
-        style: defaultStyle,
-      ));
-    }
 
     return RichText(
       text: TextSpan(
         style: defaultStyle,
         children: spans,
+      ),
+    );
+  }
+
+  List<InlineSpan> _parseInlineSpans(
+    String text,
+    bool isDark,
+    ThemeData theme,
+    TextStyle? currentStyle, {
+    BuildContext? context,
+    int depth = 0,
+  }) {
+    if (text.isEmpty) return const [];
+    if (depth >= 8) {
+      return [TextSpan(text: text, style: currentStyle)];
+    }
+
+    final spans = <InlineSpan>[];
+    final buffer = StringBuffer();
+
+    void flushBuffer() {
+      if (buffer.isNotEmpty) {
+        spans.add(TextSpan(text: buffer.toString(), style: currentStyle));
+        buffer.clear();
+      }
+    }
+
+    int i = 0;
+    while (i < text.length) {
+      final codeUnit = text.codeUnitAt(i);
+
+      // 1. Inline code: `code` (atomic leaf, inherits emphasis/decoration from enclosing spans)
+      if (codeUnit == 96) {
+        final closeIdx = text.indexOf('`', i + 1);
+        if (closeIdx > i + 1 && !text.substring(i + 1, closeIdx).contains('\n')) {
+          flushBuffer();
+          final codeText = text.substring(i + 1, closeIdx);
+          spans.add(
+            _buildInlineCodeSpan(codeText, isDark, currentStyle),
+          );
+          i = closeIdx + 1;
+          continue;
+        }
+      }
+
+      // 2. Wiki-links / embeds: [[Target]] or ![[Target]]
+      if (text.startsWith('[[', i) || text.startsWith('![[', i)) {
+        final wikiMatch = _wikiTokenRegex.matchAsPrefix(text, i);
+        if (wikiMatch != null) {
+          final matched = wikiMatch.group(0)!;
+          final parsedLink = WikiLinkService.parseToken(matched);
+          if (parsedLink != null) {
+            flushBuffer();
+            spans.add(_buildWikiLinkSpan(parsedLink, isDark, currentStyle));
+            i = wikiMatch.end;
+            continue;
+          }
+        }
+      }
+
+      // 3. Inline image: ![alt](url)
+      if (text.startsWith('![', i)) {
+        final imgMatch = _inlineImgRegex.matchAsPrefix(text, i);
+        if (imgMatch != null) {
+          flushBuffer();
+          spans.add(
+            _buildInlineImageSpan(
+              imgMatch.group(0)!,
+              isDark,
+              context: context,
+            ),
+          );
+          i = imgMatch.end;
+          continue;
+        }
+      }
+
+      // 4. Footnote reference badge: [^id]
+      if (text.startsWith('[^', i)) {
+        final fnMatch = _footnoteRefRegex.matchAsPrefix(text, i);
+        if (fnMatch != null &&
+            (fnMatch.end >= text.length || text.codeUnitAt(fnMatch.end) != 40)) {
+          final id = fnMatch.group(1)!;
+          final entry = _footnoteCollection.byId[id];
+          if (entry != null) {
+            flushBuffer();
+            spans.add(
+              _buildFootnoteBadgeSpan(
+                entry,
+                isDark,
+                theme,
+                currentStyle,
+                context: context,
+              ),
+            );
+            i = fnMatch.end;
+            continue;
+          }
+        }
+      }
+
+      // 5. Markdown link: [label](url) (supports formatted label inside!)
+      if (codeUnit == 91) {
+        final link = _tryMatchMarkdownLink(text, i);
+        if (link != null) {
+          flushBuffer();
+          spans.add(
+            _buildMarkdownLinkSpan(
+              link.label,
+              link.url,
+              isDark,
+              theme,
+              currentStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = link.endIndex;
+          continue;
+        }
+      }
+
+      // 6. Bare URL: https://...
+      if (text.startsWith('http://', i) || text.startsWith('https://', i)) {
+        final urlMatch = _bareUrlRegex.matchAsPrefix(text, i);
+        if (urlMatch != null) {
+          flushBuffer();
+          spans.add(
+            _buildBareUrlSpan(
+              urlMatch.group(0)!,
+              isDark,
+              currentStyle,
+              context: context,
+            ),
+          );
+          i = urlMatch.end;
+          continue;
+        }
+      }
+
+      // 7. HTML inline tags: <sup>...</sup>, <sub>...</sub>, <u>...</u>
+      if (codeUnit == 60) {
+        final tagMatch = _inlineHtmlTagRegex.matchAsPrefix(text, i);
+        if (tagMatch != null) {
+          final tag = tagMatch.group(1)!.toLowerCase();
+          final inner = tagMatch.group(2)!;
+          if (inner.isNotEmpty) {
+            flushBuffer();
+            if (tag == 'u') {
+              final nextStyle = _mergeTextStyle(
+                currentStyle,
+                addDecoration: TextDecoration.underline,
+              );
+              spans.addAll(
+                _parseInlineSpans(
+                  inner,
+                  isDark,
+                  theme,
+                  nextStyle,
+                  context: context,
+                  depth: depth + 1,
+                ),
+              );
+            } else {
+              spans.add(
+                _buildScriptSpan(
+                  inner,
+                  isSuperscript: tag == 'sup',
+                  isDark: isDark,
+                  theme: theme,
+                  currentStyle: currentStyle,
+                  context: context,
+                  depth: depth + 1,
+                ),
+              );
+            }
+            i = tagMatch.end;
+            continue;
+          }
+        }
+      }
+
+      // 8. Custom Highlight: ==...== or ==palette:text==
+      if (text.startsWith('==', i) && !_isWhitespace(text, i + 2)) {
+        final endIdx = _findClosingMarker(text, i + 2, '==');
+        if (endIdx > i + 2) {
+          flushBuffer();
+          final innerText = text.substring(i + 2, endIdx);
+          final colonIdx = innerText.indexOf(':');
+          String displayText = innerText;
+          Color highlightBg;
+          if (colonIdx > 0 && colonIdx < 15) {
+            final prefix = innerText.substring(0, colonIdx).toLowerCase();
+            final known = AppColors.presetPalettes.any((p) => p.id == prefix);
+            if (known) {
+              displayText = innerText.substring(colonIdx + 1);
+              highlightBg = AppColors.getHighlightColor(prefix, isDark: isDark);
+            } else {
+              highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
+            }
+          } else {
+            highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
+          }
+
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontWeight: currentStyle?.fontWeight ?? FontWeight.w600,
+            backgroundColor: highlightBg,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              displayText,
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 2;
+          continue;
+        }
+      }
+
+      // 9a. Bold + Italic: ***...***
+      if (text.startsWith('***', i) && !_isWhitespace(text, i + 3)) {
+        final endIdx = _findClosingMarker(text, i + 3, '***');
+        if (endIdx > i + 3) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontWeight: FontWeight.w800,
+            fontStyle: FontStyle.italic,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 3, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 3;
+          continue;
+        }
+      }
+
+      // 9b. Underline + Italic: ___...___
+      if (text.startsWith('___', i) &&
+          _canOpenUnderscore(text, i) &&
+          !_isWhitespace(text, i + 3)) {
+        final endIdx = _findClosingMarker(
+          text,
+          i + 3,
+          '___',
+          requireUnderscoreBoundary: true,
+        );
+        if (endIdx > i + 3) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontStyle: FontStyle.italic,
+            addDecoration: TextDecoration.underline,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 3, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 3;
+          continue;
+        }
+      }
+
+      // 9c. Bold: **...**
+      if (text.startsWith('**', i) &&
+          !text.startsWith('***', i) &&
+          !_isWhitespace(text, i + 2)) {
+        final endIdx = _findClosingMarker(
+          text,
+          i + 2,
+          '**',
+          allowNestedSingleStar: true,
+        );
+        if (endIdx > i + 2) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontWeight: FontWeight.w800,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 2, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 2;
+          continue;
+        }
+      }
+
+      // 9d. Underline: __...__
+      if (text.startsWith('__', i) &&
+          !text.startsWith('___', i) &&
+          _canOpenUnderscore(text, i) &&
+          !_isWhitespace(text, i + 2)) {
+        final endIdx = _findClosingMarker(
+          text,
+          i + 2,
+          '__',
+          requireUnderscoreBoundary: true,
+        );
+        if (endIdx > i + 2) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            addDecoration: TextDecoration.underline,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 2, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 2;
+          continue;
+        }
+      }
+
+      // 9e. Strikethrough: ~~...~~ (MUST precede single ~subscript~!)
+      if (text.startsWith('~~', i) && !_isWhitespace(text, i + 2)) {
+        final endIdx = _findClosingMarker(text, i + 2, '~~');
+        if (endIdx > i + 2) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            addDecoration: TextDecoration.lineThrough,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 2, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 2;
+          continue;
+        }
+      }
+
+      // 9f. Italic: *...* (also allows ***bold** italic* when *** failed to close as ***)
+      if (codeUnit == 42 &&
+          (!text.startsWith('**', i) || text.startsWith('***', i)) &&
+          !_isWhitespace(text, i + 1)) {
+        final endIdx = _findClosingMarker(
+          text,
+          i + 1,
+          '*',
+          allowNestedMarker: '**',
+        );
+        if (endIdx > i + 1) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontStyle: FontStyle.italic,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 1, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 1;
+          continue;
+        }
+      }
+
+      // 9g. Italic: _..._ (with intraword snake_case guard)
+      if (codeUnit == 95 &&
+          (!text.startsWith('__', i) || text.startsWith('___', i)) &&
+          _canOpenUnderscore(text, i) &&
+          !_isWhitespace(text, i + 1)) {
+        final endIdx = _findClosingMarker(
+          text,
+          i + 1,
+          '_',
+          requireUnderscoreBoundary: true,
+          allowNestedMarker: '__',
+        );
+        if (endIdx > i + 1) {
+          flushBuffer();
+          final nextStyle = _mergeTextStyle(
+            currentStyle,
+            fontStyle: FontStyle.italic,
+          );
+          spans.addAll(
+            _parseInlineSpans(
+              text.substring(i + 1, endIdx),
+              isDark,
+              theme,
+              nextStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 1;
+          continue;
+        }
+      }
+
+      // 10a. Superscript: ^sup^ (guards against unlinked [^ or spaces inside)
+      if (codeUnit == 94 &&
+          (i == 0 || text.codeUnitAt(i - 1) != 91) &&
+          !_isWhitespace(text, i + 1)) {
+        final endIdx = _findClosingMarker(text, i + 1, '^');
+        if (endIdx > i + 1) {
+          flushBuffer();
+          spans.add(
+            _buildScriptSpan(
+              text.substring(i + 1, endIdx),
+              isSuperscript: true,
+              isDark: isDark,
+              theme: theme,
+              currentStyle: currentStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 1;
+          continue;
+        }
+      }
+
+      // 10b. Subscript: ~sub~ (distinct from ~~strike~~)
+      if (codeUnit == 126 &&
+          !text.startsWith('~~', i) &&
+          (i == 0 || text.codeUnitAt(i - 1) != 126) &&
+          !_isWhitespace(text, i + 1)) {
+        final endIdx = _findClosingMarker(text, i + 1, '~');
+        if (endIdx > i + 1) {
+          flushBuffer();
+          spans.add(
+            _buildScriptSpan(
+              text.substring(i + 1, endIdx),
+              isSuperscript: false,
+              isDark: isDark,
+              theme: theme,
+              currentStyle: currentStyle,
+              context: context,
+              depth: depth + 1,
+            ),
+          );
+          i = endIdx + 1;
+          continue;
+        }
+      }
+
+      // 11. Hashtags and #RRGGBB color swatch pills
+      if (codeUnit == 35 && i + 1 < text.length) {
+        final hashMatch = _hashTokenRegex.matchAsPrefix(text, i);
+        if (hashMatch != null) {
+          flushBuffer();
+          spans.add(_buildHashTokenSpan(hashMatch.group(0)!, isDark));
+          i = hashMatch.end;
+          continue;
+        }
+      }
+
+      buffer.writeCharCode(codeUnit);
+      i++;
+    }
+
+    flushBuffer();
+    return spans;
+  }
+
+  TextStyle? _mergeTextStyle(
+    TextStyle? base, {
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    TextDecoration? addDecoration,
+    Color? backgroundColor,
+  }) {
+    if (base == null) {
+      return TextStyle(
+        fontWeight: fontWeight,
+        fontStyle: fontStyle,
+        decoration: addDecoration,
+        backgroundColor: backgroundColor,
+      );
+    }
+
+    TextDecoration? mergedDecoration = base.decoration;
+    if (addDecoration != null && addDecoration != TextDecoration.none) {
+      final list = <TextDecoration>[
+        if (mergedDecoration != null && mergedDecoration != TextDecoration.none)
+          mergedDecoration,
+        addDecoration,
+      ];
+      mergedDecoration =
+          list.length == 1 ? list.first : TextDecoration.combine(list);
+    }
+
+    return base.copyWith(
+      fontWeight: fontWeight ?? base.fontWeight,
+      fontStyle: fontStyle ?? base.fontStyle,
+      decoration: mergedDecoration,
+      backgroundColor: backgroundColor ?? base.backgroundColor,
+    );
+  }
+
+  bool _isWhitespace(String text, int index) {
+    if (index < 0 || index >= text.length) return true;
+    final ch = text.codeUnitAt(index);
+    return ch == 32 || ch == 9 || ch == 10 || ch == 13;
+  }
+
+  bool _isWordChar(String ch) => _wordCharRegex.hasMatch(ch);
+
+  bool _canOpenUnderscore(String text, int index) {
+    if (index > 0 && _isWordChar(text[index - 1])) return false;
+    return true;
+  }
+
+  ({String label, String url, int endIndex})? _tryMatchMarkdownLink(
+    String text,
+    int startIndex,
+  ) {
+    int k = startIndex + 1;
+    while (k < text.length) {
+      final ch = text.codeUnitAt(k);
+      if (ch == 10 || ch == 13) return null;
+      if (ch == 96) {
+        final closeTick = text.indexOf('`', k + 1);
+        if (closeTick != -1 && !text.substring(k + 1, closeTick).contains('\n')) {
+          k = closeTick + 1;
+          continue;
+        }
+      }
+      if (ch == 93) {
+        // ']' must be directly followed by '(' and non-empty label
+        if (k > startIndex + 1 && text.startsWith('](', k)) {
+          final urlStart = k + 2;
+          final urlEnd = text.indexOf(')', urlStart);
+          if (urlEnd > urlStart &&
+              !text.substring(urlStart, urlEnd).contains('\n')) {
+            return (
+              label: text.substring(startIndex + 1, k),
+              url: text.substring(urlStart, urlEnd),
+              endIndex: urlEnd + 1,
+            );
+          }
+        }
+        return null;
+      }
+      k++;
+    }
+    return null;
+  }
+
+  int _findClosingMarker(
+    String text,
+    int start,
+    String marker, {
+    bool allowNestedSingleStar = false,
+    bool requireUnderscoreBoundary = false,
+    String? allowNestedMarker,
+  }) {
+    final len = marker.length;
+    bool openSingleStar = false;
+    int j = start;
+    while (j <= text.length - len) {
+      final ch = text.codeUnitAt(j);
+      if (ch == 10 || ch == 13) return -1;
+
+      // Never match closing marker inside inline `code`
+      if (ch == 96) {
+        final closeTick = text.indexOf('`', j + 1);
+        if (closeTick != -1 && !text.substring(j + 1, closeTick).contains('\n')) {
+          j = closeTick + 1;
+          continue;
+        }
+      }
+
+      // Skip inner balanced marker (e.g. **bold** inside *italic*)
+      if (allowNestedMarker != null && text.startsWith(allowNestedMarker, j)) {
+        final nl = allowNestedMarker.length;
+        final isTripleEdge =
+            (allowNestedMarker == '**' && text.startsWith('***', j)) ||
+            (allowNestedMarker == '__' && text.startsWith('___', j));
+        if (!isTripleEdge) {
+          final innerClose = text.indexOf(allowNestedMarker, j + nl);
+          if (innerClose != -1 && !text.substring(j + nl, innerClose).contains('\n')) {
+            j = innerClose + nl;
+            continue;
+          }
+        }
+      }
+
+      // Track inner *italic* inside **bold** so **bold *italic*** closes cleanly
+      if (allowNestedSingleStar && ch == 42 && !text.startsWith('**', j)) {
+        final canOpen = !_isWhitespace(text, j + 1);
+        final canClose = j > start && !_isWhitespace(text, j - 1);
+        if (!openSingleStar && canOpen) {
+          openSingleStar = true;
+        } else if (openSingleStar && canClose) {
+          openSingleStar = false;
+        }
+        j++;
+        continue;
+      }
+
+      if (text.startsWith(marker, j) && j > start && !_isWhitespace(text, j - 1)) {
+        if (allowNestedSingleStar &&
+            marker == '**' &&
+            openSingleStar &&
+            text.startsWith('***', j)) {
+          // Consume the first '*' to close inner *italic*, letting j+1 close '**'
+          openSingleStar = false;
+          j++;
+          continue;
+        }
+        if (marker == '~' &&
+            j + 1 < text.length &&
+            text.codeUnitAt(j + 1) == 126) {
+          j++;
+          continue;
+        }
+        if (requireUnderscoreBoundary &&
+            j + len < text.length &&
+            _isWordChar(text[j + len])) {
+          j++;
+          continue;
+        }
+        return j;
+      }
+
+      j++;
+    }
+    return -1;
+  }
+
+  WidgetSpan _buildInlineCodeSpan(
+    String codeText,
+    bool isDark,
+    TextStyle? currentStyle,
+  ) {
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+        decoration: BoxDecoration(
+          color: palette.resolveInlineCodeBg(isDark),
+          borderRadius: AppSpacing.roundedXs,
+        ),
+        child: Text(
+          codeText,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: (currentStyle?.fontSize ?? 15) * 0.88,
+            fontWeight: currentStyle?.fontWeight == FontWeight.w800
+                ? FontWeight.w800
+                : FontWeight.w600,
+            fontStyle: currentStyle?.fontStyle ?? FontStyle.normal,
+            decoration: currentStyle?.decoration,
+            color: palette.resolveInlineCodeText(isDark),
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildScriptSpan(
+    String inner, {
+    required bool isSuperscript,
+    required bool isDark,
+    required ThemeData theme,
+    required TextStyle? currentStyle,
+    required BuildContext? context,
+    required int depth,
+  }) {
+    final baseFontSize = currentStyle?.fontSize ?? 15;
+    final scriptStyle = (currentStyle ?? const TextStyle()).copyWith(
+      fontSize: baseFontSize * 0.72,
+      height: 1.0,
+    );
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: Transform.translate(
+        offset: Offset(
+          0,
+          isSuperscript ? -(baseFontSize * 0.34) : (baseFontSize * 0.20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0.5),
+          child: RichText(
+            textScaler: TextScaler.noScaling,
+            text: TextSpan(
+              style: scriptStyle,
+              children: _parseInlineSpans(
+                inner,
+                isDark,
+                theme,
+                scriptStyle,
+                context: context,
+                depth: depth,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildFootnoteBadgeSpan(
+    _FootnoteEntry entry,
+    bool isDark,
+    ThemeData theme,
+    TextStyle? currentStyle, {
+    required BuildContext? context,
+  }) {
+    final baseFontSize = currentStyle?.fontSize ?? 15;
+    final accent = palette.resolveAccentColor(isDark);
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: Transform.translate(
+        offset: Offset(0, -(baseFontSize * 0.28)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: context == null
+                  ? null
+                  : () {
+                      HapticFeedback.selectionClick();
+                      _showFootnoteSheet(context, entry, isDark, theme);
+                    },
+              customBorder: AppSpacing.smoothBorder(AppSpacing.roundedXs),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: AppSpacing.smoothDecoration(
+                  color: accent.withValues(alpha: isDark ? 0.22 : 0.14),
+                  borderRadius: AppSpacing.roundedXs,
+                  side: BorderSide(
+                    color: accent.withValues(alpha: 0.48),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  '${entry.number}',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: (baseFontSize * 0.68).clamp(9.5, 13.0),
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildWikiLinkSpan(
+    ParsedWikiLink parsedLink,
+    bool isDark,
+    TextStyle? currentStyle,
+  ) {
+    final targetItem =
+        WikiLinkService.resolveTarget(parsedLink.target, workspaceItems);
+    final isBoard = targetItem is WhiteboardCanvasItem;
+    final exists = targetItem != null;
+    final linkPalette =
+        exists ? AppColors.getPaletteById(targetItem.paletteId) : palette;
+    final linkAccent = linkPalette.resolveAccentColor(isDark);
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+        child: Material(
+          color: exists
+              ? linkAccent.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F7)),
+          borderRadius: BorderRadius.circular(7),
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onWikiLinkTap?.call(parsedLink);
+            },
+            borderRadius: BorderRadius.circular(7),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: exists
+                    ? null
+                    : Border.all(
+                        color: isDark
+                            ? AppColors.darkBorder
+                            : AppColors.lightBorder,
+                        width: 0.8,
+                      ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TackIcon(
+                    !exists
+                        ? TackIcons.plus
+                        : (isBoard ? TackIcons.whiteboardSvg : TackIcons.notesSvg),
+                    size: 11.5,
+                    color: exists ? linkAccent : AppColors.accentAmber,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      parsedLink.displayLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: (currentStyle?.fontSize ?? 15) * 0.86,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        color: exists
+                            ? linkAccent
+                            : (isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildInlineImageSpan(
+    String matched,
+    bool isDark, {
+    required BuildContext? context,
+  }) {
+    final midIndex = matched.indexOf('](');
+    final alt = matched.substring(2, midIndex);
+    final url = matched.substring(midIndex + 2, matched.length - 1).trim();
+    final cleanUrl = url.replaceFirst(RegExp(r'^file://'), '');
+    final isNet =
+        cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
+
+    Widget inlineImg;
+    if (isNet) {
+      inlineImg = Image.network(
+        cleanUrl,
+        height: 28,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Icon(TackIcons.imageOff, size: 20),
+      );
+    } else if (!kIsWeb) {
+      final file = File(cleanUrl);
+      if (file.existsSync()) {
+        inlineImg = Image.file(file, height: 28, fit: BoxFit.cover);
+      } else {
+        inlineImg = Icon(TackIcons.imageOff, size: 20);
+      }
+    } else {
+      inlineImg = Icon(TackIcons.imageOff, size: 20);
+    }
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: GestureDetector(
+        onTap: () {
+          if (context != null) {
+            _openImageLightbox(context, cleanUrl, alt);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: inlineImg,
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildMarkdownLinkSpan(
+    String label,
+    String url,
+    bool isDark,
+    ThemeData theme,
+    TextStyle? currentStyle, {
+    required BuildContext? context,
+    required int depth,
+  }) {
+    final accent = palette.resolveAccentColor(isDark);
+    final linkLabelStyle = _mergeTextStyle(
+      currentStyle,
+      fontWeight: currentStyle?.fontWeight == FontWeight.w800
+          ? FontWeight.w800
+          : FontWeight.w600,
+      addDecoration: TextDecoration.underline,
+    )?.copyWith(
+      color: accent,
+      decorationColor: accent,
+    );
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: InkWell(
+        onTap: () {
+          if (context != null) {
+            UrlLauncherHelper.openUrl(context, url);
+          }
+        },
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: url));
+          HapticFeedback.lightImpact();
+          if (context != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Link copied: $url'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RichText(
+                textScaler: TextScaler.noScaling,
+                text: TextSpan(
+                  style: linkLabelStyle,
+                  children: _parseInlineSpans(
+                    label,
+                    isDark,
+                    theme,
+                    linkLabelStyle,
+                    context: context,
+                    depth: depth,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              TackIcon(
+                TackIcons.link,
+                size: 11,
+                color: accent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildBareUrlSpan(
+    String url,
+    bool isDark,
+    TextStyle? currentStyle, {
+    required BuildContext? context,
+  }) {
+    final accent = palette.resolveAccentColor(isDark);
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: InkWell(
+        onTap: () {
+          if (context != null) {
+            UrlLauncherHelper.openUrl(context, url);
+          }
+        },
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: url));
+          HapticFeedback.lightImpact();
+          if (context != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Link copied: $url'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                url,
+                style: TextStyle(
+                  color: accent,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                  decorationColor: accent,
+                  fontSize: currentStyle?.fontSize,
+                ),
+              ),
+              const SizedBox(width: 3),
+              TackIcon(
+                TackIcons.link,
+                size: 11,
+                color: accent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  WidgetSpan _buildHashTokenSpan(String matched, bool isDark) {
+    final hexColor = AppColors.tryParseHexColor(matched);
+    if (hexColor != null) {
+      return WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+          decoration: BoxDecoration(
+            color: hexColor.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: hexColor.withValues(alpha: 0.8),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: hexColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: (isDark ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.25),
+                    width: 0.8,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                matched,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF18191F),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+        decoration: BoxDecoration(
+          color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.14 : 0.08),
+          borderRadius: AppSpacing.roundedXs,
+        ),
+        child: Text(
+          matched,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: palette.resolveAccentColor(isDark),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Footnotes & Definition List Helpers ───────────────────────────────────
+
+  _FootnoteCollection _extractFootnotes(
+    List<String> lines,
+    int startIndex, {
+    _FootnoteCollection? inherited,
+  }) {
+    final rawDefs = <String, ({String body, int lineIndex})>{};
+    final defLineIndices = <int>{};
+
+    bool inFence = false;
+    int idx = startIndex;
+    while (idx < lines.length) {
+      final line = lines[idx];
+      final trimmed = line.trim();
+      if (trimmed.startsWith('```')) {
+        inFence = !inFence;
+        idx++;
+        continue;
+      }
+      if (!inFence) {
+        final defMatch = _footnoteDefRegex.firstMatch(line);
+        if (defMatch != null) {
+          final id = defMatch.group(1)!;
+          final buffer = <String>[];
+          final firstBody = defMatch.group(2)!.trim();
+          if (firstBody.isNotEmpty) buffer.add(firstBody);
+          defLineIndices.add(idx);
+
+          int k = idx + 1;
+          while (k < lines.length) {
+            final next = lines[k];
+            final nextTrim = next.trim();
+            if (nextTrim.startsWith('```') || _footnoteDefRegex.hasMatch(next)) {
+              break;
+            }
+            if (next.startsWith('  ') || next.startsWith('\t')) {
+              if (nextTrim.isNotEmpty) buffer.add(nextTrim);
+              defLineIndices.add(k);
+              k++;
+              continue;
+            }
+            if (nextTrim.isEmpty &&
+                k + 1 < lines.length &&
+                (lines[k + 1].startsWith('  ') || lines[k + 1].startsWith('\t'))) {
+              defLineIndices.add(k);
+              k++;
+              continue;
+            }
+            break;
+          }
+
+          rawDefs[id] = (
+            body: buffer.isEmpty ? '(No details provided)' : buffer.join(' '),
+            lineIndex: idx,
+          );
+          idx = k;
+          continue;
+        }
+      }
+      idx++;
+    }
+
+    if (rawDefs.isEmpty && inherited == null) {
+      return const _FootnoteCollection.empty();
+    }
+
+    // Order footnotes by first appearance in body, then unreferenced definitions.
+    final byId = <String, _FootnoteEntry>{};
+    final localOrdered = <_FootnoteEntry>[];
+
+    if (inherited != null) {
+      byId.addAll(inherited.byId);
+    }
+
+    int nextNumber = 1;
+    if (inherited != null && inherited.byId.isNotEmpty) {
+      for (final entry in inherited.byId.values) {
+        if (entry.number >= nextNumber) {
+          nextNumber = entry.number + 1;
+        }
+      }
+    }
+
+    // Assign local numbering cleanly in top-level docs (1..N) or extending inherited.
+    final orderedIds = <String>[];
+    bool refInFence = false;
+    for (int i = startIndex; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.trim().startsWith('```')) {
+        refInFence = !refInFence;
+        continue;
+      }
+      if (refInFence || defLineIndices.contains(i)) continue;
+
+      for (final m in _footnoteRefRegex.allMatches(line)) {
+        final id = m.group(1)!;
+        if (rawDefs.containsKey(id) && !orderedIds.contains(id)) {
+          orderedIds.add(id);
+        }
+      }
+    }
+    for (final id in rawDefs.keys) {
+      if (!orderedIds.contains(id)) {
+        orderedIds.add(id);
+      }
+    }
+
+    int localCounter = inherited == null ? 1 : nextNumber;
+    for (final id in orderedIds) {
+      final def = rawDefs[id]!;
+      final entry = _FootnoteEntry(
+        id: id,
+        number: localCounter++,
+        body: def.body,
+        definitionLine: def.lineIndex,
+      );
+      byId[id] = entry;
+      localOrdered.add(entry);
+    }
+
+    return _FootnoteCollection(
+      byId: byId,
+      localDefinitions: localOrdered,
+      definitionLineIndices: defLineIndices,
+    );
+  }
+
+  bool _isNonDefinitionTermLine(String trimmed) {
+    if (trimmed.isEmpty) return true;
+    if (trimmed.startsWith('#') ||
+        trimmed.startsWith('```') ||
+        trimmed.startsWith('>') ||
+        trimmed.startsWith(':') ||
+        trimmed.startsWith('![') ||
+        trimmed.startsWith('![[') ||
+        trimmed.startsWith('<')) {
+      return true;
+    }
+    final upper = trimmed.toUpperCase();
+    if (upper == '[TOC]' || upper == '[[_TOC_]]') return true;
+    if (_footnoteDefRegex.hasMatch(trimmed)) return true;
+    if (RegExp(r'^(-{3,}|\*{3,}|_{3,})$').hasMatch(trimmed)) return true;
+    if (RegExp(r'^[-*+]\s+').hasMatch(trimmed)) return true;
+    if (RegExp(r'^\d+\.\s+').hasMatch(trimmed)) return true;
+    return false;
+  }
+
+  int _findDefinitionStartLine(List<String> lines, int termIndex) {
+    if (termIndex + 1 >= lines.length) return -1;
+    if (_defLineRegex.hasMatch(lines[termIndex + 1])) return termIndex + 1;
+    if (lines[termIndex + 1].trim().isEmpty &&
+        termIndex + 2 < lines.length &&
+        _defLineRegex.hasMatch(lines[termIndex + 2])) {
+      return termIndex + 2;
+    }
+    return -1;
+  }
+
+  _ParsedDefinitionList _consumeDefinitionList(List<String> lines, int start) {
+    final groups = <_DefinitionGroup>[];
+    int pos = start;
+
+    while (pos < lines.length) {
+      final termTrimmed = lines[pos].trim();
+      if (_isNonDefinitionTermLine(termTrimmed)) break;
+
+      final defStart = _findDefinitionStartLine(lines, pos);
+      if (defStart == -1) break;
+
+      final defs = <String>[];
+      int cur = defStart;
+      while (cur < lines.length) {
+        final m = _defLineRegex.firstMatch(lines[cur]);
+        if (m == null) break;
+
+        final parts = <String>[m.group(1)!.trim()];
+        int cont = cur + 1;
+        while (cont < lines.length) {
+          final l = lines[cont];
+          final lt = l.trim();
+          if (lt.startsWith('```') || _defLineRegex.hasMatch(l)) break;
+          if ((l.startsWith('  ') || l.startsWith('\t')) && lt.isNotEmpty) {
+            parts.add(lt);
+            cont++;
+            continue;
+          }
+          break;
+        }
+        defs.add(parts.join(' '));
+        cur = cont;
+
+        // Skip single blank line between definitions belonging to the same term.
+        if (cur < lines.length &&
+            lines[cur].trim().isEmpty &&
+            cur + 1 < lines.length &&
+            _defLineRegex.hasMatch(lines[cur + 1])) {
+          cur++;
+        }
+      }
+
+      groups.add(_DefinitionGroup(term: termTrimmed, definitions: defs));
+      pos = cur;
+
+      // Consume a separating blank line if another term + definition follows.
+      if (pos < lines.length &&
+          lines[pos].trim().isEmpty &&
+          pos + 1 < lines.length &&
+          !_isNonDefinitionTermLine(lines[pos + 1].trim()) &&
+          _findDefinitionStartLine(lines, pos + 1) != -1) {
+        pos++;
+      } else {
+        break;
+      }
+    }
+
+    return _ParsedDefinitionList(groups: groups, nextIndex: pos);
+  }
+
+  Widget _buildDefinitionListWidget(
+    BuildContext context,
+    List<_DefinitionGroup> groups,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    final accent = palette.resolveAccentColor(isDark);
+    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final borderColor = palette.resolveTableBorder(isDark);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppSpacing.smoothDecoration(
+        color: surface,
+        borderRadius: AppSpacing.roundedMd,
+        side: BorderSide(color: borderColor, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int g = 0; g < groups.length; g++) ...[
+            if (g > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Divider(height: 1, thickness: 1, color: borderColor),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  child: _buildRichTextSpans(
+                    groups[g].term,
+                    isDark,
+                    theme,
+                    context: context,
+                    baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                      letterSpacing: -0.25,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.lightTextPrimary,
+                      fontFamily: AppTypography.fontFamily,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (int d = 0; d < groups[g].definitions.length; d++)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 14,
+                  bottom: d < groups[g].definitions.length - 1 ? 6 : 0,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.only(left: 10),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: accent.withValues(alpha: 0.45),
+                        width: 2.2,
+                      ),
+                    ),
+                  ),
+                  child: _buildRichTextSpans(
+                    groups[g].definitions[d],
+                    isDark,
+                    theme,
+                    context: context,
+                    baseStyle: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      height: 1.48,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary,
+                      fontFamily: AppTypography.fontFamily,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFootnotesSection(
+    BuildContext context,
+    _FootnoteCollection collection,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    final accent = palette.resolveAccentColor(isDark);
+    final surface = isDark ? AppColors.darkSunken : AppColors.lightSunken;
+    final borderColor = palette.resolveTableBorder(isDark);
+    final muted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: AppSpacing.smoothDecoration(
+          color: surface,
+          borderRadius: AppSpacing.roundedMd,
+          side: BorderSide(color: borderColor, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                TackIcon(TackIcons.link, size: 13, color: accent),
+                const SizedBox(width: 6),
+                Text(
+                  'FOOTNOTES',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: muted,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (int idx = 0; idx < collection.localDefinitions.length; idx++) ...[
+              if (idx > 0) const SizedBox(height: 8),
+              _wrapLineTap(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 2, right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: AppSpacing.smoothDecoration(
+                        color: accent.withValues(alpha: isDark ? 0.20 : 0.12),
+                        borderRadius: AppSpacing.roundedXs,
+                        side: BorderSide(
+                          color: accent.withValues(alpha: 0.45),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Text(
+                        '${collection.localDefinitions[idx].number}',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildRichTextSpans(
+                        collection.localDefinitions[idx].body,
+                        isDark,
+                        theme,
+                        context: context,
+                        baseStyle: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13.5,
+                          height: 1.48,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                          fontFamily: AppTypography.fontFamily,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                collection.localDefinitions[idx].definitionLine,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFootnoteSheet(
+    BuildContext context,
+    _FootnoteEntry entry,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    final accent = palette.resolveAccentColor(isDark);
+    final muted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+
+    AppBottomSheet.show<void>(
+      context: context,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: AppSpacing.smoothDecoration(
+                    color: accent.withValues(alpha: isDark ? 0.22 : 0.14),
+                    borderRadius: AppSpacing.roundedXs,
+                    side: BorderSide(
+                      color: accent.withValues(alpha: 0.48),
+                      width: 0.9,
+                    ),
+                  ),
+                  child: Text(
+                    'Footnote ${entry.number}',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '[^${entry.id}]',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: muted,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildRichTextSpans(
+              entry.body,
+              isDark,
+              theme,
+              context: sheetContext,
+              baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                fontSize: 15,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.lightTextPrimary,
+                fontFamily: AppTypography.fontFamily,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1938,8 +3200,8 @@ class _ImageLightboxViewer extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
           );
         },
-        errorBuilder: (_, _, _) => const Icon(
-          Icons.broken_image_rounded,
+        errorBuilder: (_, _, _) => Icon(
+          TackIcons.imageOff,
           size: 48,
           color: Colors.white54,
         ),
@@ -1949,15 +3211,15 @@ class _ImageLightboxViewer extends StatelessWidget {
       if (file.existsSync()) {
         imageWidget = Image.file(file, fit: BoxFit.contain);
       } else {
-        imageWidget = const Icon(
-          Icons.broken_image_rounded,
+        imageWidget = Icon(
+          TackIcons.imageOff,
           size: 48,
           color: Colors.white54,
         );
       }
     } else {
-      imageWidget = const Icon(
-        Icons.broken_image_rounded,
+      imageWidget = Icon(
+        TackIcons.imageOff,
         size: 48,
         color: Colors.white54,
       );
@@ -1987,7 +3249,7 @@ class _ImageLightboxViewer extends StatelessWidget {
                 children: [
                   // Close button
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                    icon: Icon(TackIcons.close, color: Colors.white, size: 24),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.black45,
                       shape: const CircleBorder(),
@@ -2012,7 +3274,7 @@ class _ImageLightboxViewer extends StatelessWidget {
                     const Spacer(),
                   if (isNetwork)
                     IconButton(
-                      icon: const Icon(Icons.open_in_browser_rounded, color: Colors.white, size: 22),
+                      icon: Icon(TackIcons.externalLink, color: Colors.white, size: 22),
                       tooltip: 'Open in browser',
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.black45,
@@ -2028,5 +3290,72 @@ class _ImageLightboxViewer extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FootnoteEntry {
+  final String id;
+  final int number;
+  final String body;
+  final int definitionLine;
+
+  const _FootnoteEntry({
+    required this.id,
+    required this.number,
+    required this.body,
+    required this.definitionLine,
+  });
+}
+
+class _FootnoteCollection {
+  final Map<String, _FootnoteEntry> byId;
+  final List<_FootnoteEntry> localDefinitions;
+  final Set<int> definitionLineIndices;
+
+  const _FootnoteCollection({
+    required this.byId,
+    required this.localDefinitions,
+    required this.definitionLineIndices,
+  });
+
+  const _FootnoteCollection.empty()
+      : byId = const {},
+        localDefinitions = const [],
+        definitionLineIndices = const {};
+}
+
+class _FootnoteScope extends InheritedWidget {
+  final _FootnoteCollection collection;
+
+  const _FootnoteScope({
+    required this.collection,
+    required super.child,
+  });
+
+  static _FootnoteCollection? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_FootnoteScope>()?.collection;
+
+  @override
+  bool updateShouldNotify(_FootnoteScope oldWidget) =>
+      collection != oldWidget.collection;
+}
+
+class _DefinitionGroup {
+  final String term;
+  final List<String> definitions;
+
+  const _DefinitionGroup({
+    required this.term,
+    required this.definitions,
+  });
+}
+
+class _ParsedDefinitionList {
+  final List<_DefinitionGroup> groups;
+  final int nextIndex;
+
+  const _ParsedDefinitionList({
+    required this.groups,
+    required this.nextIndex,
+  });
 }
 

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../domain/models/whiteboard_item.dart';
 import '../../../screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'mermaid_diagram_parser.dart';
+import 'mermaid_extra_renderers.dart';
 
 /// Card container that cleanly visualizes Mermaid graphs and diagrams (Flowcharts,
 /// Pie Charts, Sequence Diagrams, Timelines) with responsive auto-fit,
@@ -221,6 +223,90 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           paletteId: 'coral',
         ));
       }
+    } else if (_parsed.type == MermaidDiagramType.erDiagram && _parsed.erEntities.isNotEmpty) {
+      final layout = _computeErEntitiesForBoard(_parsed.erEntities);
+      for (int i = 0; i < _parsed.erEntities.length; i++) {
+        final ent = _parsed.erEntities[i];
+        final pos = layout[i];
+        final fields = ent.attributes.take(4).map((a) => '${a.name}: ${a.type}').join('\n');
+        nodes.add(CanvasNode(
+          id: ent.name,
+          text: fields.isEmpty ? ent.displayName : '${ent.displayName}\n$fields',
+          shapeType: CanvasNodeType.process,
+          x: pos.dx,
+          y: pos.dy,
+          width: 165,
+          height: math.max(64.0, 42.0 + ent.attributes.take(4).length * 16.0),
+          paletteId: 'cyan',
+        ));
+      }
+      for (int i = 0; i < _parsed.erRelations.length; i++) {
+        final r = _parsed.erRelations[i];
+        edges.add(CanvasEdge(
+          id: 'er_edge_$i',
+          fromNodeId: r.fromEntity,
+          toNodeId: r.toEntity,
+          label: r.label.isEmpty ? null : r.label,
+          fromPort: 'right',
+          toPort: 'left',
+        ));
+      }
+    } else if (_parsed.type == MermaidDiagramType.gantt && _parsed.ganttTasks.isNotEmpty) {
+      CanvasNode? prev;
+      for (int i = 0; i < _parsed.ganttTasks.length; i++) {
+        final t = _parsed.ganttTasks[i];
+        final days = math.max(1, t.endDate.difference(t.startDate).inDays);
+        final n = CanvasNode(
+          id: 'gantt_$i',
+          text: '${t.name}\n(${t.isMilestone ? 'Milestone' : '${days}d'})',
+          shapeType: t.isMilestone ? CanvasNodeType.decision : CanvasNodeType.process,
+          x: 2400.0 + (i % 4) * 200.0,
+          y: 2600.0 + (i ~/ 4) * 130.0,
+          width: 155,
+          height: 66,
+          paletteId: t.isCrit ? 'coral' : (t.isDone ? 'lime' : 'amber'),
+        );
+        nodes.add(n);
+        if (prev != null) {
+          edges.add(CanvasEdge(
+            id: 'gantt_edge_$i',
+            fromNodeId: prev.id,
+            toNodeId: n.id,
+            fromPort: 'right',
+            toPort: 'left',
+          ));
+        }
+        prev = n;
+      }
+    } else if (_parsed.type == MermaidDiagramType.mindmap && _parsed.mindmapRoot != null) {
+      void collectMindmap(MermaidMindmapNode node, int rowOffset, double xPos, String? parentId) {
+        final cNode = CanvasNode(
+          id: node.id,
+          text: node.label,
+          shapeType: node.depth == 0 ? CanvasNodeType.startEnd : CanvasNodeType.process,
+          x: xPos,
+          y: 2700.0 + rowOffset * 95.0,
+          width: 140,
+          height: 54,
+          paletteId: node.depth == 0 ? 'lavender' : 'cyan',
+        );
+        nodes.add(cNode);
+        if (parentId != null) {
+          edges.add(CanvasEdge(
+            id: 'mm_edge_${parentId}_${node.id}',
+            fromNodeId: parentId,
+            toNodeId: node.id,
+            fromPort: 'right',
+            toPort: 'left',
+          ));
+        }
+        int offset = rowOffset;
+        for (final c in node.children) {
+          collectMindmap(c, offset, xPos + 210.0, node.id);
+          offset += math.max(1, c.children.length);
+        }
+      }
+      collectMindmap(_parsed.mindmapRoot!, 0, 2400.0, null);
     } else {
       nodes.add(CanvasNode(
         id: 'node_0',
@@ -245,6 +331,13 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
     );
   }
 
+  List<Offset> _computeErEntitiesForBoard(List<MermaidErEntity> entities) {
+    return [
+      for (int i = 0; i < entities.length; i++)
+        Offset(2500.0 + (i % 3) * 240.0, 2600.0 + (i ~/ 3) * 180.0),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -260,12 +353,15 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
       onTap: () => _openInWhiteboard(context),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
+        decoration: ShapeDecoration(
           color: tokens.surfacePrimary,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: tokens.borderSubtle,
-            width: 1.0,
+          shape: SmoothRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            smoothness: AppSpacing.defaultSmoothing,
+            side: BorderSide(
+              color: tokens.borderSubtle,
+              width: 1.0,
+            ),
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -323,6 +419,24 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
           isDark: isDark,
           palette: _palette,
         );
+      case MermaidDiagramType.erDiagram:
+        return MermaidErWidget(
+          diagram: _parsed,
+          isDark: isDark,
+          transformController: _transformController,
+        );
+      case MermaidDiagramType.gantt:
+        return MermaidGanttWidget(
+          diagram: _parsed,
+          isDark: isDark,
+          palette: _palette,
+        );
+      case MermaidDiagramType.mindmap:
+        return MermaidMindmapWidget(
+          diagram: _parsed,
+          isDark: isDark,
+          transformController: _transformController,
+        );
       case MermaidDiagramType.flowchart:
         return MermaidFlowchartWidget(
           diagram: _parsed,
@@ -342,11 +456,13 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
 class _FlowchartLayoutResult {
   final Map<String, Offset> positions;
   final Map<String, Size> nodeSizes;
+  final Map<String, Rect> subgraphRects;
   final Size totalSize;
 
   const _FlowchartLayoutResult({
     required this.positions,
     required this.nodeSizes,
+    this.subgraphRects = const {},
     required this.totalSize,
   });
 }
@@ -360,6 +476,7 @@ _FlowchartLayoutResult _computeFlowchartLayout(
 ) {
   final nodes = diagram.nodes;
   final edges = diagram.edges;
+  final subgraphs = diagram.subgraphs;
   final isLR = diagram.direction == 'LR' || diagram.direction == 'RL';
 
   // Measure dynamic node sizes according to label length
@@ -433,11 +550,25 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     nodeLayer.putIfAbsent(n.id, () => 0);
   }
 
+  final nodeById = <String, MermaidNode>{for (final n in nodes) n.id: n};
+  final sgById = <String, MermaidSubgraph>{for (final s in subgraphs) s.id: s};
+
+  String subgraphChainKey(String nodeId) {
+    String? cur = nodeById[nodeId]?.subgraphId;
+    if (cur == null) return '';
+    final parts = <String>[];
+    int guard = 0;
+    while (cur != null && guard++ < 16) {
+      parts.add(cur);
+      cur = sgById[cur]?.parentId;
+    }
+    return parts.reversed.join('/');
+  }
+
   // Group by layers
   final layers = <int, List<String>>{};
   int maxLayer = 0;
   if (diagram.isClassDiagram) {
-    // Wrap wide layers into rows of 2 so class boxes stay readable on phones.
     final byLayer = <int, List<String>>{};
     for (final n in nodes) {
       byLayer.putIfAbsent(nodeLayer[n.id] ?? 0, () => []).add(n.id);
@@ -456,21 +587,43 @@ _FlowchartLayoutResult _computeFlowchartLayout(
       layers.putIfAbsent(entry.value, () => []).add(entry.key);
       if (entry.value > maxLayer) maxLayer = entry.value;
     }
+    if (subgraphs.isNotEmpty) {
+      final sgFirstSeenOrder = <String, int>{};
+      for (int idx = 0; idx < subgraphs.length; idx++) {
+        sgFirstSeenOrder[subgraphs[idx].id] = idx;
+      }
+      for (final list in layers.values) {
+        final origIdx = <String, int>{
+          for (int i = 0; i < list.length; i++) list[i]: i,
+        };
+        list.sort((a, b) {
+          final ka = subgraphChainKey(a);
+          final kb = subgraphChainKey(b);
+          if (ka != kb) return ka.compareTo(kb);
+          return (origIdx[a] ?? 0).compareTo(origIdx[b] ?? 0);
+        });
+      }
+    }
   }
 
   final positions = <String, Offset>{};
-  double maxColWidth = 0;
-  double maxRowHeight = 0;
+  final crossGap = isLR ? vGap : hGap;
+  const sgGroupSep = 20.0;
 
-  // Compute breadth per layer
+  // Compute breadth per layer including subgraph separator padding
   final layerBreadths = <int, double>{};
   for (int l = 0; l <= maxLayer; l++) {
     final list = layers[l] ?? [];
     double breadth = 0;
+    String? prevKey;
     for (int col = 0; col < list.length; col++) {
+      final key = subgraphs.isEmpty ? '' : subgraphChainKey(list[col]);
       final size = nodeSizes[list[col]] ?? Size(defaultNodeW, defaultNodeH);
       breadth += isLR ? size.height : size.width;
-      if (col > 0) breadth += isLR ? vGap : hGap;
+      if (col > 0) {
+        breadth += crossGap + (subgraphs.isNotEmpty && prevKey != key ? sgGroupSep : 0.0);
+      }
+      prevKey = key;
     }
     layerBreadths[l] = breadth;
   }
@@ -480,46 +633,175 @@ _FlowchartLayoutResult _computeFlowchartLayout(
     if (b > maxBreadth) maxBreadth = b;
   }
 
+  // Track which subgraphs start/end per layer so stacked subgraphs don't collide
+  final sgMinLayer = <String, int>{};
+  final sgMaxLayer = <String, int>{};
+  if (subgraphs.isNotEmpty) {
+    for (final n in nodes) {
+      String? cur = n.subgraphId;
+      final layer = nodeLayer[n.id] ?? 0;
+      int guard = 0;
+      while (cur != null && guard++ < 16) {
+        sgMinLayer[cur] = math.min(sgMinLayer[cur] ?? layer, layer);
+        sgMaxLayer[cur] = math.max(sgMaxLayer[cur] ?? layer, layer);
+        cur = sgById[cur]?.parentId;
+      }
+    }
+  }
+
   // Position nodes
   double currentLayerDepth = 16.0;
   for (int l = 0; l <= maxLayer; l++) {
     final list = layers[l] ?? [];
+    if (subgraphs.isNotEmpty) {
+      int startingCount = 0;
+      for (final s in subgraphs) {
+        if (sgMinLayer[s.id] == l) startingCount++;
+      }
+      if (startingCount > 0 && l > 0) {
+        currentLayerDepth += 26.0;
+      }
+    }
+
     final currentBreadth = layerBreadths[l] ?? 0;
     final startOffset = (maxBreadth - currentBreadth) / 2 + 16.0;
 
     double currentColOffset = startOffset;
     double maxDepthInLayer = 0;
+    String? prevKey;
 
     for (int col = 0; col < list.length; col++) {
       final id = list[col];
+      final key = subgraphs.isEmpty ? '' : subgraphChainKey(id);
+      if (col > 0 && subgraphs.isNotEmpty && prevKey != key) {
+        currentColOffset += sgGroupSep;
+      }
+      prevKey = key;
+
       final size = nodeSizes[id] ?? Size(defaultNodeW, defaultNodeH);
 
       double x, y;
       if (isLR) {
         x = currentLayerDepth;
         y = currentColOffset;
-        currentColOffset += size.height + vGap;
+        currentColOffset += size.height + crossGap;
         if (size.width > maxDepthInLayer) maxDepthInLayer = size.width;
       } else {
         x = currentColOffset;
         y = currentLayerDepth;
-        currentColOffset += size.width + hGap;
+        currentColOffset += size.width + crossGap;
         if (size.height > maxDepthInLayer) maxDepthInLayer = size.height;
       }
 
       positions[id] = Offset(x, y);
-
-      if (x + size.width > maxColWidth) maxColWidth = x + size.width;
-      if (y + size.height > maxRowHeight) maxRowHeight = y + size.height;
     }
 
     currentLayerDepth += maxDepthInLayer + (isLR ? hGap : vGap);
+    if (subgraphs.isNotEmpty && subgraphs.any((s) => sgMaxLayer[s.id] == l)) {
+      currentLayerDepth += 16.0;
+    }
+  }
+
+  // Compute subgraph bounding rectangles bottom-up (innermost subgraphs first)
+  final subgraphRects = <String, Rect>{};
+  if (subgraphs.isNotEmpty) {
+    int depthOf(MermaidSubgraph sg) {
+      int d = 0;
+      String? p = sg.parentId;
+      while (p != null && d < 16) {
+        d++;
+        p = sgById[p]?.parentId;
+      }
+      return d;
+    }
+
+    final sortedSgs = [...subgraphs]..sort((a, b) => depthOf(b).compareTo(depthOf(a)));
+    for (final sg in sortedSgs) {
+      Rect? bounds;
+      void includeRect(Rect r) {
+        bounds = bounds == null ? r : bounds!.expandToInclude(r);
+      }
+
+      for (final nid in sg.nodeIds) {
+        final pos = positions[nid];
+        final sz = nodeSizes[nid];
+        if (pos != null && sz != null) {
+          includeRect(pos & sz);
+        }
+      }
+      for (final childSg in subgraphs) {
+        if (childSg.parentId == sg.id && subgraphRects.containsKey(childSg.id)) {
+          includeRect(subgraphRects[childSg.id]!);
+        }
+      }
+
+      if (bounds != null) {
+        var expanded = Rect.fromLTRB(
+          bounds!.left - 14.0,
+          bounds!.top - 30.0,
+          bounds!.right + 14.0,
+          bounds!.bottom + 14.0,
+        );
+        final minTitleW = sg.title.length * 6.8 + 36.0;
+        if (expanded.width < minTitleW) {
+          final extra = (minTitleW - expanded.width) / 2;
+          expanded = Rect.fromLTRB(
+            expanded.left - extra,
+            expanded.top,
+            expanded.right + extra,
+            expanded.bottom,
+          );
+        }
+        subgraphRects[sg.id] = expanded;
+      }
+    }
+  }
+
+  // Normalize all positions & subgraphRects so minX / minY = 16.0 (no negative clipping)
+  double minX = double.infinity;
+  double minY = double.infinity;
+  double maxX = 0;
+  double maxY = 0;
+
+  for (final n in nodes) {
+    final pos = positions[n.id];
+    final sz = nodeSizes[n.id];
+    if (pos == null || sz == null) continue;
+    minX = math.min(minX, pos.dx);
+    minY = math.min(minY, pos.dy);
+    maxX = math.max(maxX, pos.dx + sz.width);
+    maxY = math.max(maxY, pos.dy + sz.height);
+  }
+  for (final r in subgraphRects.values) {
+    minX = math.min(minX, r.left);
+    minY = math.min(minY, r.top);
+    maxX = math.max(maxX, r.right);
+    maxY = math.max(maxY, r.bottom);
+  }
+
+  if (minX.isFinite && minY.isFinite) {
+    final shiftX = 16.0 - minX;
+    final shiftY = 16.0 - minY;
+    if (shiftX != 0 || shiftY != 0) {
+      for (final key in positions.keys.toList()) {
+        positions[key] = positions[key]!.translate(shiftX, shiftY);
+      }
+      for (final key in subgraphRects.keys.toList()) {
+        subgraphRects[key] = subgraphRects[key]!.shift(Offset(shiftX, shiftY));
+      }
+      maxX += shiftX;
+      maxY += shiftY;
+    }
+  } else {
+    maxX = 240.0;
+    maxY = 140.0;
   }
 
   return _FlowchartLayoutResult(
     positions: positions,
     nodeSizes: nodeSizes,
-    totalSize: Size(maxColWidth + 24, maxRowHeight + 24),
+    subgraphRects: subgraphRects,
+    totalSize: Size(maxX + 16.0, maxY + 16.0),
   );
 }
 
@@ -563,6 +845,7 @@ class MermaidFlowchartWidget extends StatelessWidget {
               diagram: diagram,
               positions: layout.positions,
               nodeSizes: layout.nodeSizes,
+              subgraphRects: layout.subgraphRects,
               isDark: isDark,
             ),
             child: Stack(
@@ -850,22 +1133,90 @@ class _FlowchartPainter extends CustomPainter {
   final ParsedMermaidDiagram diagram;
   final Map<String, Offset> positions;
   final Map<String, Size> nodeSizes;
+  final Map<String, Rect> subgraphRects;
   final bool isDark;
 
   _FlowchartPainter({
     required this.diagram,
     required this.positions,
     required this.nodeSizes,
+    this.subgraphRects = const {},
     required this.isDark,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final edgePaint = Paint()
-      ..color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
-      ..strokeWidth = 1.6
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    // 1. Paint Subgraph Group Containers first (shallowest first so nested subgraphs layer cleanly)
+    if (subgraphRects.isNotEmpty) {
+      final sgById = {for (final s in diagram.subgraphs) s.id: s};
+      int sgDepth(MermaidSubgraph sg) {
+        int d = 0;
+        String? p = sg.parentId;
+        while (p != null && d < 16) {
+          d++;
+          p = sgById[p]?.parentId;
+        }
+        return d;
+      }
+
+      final orderedSgs = diagram.subgraphs
+          .where((s) => subgraphRects.containsKey(s.id))
+          .toList()
+        ..sort((a, b) => sgDepth(a).compareTo(sgDepth(b)));
+
+      const sgPalettes = ['lavender', 'cyan', 'amber', 'peach', 'lime'];
+      for (int i = 0; i < orderedSgs.length; i++) {
+        final sg = orderedSgs[i];
+        final rect = subgraphRects[sg.id]!;
+        final accent = AppColors.getPaletteById(sgPalettes[i % sgPalettes.length])
+            .resolveAccentColor(isDark);
+
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+        canvas.drawRRect(
+          rrect,
+          Paint()
+            ..color = accent.withValues(alpha: isDark ? 0.08 : 0.05)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawRRect(
+          rrect,
+          Paint()
+            ..color = accent.withValues(alpha: isDark ? 0.35 : 0.30)
+            ..strokeWidth = 1.2
+            ..style = PaintingStyle.stroke,
+        );
+
+        if (sg.title.isNotEmpty) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: sg.title,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.1,
+                color: accent,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout(maxWidth: math.max(40, rect.width - 20));
+
+          final pillRect = Rect.fromLTWH(
+            rect.left + 8,
+            rect.top + 6,
+            tp.width + 12,
+            tp.height + 4,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(pillRect, const Radius.circular(6)),
+            Paint()
+              ..color = accent.withValues(alpha: isDark ? 0.16 : 0.12)
+              ..style = PaintingStyle.fill,
+          );
+          tp.paint(canvas, Offset(pillRect.left + 6, pillRect.top + 2));
+        }
+      }
+    }
 
     final arrowPaint = Paint()
       ..color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
@@ -915,7 +1266,24 @@ class _FlowchartPainter extends CustomPainter {
         );
       }
 
-      canvas.drawPath(path, edgePaint);
+      final edgePaint = Paint()
+        ..color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)
+        ..strokeWidth = edge.isThick ? 2.6 : 1.6
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      if (edge.isDotted) {
+        for (final metric in path.computeMetrics()) {
+          double dist = 0.0;
+          while (dist < metric.length) {
+            final next = math.min(dist + 4.5, metric.length);
+            canvas.drawPath(metric.extractPath(dist, next), edgePaint);
+            dist += 8.5;
+          }
+        }
+      } else {
+        canvas.drawPath(path, edgePaint);
+      }
 
       // Arrowhead at endPort
       final arrowPath = Path();
@@ -1438,7 +1806,7 @@ class MermaidSequenceWidget extends StatelessWidget {
           Row(
             children: [
               if (!isRight)
-                Icon(Icons.arrow_left, size: 13, color: arrowColor)
+                Icon(TackIcons.chevronLeft, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
               Expanded(
@@ -1448,7 +1816,7 @@ class MermaidSequenceWidget extends StatelessWidget {
                 ),
               ),
               if (isRight)
-                Icon(Icons.arrow_right, size: 13, color: arrowColor)
+                Icon(TackIcons.chevronRight, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
             ],

@@ -9,6 +9,7 @@ import 'core/theme/app_typography.dart';
 import 'core/theme/tack_icons.dart';
 import 'data/repositories/workspace_repo_impl.dart';
 import 'domain/models/base_item.dart';
+import 'domain/models/text_note.dart';
 import 'domain/models/whiteboard_item.dart';
 import 'domain/services/pinned_notification_service.dart';
 import 'domain/services/process_text_service.dart';
@@ -147,12 +148,84 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       _handleIncomingText(initialData);
     }
 
-    // 3. Keep persistent Quick Capture notification synced if enabled
+    // 3. Keep persistent Quick Capture notification & pinned note notifications synced
+    await PinnedNotificationService.initializeCallbacks(
+      onQuickAdd: _handleNotificationQuickAdd,
+      onCompleteNextTodo: _handleNotificationCompleteNextTodo,
+      onUnpin: (_) async {},
+    );
+
     final quickCaptureEnabled =
         await PinnedNotificationService.isQuickCaptureEnabled();
     if (quickCaptureEnabled) {
       await PinnedNotificationService.setQuickCaptureEnabled(true);
     }
+
+    if (mounted) {
+      final workspace = context.read<WorkspaceProvider>();
+      final pinnedIds = await PinnedNotificationService.getPinnedNoteIds();
+      for (final id in pinnedIds) {
+        final item = workspace.getItemByIdSync(id);
+        if (item == null || item.isTrash || item.isArchived) {
+          await PinnedNotificationService.unpinNote(id);
+        } else {
+          await PinnedNotificationService.pinNote(item);
+        }
+      }
+    }
+  }
+
+  Future<void> _handleNotificationQuickAdd(String noteId, String text) async {
+    if (!mounted) return;
+    final workspace = context.read<WorkspaceProvider>();
+
+    if (noteId.isEmpty) {
+      final lines = text.split('\n');
+      final title = lines.first.trim();
+      await workspace.createQuickItem(
+        title: title.isEmpty ? 'Quick Note' : title,
+        initialContent: text,
+        type: ItemType.note,
+        paletteId: 'amber',
+      );
+      return;
+    }
+
+    final existing = workspace.getItemByIdSync(noteId);
+    if (existing is TextNote) {
+      final hasChecklist = RegExp(r'^\s*[-*]\s+\[[ xX]\]', multiLine: true)
+          .hasMatch(existing.content);
+      final addition = hasChecklist ? '- [ ] $text' : text;
+      final base = existing.content.trimRight();
+      final updated = existing.copyWith(
+        content: base.isEmpty ? addition : '$base\n$addition',
+        updatedAt: DateTime.now(),
+      );
+      await workspace.saveItem(updated);
+      await PinnedNotificationService.syncPinnedNoteIfActive(updated);
+    }
+  }
+
+  Future<void> _handleNotificationCompleteNextTodo(String noteId) async {
+    if (!mounted) return;
+    final workspace = context.read<WorkspaceProvider>();
+    final existing = workspace.getItemByIdSync(noteId);
+    if (existing is! TextNote) return;
+
+    final todoPattern = RegExp(r'^(\s*[-*]\s+)\[\s\](\s+.*)$', multiLine: true);
+    final match = todoPattern.firstMatch(existing.content);
+    if (match == null) return;
+
+    final updatedContent = existing.content.replaceFirstMapped(
+      todoPattern,
+      (m) => '${m.group(1)}[x]${m.group(2)}',
+    );
+    final updated = existing.copyWith(
+      content: updatedContent,
+      updatedAt: DateTime.now(),
+    );
+    await workspace.saveItem(updated);
+    await PinnedNotificationService.syncPinnedNoteIfActive(updated);
   }
 
   Future<void> _handleIncomingText(IncomingTextData data) async {

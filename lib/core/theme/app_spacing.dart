@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'smooth_border.dart';
+export 'smooth_border.dart';
+
 /// Central spacing, layout metrics, radii, elevation, and motion tokens for Tack.
 /// Follows docs/design/07-design-system.md §4, §5, §8.
 class AppSpacing {
@@ -110,6 +113,64 @@ class AppSpacing {
   static const BorderRadius roundedPill = BorderRadius.all(Radius.circular(radiusPill));
   static const BorderRadius sheetTopRadius =
       BorderRadius.all(Radius.circular(radiusModal));
+
+  // ================= 40-60% Corner Smoothing Tokens (Figma / iOS Squircle) =================
+  /// Default corner smoothing factor: 0.60 (60% iOS / Figma continuous squircle curvature).
+  static const double defaultSmoothing = 0.60;
+
+  /// Returns a [SmoothRectangleBorder] with continuous G2 corner smoothing.
+  static SmoothRectangleBorder smoothBorder(
+    BorderRadius radius, {
+    double smoothness = defaultSmoothing,
+    BorderSide side = BorderSide.none,
+  }) =>
+      SmoothRectangleBorder(
+        borderRadius: radius,
+        smoothness: smoothness,
+        side: side,
+      );
+
+  static SmoothRectangleBorder smoothSm({
+    double smoothness = defaultSmoothing,
+    BorderSide side = BorderSide.none,
+  }) =>
+      smoothBorder(roundedSm, smoothness: smoothness, side: side);
+
+  static SmoothRectangleBorder smoothMd({
+    double smoothness = defaultSmoothing,
+    BorderSide side = BorderSide.none,
+  }) =>
+      smoothBorder(roundedMd, smoothness: smoothness, side: side);
+
+  static SmoothRectangleBorder smoothLg({
+    double smoothness = defaultSmoothing,
+    BorderSide side = BorderSide.none,
+  }) =>
+      smoothBorder(roundedLg, smoothness: smoothness, side: side);
+
+  static SmoothRectangleBorder smoothModal({
+    double smoothness = defaultSmoothing,
+    BorderSide side = BorderSide.none,
+  }) =>
+      smoothBorder(roundedModal, smoothness: smoothness, side: side);
+
+  /// Creates a [ShapeDecoration] with 60% corner smoothing and optional soft shadow.
+  static ShapeDecoration smoothDecoration({
+    required Color color,
+    BorderRadius borderRadius = roundedMd,
+    double smoothness = defaultSmoothing,
+    List<BoxShadow> shadows = const [],
+    BorderSide side = BorderSide.none,
+  }) =>
+      ShapeDecoration(
+        color: color,
+        shadows: shadows,
+        shape: SmoothRectangleBorder(
+          borderRadius: borderRadius,
+          smoothness: smoothness,
+          side: side,
+        ),
+      );
 
   // ================= Elevation & Scrim (11-reference-ui-style.md §4) =================
   /// `elev/0` — Flat content separated by 1dp hairlines (no shadow).

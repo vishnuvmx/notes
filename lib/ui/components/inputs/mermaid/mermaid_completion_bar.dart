@@ -132,6 +132,29 @@ class MermaidCompletionBar extends StatelessWidget {
       snippet: 'pie title Chart\n    "Part A" : 60\n    "Part B" : 40\n',
       tooltip: 'Pie Template',
     ),
+    MermaidCompletionItem(
+      label: 'subgraph',
+      snippet: 'subgraph GroupTitle\n    A --> B\nend\n',
+      tooltip: 'Subgraph Container',
+    ),
+    MermaidCompletionItem(
+      label: 'erDiagram',
+      snippet:
+          'erDiagram\n    USER ||--o{ NOTE : writes\n    USER {\n        string id PK\n        string name\n    }\n    NOTE {\n        string id PK\n        string userId FK\n    }\n',
+      tooltip: 'ER Diagram Template',
+    ),
+    MermaidCompletionItem(
+      label: 'gantt',
+      snippet:
+          'gantt\n    title Project Plan\n    section Phase 1\n    Design :done, t1, 2026-01-01, 3d\n    Build :active, t2, after t1, 5d\n',
+      tooltip: 'Gantt Chart Template',
+    ),
+    MermaidCompletionItem(
+      label: 'mindmap',
+      snippet:
+          'mindmap\n  root((Central Idea))\n    Branch A\n      Leaf 1\n      Leaf 2\n    Branch B\n',
+      tooltip: 'Mindmap Template',
+    ),
   ];
 
   @override
@@ -242,7 +265,7 @@ class MermaidCompletionBar extends StatelessWidget {
             Tooltip(
               message: 'Diagram Templates',
               child: IconButton(
-                icon: const Icon(Icons.auto_awesome, size: 16, color: AppColors.accentAmber),
+                icon: Icon(TackIcons.sparkles, size: 16, color: AppColors.accentAmber),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 onPressed: () {

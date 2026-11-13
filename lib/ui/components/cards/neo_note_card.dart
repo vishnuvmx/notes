@@ -75,13 +75,16 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
               : AppSpacing.cardMinHeightCompact,
         ),
         child: Container(
-          decoration: BoxDecoration(
+          decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            border: _isPressed
-                ? Border.all(color: tokens.borderStrong, width: 1)
-                : null,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
+            shadows: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: 0.60,
+              side: _isPressed
+                  ? BorderSide(color: tokens.borderStrong, width: 1)
+                  : BorderSide.none,
+            ),
           ),
           clipBehavior: Clip.antiAlias,
           child: Material(

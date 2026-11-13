@@ -17,6 +17,7 @@ import '../../../domain/models/sticky_note.dart';
 import '../../../domain/models/clipboard_item.dart';
 import '../../../domain/models/whiteboard_item.dart';
 import '../../../domain/services/block_transform_service.dart';
+import '../../../domain/services/pinned_notification_service.dart';
 import '../../../domain/services/wiki_link_service.dart';
 import '../../../state/workspace_provider.dart';
 import '../../components/dialogs_sheets/color_swatch_picker.dart';
@@ -77,6 +78,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isSaving = false;
+  bool _isNotificationPinned = false;
   Timer? _saveDebounce;
 
   int? _dismissedWikiTriggerOffset;
@@ -85,6 +87,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PinnedNotificationService.isNotePinned(widget.item.id).then((pinned) {
+      if (mounted) setState(() => _isNotificationPinned = pinned);
+    });
     _titleController = TextEditingController(text: widget.item.title);
     final initialContent = widget.item is TextNote
         ? (widget.item as TextNote).content
@@ -211,7 +216,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final ws = _workspace;
     if (ws == null) return;
     if (_isUntouchedEmptyDraft) return;
-    ws.saveItem(_buildUpdatedItem(ws));
+    final updated = _buildUpdatedItem(ws);
+    ws.saveItem(updated);
+    PinnedNotificationService.syncPinnedNoteIfActive(updated);
   }
 
   @override
@@ -441,6 +448,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final updated = _buildUpdatedItem(workspace);
 
     await workspace.saveItem(updated);
+    await PinnedNotificationService.syncPinnedNoteIfActive(updated);
     if (!mounted) return;
     setState(() => _isSaving = false);
   }
@@ -1568,7 +1576,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TackIcon(
-                      _isSaving ? TackIcons.undo : TackIcons.checkCircle,
+                      _isSaving ? TackIcons.saving : TackIcons.checkCircle,
                       size: 14,
                       color: _isSaving ? AppColors.accentAmber : AppColors.success,
                       style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
@@ -1656,6 +1664,40 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       duration: Duration(seconds: 2),
                     ),
                   );
+                } else if (val == 'pin_notification') {
+                  HapticFeedback.lightImpact();
+                  _flushSave();
+                  final latest = workspace.getItemByIdSync(widget.item.id) ??
+                      _buildUpdatedItem(workspace);
+                  if (_isNotificationPinned) {
+                    await PinnedNotificationService.unpinNote(latest.id);
+                    if (mounted) {
+                      setState(() => _isNotificationPinned = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Unpinned from notification bar'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } else {
+                    final ok = await PinnedNotificationService.pinNote(latest);
+                    if (mounted) {
+                      setState(() => _isNotificationPinned = ok);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            ok
+                                ? 'Pinned to notification bar'
+                                : 'Enable notifications to pin notes',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
                 } else if (val == 'share') {
                   _showShareExportSheet();
                 } else if (val == 'trash') {
@@ -1698,6 +1740,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   title: 'Duplicate Note',
                   icon: TackIcons.copy,
                 ),
+                if (widget.item is TextNote)
+                  IosMenuItem(
+                    value: 'pin_notification',
+                    title: _isNotificationPinned
+                        ? 'Unpin Notification'
+                        : 'Pin to Notification',
+                    icon: TackIcons.notification,
+                  ),
                 const IosMenuItem(
                   value: 'share',
                   title: 'Export & Share',

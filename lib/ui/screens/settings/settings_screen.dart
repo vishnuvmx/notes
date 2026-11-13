@@ -208,14 +208,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                     constraints: const BoxConstraints(maxWidth: 380),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
-                      decoration: BoxDecoration(
+                      decoration: ShapeDecoration(
                         color: tokens.surfacePrimary,
-                        borderRadius: AppSpacing.roundedModal,
-                        boxShadow: AppSpacing.elevModal(isDark),
-                        border: Border.all(
-                          color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                          width: 0.8,
+                        shape: SmoothRectangleBorder(
+                          borderRadius: AppSpacing.roundedModal,
+                          smoothness: AppSpacing.defaultSmoothing,
+                          side: BorderSide(
+                            color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+                            width: 0.8,
+                          ),
                         ),
+                        shadows: AppSpacing.elevModal(isDark),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Material(
@@ -480,10 +483,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             Container(
               clipBehavior: Clip.antiAlias,
               padding: const EdgeInsets.all(AppSpacing.s4),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: tokens.surfacePrimary,
-                borderRadius: AppSpacing.roundedMd,
-                boxShadow: AppSpacing.elev1(tokens.isDark),
+                shape: SmoothRectangleBorder(
+                  borderRadius: AppSpacing.roundedMd,
+                  smoothness: AppSpacing.defaultSmoothing,
+                ),
+                shadows: AppSpacing.elev1(tokens.isDark),
               ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -495,9 +501,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                       Container(
                         width: 52,
                         height: 52,
-                        decoration: BoxDecoration(
+                        decoration: ShapeDecoration(
                           color: tokens.actionPrimary,
-                          borderRadius: BorderRadius.circular(16),
+                          shape: SmoothRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            smoothness: AppSpacing.defaultSmoothing,
+                          ),
                         ),
                         child: Center(
                           child: Text(
@@ -623,10 +632,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         // 2. Trash Navigation Tile
         Container(
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
+          decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+            ),
+            shadows: AppSpacing.elev1(tokens.isDark),
           ),
           child: Material(
             color: Colors.transparent,
@@ -634,9 +646,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             leading: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: tokens.accentPin.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                shape: SmoothRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  smoothness: AppSpacing.defaultSmoothing,
+                ),
               ),
               child: Center(
                 child: TackIcon(
@@ -714,10 +729,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         const SizedBox(height: AppSpacing.s2),
         Container(
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
+          decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+            ),
+            shadows: AppSpacing.elev1(tokens.isDark),
           ),
           child: Material(
             color: Colors.transparent,
@@ -751,10 +769,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         const SizedBox(height: AppSpacing.s2),
         Container(
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
+          decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+            ),
+            shadows: AppSpacing.elev1(tokens.isDark),
           ),
           child: Material(
             color: Colors.transparent,
@@ -839,10 +860,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         const SizedBox(height: AppSpacing.s2),
         Container(
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
+          decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
-            borderRadius: AppSpacing.roundedMd,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+            ),
+            shadows: AppSpacing.elev1(tokens.isDark),
           ),
           child: Material(
             color: Colors.transparent,
@@ -905,9 +929,12 @@ class _StatMetricPill extends StatelessWidget {
         horizontal: AppSpacing.s2,
         vertical: AppSpacing.s2,
       ),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.canvasSunken,
-        borderRadius: AppSpacing.roundedSm,
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedSm,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
       ),
       child: Column(
         children: [

@@ -82,10 +82,15 @@ class TackIcons {
   static const IconData notification = LucideIcons.bell;
   static const IconData chevronDown = LucideIcons.chevronDown;
   static const IconData chevronUp = LucideIcons.chevronUp;
+  static const IconData chevronLeft = LucideIcons.chevronLeft;
   static const IconData chevronRight = LucideIcons.chevronRight;
   static const IconData edit = LucideIcons.pencil;
   static const IconData reader = LucideIcons.bookOpen;
   static const IconData tag = LucideIcons.hash;
+  static const IconData eye = LucideIcons.eye;
+  static const IconData eyeOff = LucideIcons.eyeOff;
+  static const IconData imageOff = LucideIcons.imageOff;
+  static const IconData externalLink = LucideIcons.externalLink;
 
   // Board shapes & tools
   static const IconData play = LucideIcons.play;
@@ -94,12 +99,18 @@ class TackIcons {
   static const IconData flow = LucideIcons.gitFork;
   static const IconData cursor = LucideIcons.mousePointer;
   static const IconData hand = LucideIcons.hand;
+  static const IconData move = LucideIcons.move;
   static const IconData photo = LucideIcons.image;
   static const IconData camera = LucideIcons.camera;
   static const IconData minus = LucideIcons.minus;
   static const IconData pencil = LucideIcons.pencil;
   static const IconData link = LucideIcons.link2;
   static const IconData pin = LucideIcons.pin;
+  static const IconData stickyNote = LucideIcons.stickyNote;
+  static const IconData map = LucideIcons.map;
+  static const IconData scan = LucideIcons.scan;
+  static const IconData maximize = LucideIcons.maximize2;
+  static const IconData arrowLeftRight = LucideIcons.arrowLeftRight;
 
   // Tag & category aliases
   static const IconData bolt = LucideIcons.zap;

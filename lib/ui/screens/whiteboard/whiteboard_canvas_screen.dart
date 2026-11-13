@@ -2949,7 +2949,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.visibility_rounded,
+                            TackIcons.eye,
                             size: 16,
                             color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
                           ),
@@ -3122,7 +3122,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     ),
                     child: Center(
                       child: Icon(
-                        Icons.add_box_rounded,
+                        TackIcons.square,
                         size: 18,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
@@ -3133,7 +3133,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
                 // Reverse Direction
                 IconButton(
-                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                  icon: const Icon(TackIcons.arrowLeftRight, size: 18),
                   tooltip: 'Reverse Direction',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -3657,7 +3657,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Tool 5: Sticky Note
             _buildDockToolButton(
               id: 'sticky',
-              icon: Icons.sticky_note_2_rounded,
+              icon: TackIcons.stickyNote,
               tooltip: 'Sticky Note (S)',
               isDark: isDark,
             ),
@@ -3728,7 +3728,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Auto-Align In Place',
               child: IconButton(
-                icon: const Icon(Icons.account_tree_rounded, size: 19, color: AppColors.accentAmber),
+                icon: const Icon(TackIcons.graph, size: 19, color: AppColors.accentAmber),
                 onPressed: _autoArrangeFlowchart,
                 visualDensity: VisualDensity.compact,
               ),
@@ -3738,7 +3738,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Fit to View',
               child: IconButton(
-                icon: const Icon(Icons.crop_free_rounded, size: 19),
+                icon: const Icon(TackIcons.scan, size: 19),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   _fitCanvasToContent();
@@ -3752,7 +3752,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               message: _showMinimap ? 'Hide Minimap' : 'Show Minimap',
               child: IconButton(
                 icon: Icon(
-                  Icons.map_outlined,
+                  TackIcons.map,
                   size: 18,
                   color: _showMinimap
                       ? AppColors.accentCyan
@@ -3770,7 +3770,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Zen Mode (Hide Tools)',
               child: IconButton(
-                icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                icon: const Icon(TackIcons.eyeOff, size: 18),
                 onPressed: () {
                   HapticFeedback.mediumImpact();
                   setState(() {
@@ -4045,7 +4045,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       ),
                       child: Center(
                         child: Icon(
-                          Icons.open_with_rounded,
+                          TackIcons.move,
                           size: 15,
                           color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
                         ),
@@ -4169,7 +4169,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                             ),
                             if (isCurrent) ...[
                               const Spacer(),
-                              const Icon(Icons.check, size: 16, color: AppColors.pastelLimeLight),
+                              const Icon(TackIcons.check, size: 16, color: AppColors.pastelLimeLight),
                             ],
                           ],
                         ),
@@ -4185,7 +4185,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                     ),
                     child: Center(
                       child: Icon(
-                        Icons.add_box_rounded,
+                        TackIcons.square,
                         size: 18,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
@@ -4263,7 +4263,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           left: node.x + node.width + 6,
           top: node.y + (node.height / 2) - 13,
           child: _buildBranchHandleIcon(
-            icon: Icons.add_rounded,
+            icon: TackIcons.plus,
             tooltip: 'Branch Right',
             isDark: isDark,
             onTap: () => _branchFromNode(node, 'right'),
@@ -4274,7 +4274,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           left: node.x + (node.width / 2) - 13,
           top: node.y + node.height + 6,
           child: _buildBranchHandleIcon(
-            icon: Icons.add_rounded,
+            icon: TackIcons.plus,
             tooltip: 'Branch Down',
             isDark: isDark,
             onTap: () => _branchFromNode(node, 'bottom'),
@@ -4285,7 +4285,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           left: node.x - 32,
           top: node.y + (node.height / 2) - 13,
           child: _buildBranchHandleIcon(
-            icon: Icons.add_rounded,
+            icon: TackIcons.plus,
             tooltip: 'Branch Left',
             isDark: isDark,
             onTap: () => _branchFromNode(node, 'left'),
@@ -4296,7 +4296,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           left: node.x + (node.width / 2) - 13,
           top: node.y - 32,
           child: _buildBranchHandleIcon(
-            icon: Icons.add_rounded,
+            icon: TackIcons.plus,
             tooltip: 'Branch Up',
             isDark: isDark,
             onTap: () => _branchFromNode(node, 'top'),

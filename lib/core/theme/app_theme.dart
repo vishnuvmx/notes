@@ -65,8 +65,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.lightSurface,
         elevation: 0,
-        shape: const RoundedRectangleBorder(
+        shape: const SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
+          smoothness: 0.60,
           side: BorderSide(color: AppColors.lightBorderSubtle, width: 1),
         ),
         margin: EdgeInsets.zero,
@@ -78,8 +79,9 @@ class AppTheme {
           elevation: 0,
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.lightCanvas, fontWeight: FontWeight.w600),
         ),
@@ -90,8 +92,9 @@ class AppTheme {
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           side: const BorderSide(color: AppColors.lightBorderStrong, width: 1.0),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
         ),
@@ -101,8 +104,9 @@ class AppTheme {
           foregroundColor: AppColors.lightTextPrimary,
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
         ),
@@ -133,16 +137,18 @@ class AppTheme {
       dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.lightSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedModal,
+          smoothness: 0.60,
           side: BorderSide(color: AppColors.lightBorderSubtle, width: 1),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.lightSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedModal,
+          smoothness: 0.60,
         ),
         showDragHandle: false,
         dragHandleColor: AppColors.lightBorderStrong,
@@ -227,8 +233,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.darkSurface,
         elevation: 0,
-        shape: const RoundedRectangleBorder(
+        shape: const SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
+          smoothness: 0.60,
           side: BorderSide(color: AppColors.darkBorderSubtle, width: 1),
         ),
         margin: EdgeInsets.zero,
@@ -240,8 +247,9 @@ class AppTheme {
           elevation: 0,
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.darkCanvas, fontWeight: FontWeight.w600),
         ),
@@ -252,8 +260,9 @@ class AppTheme {
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           side: const BorderSide(color: AppColors.darkBorderStrong, width: 1.0),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
         ),
@@ -263,8 +272,9 @@ class AppTheme {
           foregroundColor: AppColors.darkTextPrimary,
           minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-          shape: const RoundedRectangleBorder(
+          shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
+            smoothness: 0.60,
           ),
           textStyle: AppTypography.label(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
         ),
@@ -295,16 +305,18 @@ class AppTheme {
       dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.darkSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedModal,
+          smoothness: 0.60,
           side: BorderSide(color: AppColors.darkBorderSubtle, width: 1),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.darkSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedModal,
+          smoothness: 0.60,
         ),
         showDragHandle: false,
         dragHandleColor: AppColors.darkBorderStrong,

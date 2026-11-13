@@ -270,10 +270,13 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     return Container(
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(AppSpacing.s5),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedLg,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedLg,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
+        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,10 +383,13 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.s3),
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedMd,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
+        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,9 +430,12 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
           const SizedBox(height: AppSpacing.s3),
           Container(
             padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: softBg,
-              borderRadius: AppSpacing.roundedSm,
+              shape: SmoothRectangleBorder(
+                borderRadius: AppSpacing.roundedSm,
+                smoothness: AppSpacing.defaultSmoothing,
+              ),
             ),
             child: IntrinsicHeight(
               child: Row(
@@ -482,10 +491,13 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     return Container(
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedMd,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+        ),
+        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

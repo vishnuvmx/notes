@@ -121,10 +121,13 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               width: 38,
               height: 38,
               clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: tokens.surfacePrimary,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: AppSpacing.elev1(tokens.isDark),
+                shadows: AppSpacing.elev1(tokens.isDark),
+                shape: const SmoothRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  smoothness: 0.60,
+                ),
               ),
               child: Center(
                 child: TackIcon(

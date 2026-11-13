@@ -305,10 +305,13 @@ class _WeekStripCard extends StatelessWidget {
         horizontal: AppSpacing.s3,
         vertical: AppSpacing.s3,
       ),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedLg,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shadows: AppSpacing.elev1(tokens.isDark),
+        shape: const SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedLg,
+          smoothness: 0.60,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
@@ -329,9 +332,12 @@ class _WeekStripCard extends StatelessWidget {
                 duration: AppSpacing.durationFast,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: isToday ? tokens.canvasSunken : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
+                  shape: const SmoothRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                    smoothness: 0.60,
+                  ),
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -410,10 +416,13 @@ class _TodaysDailyNoteCard extends StatelessWidget {
     final dayNum = now.day.toString().padLeft(2, '0');
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedLg,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shadows: AppSpacing.elev1(tokens.isDark),
+        shape: const SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedLg,
+          smoothness: 0.60,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -568,10 +577,13 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedLg,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shadows: AppSpacing.elev1(tokens.isDark),
+        shape: const SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedLg,
+          smoothness: 0.60,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -1161,10 +1173,13 @@ class _WorthRevisitingCard extends StatelessWidget {
     final accentColor = palette.resolveAccentColor(tokens.isDark);
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
-        borderRadius: AppSpacing.roundedMd,
-        boxShadow: AppSpacing.elev1(tokens.isDark),
+        shadows: AppSpacing.elev1(tokens.isDark),
+        shape: const SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: 0.60,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(

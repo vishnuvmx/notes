@@ -1,12 +1,15 @@
 package com.notes.tacknotes
 
+import android.Manifest
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,8 +20,126 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        private const val QUICK_CAPTURE_NOTIF_ID = 7777
+        private const val CHANNEL_QUICK_CAPTURE = "tack_quick_capture"
+        private const val CHANNEL_PINNED_NOTES = "tack_pinned_notes"
+
+        var activeNotificationChannel: MethodChannel? = null
+
+        fun showQuickCaptureNotificationOn(context: Context) {
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val quickIntent = Intent(context, MainActivity::class.java).apply {
+                action = "com.notes.tacknotes.QUICK_CAPTURE"
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                QUICK_CAPTURE_NOTIF_ID,
+                quickIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val replyIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = NotificationActionReceiver.ACTION_QUICK_REPLY_NOTE
+                putExtra("noteId", "")
+            }
+            val replyPendingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val replyPendingIntent = PendingIntent.getBroadcast(
+                context,
+                QUICK_CAPTURE_NOTIF_ID + 1,
+                replyIntent,
+                replyPendingFlags
+            )
+
+            val remoteInput = RemoteInput.Builder(NotificationActionReceiver.KEY_QUICK_REPLY_TEXT)
+                .setLabel("Jot a quick note or task...")
+                .build()
+
+            val quickAddAction = Notification.Action.Builder(
+                android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_stat_tack),
+                "Quick Add",
+                replyPendingIntent
+            ).addRemoteInput(remoteInput).build()
+
+            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Notification.Builder(context, CHANNEL_QUICK_CAPTURE)
+            } else {
+                @Suppress("DEPRECATION")
+                Notification.Builder(context)
+            }
+
+            builder.setContentTitle("Quick Note")
+                .setContentText("Tap to open or use Quick Add below")
+                .setSmallIcon(R.drawable.ic_stat_tack)
+                .setContentIntent(pendingIntent)
+                .addAction(quickAddAction)
+                .setOngoing(true)
+                .setAutoCancel(false)
+
+            notificationManager.notify(QUICK_CAPTURE_NOTIF_ID, builder.build())
+        }
+
+        fun showFallbackStatusNotification(context: Context, noteId: String, statusText: String) {
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val openIntent = Intent(context, MainActivity::class.java).apply {
+                action = "com.notes.tacknotes.OPEN_NOTE"
+                putExtra("noteId", noteId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val openPending = PendingIntent.getActivity(
+                context,
+                noteId.hashCode(),
+                openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val unpinIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = NotificationActionReceiver.ACTION_UNPIN_NOTE
+                putExtra("noteId", noteId)
+            }
+            val unpinPending = PendingIntent.getBroadcast(
+                context,
+                noteId.hashCode() + 1,
+                unpinIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Notification.Builder(context, CHANNEL_PINNED_NOTES)
+            } else {
+                @Suppress("DEPRECATION")
+                Notification.Builder(context)
+            }
+
+            builder.setContentTitle("Pinned Note")
+                .setContentText(statusText)
+                .setSmallIcon(R.drawable.ic_stat_tack)
+                .setContentIntent(openPending)
+                .addAction(
+                    Notification.Action.Builder(
+                        android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_stat_tack),
+                        "Unpin",
+                        unpinPending
+                    ).build()
+                )
+                .setOngoing(true)
+                .setAutoCancel(false)
+
+            notificationManager.notify(noteId.hashCode(), builder.build())
+        }
+    }
+
     private val channelName = "com.notes.tacknotes/process_text"
+    private val notifChannelName = "com.notes.tacknotes/notifications"
     private var methodChannel: MethodChannel? = null
+    private var notificationMethodChannel: MethodChannel? = null
     private var pendingPayload: Map<String, Any?>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +185,70 @@ class MainActivity : FlutterActivity() {
         pendingPayload?.let { payload ->
             methodChannel?.invokeMethod("onReceiveText", payload)
         }
+
+        notificationMethodChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, notifChannelName)
+        activeNotificationChannel = notificationMethodChannel
+        notificationMethodChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "showQuickCapture" -> {
+                    ensureNotificationPermission()
+                    showQuickCaptureNotification()
+                    result.success(true)
+                }
+                "hideQuickCapture" -> {
+                    hideQuickCaptureNotification()
+                    result.success(true)
+                }
+                "pinNoteNotification" -> {
+                    ensureNotificationPermission()
+                    val noteId = call.argument<String>("noteId") ?: ""
+                    val title = call.argument<String>("title") ?: "Pinned Note"
+                    val body = call.argument<String>("body") ?: ""
+                    val hasNextTodo = call.argument<Boolean>("hasNextTodo") ?: false
+                    if (noteId.isNotBlank()) {
+                        showPinnedNoteNotification(
+                            noteId = noteId,
+                            title = title,
+                            body = body,
+                            hasNextTodo = hasNextTodo
+                        )
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
+                }
+                "unpinNoteNotification" -> {
+                    val noteId = call.argument<String>("noteId") ?: ""
+                    if (noteId.isNotBlank()) {
+                        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        nm.cancel(noteId.hashCode())
+                    }
+                    result.success(true)
+                }
+                "drainPendingNotificationActions" -> {
+                    result.success(NotificationActionReceiver.drainQueuedActions(this))
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        if (activeNotificationChannel === notificationMethodChannel) {
+            activeNotificationChannel = null
+        }
+        super.onDestroy()
+    }
+
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9001)
+            }
+        }
     }
 
     private fun createNotificationChannels() {
@@ -71,7 +256,7 @@ class MainActivity : FlutterActivity() {
             val notificationManager = getSystemService(NotificationManager::class.java)
 
             val quickCaptureChannel = NotificationChannel(
-                "tack_quick_capture",
+                CHANNEL_QUICK_CAPTURE,
                 "Quick Capture",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
@@ -79,42 +264,138 @@ class MainActivity : FlutterActivity() {
                 setShowBadge(false)
             }
             notificationManager?.createNotificationChannel(quickCaptureChannel)
+
+            val pinnedNotesChannel = NotificationChannel(
+                CHANNEL_PINNED_NOTES,
+                "Pinned Notes & To-Dos",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Pinned notes and checklists in your notification shade"
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            }
+            notificationManager?.createNotificationChannel(pinnedNotesChannel)
         }
     }
 
     private fun showQuickCaptureNotification() {
+        showQuickCaptureNotificationOn(this)
+    }
+
+    private fun hideQuickCaptureNotification() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val quickIntent = Intent(this, MainActivity::class.java).apply {
-            action = "com.notes.tacknotes.QUICK_CAPTURE"
+        notificationManager.cancel(QUICK_CAPTURE_NOTIF_ID)
+    }
+
+    private fun showPinnedNoteNotification(
+        noteId: String,
+        title: String,
+        body: String,
+        hasNextTodo: Boolean
+    ) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notifId = noteId.hashCode()
+
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            action = "com.notes.tacknotes.OPEN_NOTE"
+            putExtra("noteId", noteId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val pendingIntent = PendingIntent.getActivity(
+        val openPending = PendingIntent.getActivity(
             this,
-            7777,
-            quickIntent,
+            notifId,
+            openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val unpinIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_UNPIN_NOTE
+            putExtra("noteId", noteId)
+        }
+        val unpinPending = PendingIntent.getBroadcast(
+            this,
+            notifId + 1,
+            unpinIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val replyIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_QUICK_REPLY_NOTE
+            putExtra("noteId", noteId)
+        }
+        val replyPendingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val replyPending = PendingIntent.getBroadcast(
+            this,
+            notifId + 2,
+            replyIntent,
+            replyPendingFlags
+        )
+
+        val remoteInput = RemoteInput.Builder(NotificationActionReceiver.KEY_QUICK_REPLY_TEXT)
+            .setLabel(if (hasNextTodo) "Add task..." else "Append to note...")
+            .build()
+
+        val addTaskAction = Notification.Action.Builder(
+            android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_stat_tack),
+            if (hasNextTodo) "Add Task" else "Append",
+            replyPending
+        ).addRemoteInput(remoteInput).build()
+
+        val unpinAction = Notification.Action.Builder(
+            android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_stat_tack),
+            "Unpin",
+            unpinPending
+        ).build()
+
+        val summaryLine = body.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: "Tap to open"
+
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, "tack_quick_capture")
+            Notification.Builder(this, CHANNEL_PINNED_NOTES)
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
 
-        builder.setContentTitle("Quick Note")
-            .setContentText("Tap to jot down a fast note or checklist")
+        builder.setContentTitle(title.ifBlank { "Pinned Note" })
+            .setContentText(summaryLine)
+            .setStyle(
+                Notification.BigTextStyle()
+                    .setBigContentTitle(title.ifBlank { "Pinned Note" })
+                    .bigText(body.ifBlank { "Tap to open in Tack" })
+            )
             .setSmallIcon(R.drawable.ic_stat_tack)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(openPending)
             .setOngoing(true)
             .setAutoCancel(false)
+            .addAction(addTaskAction)
 
-        notificationManager.notify(7777, builder.build())
-    }
+        if (hasNextTodo) {
+            val doneIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+                action = NotificationActionReceiver.ACTION_COMPLETE_NEXT_TODO
+                putExtra("noteId", noteId)
+            }
+            val donePending = PendingIntent.getBroadcast(
+                this,
+                notifId + 3,
+                doneIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(
+                Notification.Action.Builder(
+                    android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_stat_tack),
+                    "Check Next",
+                    donePending
+                ).build()
+            )
+        }
 
-    private fun hideQuickCaptureNotification() {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(7777)
+        builder.addAction(unpinAction)
+        notificationManager.notify(notifId, builder.build())
     }
 
     private fun updateDynamicShortcuts(shortcutsList: List<Map<String, Any?>>) {
