@@ -50,11 +50,15 @@ class CardPeekSheet extends StatefulWidget {
 class _CardPeekSheetState extends State<CardPeekSheet> {
   late BaseWorkspaceItem _currentItem;
   bool _showFolderPicker = false;
+  bool _isNotifPinned = false;
 
   @override
   void initState() {
     super.initState();
     _currentItem = widget.item;
+    PinnedNotificationService.isNotePinned(widget.item.id).then((pinned) {
+      if (mounted) setState(() => _isNotifPinned = pinned);
+    });
   }
 
   Future<void> _updatePalette(String paletteId) async {
@@ -249,6 +253,42 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
               );
             },
           ),
+          if (_currentItem is TextNote)
+            _PeekActionRow(
+              icon: TackIcons.notification,
+              label: _isNotifPinned
+                  ? 'Unpin from Notification Bar'
+                  : 'Pin to Notification Bar',
+              onTap: () async {
+                final item = _currentItem;
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                if (_isNotifPinned) {
+                  await PinnedNotificationService.unpinNote(item.id);
+                  if (mounted) Navigator.of(context).pop();
+                  messenger?.showSnackBar(
+                    const SnackBar(
+                      content: Text('Unpinned from notification bar'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  final ok = await PinnedNotificationService.pinNote(item);
+                  if (mounted) Navigator.of(context).pop();
+                  messenger?.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok
+                            ? 'Pinned to notification bar'
+                            : 'Enable notifications to pin notes',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
           if (_currentItem is TextNote)
             _PeekActionRow(
               icon: TackIcons.share,

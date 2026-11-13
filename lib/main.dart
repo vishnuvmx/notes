@@ -184,7 +184,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       final title = lines.first.trim();
       await workspace.createQuickItem(
         title: title.isEmpty ? 'Quick Note' : title,
-        initialContent: text,
+        content: text,
         type: ItemType.note,
         paletteId: 'amber',
       );
