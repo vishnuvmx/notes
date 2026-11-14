@@ -70,9 +70,10 @@ class AppFloatingDialog {
               decoration: ShapeDecoration(
                 color: tokens.surfacePrimary,
                 shadows: AppSpacing.elevModal(isDark),
-                shape: SmoothRectangleBorder(
-                  borderRadius: AppSpacing.roundedModal,
-                  smoothness: 0.60,
+                shape: AppSpacing.smoothModal(),
+              ),
+              foregroundDecoration: ShapeDecoration(
+                shape: AppSpacing.smoothModal(
                   side: BorderSide(
                     color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
                     width: 0.8,
@@ -81,7 +82,7 @@ class AppFloatingDialog {
               ),
               clipBehavior: Clip.antiAlias,
               child: Material(
-                color: tokens.surfacePrimary,
+                type: MaterialType.transparency,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.s6),
                   child: Column(
@@ -227,9 +228,10 @@ class AppFloatingDialog {
                   decoration: ShapeDecoration(
                     color: tokens.surfacePrimary,
                     shadows: AppSpacing.elevModal(isDark),
-                    shape: SmoothRectangleBorder(
-                      borderRadius: AppSpacing.roundedModal,
-                      smoothness: 0.60,
+                    shape: AppSpacing.smoothModal(),
+                  ),
+                  foregroundDecoration: ShapeDecoration(
+                    shape: AppSpacing.smoothModal(
                       side: BorderSide(
                         color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
                         width: 0.8,
@@ -238,7 +240,7 @@ class AppFloatingDialog {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Material(
-                    color: tokens.surfacePrimary,
+                    type: MaterialType.transparency,
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.s6),
                       child: Column(

@@ -9,13 +9,14 @@ import '../../core/utils/date_formatter.dart';
 import '../models/base_item.dart';
 import '../../features/notes/models/text_note.dart';
 
-/// Clean, Soft Monochrome Note Grid Card (`docs/design/11-reference-ui-style.md`, Screenshots 1 & 4).
+/// Uniform Soft Monochrome Note Grid Card.
 ///
-/// Designed to be calm and uncluttered:
-/// - Pure white / soft carbon surface (`radius: 18dp`, diffused elevation)
-/// - Top meta row: subtle custom tag/folder (only if set), date, and pin badge (only if favorited)
-/// - Prominent, readable title
-/// - Clean content snippet preview (no redundant nested boxes, badges, or word-count pills)
+/// Shares identical square-ish geometry (`AppSpacing.cardAspectRatio`) with
+/// `BoardGridCard` so Notes, Boards, and mixed Pinned grids stay evenly spaced:
+/// - Top header: single-line title, pin badge (if favorited), and `...` peek action
+/// - Subtitle: calm date (`Mar 10, 2025`)
+/// - Lower area: clean open blank space with optional subtle bottom-left tag pill
+///   (no body text snippet or embedded image clutter).
 class NeoNoteCard extends StatefulWidget {
   final BaseWorkspaceItem item;
   final VoidCallback onTap;
@@ -45,10 +46,6 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     final palette = AppColors.getPaletteById(widget.item.paletteId);
     final accentColor = palette.resolveAccentColor(tokens.isDark);
     final softTint = palette.resolveSoftBackground(tokens.isDark);
-    final summary = widget.item.getSummary();
-    final hasDistinctSummary = summary.trim().isNotEmpty &&
-        summary.trim().toLowerCase() != widget.item.title.trim().toLowerCase() &&
-        summary != 'Empty note';
 
     final displayTitle =
         (widget.item.iconEmoji != null && widget.item.iconEmoji!.isNotEmpty)
@@ -68,22 +65,21 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
       scale: _isPressed ? 0.98 : 1.0,
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: widget.showContentPreview
-              ? AppSpacing.cardMinHeight
-              : AppSpacing.cardMinHeightCompact,
-        ),
+      child: AspectRatio(
+        aspectRatio: AppSpacing.cardAspectRatio,
         child: Container(
           decoration: ShapeDecoration(
             color: tokens.surfacePrimary,
             shadows: AppSpacing.elev1(tokens.isDark),
             shape: SmoothRectangleBorder(
               borderRadius: AppSpacing.roundedMd,
-              smoothness: 0.60,
-              side: _isPressed
-                  ? BorderSide(color: tokens.borderStrong, width: 1)
-                  : BorderSide.none,
+              smoothness: AppSpacing.defaultSmoothing,
+              side: BorderSide(
+                color: _isPressed
+                    ? tokens.borderStrong
+                    : tokens.borderSubtle.withValues(alpha: 0.7),
+                width: 1,
+              ),
             ),
           ),
           clipBehavior: Clip.antiAlias,
@@ -108,82 +104,91 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                     }
                   : null,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: const EdgeInsets.all(AppSpacing.s5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. Top Meta Row: Custom Tag (if any) + Date + Pin Badge (if favorited)
+                    // 1. Top Header Row: Title + optional Pin + More (...)
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        if (customTag != null) ...[
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: softTint,
-                                borderRadius: AppSpacing.roundedPill,
-                              ),
-                              child: Text(
-                                customTag,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.caption(
-                                  color: accentColor,
-                                  weight: FontWeight.w600,
-                                ),
-                              ),
+                        Expanded(
+                          child: Text(
+                            displayTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.titleSm(
+                              color: tokens.textPrimary,
+                              fontSize: 15.5,
+                              weight: FontWeight.w600,
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        const Spacer(),
-                        Text(
-                          DateFormatter.formatTimestamp(widget.item.updatedAt)
-                              .toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.mono(
-                            fontSize: 10.5,
-                            color: tokens.textTertiary,
                           ),
                         ),
                         if (widget.item.isFavorite) ...[
-                          const SizedBox(width: 6),
-                          TackPinBadge(color: tokens.accentPin, size: 12),
+                          const SizedBox(width: AppSpacing.s2),
+                          TackPinBadge(color: tokens.accentPin, size: 10),
+                        ],
+                        if (widget.onLongPress != null) ...[
+                          const SizedBox(width: AppSpacing.s1),
+                          InkWell(
+                            borderRadius: AppSpacing.roundedPill,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              widget.onLongPress!();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.s1),
+                              child: TackIcon(
+                                TackIcons.more,
+                                size: 16,
+                                color: tokens.textTertiary,
+                              ),
+                            ),
+                          ),
                         ],
                       ],
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.s1),
 
-                    // 2. Note Title
+                    // 2. Calm Date Subtitle
                     Text(
-                      displayTitle,
-                      style: AppTypography.titleSm(
-                        color: tokens.textPrimary,
-                        fontSize: 15.5,
-                        weight: FontWeight.w700,
-                      ),
-                      maxLines: 2,
+                      DateFormatter.formatCardDate(widget.item.updatedAt),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textTertiary,
+                        weight: FontWeight.w500,
+                      ),
                     ),
 
-                    // 3. Optional Content Snippet Preview (hidden by default on home/note grids per user request)
-                    if (widget.showContentPreview && hasDistinctSummary) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        summary,
-                        style: AppTypography.bodySm(
-                          color: tokens.textSecondary,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                    // 3. Clean Blank Gap Space (optional subtle tag tucked at bottom-left)
+                    Expanded(
+                      child: customTag != null
+                          ? Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.s3,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: softTint,
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
+                                child: Text(
+                                  customTag,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.caption(
+                                    color: accentColor,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const SizedBox.expand(),
+                    ),
                   ],
                 ),
               ),

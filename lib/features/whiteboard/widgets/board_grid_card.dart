@@ -9,13 +9,11 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../models/whiteboard_item.dart';
 
-/// Soft Monochrome Board Grid Card (`docs/design/11-reference-ui-style.md` §4).
+/// Uniform Soft Monochrome Board Grid Card.
 ///
-/// Anatomy:
-/// - Outer container: `surface/primary`, `r-md` (`18dp`), soft diffused shadow (`elev/1`)
-/// - Top header row: `BOARD` tinted pill + relative date + `TackPinBadge` if pinned
-/// - Inset rounded `112dp` mini-canvas thumbnail (`CustomPaint` on grid-paper `canvas/sunken`)
-/// - Bottom row: board title (`title-sm`) + node count pill (`3n`)
+/// Matches `NeoNoteCard` geometry (`AppSpacing.cardAspectRatio`) and top header
+/// hierarchy (Title + `...` + Date subtitle), with an inset node-and-edge graph
+/// preview occupying the lower preview region.
 class BoardGridCard extends StatefulWidget {
   final WhiteboardCanvasItem board;
   final VoidCallback onTap;
@@ -51,102 +49,131 @@ class _BoardGridCardState extends State<BoardGridCard> {
       scale: _isPressed ? 0.98 : 1.0,
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
-      child: Container(
-        decoration: ShapeDecoration(
-          color: tokens.surfacePrimary,
-          shadows: AppSpacing.elev1(tokens.isDark),
-          shape: SmoothRectangleBorder(
-            borderRadius: AppSpacing.roundedMd,
-            smoothness: 0.60,
-            side: _isPressed
-                ? BorderSide(color: tokens.borderStrong, width: 1)
-                : BorderSide.none,
+      child: AspectRatio(
+        aspectRatio: AppSpacing.cardAspectRatio,
+        child: Container(
+          decoration: ShapeDecoration(
+            color: tokens.surfacePrimary,
+            shadows: AppSpacing.elev1(tokens.isDark),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+              side: BorderSide(
+                color: _isPressed
+                    ? tokens.borderStrong
+                    : tokens.borderSubtle.withValues(alpha: 0.7),
+                width: 1,
+              ),
+            ),
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTapDown: (_) {
-              HapticFeedback.selectionClick();
-              setState(() => _isPressed = true);
-            },
-            onTapCancel: () => setState(() => _isPressed = false),
-            onTap: () {
-              setState(() => _isPressed = false);
-              HapticFeedback.lightImpact();
-              widget.onTap();
-            },
-            onLongPress: widget.onLongPress != null
-                ? () {
-                    setState(() => _isPressed = false);
-                    HapticFeedback.mediumImpact();
-                    widget.onLongPress!();
-                  }
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 1. Inset Mini-Canvas Thumbnail
-                  ClipRRect(
-                    borderRadius: AppSpacing.roundedSm,
-                    child: SizedBox(
-                      height: 104,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: tokens.canvasSunken,
-                        ),
-                        child: CustomPaint(
-                          painter: _BoardMiniThumbnailPainter(
-                            nodes: widget.board.nodes,
-                            edges: widget.board.edges,
-                            tokens: tokens,
-                            accentBandColor: bandColor,
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTapDown: (_) {
+                HapticFeedback.selectionClick();
+                setState(() => _isPressed = true);
+              },
+              onTapCancel: () => setState(() => _isPressed = false),
+              onTap: () {
+                setState(() => _isPressed = false);
+                HapticFeedback.lightImpact();
+                widget.onTap();
+              },
+              onLongPress: widget.onLongPress != null
+                  ? () {
+                      setState(() => _isPressed = false);
+                      HapticFeedback.mediumImpact();
+                      widget.onLongPress!();
+                    }
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.s5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 1. Top Header Row: Title + optional Pin + More (...)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            displayTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.titleSm(
+                              color: tokens.textPrimary,
+                              fontSize: 15.5,
+                              weight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // 2. Title & Pin Badge
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          displayTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.titleSm(
-                            color: tokens.textPrimary,
-                            fontSize: 15.5,
-                            weight: FontWeight.w700,
+                        if (widget.board.isFavorite) ...[
+                          const SizedBox(width: AppSpacing.s2),
+                          TackPinBadge(color: tokens.accentPin, size: 10),
+                        ],
+                        if (widget.onLongPress != null) ...[
+                          const SizedBox(width: AppSpacing.s1),
+                          InkWell(
+                            borderRadius: AppSpacing.roundedPill,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              widget.onLongPress!();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.s1),
+                              child: TackIcon(
+                                TackIcons.more,
+                                size: 16,
+                                color: tokens.textTertiary,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      if (widget.board.isFavorite) ...[
-                        const SizedBox(width: 6),
-                        TackPinBadge(color: tokens.accentPin, size: 12),
+                        ],
                       ],
-                    ],
-                  ),
-
-                  const SizedBox(height: 3),
-
-                  // 3. Calm Metadata Subtitle
-                  Text(
-                    '${widget.board.nodes.length} ${widget.board.nodes.length == 1 ? 'node' : 'nodes'}  •  ${DateFormatter.formatTimestamp(widget.board.updatedAt)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(
-                      color: tokens.textTertiary,
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: AppSpacing.s1),
+
+                    // 2. Calm Date & Node Count Subtitle
+                    Text(
+                      '${DateFormatter.formatCardDate(widget.board.updatedAt)} · ${widget.board.nodes.length} ${widget.board.nodes.length == 1 ? 'node' : 'nodes'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textTertiary,
+                        weight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.s3),
+
+                    // 3. Lower Node Graph Preview Thumbnail
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: AppSpacing.roundedSm,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: tokens.canvasSunken,
+                            borderRadius: AppSpacing.roundedSm,
+                            border: Border.all(
+                              color: tokens.borderSubtle.withValues(alpha: 0.7),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: CustomPaint(
+                            painter: _BoardMiniThumbnailPainter(
+                              nodes: widget.board.nodes,
+                              edges: widget.board.edges,
+                              tokens: tokens,
+                              accentBandColor: bandColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -171,7 +198,7 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Subtle grid-paper lines (matching Screenshot 1 right-side grid paper)
+    // 1. Subtle grid-paper lines
     final gridPaint = Paint()
       ..color = tokens.borderSubtle.withValues(alpha: 0.65)
       ..strokeWidth = 0.7;
@@ -183,7 +210,10 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    if (nodes.isEmpty) return;
+    if (nodes.isEmpty) {
+      _paintEmptySilhouette(canvas, size);
+      return;
+    }
 
     // 2. Compute bounding box of all nodes
     double minX = double.infinity;
@@ -282,6 +312,42 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
           break;
       }
     }
+  }
+
+  void _paintEmptySilhouette(Canvas canvas, Size size) {
+    final outlinePaint = Paint()
+      ..color = tokens.borderStrong.withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    final fillPaint = Paint()
+      ..color = accentBandColor.withValues(alpha: 0.14)
+      ..style = PaintingStyle.fill;
+
+    final leftBox = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.30, size.height * 0.44),
+        width: math.min(28, size.width * 0.22),
+        height: 14,
+      ),
+      const Radius.circular(4),
+    );
+    final rightBox = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.70, size.height * 0.58),
+        width: math.min(28, size.width * 0.22),
+        height: 14,
+      ),
+      const Radius.circular(4),
+    );
+    canvas.drawLine(
+      Offset(leftBox.right, leftBox.center.dy),
+      Offset(rightBox.left, rightBox.center.dy),
+      outlinePaint,
+    );
+    canvas.drawRRect(leftBox, fillPaint);
+    canvas.drawRRect(leftBox, outlinePaint);
+    canvas.drawRRect(rightBox, fillPaint);
+    canvas.drawRRect(rightBox, outlinePaint);
   }
 
   @override

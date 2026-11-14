@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -118,9 +117,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  LucideIcons.slidersHorizontal,
-                  size: 12,
+                TackIcon(
+                  TackIcons.settings,
+                  size: 13,
                   color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                 ),
                 const SizedBox(width: 5),
@@ -165,7 +164,7 @@ class FrontmatterPropertiesBar extends StatelessWidget {
       } else if (k == 'priority') {
         chips.add(
           _PropertyPill(
-            icon: LucideIcons.flag,
+            icon: TackIcons.flag,
             label: v,
             isDark: isDark,
             onTap: () => _cyclePriority(v),
@@ -184,7 +183,7 @@ class FrontmatterPropertiesBar extends StatelessWidget {
         final checked = v.toLowerCase() == 'true';
         chips.add(
           _PropertyPill(
-            icon: checked ? TackIcons.checkCircle : LucideIcons.circle,
+            icon: checked ? TackIcons.checkCircle : TackIcons.taskOpen,
             label: k.replaceAll('_', ' '),
             isDark: isDark,
             onTap: () {
@@ -217,7 +216,7 @@ class FrontmatterPropertiesBar extends StatelessWidget {
 
     chips.add(
       _PropertyPill(
-        icon: LucideIcons.slidersHorizontal,
+        icon: TackIcons.edit,
         label: 'Edit',
         isDark: isDark,
         subtle: true,
@@ -291,7 +290,7 @@ class _PropertyPill extends StatelessWidget {
               iconWidget!,
               const SizedBox(width: 6),
             ] else if (icon != null) ...[
-              TackIcon(icon, size: 12, color: fg),
+              TackIcon(icon, size: 13, color: fg),
               const SizedBox(width: 5),
             ],
             Text(
@@ -387,7 +386,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
     final accent = palette.resolveAccentColor(isDark);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: AppSpacing.modalSheetPadding,
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -395,7 +394,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
           children: [
             Row(
               children: [
-                Icon(LucideIcons.slidersHorizontal, size: 18, color: accent),
+                TackIcon(TackIcons.settings, size: 18, color: accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -489,7 +488,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                           _setProp('target_date', formatted);
                         }
                       },
-                      icon: const Icon(LucideIcons.calendar, size: 15),
+                      icon: const TackIcon(TackIcons.calendar, size: 16),
                       label: Text(
                         _props['target_date'] ?? 'Set Target Date',
                         maxLines: 1,

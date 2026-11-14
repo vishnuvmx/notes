@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -460,9 +459,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
               ),
             ),
           IconButton(
-            icon: Icon(
-              _isSearching ? LucideIcons.x : LucideIcons.search,
-              size: 19,
+            icon: TackIcon(
+              _isSearching ? TackIcons.close : TackIcons.search,
+              size: 20,
             ),
             tooltip: 'Filter Graph',
             onPressed: () {
@@ -476,7 +475,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(LucideIcons.locateFixed, size: 19),
+            icon: const TackIcon(TackIcons.expandNavigation, size: 20),
             tooltip: 'Recenter',
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -495,9 +494,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      LucideIcons.network,
-                      size: 46,
+                    TackIcon(
+                      TackIcons.graph,
+                      size: 48,
                       color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                     ),
                     const SizedBox(height: 12),
@@ -715,13 +714,13 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             child: Center(
               child: node.iconEmoji != null && node.iconEmoji!.isNotEmpty
                   ? Text(node.iconEmoji!, style: const TextStyle(fontSize: 18))
-                  : Icon(
+                  : TackIcon(
                       node.isTagHub
-                          ? LucideIcons.hash
+                          ? TackIcons.tag
                           : (item is WhiteboardCanvasItem
-                              ? LucideIcons.workflow
-                              : LucideIcons.fileText),
-                      size: 18,
+                              ? TackIcons.workflow
+                              : TackIcons.notes),
+                      size: 19,
                       color: accent,
                     ),
             ),

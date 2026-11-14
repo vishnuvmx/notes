@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -140,14 +139,14 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
     });
   }
 
-  IconData _alignIcon(TableColumnAlign align) {
+  TackSvgIcon _alignIcon(TableColumnAlign align) {
     switch (align) {
       case TableColumnAlign.left:
-        return LucideIcons.alignLeft;
+        return TackIcons.alignLeft;
       case TableColumnAlign.center:
-        return LucideIcons.alignCenter;
+        return TackIcons.alignCenter;
       case TableColumnAlign.right:
-        return LucideIcons.alignRight;
+        return TackIcons.alignRight;
     }
   }
 
@@ -168,14 +167,14 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
     final accent = palette.resolveAccentColor(isDark);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.table, size: 18, color: accent),
+              TackIcon(TackIcons.table, size: 19, color: accent),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -242,9 +241,9 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
                                       child: IconButton(
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                        icon: Icon(
+                                        icon: TackIcon(
                                           _alignIcon(_alignments[colIdx]),
-                                          size: 14,
+                                          size: 15,
                                           color: accent,
                                         ),
                                         tooltip: 'Cycle Alignment',

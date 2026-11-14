@@ -77,6 +77,9 @@ class AppSpacing {
   static const double cardMinHeightCompact = 80.0;
   static const double cardMaxHeight = 200.0;
 
+  /// Uniform grid card aspect ratio shared by Note and Board cards.
+  static const double cardAspectRatio = 0.94;
+
   // ================= Radii (07-design-system.md §5) =================
   /// `radius/xs` — 4dp (tags inside text, code chips)
   static const double radiusXs = 4.0;
@@ -113,6 +116,15 @@ class AppSpacing {
   static const BorderRadius roundedPill = BorderRadius.all(Radius.circular(radiusPill));
   static const BorderRadius sheetTopRadius =
       BorderRadius.all(Radius.circular(radiusModal));
+
+  /// Standardized interior padding for 28dp floating modal sheets so titles and
+  /// controls stay generously clear of the squircle corner curvature.
+  static const EdgeInsets modalSheetPadding = EdgeInsets.fromLTRB(
+    s6, // 20dp left
+    s7, // 24dp top
+    s6, // 20dp right
+    s6, // 20dp bottom
+  );
 
   // ================= 40-60% Corner Smoothing Tokens (Figma / iOS Squircle) =================
   /// Default corner smoothing factor: 0.60 (60% iOS / Figma continuous squircle curvature).

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -24,7 +23,7 @@ class _ReleaseEntry {
   final String summary;
   final String badge;
   final String? syntaxHint;
-  final IconData icon;
+  final dynamic icon;
   final String paletteId;
   final _ReleaseCategory category;
 
@@ -57,7 +56,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Bi-Directional Wiki-Links & Backlinks',
       badge: 'Knowledge Links',
       syntaxHint: '[[Note#Heading|Alias]]',
-      icon: LucideIcons.link2,
+      icon: TackIcons.link,
       paletteId: 'cyan',
       category: _ReleaseCategory.connected,
       summary:
@@ -68,7 +67,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Canvas Spec Cards & Live Board Embeds',
       badge: 'Visual Specs',
       syntaxHint: '![[Board#nodeId]]',
-      icon: LucideIcons.workflow,
+      icon: TackIcons.workflow,
       paletteId: 'peach',
       category: _ReleaseCategory.connected,
       summary:
@@ -79,7 +78,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Slash (/) Command Palette & "Turn Into"',
       badge: 'Block Engine',
       syntaxHint: '/toggle  •  /table  •  /toc',
-      icon: LucideIcons.terminal,
+      icon: TackIcons.code,
       paletteId: 'lavender',
       category: _ReleaseCategory.editor,
       summary:
@@ -92,7 +91,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Toggle Blocks & Heading Section Folding',
       badge: 'Reader & Specs',
       syntaxHint: '>▸ Toggle Title',
-      icon: LucideIcons.chevronsDownUp,
+      icon: TackIcons.expandNavigation,
       paletteId: 'amber',
       category: _ReleaseCategory.editor,
       summary:
@@ -103,7 +102,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Document Outline Drawer & Inline [TOC]',
       badge: 'Navigation',
       syntaxHint: '[TOC]',
-      icon: LucideIcons.listTree,
+      icon: TackIcons.nestedList,
       paletteId: 'cyan',
       category: _ReleaseCategory.editor,
       summary:
@@ -114,7 +113,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'YAML Frontmatter Properties Bar',
       badge: 'Local .md',
       syntaxHint: 'status  •  priority  •  aliases',
-      icon: LucideIcons.slidersHorizontal,
+      icon: TackIcons.layers,
       paletteId: 'rose',
       category: _ReleaseCategory.connected,
       summary:
@@ -125,7 +124,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Touch-First Visual Markdown Table Editor',
       badge: 'Mobile Editor',
       syntaxHint: '1-Tap Edit Table',
-      icon: LucideIcons.table,
+      icon: TackIcons.table,
       paletteId: 'lime',
       category: _ReleaseCategory.editor,
       summary:
@@ -138,7 +137,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: "Templates Gallery & 1-Tap Today's Note",
       badge: 'Daily Desk',
       syntaxHint: '{{date}}  •  Carry-Forward',
-      icon: LucideIcons.sun,
+      icon: TackIcons.today,
       paletteId: 'amber',
       category: _ReleaseCategory.knowledge,
       summary:
@@ -149,7 +148,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Custom Folders, Sub-Notes & Breadcrumbs',
       badge: 'Hierarchy',
       syntaxHint: 'Folder › Parent › Sub-note',
-      icon: LucideIcons.folderTree,
+      icon: TackIcons.folderTree,
       paletteId: 'lavender',
       category: _ReleaseCategory.knowledge,
       summary:
@@ -160,7 +159,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: '2D Knowledge Graph & Section Transclusion',
       badge: 'Knowledge Map',
       syntaxHint: 'Global & 1-Hop Local Graph',
-      icon: LucideIcons.network,
+      icon: TackIcons.graph,
       paletteId: 'cyan',
       category: _ReleaseCategory.knowledge,
       summary:
@@ -173,7 +172,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       title: 'Soft Monochrome UI, Floating Nav & Today Triage',
       badge: 'Redesign',
       syntaxHint: 'Today  •  Library  •  Boards  •  Search',
-      icon: LucideIcons.zap,
+      icon: TackIcons.sparkles,
       paletteId: 'coral',
       category: _ReleaseCategory.ux,
       summary:
@@ -455,7 +454,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                       children: [
                         Row(
                           children: [
-                            Icon(entry.icon, size: 16, color: accent),
+                            TackIcon(entry.icon, size: 17, color: accent),
                             const SizedBox(width: AppSpacing.s2),
                             Expanded(
                               child: Text(

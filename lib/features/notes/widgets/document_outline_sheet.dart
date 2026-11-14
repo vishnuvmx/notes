@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/tack_icons.dart';
 import '../services/wiki_link_service.dart';
 import '../../../shared/widgets/app_search_field.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
@@ -80,14 +80,14 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
             .toList();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.listTree, size: 18, color: accent),
+              TackIcon(TackIcons.nestedList, size: 19, color: accent),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -282,7 +282,7 @@ class _InlineTocCardState extends State<InlineTocCard> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  Icon(LucideIcons.listTree, size: 15, color: accent),
+                  TackIcon(TackIcons.nestedList, size: 16, color: accent),
                   const SizedBox(width: 7),
                   Expanded(
                     child: Text(
@@ -298,8 +298,8 @@ class _InlineTocCardState extends State<InlineTocCard> {
                       ),
                     ),
                   ),
-                  Icon(
-                    _expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                  TackIcon(
+                    _expanded ? TackIcons.chevronUp : TackIcons.chevronDown,
                     size: 15,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),

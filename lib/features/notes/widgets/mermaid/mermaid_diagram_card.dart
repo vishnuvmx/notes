@@ -1807,7 +1807,7 @@ class MermaidSequenceWidget extends StatelessWidget {
           Row(
             children: [
               if (!isRight)
-                Icon(TackIcons.chevronLeft, size: 13, color: arrowColor)
+                TackIcon(TackIcons.chevronLeft, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
               Expanded(

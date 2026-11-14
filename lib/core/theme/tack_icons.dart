@@ -16,8 +16,13 @@ enum HeroIconStyle { outline, solid }
 class TackSvgIcon {
   final String name;
   final bool isSingleColor;
+  final double opticalScale;
 
-  const TackSvgIcon(this.name, {this.isSingleColor = false});
+  const TackSvgIcon(
+    this.name, {
+    this.isSingleColor = false,
+    this.opticalScale = 1.20,
+  });
 }
 
 /// Central Iconography for Tack powered by custom light/dark SVG packs and
@@ -124,8 +129,10 @@ class TackIcons {
   static const IconData imageOff = LucideIcons.imageOff;
   static const IconData externalLink = LucideIcons.externalLink;
   static const TackSvgIcon play = TackSvgIcon('play', isSingleColor: true);
-  static const TackSvgIcon bold = TackSvgIcon('bold', isSingleColor: true);
-  static const TackSvgIcon italic = TackSvgIcon('italic', isSingleColor: true);
+  static const TackSvgIcon bold =
+      TackSvgIcon('bold', isSingleColor: true, opticalScale: 1.28);
+  static const TackSvgIcon italic =
+      TackSvgIcon('italic', isSingleColor: true, opticalScale: 1.28);
   static const TackSvgIcon underline = TackSvgIcon('underline');
   static const TackSvgIcon strikethrough = TackSvgIcon('strikethrough');
   static const TackSvgIcon code = TackSvgIcon('code', isSingleColor: true);
@@ -147,7 +154,8 @@ class TackIcons {
   static const IconData square = LucideIcons.square;
   static const IconData diamond = LucideIcons.diamond;
   static const TackSvgIcon flow = TackSvgIcon('flow');
-  static const TackSvgIcon cursor = TackSvgIcon('cursor', isSingleColor: true);
+  static const TackSvgIcon cursor =
+      TackSvgIcon('cursor', isSingleColor: true, opticalScale: 1.12);
   static const TackSvgIcon hand = TackSvgIcon('hand', isSingleColor: true);
   static const TackSvgIcon move = TackSvgIcon('move', isSingleColor: true);
   static const TackSvgIcon photo = TackSvgIcon('image');
@@ -167,15 +175,17 @@ class TackIcons {
   static const TackSvgIcon sparkles = TackSvgIcon('sparkles');
   static const IconData briefcase = LucideIcons.briefcase;
   static const TackSvgIcon calendar = TackSvgIcon('calendar');
-  static const TackSvgIcon lock = TackSvgIcon('lock');
+  static const TackSvgIcon lock = TackSvgIcon('lock', opticalScale: 1.06);
 
   // Status & Feedback
   static const TackSvgIcon info = TackSvgIcon('info', isSingleColor: true);
   static const TackSvgIcon warning = TackSvgIcon('warning', isSingleColor: true);
   static const TackSvgIcon error = TackSvgIcon('error', isSingleColor: true);
   static const TackSvgIcon success = TackSvgIcon('success', isSingleColor: true);
-  static const TackSvgIcon flag = TackSvgIcon('flag', isSingleColor: true);
-  static const TackSvgIcon refresh = TackSvgIcon('refresh', isSingleColor: true);
+  static const TackSvgIcon flag =
+      TackSvgIcon('flag', isSingleColor: true, opticalScale: 1.08);
+  static const TackSvgIcon refresh =
+      TackSvgIcon('refresh', isSingleColor: true, opticalScale: 1.0);
   static const TackSvgIcon save = TackSvgIcon('save');
   static const TackSvgIcon shield = TackSvgIcon('shield');
   static const TackSvgIcon lightbulb = TackSvgIcon('lightbulb');
@@ -185,6 +195,23 @@ class TackIcons {
   static const TackSvgIcon arrowDown = TackSvgIcon('arrow_down');
   static const TackSvgIcon arrowLeft = TackSvgIcon('arrow_left');
   static const TackSvgIcon arrowRight = TackSvgIcon('arrow_right');
+
+  // Additional custom SVG icons from dark-icons / white-icons packs
+  static const TackSvgIcon add = TackSvgIcon('add', isSingleColor: true);
+  static const TackSvgIcon alert = TackSvgIcon('alert', isSingleColor: true);
+  static const TackSvgIcon crop = TackSvgIcon('crop', isSingleColor: true);
+  static const TackSvgIcon expandNavigation =
+      TackSvgIcon('expand_navigation', isSingleColor: true);
+  static const TackSvgIcon grid = TackSvgIcon('grid');
+  static const TackSvgIcon imageTool = TackSvgIcon('image_tool');
+  static const TackSvgIcon nestedList = TackSvgIcon('nested_list');
+  static const TackSvgIcon paragraph =
+      TackSvgIcon('paragraph', isSingleColor: true);
+  static const TackSvgIcon smile = TackSvgIcon('smile', isSingleColor: true);
+  static const TackSvgIcon textTool =
+      TackSvgIcon('text_tool', isSingleColor: true);
+  static const TackSvgIcon visibility =
+      TackSvgIcon('visibility', isSingleColor: true);
 }
 
 /// Unified icon widget supporting custom SVG packs (`TackSvgIcon`), legacy
@@ -214,12 +241,13 @@ class TackIcon extends StatelessWidget {
 
     if (icon is TackSvgIcon) {
       final svgIcon = icon as TackSvgIcon;
+      final Widget svgWidget;
       if (svgIcon.isSingleColor) {
         final useTint = color != null || themeIconColor != null;
         final folder = useTint
             ? 'dark-icons'
             : (isDark ? 'white-icons' : 'dark-icons');
-        return SvgPicture.asset(
+        svgWidget = SvgPicture.asset(
           'icons/$folder/${svgIcon.name}.svg',
           width: size,
           height: size,
@@ -228,19 +256,41 @@ class TackIcon extends StatelessWidget {
               : null,
         );
       } else {
-        // Two-tone SVGs must not receive a BlendMode.srcIn color filter, as it
-        // flattens their secondary tone. Choose the white or dark pack instead.
+        // Multi-color / two-tone SVGs must not receive a BlendMode.srcIn color
+        // filter, as it flattens their palette accents. Only explicit light
+        // (> 0.65 luminance) or dark (< 0.12 luminance) ink overrides force
+        // white-icons vs dark-icons; mid-tone accent colors follow theme mode.
         final targetColor = color ?? themeIconColor;
-        final useWhiteVariant = targetColor != null
-            ? targetColor.computeLuminance() > 0.5
-            : isDark;
+        final bool useWhiteVariant;
+        if (targetColor != null) {
+          final lum = targetColor.computeLuminance();
+          useWhiteVariant = lum > 0.65 ? true : (lum < 0.12 ? false : isDark);
+        } else {
+          useWhiteVariant = isDark;
+        }
         final folder = useWhiteVariant ? 'white-icons' : 'dark-icons';
-        return SvgPicture.asset(
+        svgWidget = SvgPicture.asset(
           'icons/$folder/${svgIcon.name}.svg',
           width: size,
           height: size,
         );
       }
+
+      // Normalize the 64x64 SVG viewBox transparent margin while keeping a
+      // strict `size x size` layout footprint so icons fill their slots cleanly
+      // without overflowing tight containers or shifting surrounding layouts.
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Center(
+          child: svgIcon.opticalScale == 1.0
+              ? svgWidget
+              : Transform.scale(
+                  scale: svgIcon.opticalScale,
+                  child: svgWidget,
+                ),
+        ),
+      );
     }
 
     if (icon is String) {

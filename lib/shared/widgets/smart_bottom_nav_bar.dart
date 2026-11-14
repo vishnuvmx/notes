@@ -62,8 +62,11 @@ class SmartBottomNavBar extends StatelessWidget {
                     padding: const EdgeInsets.all(5),
                     itemCount: navItems.length,
                     selectedIndex: selectedSlot,
+                    duration: const Duration(milliseconds: 300),
+                    curve: const Cubic(0.22, 1.0, 0.36, 1.0),
                     trackColor: tokens.canvasSunken,
                     indicatorColor: tokens.surfacePrimary,
+                    indicatorShadow: AppSpacing.elev1(tokens.isDark),
                     trackShadow: AppSpacing.elev1(tokens.isDark),
                     children: [
                       for (final item in navItems)
@@ -91,6 +94,8 @@ class SmartBottomNavBar extends StatelessWidget {
   ) {
     final isSelected = currentIndex == item.index;
     final fgColor = isSelected ? tokens.textPrimary : tokens.textSecondary;
+    const iconAnimDuration = Duration(milliseconds: 240);
+    const iconAnimCurve = Curves.easeOutCubic;
 
     return Semantics(
       button: true,
@@ -106,37 +111,48 @@ class SmartBottomNavBar extends StatelessWidget {
             onTap(item.index);
           },
           child: Center(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                TackIcon(
-                  item.icon,
-                  size: 21,
-                  color: fgColor,
-                  style: isSelected
-                      ? HeroIconStyle.solid
-                      : HeroIconStyle.outline,
-                ),
-                if (item.badge > 0)
-                  Positioned(
-                    top: -2,
-                    right: -4,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: tokens.accentPin,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? tokens.surfacePrimary
-                              : tokens.canvasSunken,
-                          width: 1.2,
+            child: AnimatedScale(
+              scale: isSelected ? 1.04 : 0.94,
+              duration: iconAnimDuration,
+              curve: iconAnimCurve,
+              child: AnimatedOpacity(
+                opacity: isSelected ? 1.0 : 0.52,
+                duration: iconAnimDuration,
+                curve: iconAnimCurve,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    TackIcon(
+                      item.icon,
+                      size: 21,
+                      color: fgColor,
+                      style: isSelected
+                          ? HeroIconStyle.solid
+                          : HeroIconStyle.outline,
+                    ),
+                    if (item.badge > 0)
+                      Positioned(
+                        top: -2,
+                        right: -4,
+                        child: AnimatedContainer(
+                          duration: iconAnimDuration,
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: tokens.accentPin,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? tokens.surfacePrimary
+                                  : tokens.canvasSunken,
+                              width: 1.2,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

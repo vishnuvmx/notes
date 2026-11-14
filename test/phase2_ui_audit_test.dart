@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
+import 'package:notes/core/theme/tack_icons.dart';
 import 'package:notes/shared/data/i_workspace_repo.dart';
 import 'package:notes/shared/models/base_item.dart';
 import 'package:notes/features/notes/models/text_note.dart';
@@ -18,6 +19,8 @@ import 'package:notes/shared/widgets/z_order_column.dart';
 import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
 import 'package:notes/features/notes/screens/note_editor_screen.dart';
 import 'package:notes/features/settings/screens/settings_screen.dart';
+import 'package:notes/features/whiteboard/models/whiteboard_item.dart';
+import 'package:notes/features/whiteboard/screens/whiteboard_canvas_screen.dart';
 
 class _MockWorkspaceRepo extends IWorkspaceRepository {
   final List<BaseWorkspaceItem> _store = [];
@@ -406,6 +409,36 @@ Footer text.
       await tester.tap(find.byKey(const ValueKey('nav_capture_fab')));
       await tester.pump();
       expect(captureTapped, isTrue);
+
+      // Verify the background pill fill smoothly glides across the dock when index changes
+      final pillFinder = find.descendant(
+        of: find.byType(SmartBottomNavBar),
+        matching: find.byType(FractionallySizedBox),
+      );
+      final startX = tester.getTopLeft(pillFinder).dx;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            bottomNavigationBar: SmartBottomNavBar(
+              currentIndex: 4, // Last slot (Search)
+              inboxCount: 3,
+              onTap: (idx) => tappedIndex = idx,
+              onFabTap: () => captureTapped = true,
+            ),
+          ),
+        ),
+      );
+
+      // Midway through the 300ms glide, indicator should be strictly between start and end
+      await tester.pump(const Duration(milliseconds: 120));
+      final midX = tester.getTopLeft(pillFinder).dx;
+      await tester.pumpAndSettle();
+      final endX = tester.getTopLeft(pillFinder).dx;
+
+      expect(midX, greaterThan(startX + 10));
+      expect(midX, lessThan(endX - 10));
     });
 
     testWidgets('7. ProfileSettingsScreen switches between tabs with IndexedStack, clipBehavior, and clean TabBar', (tester) async {
@@ -580,6 +613,167 @@ Footer text.
       await tester.tap(find.text('Move to Trash'));
       await tester.pumpAndSettle();
       expect(confirmed, isTrue);
+    });
+
+    test('11. WhiteboardCanvasScreen.computeDensestClusterBounds picks dense cluster over outliers', () {
+      const nodes = [
+        // Isolated distant outliers
+        CanvasNode(id: 'out1', text: 'Outlier 1', shapeType: CanvasNodeType.process, x: 900, y: 900),
+        CanvasNode(id: 'out2', text: 'Outlier 2', shapeType: CanvasNodeType.process, x: 5200, y: 4900),
+        // Dense cluster of 4 connected nodes around (3600, 3200)
+        CanvasNode(id: 'c1', text: 'Core 1', shapeType: CanvasNodeType.process, x: 3500, y: 3100),
+        CanvasNode(id: 'c2', text: 'Core 2', shapeType: CanvasNodeType.process, x: 3720, y: 3120),
+        CanvasNode(id: 'c3', text: 'Core 3', shapeType: CanvasNodeType.decision, x: 3560, y: 3320),
+        CanvasNode(id: 'c4', text: 'Core 4', shapeType: CanvasNodeType.sticky, x: 3760, y: 3340),
+      ];
+      const edges = [
+        CanvasEdge(id: 'e1', fromNodeId: 'c1', toNodeId: 'c2'),
+        CanvasEdge(id: 'e2', fromNodeId: 'c2', toNodeId: 'c3'),
+        CanvasEdge(id: 'e3', fromNodeId: 'c3', toNodeId: 'c4'),
+      ];
+
+      final bounds = WhiteboardCanvasScreen.computeDensestClusterBounds(
+        nodes,
+        edges: edges,
+      );
+      expect(bounds, isNotNull);
+      expect(bounds!.left, greaterThanOrEqualTo(3400));
+      expect(bounds.right, lessThanOrEqualTo(4000));
+      expect(bounds.top, greaterThanOrEqualTo(3000));
+      expect(bounds.bottom, lessThanOrEqualTo(3500));
+    });
+
+    testWidgets('12. WhiteboardCanvasScreen hides Whiteboard subtitle & chevron and opens on densest cluster', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final workspaceProvider = WorkspaceProvider(repo);
+      final now = DateTime.now();
+
+      final board = WhiteboardCanvasItem(
+        id: 'wb_dense_open',
+        title: 'Roadmap Architecture',
+        createdAt: now,
+        updatedAt: now,
+        paletteId: 'cyan',
+        // Stale random pan offset far away from the dense cluster
+        panOffset: const Offset(100, 100),
+        zoomScale: 0.4,
+        nodes: const [
+          CanvasNode(id: 'far', text: 'Far Node', shapeType: CanvasNodeType.process, x: 900, y: 900),
+          CanvasNode(id: 'd1', text: 'Hub A', shapeType: CanvasNodeType.process, x: 3600, y: 3100),
+          CanvasNode(id: 'd2', text: 'Hub B', shapeType: CanvasNodeType.process, x: 3820, y: 3100),
+          CanvasNode(id: 'd3', text: 'Hub C', shapeType: CanvasNodeType.process, x: 3710, y: 3290),
+        ],
+        edges: const [
+          CanvasEdge(id: 'e1', fromNodeId: 'd1', toNodeId: 'd2'),
+          CanvasEdge(id: 'e2', fromNodeId: 'd2', toNodeId: 'd3'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: WhiteboardCanvasScreen(item: board),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Board title renders without 'Whiteboard' subtitle or down arrow
+      expect(find.text('Roadmap Architecture'), findsOneWidget);
+      expect(find.text('Whiteboard'), findsNothing);
+      final appBarFinder = find.byType(AppBar);
+      expect(
+        find.descendant(
+          of: appBarFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is TackIcon && w.icon == TackIcons.chevronDown,
+          ),
+        ),
+        findsNothing,
+      );
+
+      // InteractiveViewer camera should be focused near the dense cluster (around 3700, 3200)
+      final viewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final viewportCenter = viewer.transformationController!.toScene(
+        const Offset(400, 260),
+      );
+      expect(viewportCenter.dx, greaterThan(3200));
+      expect(viewportCenter.dy, greaterThan(2700));
+    });
+
+    test('13. SmoothRectangleBorder produces strictly convex smooth squircle boundary', () {
+      const rect = Rect.fromLTWH(0, 0, 360, 240);
+      final shape = AppSpacing.smoothModal(
+        side: const BorderSide(color: Color(0xFFE2E8F0), width: 0.8),
+      );
+
+      final outer = shape.getOuterPath(rect);
+      final inner = shape.getInnerPath(rect);
+      expect(outer.getBounds(), equals(rect));
+      expect(inner.getBounds(), isNot(rect));
+
+      // Verify curve never overshoots straight edges anywhere near top-left corner
+      final metric = outer.computeMetrics().first;
+      for (int i = 0; i <= 100; i++) {
+        final pos = metric.getTangentForOffset(metric.length * (i / 100.0))!.position;
+        expect(pos.dx, inInclusiveRange(-0.01, rect.width + 0.01));
+        expect(pos.dy, inInclusiveRange(-0.01, rect.height + 0.01));
+      }
+    });
+
+    testWidgets('14. Sort modal clears 28dp corners, aligns title with rows, and paints clean foreground border', (tester) async {
+      final workspace = WorkspaceProvider();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<WorkspaceProvider>.value(
+          value: workspace,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Sort'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sort items'), findsOneWidget);
+      expect(find.text('Recently updated (Pinned first)'), findsOneWidget);
+
+      // Modal shell uses MaterialType.transparency + foregroundDecoration for border
+      final sheetContainer = tester.widget<Container>(
+        find.ancestor(
+          of: find.text('Sort items'),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Container &&
+                w.decoration is ShapeDecoration &&
+                (w.decoration as ShapeDecoration).shape is SmoothRectangleBorder,
+          ),
+        ).first,
+      );
+      expect(sheetContainer.foregroundDecoration, isA<ShapeDecoration>());
+      final sheetMaterial = tester.widget<Material>(
+        find.descendant(
+          of: find.byWidgetPredicate((w) => identical(w, sheetContainer)),
+          matching: find.byType(Material),
+        ).first,
+      );
+      expect(sheetMaterial.type, equals(MaterialType.transparency));
+
+      // 'Sort items' header stays well clear of 28dp top-left curve and aligns with option labels
+      final sheetRect = tester.getRect(find.byWidgetPredicate((w) => identical(w, sheetContainer)));
+      final headerRect = tester.getRect(find.text('Sort items'));
+      final optionRect = tester.getRect(find.text('Recently updated (Pinned first)'));
+      expect(headerRect.top - sheetRect.top, greaterThanOrEqualTo(22.0));
+      expect(headerRect.left - sheetRect.left, greaterThanOrEqualTo(22.0));
+      expect((headerRect.left - optionRect.left).abs(), lessThanOrEqualTo(1.0));
     });
   });
 }

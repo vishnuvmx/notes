@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -472,8 +471,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 child: AnimatedRotation(
                   turns: isFolded ? -0.25 : 0.0,
                   duration: const Duration(milliseconds: 160),
-                  child: Icon(
-                    LucideIcons.chevronDown,
+                  child: TackIcon(
+                    TackIcons.chevronDown,
                     size: 16,
                     color: isFolded
                         ? accent
@@ -554,8 +553,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                   AnimatedRotation(
                     turns: isOpen ? 0.25 : 0.0,
                     duration: const Duration(milliseconds: 160),
-                    child: Icon(
-                      LucideIcons.chevronRight,
+                    child: TackIcon(
+                      TackIcons.chevronRight,
                       size: 16,
                       color: accent,
                     ),
@@ -855,28 +854,28 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       final bodyText = bodyLines.join('\n').trim();
 
       Color alertColor;
-      IconData alertIcon;
+      TackSvgIcon alertIcon;
       switch (alertType) {
         case 'TIP':
           alertColor = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
-          alertIcon = LucideIcons.lightbulb;
+          alertIcon = TackIcons.lightbulb;
           break;
         case 'IMPORTANT':
           alertColor = isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
-          alertIcon = LucideIcons.star;
+          alertIcon = TackIcons.star;
           break;
         case 'WARNING':
           alertColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
-          alertIcon = LucideIcons.alertTriangle;
+          alertIcon = TackIcons.warning;
           break;
         case 'CAUTION':
           alertColor = isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
-          alertIcon = LucideIcons.shieldAlert;
+          alertIcon = TackIcons.shield;
           break;
         case 'NOTE':
         default:
           alertColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
-          alertIcon = LucideIcons.info;
+          alertIcon = TackIcons.info;
           break;
       }
 
@@ -904,7 +903,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     children: [
                       Row(
                         children: [
-                          Icon(alertIcon, size: 15, color: alertColor),
+                          TackIcon(alertIcon, size: 16, color: alertColor),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -1202,9 +1201,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    LucideIcons.table,
-                    size: 12,
+                  TackIcon(
+                    TackIcons.table,
+                    size: 14,
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),
                   const SizedBox(width: 5),
@@ -1249,9 +1248,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            LucideIcons.pencil,
-                            size: 10.5,
+                          TackIcon(
+                            TackIcons.pencil,
+                            size: 12,
                             color: palette.resolveAccentColor(isDark),
                           ),
                           const SizedBox(width: 4),
@@ -3119,12 +3118,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     AppBottomSheet.show<void>(
       context: context,
       builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

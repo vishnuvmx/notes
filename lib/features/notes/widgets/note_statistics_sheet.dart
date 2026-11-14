@@ -37,7 +37,7 @@ class NoteStatisticsSheet extends StatelessWidget {
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

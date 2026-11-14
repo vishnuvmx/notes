@@ -89,6 +89,70 @@ class WhiteboardCanvasScreen extends StatefulWidget {
     this.initialFocusNodeId,
   });
 
+  /// Computes the bounding rect for a list of canvas nodes.
+  static Rect? computeNodesBounds(List<CanvasNode> nodes) {
+    if (nodes.isEmpty) return null;
+    double minX = nodes.first.x;
+    double maxX = nodes.first.x + nodes.first.width;
+    double minY = nodes.first.y;
+    double maxY = nodes.first.y + nodes.first.height;
+
+    for (final node in nodes) {
+      minX = math.min(minX, node.x);
+      maxX = math.max(maxX, node.x + node.width);
+      minY = math.min(minY, node.y);
+      maxY = math.max(maxY, node.y + node.height);
+    }
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
+  /// Finds the bounding rectangle of the region containing the densest cluster
+  /// of nodes (and incident edges) so large boards open directly on active work
+  /// instead of empty canvas space or sparse outliers.
+  static Rect? computeDensestClusterBounds(
+    List<CanvasNode> nodes, {
+    List<CanvasEdge> edges = const [],
+    double clusterRadius = 700.0,
+  }) {
+    if (nodes.isEmpty) return null;
+    if (nodes.length <= 2) return computeNodesBounds(nodes);
+
+    double bestScore = -1.0;
+    List<CanvasNode> bestCluster = [nodes.first];
+
+    for (final anchor in nodes) {
+      final anchorCenter = anchor.center;
+      final cluster = <CanvasNode>[];
+      final clusterIds = <String>{};
+      double proximitySum = 0.0;
+
+      for (final candidate in nodes) {
+        final dist = (candidate.center - anchorCenter).distance;
+        if (dist <= clusterRadius) {
+          cluster.add(candidate);
+          clusterIds.add(candidate.id);
+          proximitySum += 1.0 / (1.0 + dist / 250.0);
+        }
+      }
+
+      int internalEdges = 0;
+      for (final edge in edges) {
+        if (clusterIds.contains(edge.fromNodeId) &&
+            clusterIds.contains(edge.toNodeId)) {
+          internalEdges++;
+        }
+      }
+
+      final score = cluster.length * 10.0 + internalEdges * 2.5 + proximitySum;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCluster = cluster;
+      }
+    }
+
+    return computeNodesBounds(bestCluster);
+  }
+
   @override
   State<WhiteboardCanvasScreen> createState() => _WhiteboardCanvasScreenState();
 }
@@ -232,20 +296,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         if (widget.initialFocusNodeId != null &&
             widget.initialFocusNodeId!.trim().isNotEmpty) {
           _focusNodeByIdOrLabel(widget.initialFocusNodeId!.trim());
-        } else if (widget.item.panOffset != Offset.zero) {
-          final savedZoom = widget.item.zoomScale.clamp(0.15, 3.0);
-          final matrix = Matrix4.identity()
-            ..translateByVector3(
-              vmath.Vector3(
-                widget.item.panOffset.dx,
-                widget.item.panOffset.dy,
-                0.0,
-              ),
-            )
-            ..scaleByVector3(vmath.Vector3(savedZoom, savedZoom, 1.0));
-          _transformationController.value = matrix;
         } else {
-          _fitCanvasToContent();
+          _focusDensestCluster(animate: false);
         }
         _saveCanvasState();
       }
@@ -264,7 +316,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
           orElse: () => null,
         );
     if (target == null) {
-      _fitCanvasToContent();
+      _focusDensestCluster(animate: false);
       return;
     }
     setState(() {
@@ -914,48 +966,61 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     );
   }
 
+  Matrix4 _matrixForBounds(
+    Rect? bounds,
+    Size viewportSize, {
+    double padding = 120.0,
+    double minScale = 0.4,
+    double maxScale = 1.15,
+  }) {
+    if (bounds == null) {
+      final transX = (viewportSize.width / 2) - (_canvasSize / 2);
+      final transY = (viewportSize.height / 2) - (_canvasSize / 2);
+      return Matrix4.translationValues(transX, transY, 0.0);
+    }
+
+    final contentW = math.max(bounds.width + (padding * 2), 220.0);
+    final contentH = math.max(bounds.height + (padding * 2), 220.0);
+    final scaleX = viewportSize.width / contentW;
+    final scaleY = math.max(viewportSize.height - 220, 180.0) / contentH;
+    final fitScale = math.min(scaleX, scaleY).clamp(minScale, maxScale);
+
+    final centerScreenX = viewportSize.width / 2;
+    final centerScreenY = (viewportSize.height - 80) / 2;
+    final transX = centerScreenX - (bounds.center.dx * fitScale);
+    final transY = centerScreenY - (bounds.center.dy * fitScale);
+
+    return Matrix4.identity()
+      ..translateByVector3(vmath.Vector3(transX, transY, 0.0))
+      ..scaleByVector3(vmath.Vector3(fitScale, fitScale, 1.0));
+  }
+
+  /// Opens the camera directly on the densest cluster of items on the board.
+  void _focusDensestCluster({bool animate = false}) {
+    final size = MediaQuery.sizeOf(context);
+    final clusterBounds = WhiteboardCanvasScreen.computeDensestClusterBounds(
+      _nodes,
+      edges: _edges,
+    );
+    final matrix = _matrixForBounds(
+      clusterBounds,
+      size,
+      padding: 100.0,
+      minScale: 0.50,
+      maxScale: 1.08,
+    );
+    if (animate) {
+      _animateCanvasToMatrix(matrix);
+    } else {
+      _transformationController.value = matrix;
+    }
+  }
+
   /// Automatically fits and centers all flowchart nodes in the viewport
   void _fitCanvasToContent() {
     final size = MediaQuery.sizeOf(context);
-    if (_nodes.isEmpty) {
-      final transX = (size.width / 2) - (_canvasSize / 2);
-      final transY = (size.height / 2) - (_canvasSize / 2);
-      _animateCanvasToMatrix(Matrix4.translationValues(transX, transY, 0.0));
-      return;
-    }
-    double minX = _nodes.first.x;
-    double maxX = _nodes.first.x + _nodes.first.width;
-    double minY = _nodes.first.y;
-    double maxY = _nodes.first.y + _nodes.first.height;
-
-    for (final node in _nodes) {
-      minX = math.min(minX, node.x);
-      maxX = math.max(maxX, node.x + node.width);
-      minY = math.min(minY, node.y);
-      maxY = math.max(maxY, node.y + node.height);
-    }
-
-    const padding = 120.0;
-    final contentW = math.max((maxX - minX) + (padding * 2), 220.0);
-    final contentH = math.max((maxY - minY) + (padding * 2), 220.0);
-
-    final scaleX = size.width / contentW;
-    final scaleY = (size.height - 220) / contentH;
-    final fitScale = math.min(scaleX, scaleY).clamp(0.4, 1.15);
-
-    final centerScreenX = size.width / 2;
-    final centerScreenY = (size.height - 80) / 2;
-    final centerContentX = (minX + maxX) / 2;
-    final centerContentY = (minY + maxY) / 2;
-
-    final transX = centerScreenX - (centerContentX * fitScale);
-    final transY = centerScreenY - (centerContentY * fitScale);
-
-    final matrix = Matrix4.identity()
-      ..translateByVector3(vmath.Vector3(transX, transY, 0.0))
-      ..scaleByVector3(vmath.Vector3(fitScale, fitScale, 1.0));
-
-    _animateCanvasToMatrix(matrix);
+    final bounds = WhiteboardCanvasScreen.computeNodesBounds(_nodes);
+    _animateCanvasToMatrix(_matrixForBounds(bounds, size));
   }
 
   void _changeNodeColor(String paletteId) {
@@ -2666,33 +2731,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
               icon: const TackIcon(TackIcons.back, size: 22),
               onPressed: _handleWhiteboardBack,
             ),
-          title: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.item.title,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      'Whiteboard',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const TackIcon(TackIcons.chevronDown, size: 14),
-                ],
-              ),
-            ],
+          title: Text(
+            widget.item.title,
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           actions: [
             // Undo Button (Disabled when stack is empty)
@@ -3137,7 +3180,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
-                      child: Icon(
+                      child: TackIcon(
                         TackIcons.square,
                         size: 18,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
@@ -3149,7 +3192,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
                 // Reverse Direction
                 IconButton(
-                  icon: const Icon(TackIcons.arrowLeftRight, size: 18),
+                  icon: const TackIcon(TackIcons.arrowLeftRight, size: 18),
                   tooltip: 'Reverse Direction',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -3688,14 +3731,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Tool 6: Text Tool
             _buildDockToolButton(
               id: 'text',
-              icon: TackIcons.textSvg,
+              icon: TackIcons.textTool,
               tooltip: 'Text Tool (T)',
               isDark: isDark,
             ),
             // Tool 7: Image
             _buildDockToolButton(
               id: 'image',
-              icon: TackIcons.imageSvg,
+              icon: TackIcons.imageTool,
               tooltip: 'Insert Image',
               isDark: isDark,
               onTapOverride: _pickAndInsertImage,
@@ -3754,7 +3797,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Fit to View',
               child: IconButton(
-                icon: const Icon(TackIcons.scan, size: 19),
+                icon: const TackIcon(TackIcons.maximize, size: 19),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   _fitCanvasToContent();
@@ -4206,7 +4249,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
-                      child: Icon(
+                      child: TackIcon(
                         TackIcons.square,
                         size: 18,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,

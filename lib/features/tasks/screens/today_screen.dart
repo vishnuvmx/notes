@@ -817,12 +817,7 @@ class _InboxTriageCard extends StatelessWidget {
       builder: (sheetCtx) {
         final tokens = sheetCtx.tokens;
         return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s5,
-            0,
-            AppSpacing.s5,
-            AppSpacing.s5,
-          ),
+          padding: AppSpacing.modalSheetPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

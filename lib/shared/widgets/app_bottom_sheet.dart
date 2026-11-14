@@ -50,6 +50,14 @@ class AppBottomSheet {
             ? (viewInsets.bottom + AppSpacing.s4)
             : math.max(AppSpacing.s4, viewPadding.bottom + AppSpacing.s2);
 
+        final borderShape = AppSpacing.smoothModal();
+        final foregroundShape = AppSpacing.smoothModal(
+          side: BorderSide(
+            color: modalTokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
+            width: 0.8,
+          ),
+        );
+
         return AnimatedPadding(
           padding: EdgeInsets.only(bottom: bottomOffset),
           duration: AppSpacing.durationFast,
@@ -63,18 +71,14 @@ class AppBottomSheet {
               decoration: ShapeDecoration(
                 color: sheetBg,
                 shadows: AppSpacing.elevModal(isDark),
-                shape: SmoothRectangleBorder(
-                  borderRadius: AppSpacing.roundedModal,
-                  smoothness: 0.60,
-                  side: BorderSide(
-                    color: modalTokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                    width: 0.8,
-                  ),
-                ),
+                shape: borderShape,
+              ),
+              foregroundDecoration: ShapeDecoration(
+                shape: foregroundShape,
               ),
               clipBehavior: Clip.antiAlias,
               child: Material(
-                color: sheetBg,
+                type: MaterialType.transparency,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

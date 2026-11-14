@@ -49,7 +49,55 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tabFadeController;
+  late final Animation<double> _tabFadeOpacity;
+  WorkspaceProvider? _workspace;
+  int _lastStackIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+      value: 1.0,
+    );
+    _tabFadeOpacity = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(parent: _tabFadeController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ws = context.read<WorkspaceProvider>();
+    if (_workspace != ws) {
+      _workspace?.removeListener(_syncTabTransition);
+      _workspace = ws;
+      _lastStackIndex = _stackIndexForTab(ws.bottomNavIndex);
+      ws.addListener(_syncTabTransition);
+    }
+  }
+
+  void _syncTabTransition() {
+    final ws = _workspace;
+    if (ws == null || !mounted) return;
+    final next = _stackIndexForTab(ws.bottomNavIndex);
+    if (next != _lastStackIndex) {
+      _lastStackIndex = next;
+      _tabFadeController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _workspace?.removeListener(_syncTabTransition);
+    _tabFadeController.dispose();
+    super.dispose();
+  }
+
   void _openItem(BaseWorkspaceItem item, {bool startInEditMode = false}) {
     if (widget.onOpenItem != null) {
       widget.onOpenItem!(item, startInEditMode: startInEditMode);
@@ -129,20 +177,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ];
         return Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s5,
-            AppSpacing.s2,
-            AppSpacing.s5,
+            AppSpacing.s4,
+            AppSpacing.s7,
+            AppSpacing.s4,
             AppSpacing.s5,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Sort items',
-                style: AppTypography.titleSm(color: tokens.textPrimary),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+                child: Text(
+                  'Sort items',
+                  style: AppTypography.titleSm(color: tokens.textPrimary),
+                ),
               ),
-              const SizedBox(height: AppSpacing.s2),
+              const SizedBox(height: AppSpacing.s3),
               for (final opt in options)
                 InkWell(
                   onTap: () {
@@ -157,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s2,
+                        horizontal: AppSpacing.s4,
                       ),
                       child: Row(
                         children: [
@@ -258,20 +309,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: workspace.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : TweenAnimationBuilder<double>(
-                key: ValueKey('home_tab_${_stackIndexForTab(activeTab)}'),
-                tween: Tween<double>(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                builder: (context, t, child) {
-                  return Opacity(
-                    opacity: t,
-                    child: Transform.translate(
-                      offset: Offset(0, (1 - t) * 6),
-                      child: child,
-                    ),
-                  );
-                },
+            : FadeTransition(
+                opacity: _tabFadeOpacity,
                 child: IndexedStack(
                   index: _stackIndexForTab(activeTab),
                   children: [

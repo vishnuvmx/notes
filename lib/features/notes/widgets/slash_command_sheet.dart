@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -17,7 +16,7 @@ class SlashCommandItem {
   final String command; // e.g. 'spec', 'h1', 'todo'
   final String label;
   final String subtitle;
-  final IconData icon;
+  final dynamic icon;
   final Color accentColor;
   final String? markdownSnippet;
 
@@ -41,7 +40,7 @@ class SlashCommandsCatalog {
       command: 'todo',
       label: 'To-Do List',
       subtitle: 'Interactive task checkbox',
-      icon: LucideIcons.circleCheck,
+      icon: TackIcons.checkCircle,
       accentColor: Color(0xFF10B981),
       markdownSnippet: '- [ ] ',
     ),
@@ -50,7 +49,7 @@ class SlashCommandsCatalog {
       command: 'h1',
       label: 'Heading 1',
       subtitle: 'Big section heading',
-      icon: LucideIcons.heading1,
+      icon: TackIcons.heading1,
       accentColor: Color(0xFFFF8F6B),
       markdownSnippet: '# ',
     ),
@@ -59,7 +58,7 @@ class SlashCommandsCatalog {
       command: 'h2',
       label: 'Heading 2',
       subtitle: 'Medium section heading',
-      icon: LucideIcons.heading2,
+      icon: TackIcons.heading2,
       accentColor: Color(0xFFF5B842),
       markdownSnippet: '## ',
     ),
@@ -68,7 +67,7 @@ class SlashCommandsCatalog {
       command: 'h3',
       label: 'Heading 3',
       subtitle: 'Compact sub-heading',
-      icon: LucideIcons.heading3,
+      icon: TackIcons.heading3,
       accentColor: Color(0xFF9D84D6),
       markdownSnippet: '### ',
     ),
@@ -77,7 +76,7 @@ class SlashCommandsCatalog {
       command: 'spec',
       label: 'Spec Brief',
       subtitle: 'Structured PRD outline with goals & requirements',
-      icon: LucideIcons.fileCheck2,
+      icon: TackIcons.notes,
       accentColor: Color(0xFF1BA5BA),
       markdownSnippet:
           '## Overview\nWrite the core problem & goal here.\n\n'
@@ -89,7 +88,7 @@ class SlashCommandsCatalog {
       command: 'link',
       label: 'Link Note [[',
       subtitle: 'Connect another note or board',
-      icon: LucideIcons.link2,
+      icon: TackIcons.link,
       accentColor: Color(0xFF0284C7),
       markdownSnippet: '[[',
     ),
@@ -98,7 +97,7 @@ class SlashCommandsCatalog {
       command: 'board',
       label: 'Embed Whiteboard',
       subtitle: 'Live canvas preview inside note',
-      icon: LucideIcons.workflow,
+      icon: TackIcons.workflow,
       accentColor: Color(0xFF7C3AED),
     ),
     SlashCommandItem(
@@ -106,7 +105,7 @@ class SlashCommandsCatalog {
       command: 'bullet',
       label: 'Bullet List',
       subtitle: 'Simple bulleted items',
-      icon: LucideIcons.list,
+      icon: TackIcons.bulletList,
       accentColor: Color(0xFFF59E0B),
       markdownSnippet: '- ',
     ),
@@ -115,7 +114,7 @@ class SlashCommandsCatalog {
       command: 'num',
       label: 'Numbered List',
       subtitle: 'Ordered sequence 1, 2, 3...',
-      icon: LucideIcons.listOrdered,
+      icon: TackIcons.numberedList,
       accentColor: Color(0xFFF59E0B),
       markdownSnippet: '1. ',
     ),
@@ -124,7 +123,7 @@ class SlashCommandsCatalog {
       command: 'toggle',
       label: 'Toggle List',
       subtitle: 'Collapsible disclosure section',
-      icon: LucideIcons.chevronRight,
+      icon: TackIcons.chevronRight,
       accentColor: Color(0xFF14B8A6),
       markdownSnippet: '>▸ Toggle heading\n> Hidden details...\n',
     ),
@@ -133,7 +132,7 @@ class SlashCommandsCatalog {
       command: 'toc',
       label: 'Table of Contents',
       subtitle: 'Auto-synced [TOC] outline block',
-      icon: LucideIcons.listTree,
+      icon: TackIcons.nestedList,
       accentColor: Color(0xFF0EA5E9),
       markdownSnippet: '[TOC]\n',
     ),
@@ -142,7 +141,7 @@ class SlashCommandsCatalog {
       command: 'callout',
       label: 'Callout Box',
       subtitle: 'Highlighted [!NOTE] box',
-      icon: LucideIcons.info,
+      icon: TackIcons.info,
       accentColor: Color(0xFF0284C7),
       markdownSnippet: '> [!NOTE]\n> ',
     ),
@@ -151,7 +150,7 @@ class SlashCommandsCatalog {
       command: 'code',
       label: 'Code Block',
       subtitle: 'Syntax-highlighted code snippet',
-      icon: LucideIcons.code,
+      icon: TackIcons.code,
       accentColor: Color(0xFF6366F1),
       markdownSnippet: '```dart\n\n```',
     ),
@@ -160,7 +159,7 @@ class SlashCommandsCatalog {
       command: 'table',
       label: 'Table',
       subtitle: '3-column Markdown table',
-      icon: LucideIcons.table,
+      icon: TackIcons.table,
       accentColor: Color(0xFFEC4899),
       markdownSnippet:
           '| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Item | Detail | Status |\n',
@@ -170,7 +169,7 @@ class SlashCommandsCatalog {
       command: 'diagram',
       label: 'Flowchart Diagram',
       subtitle: 'Native Mermaid diagram block',
-      icon: LucideIcons.gitFork,
+      icon: TackIcons.flow,
       accentColor: Color(0xFF14B8A6),
     ),
     SlashCommandItem(
@@ -178,7 +177,7 @@ class SlashCommandsCatalog {
       command: 'quote',
       label: 'Quote',
       subtitle: 'Indented blockquote',
-      icon: LucideIcons.quote,
+      icon: TackIcons.quote,
       accentColor: Color(0xFF8B5CF6),
       markdownSnippet: '> ',
     ),
@@ -187,7 +186,7 @@ class SlashCommandsCatalog {
       command: 'divider',
       label: 'Divider',
       subtitle: 'Visual section separator (---)',
-      icon: LucideIcons.minus,
+      icon: TackIcons.minus,
       accentColor: Color(0xFF64748B),
       markdownSnippet: '---\n',
     ),
@@ -280,7 +279,7 @@ class SlashCommandInlineBar extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(cmd.icon, size: 14, color: cmd.accentColor),
+                            TackIcon(cmd.icon, size: 15, color: cmd.accentColor),
                             const SizedBox(width: 6),
                             Text(
                               cmd.label,
@@ -380,10 +379,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     final filteredCommands = SlashCommandsCatalog.filter(_searchController.text);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -393,7 +389,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
               children: [
                 _buildQuickActionPill(
                   isDark: isDark,
-                  icon: LucideIcons.arrowUp,
+                  icon: TackIcons.arrowUp,
                   label: 'Move Up',
                   onTap: () {
                     HapticFeedback.selectionClick();
@@ -403,7 +399,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 const SizedBox(width: 8),
                 _buildQuickActionPill(
                   isDark: isDark,
-                  icon: LucideIcons.arrowDown,
+                  icon: TackIcons.arrowDown,
                   label: 'Move Down',
                   onTap: () {
                     HapticFeedback.selectionClick();
@@ -413,7 +409,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 const SizedBox(width: 8),
                 _buildQuickActionPill(
                   isDark: isDark,
-                  icon: LucideIcons.copyPlus,
+                  icon: TackIcons.add,
                   label: 'Duplicate',
                   onTap: () {
                     HapticFeedback.lightImpact();
@@ -481,7 +477,9 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                           color: cmd.accentColor.withValues(alpha: isDark ? 0.2 : 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(cmd.icon, size: 18, color: cmd.accentColor),
+                        child: Center(
+                          child: TackIcon(cmd.icon, size: 19, color: cmd.accentColor),
+                        ),
                       ),
                       title: Text(
                         cmd.label,
@@ -528,9 +526,9 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                         dense: true,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         selected: kind == widget.currentBlockKind,
-                        leading: Icon(
+                        leading: TackIcon(
                           _iconForBlockKind(kind),
-                          size: 18,
+                          size: 19,
                           color: kind == widget.currentBlockKind
                               ? AppColors.accentAmber
                               : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
@@ -571,7 +569,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
 
   Widget _buildQuickActionPill({
     required bool isDark,
-    required IconData icon,
+    required dynamic icon,
     required String label,
     required VoidCallback onTap,
   }) {
@@ -587,7 +585,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 15, color: isDark ? Colors.white : const Color(0xFF191A23)),
+                TackIcon(icon, size: 16, color: isDark ? Colors.white : const Color(0xFF191A23)),
                 const SizedBox(width: 5),
                 Flexible(
                   child: Text(
@@ -656,32 +654,32 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     );
   }
 
-  IconData _iconForBlockKind(BlockKind kind) {
+  dynamic _iconForBlockKind(BlockKind kind) {
     switch (kind) {
       case BlockKind.paragraph:
-        return LucideIcons.pilcrow;
+        return TackIcons.paragraph;
       case BlockKind.h1:
-        return LucideIcons.heading1;
+        return TackIcons.heading1;
       case BlockKind.h2:
-        return LucideIcons.heading2;
+        return TackIcons.heading2;
       case BlockKind.h3:
-        return LucideIcons.heading3;
+        return TackIcons.heading3;
       case BlockKind.todo:
-        return LucideIcons.circleCheck;
+        return TackIcons.checkCircle;
       case BlockKind.bullet:
-        return LucideIcons.list;
+        return TackIcons.bulletList;
       case BlockKind.numbered:
-        return LucideIcons.listOrdered;
+        return TackIcons.numberedList;
       case BlockKind.quote:
-        return LucideIcons.quote;
+        return TackIcons.quote;
       case BlockKind.toggle:
-        return LucideIcons.chevronRight;
+        return TackIcons.chevronRight;
       case BlockKind.calloutNote:
-        return LucideIcons.info;
+        return TackIcons.info;
       case BlockKind.calloutTip:
-        return LucideIcons.lightbulb;
+        return TackIcons.lightbulb;
       case BlockKind.calloutWarning:
-        return LucideIcons.triangleAlert;
+        return TackIcons.warning;
     }
   }
 }

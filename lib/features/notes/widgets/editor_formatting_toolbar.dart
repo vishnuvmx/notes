@@ -174,7 +174,7 @@ class EditorFormattingToolbar extends StatelessWidget {
     IconToolbarItem(
       label: 'Callout Block',
       action: 'alert',
-      icon: TackIcons.bolt,
+      icon: TackIcons.alert,
     ),
     IconToolbarItem(
       label: 'Image',
@@ -247,7 +247,7 @@ class EditorFormattingToolbar extends StatelessWidget {
                     child: switch (item) {
                       IconToolbarItem iconItem => TackIcon(
                           iconItem.icon,
-                          size: 18,
+                          size: 19,
                           color: tokens.textPrimary,
                         ),
                       TextToolbarItem textItem => Text(

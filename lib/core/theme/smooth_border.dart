@@ -68,16 +68,18 @@ class SmoothRectangleBorder extends OutlinedBorder {
     if (rect.isEmpty) return;
 
     if (side.style == BorderStyle.solid && side.width > 0.0) {
-      final paint = side.toPaint();
-      final path = getOuterPath(rect, textDirection: textDirection);
-      if (side.width <= 1.0) {
-        canvas.drawPath(path, paint);
-      } else {
-        final innerPath = getInnerPath(rect, textDirection: textDirection);
-        final diff = Path.combine(PathOperation.difference, path, innerPath);
-        paint.style = PaintingStyle.fill;
-        canvas.drawPath(diff, paint);
-      }
+      final inset = side.width / 2.0;
+      final strokeRect = rect.deflate(inset);
+      if (strokeRect.isEmpty) return;
+      final resolved = borderRadius.resolve(textDirection);
+      final insetRadius = BorderRadius.only(
+        topLeft: Radius.circular(math.max(0.0, resolved.topLeft.x - inset)),
+        topRight: Radius.circular(math.max(0.0, resolved.topRight.x - inset)),
+        bottomRight: Radius.circular(math.max(0.0, resolved.bottomRight.x - inset)),
+        bottomLeft: Radius.circular(math.max(0.0, resolved.bottomLeft.x - inset)),
+      );
+      final strokePath = _buildSmoothPath(strokeRect, insetRadius, smoothness);
+      canvas.drawPath(strokePath, side.toPaint());
     }
   }
 
@@ -170,6 +172,7 @@ class SmoothRectangleBorder extends OutlinedBorder {
 
   static double _cornerP(double r, double s, double maxR) {
     if (r <= 0) return 0.0;
+    if (s <= 0.001) return r > maxR ? maxR : r;
     final p = (1.0 + s) * r;
     return p > maxR ? maxR : p;
   }
@@ -188,31 +191,7 @@ class SmoothRectangleBorder extends OutlinedBorder {
       return;
     }
 
-    double p = (1.0 + s) * r;
-    double effectiveR = r;
-    if (p > maxR) {
-      final ratio = maxR / p;
-      p = maxR;
-      effectiveR = r * ratio;
-    }
-
-    final alpha = (math.pi / 4.0) * (1.0 - s);
-    final sinA = math.sin(alpha);
-    final cosA = math.cos(alpha);
-
-    // Distance from the corner along axes
-    final aX = effectiveR * (1.0 - sinA);
-    final aY = effectiveR * (1.0 - cosA);
-
-    // Control point metrics
-    final c1x = p - (p - aX) * 0.45;
-    final c1y = 0.0;
-
-    final tanA = math.max(0.001, math.tan(alpha));
-    final c2x = aX + (aY / tanA) * 0.35;
-    final c2y = aY * 0.65;
-
-    // Transform normalized top-right corner to actual target corner orientation
+    // Transform normalized top-right corner to actual target corner orientation.
     Offset transform(double localX, double localY) {
       switch (corner) {
         case _Corner.topRight:
@@ -226,24 +205,63 @@ class SmoothRectangleBorder extends OutlinedBorder {
       }
     }
 
-    // 1. First easing cubic Bezier curve (straight edge -> circular arc)
+    if (s <= 0.001) {
+      final effectiveR = r > maxR ? maxR : r;
+      final p2 = transform(0.0, effectiveR);
+      path.arcToPoint(
+        p2,
+        radius: Radius.circular(effectiveR),
+        clockwise: true,
+      );
+      return;
+    }
+
+    double p = (1.0 + s) * r;
+    double effectiveR = r;
+    if (p > maxR) {
+      final ratio = maxR / p;
+      p = maxR;
+      effectiveR = r * ratio;
+    }
+
+    // Blend angle from straight edge to circular arc: 0 at s=0 (pure circle), pi/4 at s=1.
+    final beta = (math.pi / 4.0) * s;
+    final sinB = math.sin(beta);
+    final cosB = math.cos(beta);
+    final tanB = math.tan(beta);
+
+    // Circular arc anchor (aX, aY) where curvature enters/exits 1/effectiveR.
+    final aX = effectiveR * (1.0 - sinB);
+    final aY = effectiveR * (1.0 - cosB);
+
+    // Tangent line from (aX, aY) meets straight edge y=0 at xTan; d is handle length.
+    final d = aY / sinB;
+    final xTan = aX + aY / tanB;
+
+    // Solve c1x for exact G2 curvature match: kappa(0)=0, kappa(1)=1/effectiveR.
+    final h = 1.5 * d * d / effectiveR;
+    final c1x = math.min(p, xTan + h / sinB);
+
+    // 1. Entry cubic Bezier curve (straight edge -> circular arc)
     final p1 = transform(aX, aY);
-    final cp1 = transform(c1x, c1y);
-    final cp2 = transform(c2x, c2y);
+    final cp1 = transform(c1x, 0.0);
+    final cp2 = transform(xTan, 0.0);
     path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p1.dx, p1.dy);
 
-    // 2. Circular middle arc (between alpha and 90 deg - alpha)
+    // 2. Circular middle arc (omitted cleanly when s approaches 1.0)
     final p2 = transform(aY, aX);
-    path.arcToPoint(
-      p2,
-      radius: Radius.circular(effectiveR),
-      clockwise: true,
-    );
+    if ((p1 - p2).distance > 1e-3) {
+      path.arcToPoint(
+        p2,
+        radius: Radius.circular(effectiveR),
+        clockwise: true,
+      );
+    }
 
-    // 3. Second easing cubic Bezier curve (circular arc -> exit straight edge)
+    // 3. Symmetric exit cubic Bezier curve (circular arc -> exit straight edge)
     final p3 = transform(0.0, p);
-    final cp3 = transform(c2y, c2x);
-    final cp4 = transform(c1y, c1x);
+    final cp3 = transform(0.0, xTan);
+    final cp4 = transform(0.0, c1x);
     path.cubicTo(cp3.dx, cp3.dy, cp4.dx, cp4.dy, p3.dx, p3.dy);
   }
 

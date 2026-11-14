@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -462,7 +461,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,7 +537,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final chosen = await AppBottomSheet.show<String?>(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -554,7 +553,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               ),
               const SizedBox(height: 8),
               ListTile(
-                leading: const Icon(LucideIcons.folderX, size: 19),
+                leading: const TackIcon(TackIcons.inbox, size: 20),
                 title: const Text('No Folder (All Notes)'),
                 trailing: _folderName == null
                     ? const TackIcon(TackIcons.check, size: 16)
@@ -564,7 +563,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               ),
               ...workspace.userFolders.map(
                 (f) => ListTile(
-                  leading: const Icon(LucideIcons.folder, size: 19),
+                  leading: const TackIcon(TackIcons.folder, size: 20),
                   title: Text(f),
                   trailing: _folderName == f
                       ? const TackIcon(TackIcons.check, size: 16)
@@ -892,7 +891,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -903,7 +902,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
               const SizedBox(height: AppSpacing.md),
               ListTile(
-                leading: const Icon(LucideIcons.info, size: 22, color: Color(0xFF0284C7)),
+                leading: const TackIcon(TackIcons.info, size: 22, color: Color(0xFF0284C7)),
                 title: const Text('Note Alert'),
                 subtitle: const Text('> [!NOTE] Informational notice'),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -913,7 +912,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 },
               ),
               ListTile(
-                leading: const Icon(LucideIcons.lightbulb, size: 22, color: Color(0xFF059669)),
+                leading: const TackIcon(TackIcons.lightbulb, size: 22, color: Color(0xFF059669)),
                 title: const Text('Tip Alert'),
                 subtitle: const Text('> [!TIP] Helpful recommendation'),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -923,7 +922,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 },
               ),
               ListTile(
-                leading: const Icon(LucideIcons.star, size: 22, color: Color(0xFF7C3AED)),
+                leading: const TackIcon(TackIcons.star, size: 22, color: Color(0xFF7C3AED)),
                 title: const Text('Important Alert'),
                 subtitle: const Text('> [!IMPORTANT] Crucial requirement'),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -933,7 +932,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 },
               ),
               ListTile(
-                leading: const Icon(LucideIcons.alertTriangle, size: 22, color: Color(0xFFD97706)),
+                leading: const TackIcon(TackIcons.warning, size: 22, color: Color(0xFFD97706)),
                 title: const Text('Warning Alert'),
                 subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -943,7 +942,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 },
               ),
               ListTile(
-                leading: const Icon(LucideIcons.shieldAlert, size: 22, color: Color(0xFFDC2626)),
+                leading: const TackIcon(TackIcons.shield, size: 22, color: Color(0xFFDC2626)),
                 title: const Text('Caution Alert'),
                 subtitle: const Text('> [!CAUTION] High-risk action notice'),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -962,7 +961,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1035,7 +1034,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       title: 'Image Web Link',
       hintText: 'https://example.com/image.png',
       confirmLabel: 'Insert',
-      icon: LucideIcons.image,
+      icon: TackIcons.photo,
     );
     if (url != null && url.isNotEmpty) {
       _insertImageMarkdown(url, alt: 'Web Image');
@@ -1051,7 +1050,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       context: context,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: AppSpacing.modalSheetPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1087,7 +1086,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1307,7 +1306,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1605,9 +1604,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         actions: [
           if (hasHeadings)
             IconButton(
-              icon: Icon(
-                LucideIcons.listTree,
-                size: 19,
+              icon: TackIcon(
+                TackIcons.nestedList,
+                size: 20,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               ),
               tooltip: 'Document Outline',
@@ -1724,19 +1723,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 const IosMenuItem(
                   value: 'local_graph',
                   title: 'Local Graph',
-                  icon: LucideIcons.network,
+                  icon: TackIcons.graph,
                   iconColor: AppColors.accentCyan,
                 ),
                 const IosMenuItem(
                   value: 'move_folder',
                   title: 'Move to Folder',
-                  icon: LucideIcons.folder,
+                  icon: TackIcons.folder,
                 ),
                 if (widget.item is TextNote)
                   const IosMenuItem(
                     value: 'save_template',
                     title: 'Save as Template',
-                    icon: LucideIcons.sparkles,
+                    icon: TackIcons.sparkles,
                   ),
                 const IosMenuItem(
                   value: 'duplicate',
@@ -2269,7 +2268,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(LucideIcons.folder, size: 12, color: muted),
+                      TackIcon(TackIcons.folder, size: 13, color: muted),
                       const SizedBox(width: 4),
                       Text(
                         _folderName ?? 'Folder',
@@ -2289,7 +2288,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             for (final ancestor in breadcrumbs) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(LucideIcons.chevronRight, size: 13, color: muted),
+                child: TackIcon(TackIcons.chevronRight, size: 13, color: muted),
               ),
               GestureDetector(
                 onTap: () async {
@@ -2338,7 +2337,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(LucideIcons.smile, size: 12, color: muted),
+                        TackIcon(TackIcons.smile, size: 13, color: muted),
                         const SizedBox(width: 4),
                         Text(
                           'Add Icon',
@@ -2368,7 +2367,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(LucideIcons.filePlus2, size: 12, color: muted),
+                        TackIcon(TackIcons.add, size: 13, color: muted),
                         const SizedBox(width: 4),
                         Text(
                           '+ Sub-note',
@@ -2416,7 +2415,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               Expanded(
                 child: Row(
                   children: [
-                    Icon(LucideIcons.folderTree, size: 15, color: accent),
+                    TackIcon(TackIcons.folderTree, size: 16, color: accent),
                     const SizedBox(width: AppSpacing.s2),
                     Flexible(
                       child: Text(
@@ -2498,8 +2497,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         ],
                       ),
                     ),
-                    Icon(
-                      LucideIcons.chevronRight,
+                    TackIcon(
+                      TackIcons.chevronRight,
                       size: 15,
                       color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                     ),

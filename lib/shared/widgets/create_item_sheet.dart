@@ -216,10 +216,10 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s6,
         AppSpacing.s5,
-        AppSpacing.s2,
-        AppSpacing.s5,
-        AppSpacing.s4,
+        AppSpacing.s6,
+        AppSpacing.s6,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

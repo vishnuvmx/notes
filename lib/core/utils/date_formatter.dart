@@ -52,6 +52,14 @@ class DateFormatter {
     return '$day $month $year';
   }
 
+  /// Formats card subtitle date concisely (e.g., "Mar 10, 2025").
+  static String formatCardDate(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = _months[dateTime.month - 1];
+    final year = dateTime.year;
+    return '$month $day, $year';
+  }
+
   /// Formats date with ordinal suffix matching mockup (e.g., "4th Jan 2050")
   static String formatOrdinalDate(DateTime dateTime) {
     final day = dateTime.day;

@@ -95,12 +95,7 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
     final summary = _currentItem.getSummary();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s5,
-        AppSpacing.s2,
-        AppSpacing.s5,
-        AppSpacing.s4,
-      ),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
