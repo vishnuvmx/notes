@@ -4,20 +4,20 @@ import 'package:provider/provider.dart';
 
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
-import 'package:notes/domain/interfaces/i_workspace_repo.dart';
-import 'package:notes/domain/models/base_item.dart';
-import 'package:notes/domain/models/text_note.dart';
-import 'package:notes/domain/services/markdown_table_service.dart';
-import 'package:notes/state/theme_provider.dart';
-import 'package:notes/state/workspace_provider.dart';
-import 'package:notes/ui/components/cards/neo_note_card.dart';
-import 'package:notes/ui/components/dialogs_sheets/app_bottom_sheet.dart';
-import 'package:notes/ui/components/dialogs_sheets/app_floating_dialog.dart';
-import 'package:notes/ui/components/inputs/app_search_field.dart';
-import 'package:notes/ui/components/layout/z_order_column.dart';
-import 'package:notes/ui/components/navigation/smart_bottom_nav_bar.dart';
-import 'package:notes/ui/screens/editor/note_editor_screen.dart';
-import 'package:notes/ui/screens/settings/settings_screen.dart';
+import 'package:notes/shared/data/i_workspace_repo.dart';
+import 'package:notes/shared/models/base_item.dart';
+import 'package:notes/features/notes/models/text_note.dart';
+import 'package:notes/features/notes/services/markdown_table_service.dart';
+import 'package:notes/core/theme/theme_provider.dart';
+import 'package:notes/shared/providers/workspace_provider.dart';
+import 'package:notes/shared/widgets/neo_note_card.dart';
+import 'package:notes/shared/widgets/app_bottom_sheet.dart';
+import 'package:notes/shared/widgets/app_floating_dialog.dart';
+import 'package:notes/shared/widgets/app_search_field.dart';
+import 'package:notes/shared/widgets/z_order_column.dart';
+import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
+import 'package:notes/features/notes/screens/note_editor_screen.dart';
+import 'package:notes/features/settings/screens/settings_screen.dart';
 
 class _MockWorkspaceRepo extends IWorkspaceRepository {
   final List<BaseWorkspaceItem> _store = [];

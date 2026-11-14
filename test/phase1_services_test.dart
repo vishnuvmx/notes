@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:notes/domain/interfaces/i_workspace_repo.dart';
-import 'package:notes/domain/models/base_item.dart';
-import 'package:notes/domain/models/item_serializer.dart';
-import 'package:notes/domain/models/text_note.dart';
-import 'package:notes/domain/models/whiteboard_item.dart';
-import 'package:notes/domain/services/block_transform_service.dart';
-import 'package:notes/domain/services/frontmatter_service.dart';
-import 'package:notes/domain/services/markdown_table_service.dart';
-import 'package:notes/domain/services/note_export_service.dart';
-import 'package:notes/domain/services/note_template_service.dart';
-import 'package:notes/domain/services/open_tasks_service.dart';
-import 'package:notes/domain/services/wiki_link_service.dart';
-import 'package:notes/state/workspace_provider.dart';
+import 'package:notes/shared/data/i_workspace_repo.dart';
+import 'package:notes/shared/models/base_item.dart';
+import 'package:notes/shared/models/item_serializer.dart';
+import 'package:notes/features/notes/models/text_note.dart';
+import 'package:notes/features/whiteboard/models/whiteboard_item.dart';
+import 'package:notes/features/notes/services/block_transform_service.dart';
+import 'package:notes/features/notes/services/frontmatter_service.dart';
+import 'package:notes/features/notes/services/markdown_table_service.dart';
+import 'package:notes/features/notes/services/note_export_service.dart';
+import 'package:notes/features/notes/services/note_template_service.dart';
+import 'package:notes/features/tasks/services/open_tasks_service.dart';
+import 'package:notes/features/notes/services/wiki_link_service.dart';
+import 'package:notes/shared/providers/workspace_provider.dart';
 
 class _InMemoryWorkspaceRepo extends IWorkspaceRepository {
   final List<BaseWorkspaceItem> _store = [];

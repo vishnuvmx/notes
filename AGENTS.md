@@ -91,22 +91,30 @@ The domain layer demonstrates clear Java/Dart OOP concepts:
 
 ---
 
-## 4. Layered Directory Structure
+## 4. Feature-First Directory Structure
 
 ```
 lib/
+├── main.dart
 ├── core/
-│   ├── theme/ (app_colors, app_typography, app_spacing, app_theme)
-│   └── utils/
-├── domain/
-│   ├── models/ (base_item, text_note, sticky_note, whiteboard_item, clipboard_item)
-│   ├── interfaces/ (i_workspace_repo, i_storage_driver)
-│   └── services/ (workspace_service)
-├── data/
-│   ├── repositories/ (workspace_repo_impl)
-│   └── mock/ (mock_initial_data)
-├── state/ (workspace_provider, theme_provider)
-└── ui/
-    ├── components/ (app_bars, cards, dialogs_sheets, inputs, toolbars, navigation, whiteboard)
-    └── screens/ (home, editor, whiteboard, sticky_board, clipboard, folders, settings)
+│   ├── constants/ (app_constants)
+│   ├── routing/ (app_router)
+│   ├── services/ (pinned_notification_service, process_text_service)
+│   ├── theme/ (app_colors, app_typography, app_spacing, app_theme, smooth_border, tack_icons, theme_provider)
+│   └── utils/ (date_formatter, url_launcher_helper)
+├── shared/
+│   ├── data/ (i_workspace_repo, workspace_repo_impl, mock_initial_data)
+│   ├── models/ (base_item, sticky_note, clipboard_item, item_serializer)
+│   ├── providers/ (workspace_provider)
+│   └── widgets/ (app_header_bar, neo_note_card, responsive_card_grid, smart_bottom_nav_bar, sheets, dialogs, inputs)
+└── features/
+    ├── about/ (screens/about_tack_screen, widgets/release_notes_tab)
+    ├── folders/ (screens/folder_view_screen)
+    ├── graph/ (screens/knowledge_graph_screen)
+    ├── home/ (screens/home_screen)
+    ├── notes/ (models/text_note, screens/note_editor_screen, services/*, widgets/*, widgets/mermaid/*)
+    ├── search/ (screens/search_command_screen)
+    ├── settings/ (screens/settings_screen)
+    ├── tasks/ (screens/today_screen, services/open_tasks_service)
+    └── whiteboard/ (models/whiteboard_item, screens/whiteboard_canvas_screen, widgets/board_grid_card)
 ```
