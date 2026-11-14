@@ -9,7 +9,7 @@ import '../../../core/theme/tack_icons.dart';
 class IosMenuItem<T> {
   final T value;
   final String title;
-  final IconData icon;
+  final dynamic icon;
   final dynamic iconStyle;
   final Color? iconColor;
   final bool isDestructive;
@@ -34,7 +34,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
   final List<IosMenuItem<T>> items;
   final ValueChanged<T> onSelected;
   final double size;
-  final IconData icon;
+  final dynamic icon;
   final Color? iconColor;
   final String tooltip;
 

@@ -265,7 +265,7 @@ class MermaidCompletionBar extends StatelessWidget {
             Tooltip(
               message: 'Diagram Templates',
               child: IconButton(
-                icon: Icon(TackIcons.sparkles, size: 16, color: AppColors.accentAmber),
+                icon: const TackIcon(TackIcons.sparkles, size: 16, color: AppColors.accentAmber),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 onPressed: () {

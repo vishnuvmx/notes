@@ -2948,7 +2948,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          TackIcon(
                             TackIcons.eye,
                             size: 16,
                             color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
@@ -3728,7 +3728,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Auto-Align In Place',
               child: IconButton(
-                icon: const Icon(TackIcons.graph, size: 19, color: AppColors.accentAmber),
+                icon: const TackIcon(TackIcons.graph, size: 19, color: AppColors.accentAmber),
                 onPressed: _autoArrangeFlowchart,
                 visualDensity: VisualDensity.compact,
               ),
@@ -3751,7 +3751,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: _showMinimap ? 'Hide Minimap' : 'Show Minimap',
               child: IconButton(
-                icon: Icon(
+                icon: TackIcon(
                   TackIcons.map,
                   size: 18,
                   color: _showMinimap
@@ -3770,7 +3770,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             Tooltip(
               message: 'Zen Mode (Hide Tools)',
               child: IconButton(
-                icon: const Icon(TackIcons.eyeOff, size: 18),
+                icon: const TackIcon(TackIcons.eyeOff, size: 18),
                 onPressed: () {
                   HapticFeedback.mediumImpact();
                   setState(() {
@@ -4044,7 +4044,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
-                        child: Icon(
+                        child: TackIcon(
                           TackIcons.move,
                           size: 15,
                           color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
@@ -4169,7 +4169,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                             ),
                             if (isCurrent) ...[
                               const Spacer(),
-                              const Icon(TackIcons.check, size: 16, color: AppColors.pastelLimeLight),
+                              const TackIcon(TackIcons.check, size: 16, color: AppColors.pastelLimeLight),
                             ],
                           ],
                         ),
@@ -4306,7 +4306,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   }
 
   Widget _buildBranchHandleIcon({
-    required IconData icon,
+    required dynamic icon,
     required String tooltip,
     required bool isDark,
     required VoidCallback onTap,

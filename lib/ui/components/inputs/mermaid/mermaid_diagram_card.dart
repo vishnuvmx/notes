@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/tack_icons.dart';
 import '../../../../domain/models/whiteboard_item.dart';
 import '../../../screens/whiteboard/whiteboard_canvas_screen.dart';
 import 'mermaid_diagram_parser.dart';
@@ -1816,7 +1817,7 @@ class MermaidSequenceWidget extends StatelessWidget {
                 ),
               ),
               if (isRight)
-                Icon(TackIcons.chevronRight, size: 13, color: arrowColor)
+                TackIcon(TackIcons.chevronRight, size: 13, color: arrowColor)
               else
                 const SizedBox(width: 4),
             ],

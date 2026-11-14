@@ -5,122 +5,190 @@ import 'app_colors.dart';
 
 enum HeroIconStyle { outline, solid }
 
-/// Central Iconography for Tack powered by Lucide Icons and custom SVGs.
-/// Follows docs/design/07-design-system.md §6:
-/// - Single `TackIcon` wrapper across the app.
-/// - Semantic fixes: sort != list-view, saving != undo, forward chevron != chevron-down.
+/// Descriptor for Tack's custom 64x64 SVG icon packs in
+/// `icons/white-icons/` and `icons/dark-icons/`.
+///
+/// - Single-color SVGs (`isSingleColor: true`) can be safely color-tinted via
+///   `BlendMode.srcIn` when an explicit/semantic color is provided.
+/// - Two-tone / multi-color SVGs (`isSingleColor: false`) preserve their
+///   built-in dual-tone shading and switch between `white-icons/` and
+///   `dark-icons/` based on surface brightness or foreground luminance.
+class TackSvgIcon {
+  final String name;
+  final bool isSingleColor;
+
+  const TackSvgIcon(this.name, {this.isSingleColor = false});
+}
+
+/// Central Iconography for Tack powered by custom light/dark SVG packs and
+/// Lucide fallback icons for shapes without a custom SVG.
+///
+/// Always render icons through `TackIcon(...)` rather than `Icon(...)`.
 class TackIcons {
   TackIcons._();
 
-  // Custom App SVGs from /icons
-  static const String homeSvg = 'icons/icon-home.svg';
-  static const String notesSvg = 'icons/icon-notes.svg';
-  static const String whiteboardSvg = 'icons/icon-whiteboard.svg';
-  static const String clipboardSvg = 'icons/icon-clipboard.svg';
-  static const String plusSvg = 'icons/icon-plus.svg';
-  static const String selectSvg = 'icons/icon-select.svg';
-  static const String handSvg = 'icons/icon-hand.svg';
-  static const String connectorSvg = 'icons/icon-connector.svg';
-  static const String textSvg = 'icons/icon-text.svg';
-  static const String imageSvg = 'icons/icon-image.svg';
-  static const String drawSvg = 'icons/icon-draw.svg';
-  static const String editSvg = 'icons/icon-edit.svg';
-  static const String eyeSvg = 'icons/icon-eye.svg';
-  static const String undoSvg = 'icons/icon-undo.svg';
-  static const String redoSvg = 'icons/icon-redo.svg';
-  static const String searchSvg = 'icons/icon-search.svg';
-  static const String copySvg = 'icons/icon-copy.svg';
-  static const String pasteSvg = 'icons/icon-paste.svg';
+  // Primary SVG icons
+  static const TackSvgIcon homeSvg = TackSvgIcon('home');
+  static const TackSvgIcon notesSvg = TackSvgIcon('notes');
+  static const TackSvgIcon whiteboardSvg = TackSvgIcon('whiteboard');
+  static const TackSvgIcon clipboardSvg = TackSvgIcon('clipboard');
+  static const TackSvgIcon plusSvg = TackSvgIcon('plus', isSingleColor: true);
+  static const TackSvgIcon selectSvg = TackSvgIcon('select');
+  static const TackSvgIcon handSvg = TackSvgIcon('hand', isSingleColor: true);
+  static const TackSvgIcon connectorSvg = TackSvgIcon('connector');
+  static const TackSvgIcon textSvg = TackSvgIcon('text', isSingleColor: true);
+  static const TackSvgIcon imageSvg = TackSvgIcon('image');
+  static const TackSvgIcon drawSvg = TackSvgIcon('draw');
+  static const TackSvgIcon editSvg = TackSvgIcon('edit');
+  static const TackSvgIcon eyeSvg = TackSvgIcon('eye', isSingleColor: true);
+  static const TackSvgIcon undoSvg = TackSvgIcon('undo', isSingleColor: true);
+  static const TackSvgIcon redoSvg = TackSvgIcon('redo', isSingleColor: true);
+  static const TackSvgIcon searchSvg = TackSvgIcon('search', isSingleColor: true);
+  static const TackSvgIcon copySvg = TackSvgIcon('copy');
+  static const TackSvgIcon pasteSvg = TackSvgIcon('paste');
 
-  // Primary Navigation (5-slot bar: Today · Library · + Capture · Boards · Search)
-  static const IconData today = LucideIcons.calendarCheck2;
-  static const IconData library = LucideIcons.library;
-  static const IconData inbox = LucideIcons.inbox;
-  static const IconData boards = LucideIcons.gitFork;
-  static const IconData home = LucideIcons.sun;
-  static const IconData notes = LucideIcons.fileText;
-  static const IconData sticky = LucideIcons.pin;
-  static const IconData whiteboard = LucideIcons.gitFork;
-  static const IconData clipboard = LucideIcons.inbox;
-  static const IconData plus = LucideIcons.plus;
+  // Navigation & Primary Tabs
+  static const TackSvgIcon today = TackSvgIcon('today');
+  static const TackSvgIcon library = TackSvgIcon('library');
+  static const TackSvgIcon inbox = TackSvgIcon('inbox');
+  static const TackSvgIcon boards = TackSvgIcon('boards');
+  static const TackSvgIcon home = TackSvgIcon('home');
+  static const TackSvgIcon notes = TackSvgIcon('notes');
+  static const TackSvgIcon sticky = TackSvgIcon('sticky_notes');
+  static const TackSvgIcon whiteboard = TackSvgIcon('whiteboard');
+  static const TackSvgIcon clipboard = TackSvgIcon('clipboard');
+  static const TackSvgIcon plus = TackSvgIcon('plus', isSingleColor: true);
 
-  // Actions & Controls (Semantic fixes per 07-design-system.md §6)
-  static const IconData menu = LucideIcons.menu;
-  static const IconData search = LucideIcons.search;
-  static const IconData close = LucideIcons.x;
-  static const IconData check = LucideIcons.check;
-  static const IconData checkCircle = LucideIcons.circleCheck;
-  static const IconData back = LucideIcons.arrowLeft;
-  static const IconData more = LucideIcons.ellipsis;
-  static const IconData share = LucideIcons.share2;
-  static const IconData copy = LucideIcons.copy;
-  static const IconData exportData = LucideIcons.upload;
-  static const IconData importData = LucideIcons.download;
-  static const IconData undo = LucideIcons.undo2;
-  static const IconData redo = LucideIcons.redo2;
-  static const IconData palette = LucideIcons.palette;
-  static const IconData clock = LucideIcons.clock;
-  static const IconData sort = LucideIcons.arrowUpDown;
-  static const IconData saving = LucideIcons.refreshCw;
-  static const IconData command = LucideIcons.terminal;
-  static const IconData task = LucideIcons.squareCheckBig;
-  static const IconData taskOpen = LucideIcons.square;
-  static const IconData folder = LucideIcons.folder;
-  static const IconData folderPlus = LucideIcons.folderPlus;
-  static const IconData graph = LucideIcons.network;
+  // App Bar & Common Actions
+  static const TackSvgIcon menu = TackSvgIcon('menu', isSingleColor: true);
+  static const TackSvgIcon search = TackSvgIcon('search', isSingleColor: true);
+  static const TackSvgIcon close = TackSvgIcon('close', isSingleColor: true);
+  static const TackSvgIcon check = TackSvgIcon('check', isSingleColor: true);
+  static const TackSvgIcon checkCircle =
+      TackSvgIcon('check_circle', isSingleColor: true);
+  static const TackSvgIcon back = TackSvgIcon('back');
+  static const TackSvgIcon more = TackSvgIcon('more', isSingleColor: true);
+  static const TackSvgIcon share = TackSvgIcon('share', isSingleColor: true);
+  static const TackSvgIcon copy = TackSvgIcon('copy');
+  static const TackSvgIcon paste = TackSvgIcon('paste');
+  static const TackSvgIcon exportData =
+      TackSvgIcon('export', isSingleColor: true);
+  static const TackSvgIcon importData =
+      TackSvgIcon('import', isSingleColor: true);
+  static const TackSvgIcon undo = TackSvgIcon('undo', isSingleColor: true);
+  static const TackSvgIcon redo = TackSvgIcon('redo', isSingleColor: true);
+  static const TackSvgIcon palette = TackSvgIcon('palette');
+  static const TackSvgIcon clock = TackSvgIcon('clock', isSingleColor: true);
+  static const TackSvgIcon sort = TackSvgIcon('sort');
+  static const TackSvgIcon saving = TackSvgIcon('loading');
+  static const IconData command = LucideIcons.command;
 
-  // Views & Folders
-  static const IconData gridView = LucideIcons.layoutGrid;
-  static const IconData listView = LucideIcons.arrowUpDown; // Semantic sort alias
-  static const IconData star = LucideIcons.pin; // Pin replaces Favorite star
-  static const IconData archive = LucideIcons.archive;
-  static const IconData trash = LucideIcons.trash2;
-  static const IconData settings = LucideIcons.settings;
+  // Todo / Tasks
+  static const TackSvgIcon task = TackSvgIcon('task', isSingleColor: true);
+  static const TackSvgIcon taskOpen =
+      TackSvgIcon('task_open', isSingleColor: true);
+  static const TackSvgIcon todayTasks = TackSvgIcon('today_tasks');
+
+  // Folders & Views
+  static const TackSvgIcon folder = TackSvgIcon('folder');
+  static const TackSvgIcon folderPlus = TackSvgIcon('folder_plus');
+  static const TackSvgIcon folderTree = TackSvgIcon('folder_tree');
+  static const TackSvgIcon graph = TackSvgIcon('graph');
+  static const TackSvgIcon gridView = TackSvgIcon('grid_view');
+  static const TackSvgIcon listView = TackSvgIcon('list_view');
+
+  // Secondary / Drawer / Settings
+  static const TackSvgIcon star = TackSvgIcon('star', isSingleColor: true);
+  static const TackSvgIcon archive = TackSvgIcon('archive');
+  static const TackSvgIcon trash = TackSvgIcon('delete', isSingleColor: true);
+  static const TackSvgIcon settings =
+      TackSvgIcon('settings', isSingleColor: true);
   static const IconData sun = LucideIcons.sun;
   static const IconData moon = LucideIcons.moon;
-  static const IconData user = LucideIcons.circleUser;
-  static const IconData notification = LucideIcons.bell;
-  static const IconData chevronDown = LucideIcons.chevronDown;
-  static const IconData chevronUp = LucideIcons.chevronUp;
+  static const TackSvgIcon user = TackSvgIcon('user', isSingleColor: true);
+  static const TackSvgIcon notification = TackSvgIcon('notification');
+
+  // Editor & Formatting
+  static const TackSvgIcon chevronDown =
+      TackSvgIcon('chevron_down', isSingleColor: true);
+  static const TackSvgIcon chevronUp =
+      TackSvgIcon('chevron_up', isSingleColor: true);
   static const IconData chevronLeft = LucideIcons.chevronLeft;
-  static const IconData chevronRight = LucideIcons.chevronRight;
-  static const IconData edit = LucideIcons.pencil;
-  static const IconData reader = LucideIcons.bookOpen;
-  static const IconData tag = LucideIcons.hash;
-  static const IconData eye = LucideIcons.eye;
-  static const IconData eyeOff = LucideIcons.eyeOff;
+  static const TackSvgIcon chevronRight =
+      TackSvgIcon('chevron_right', isSingleColor: true);
+  static const TackSvgIcon edit = TackSvgIcon('edit');
+  static const TackSvgIcon reader = TackSvgIcon('eye', isSingleColor: true);
+  static const TackSvgIcon tag = TackSvgIcon('tag', isSingleColor: true);
+  static const TackSvgIcon eye = TackSvgIcon('eye', isSingleColor: true);
+  static const TackSvgIcon eyeOff = TackSvgIcon('eye_off');
   static const IconData imageOff = LucideIcons.imageOff;
   static const IconData externalLink = LucideIcons.externalLink;
+  static const TackSvgIcon play = TackSvgIcon('play', isSingleColor: true);
+  static const TackSvgIcon bold = TackSvgIcon('bold', isSingleColor: true);
+  static const TackSvgIcon italic = TackSvgIcon('italic', isSingleColor: true);
+  static const TackSvgIcon underline = TackSvgIcon('underline');
+  static const TackSvgIcon strikethrough = TackSvgIcon('strikethrough');
+  static const TackSvgIcon code = TackSvgIcon('code', isSingleColor: true);
+  static const TackSvgIcon quote = TackSvgIcon('quote', isSingleColor: true);
+  static const TackSvgIcon bulletList = TackSvgIcon('bullet_list');
+  static const TackSvgIcon numberedList = TackSvgIcon('numbered_list');
+  static const TackSvgIcon heading1 = TackSvgIcon('heading_1');
+  static const TackSvgIcon heading2 = TackSvgIcon('heading_2');
+  static const TackSvgIcon heading3 = TackSvgIcon('heading_3');
+  static const TackSvgIcon table = TackSvgIcon('table');
+  static const TackSvgIcon alignLeft =
+      TackSvgIcon('align_left', isSingleColor: true);
+  static const TackSvgIcon alignCenter =
+      TackSvgIcon('align_center', isSingleColor: true);
+  static const TackSvgIcon alignRight =
+      TackSvgIcon('align_right', isSingleColor: true);
 
-  // Board shapes & tools
-  static const IconData play = LucideIcons.play;
+  // Whiteboard & Canvas Tools
   static const IconData square = LucideIcons.square;
   static const IconData diamond = LucideIcons.diamond;
-  static const IconData flow = LucideIcons.gitFork;
-  static const IconData cursor = LucideIcons.mousePointer;
-  static const IconData hand = LucideIcons.hand;
-  static const IconData move = LucideIcons.move;
-  static const IconData photo = LucideIcons.image;
-  static const IconData camera = LucideIcons.camera;
-  static const IconData minus = LucideIcons.minus;
-  static const IconData pencil = LucideIcons.pencil;
-  static const IconData link = LucideIcons.link2;
-  static const IconData pin = LucideIcons.pin;
-  static const IconData stickyNote = LucideIcons.stickyNote;
-  static const IconData map = LucideIcons.map;
+  static const TackSvgIcon flow = TackSvgIcon('flow');
+  static const TackSvgIcon cursor = TackSvgIcon('cursor', isSingleColor: true);
+  static const TackSvgIcon hand = TackSvgIcon('hand', isSingleColor: true);
+  static const TackSvgIcon move = TackSvgIcon('move', isSingleColor: true);
+  static const TackSvgIcon photo = TackSvgIcon('image');
+  static const TackSvgIcon camera = TackSvgIcon('camera');
+  static const TackSvgIcon minus = TackSvgIcon('minus', isSingleColor: true);
+  static const TackSvgIcon pencil = TackSvgIcon('draw');
+  static const TackSvgIcon link = TackSvgIcon('link');
+  static const TackSvgIcon pin = TackSvgIcon('pin');
+  static const TackSvgIcon stickyNote = TackSvgIcon('sticky_note');
+  static const TackSvgIcon map = TackSvgIcon('map');
   static const IconData scan = LucideIcons.scan;
-  static const IconData maximize = LucideIcons.maximize2;
+  static const TackSvgIcon maximize =
+      TackSvgIcon('expand', isSingleColor: true);
+  static const TackSvgIcon collapse = TackSvgIcon('collapse');
   static const IconData arrowLeftRight = LucideIcons.arrowLeftRight;
-
-  // Tag & category aliases
   static const IconData bolt = LucideIcons.zap;
-  static const IconData sparkles = LucideIcons.sparkles;
+  static const TackSvgIcon sparkles = TackSvgIcon('sparkles');
   static const IconData briefcase = LucideIcons.briefcase;
-  static const IconData calendar = LucideIcons.calendar;
-  static const IconData lock = LucideIcons.lock;
+  static const TackSvgIcon calendar = TackSvgIcon('calendar');
+  static const TackSvgIcon lock = TackSvgIcon('lock');
+
+  // Status & Feedback
+  static const TackSvgIcon info = TackSvgIcon('info', isSingleColor: true);
+  static const TackSvgIcon warning = TackSvgIcon('warning', isSingleColor: true);
+  static const TackSvgIcon error = TackSvgIcon('error', isSingleColor: true);
+  static const TackSvgIcon success = TackSvgIcon('success', isSingleColor: true);
+  static const TackSvgIcon flag = TackSvgIcon('flag', isSingleColor: true);
+  static const TackSvgIcon refresh = TackSvgIcon('refresh', isSingleColor: true);
+  static const TackSvgIcon save = TackSvgIcon('save');
+  static const TackSvgIcon shield = TackSvgIcon('shield');
+  static const TackSvgIcon lightbulb = TackSvgIcon('lightbulb');
+  static const TackSvgIcon workflow = TackSvgIcon('workflow');
+  static const TackSvgIcon layers = TackSvgIcon('layers');
+  static const TackSvgIcon arrowUp = TackSvgIcon('arrow_up');
+  static const TackSvgIcon arrowDown = TackSvgIcon('arrow_down');
+  static const TackSvgIcon arrowLeft = TackSvgIcon('arrow_left');
+  static const TackSvgIcon arrowRight = TackSvgIcon('arrow_right');
 }
 
-/// Aesthetic Icon builder with consistent sizing and token-resolved colors.
+/// Unified icon widget supporting custom SVG packs (`TackSvgIcon`), legacy
+/// asset paths (`String`), and Lucide `IconData` fallbacks.
 class TackIcon extends StatelessWidget {
   final dynamic icon;
   final double size;
@@ -130,17 +198,50 @@ class TackIcon extends StatelessWidget {
   const TackIcon(
     this.icon, {
     super.key,
-    this.size = 20,
+    this.size = 22.0,
     this.color,
     this.style,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tokens = TackTokens.of(context);
-    final effectiveColor = color ??
-        IconTheme.of(context).color ??
-        tokens.textPrimary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeIconColor = IconTheme.of(context).color;
+    final effectiveColor =
+        color ??
+        themeIconColor ??
+        (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
+
+    if (icon is TackSvgIcon) {
+      final svgIcon = icon as TackSvgIcon;
+      if (svgIcon.isSingleColor) {
+        final useTint = color != null || themeIconColor != null;
+        final folder = useTint
+            ? 'dark-icons'
+            : (isDark ? 'white-icons' : 'dark-icons');
+        return SvgPicture.asset(
+          'icons/$folder/${svgIcon.name}.svg',
+          width: size,
+          height: size,
+          colorFilter: useTint
+              ? ColorFilter.mode(effectiveColor, BlendMode.srcIn)
+              : null,
+        );
+      } else {
+        // Two-tone SVGs must not receive a BlendMode.srcIn color filter, as it
+        // flattens their secondary tone. Choose the white or dark pack instead.
+        final targetColor = color ?? themeIconColor;
+        final useWhiteVariant = targetColor != null
+            ? targetColor.computeLuminance() > 0.5
+            : isDark;
+        final folder = useWhiteVariant ? 'white-icons' : 'dark-icons';
+        return SvgPicture.asset(
+          'icons/$folder/${svgIcon.name}.svg',
+          width: size,
+          height: size,
+        );
+      }
+    }
 
     if (icon is String) {
       final effectiveSvgSize = size * 1.5;
@@ -164,44 +265,44 @@ class TackIcon extends StatelessWidget {
   }
 }
 
-/// Bespoke Pin Motif widget (`06-design-directions.md` Direction A: "Paper & Pin").
-/// Used on pinned cards, active nav slot dot, and board ports.
+/// Custom tactile Pin Badge matching Tack's visual language.
 class TackPinBadge extends StatelessWidget {
+  final Color? color;
   final double size;
   final bool showIcon;
-  final Color? color;
 
   const TackPinBadge({
     super.key,
-    this.size = 14,
-    this.showIcon = true,
     this.color,
+    this.size = 14.0,
+    this.showIcon = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tokens = TackTokens.of(context);
-    final resolvedColor = color ?? tokens.accentPin;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final resolvedColor =
+        color ?? (isDark ? AppColors.darkTextPrimary : AppColors.lightAccentPin);
+
     if (!showIcon) {
-      return Semantics(
-        label: 'Pinned',
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: resolvedColor,
-            shape: BoxShape.circle,
+      return Container(
+        width: size * 0.65,
+        height: size * 0.65,
+        decoration: BoxDecoration(
+          color: resolvedColor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.7),
+            width: 1.5,
           ),
         ),
       );
     }
-    return Semantics(
-      label: 'Pinned',
-      child: Icon(
-        TackIcons.pin,
-        size: size,
-        color: resolvedColor,
-      ),
+
+    return TackIcon(
+      TackIcons.pin,
+      size: size,
+      color: resolvedColor,
     );
   }
 }

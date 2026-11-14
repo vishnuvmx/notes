@@ -9,7 +9,7 @@ class MermaidTemplateItem {
   final String title;
   final String subtitle;
   final String code;
-  final IconData icon;
+  final dynamic icon;
   final Color accentColor;
 
   const MermaidTemplateItem({
@@ -409,7 +409,7 @@ timeline
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(TackIcons.plus, size: 14, color: Colors.white),
+                          const TackIcon(TackIcons.plus, size: 14, color: Colors.white),
                           const SizedBox(width: 2),
                           const Text(
                             'Insert',

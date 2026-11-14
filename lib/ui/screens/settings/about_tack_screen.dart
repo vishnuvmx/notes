@@ -530,7 +530,7 @@ class _JourneyStage {
   final String phase;
   final String title;
   final String paletteId;
-  final IconData icon;
+  final dynamic icon;
   final String description;
 
   const _JourneyStage({

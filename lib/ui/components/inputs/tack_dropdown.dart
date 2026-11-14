@@ -9,7 +9,7 @@ import '../../../core/theme/tack_icons.dart';
 class TackDropdownItem<T> {
   final T value;
   final String label;
-  final IconData? icon;
+  final dynamic icon;
   final Color? iconColor;
 
   const TackDropdownItem({
@@ -25,7 +25,7 @@ class TackDropdownItem<T> {
 class TackDropdown<T> extends StatelessWidget {
   final T? value;
   final String? customLabel;
-  final IconData? leadingIcon;
+  final dynamic leadingIcon;
   final Color? leadingIconColor;
   final List<TackDropdownItem<T>> items;
   final ValueChanged<T> onSelected;

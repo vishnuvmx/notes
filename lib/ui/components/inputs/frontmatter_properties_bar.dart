@@ -242,7 +242,7 @@ class FrontmatterPropertiesBar extends StatelessWidget {
 }
 
 class _PropertyPill extends StatelessWidget {
-  final IconData? icon;
+  final dynamic icon;
   final Widget? iconWidget;
   final String label;
   final bool isDark;
@@ -291,7 +291,7 @@ class _PropertyPill extends StatelessWidget {
               iconWidget!,
               const SizedBox(width: 6),
             ] else if (icon != null) ...[
-              Icon(icon, size: 12, color: fg),
+              TackIcon(icon, size: 12, color: fg),
               const SizedBox(width: 5),
             ],
             Text(

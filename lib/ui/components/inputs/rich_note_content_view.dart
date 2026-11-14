@@ -1386,7 +1386,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       color: Colors.black.withValues(alpha: 0.55),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const TackIcon(
                       TackIcons.maximize,
                       size: 16,
                       color: Colors.white,
@@ -3249,7 +3249,7 @@ class _ImageLightboxViewer extends StatelessWidget {
                 children: [
                   // Close button
                   IconButton(
-                    icon: Icon(TackIcons.close, color: Colors.white, size: 24),
+                    icon: const TackIcon(TackIcons.close, color: Colors.white, size: 24),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.black45,
                       shape: const CircleBorder(),
