@@ -45,13 +45,15 @@ class NoteStatisticsSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Note Statistics',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4,
+              Expanded(
+                child: Text(
+                  'Note Statistics',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSm(
+                    fontSize: 18,
+                    weight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(
@@ -109,20 +111,20 @@ class NoteStatisticsSheet extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption(
                 color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
               ),
             ),
             const SizedBox(height: 3),
             Text(
               value,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.titleSm(
                 fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
+                weight: FontWeight.w700,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               ),
             ),

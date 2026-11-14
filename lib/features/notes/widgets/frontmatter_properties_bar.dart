@@ -474,25 +474,31 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2035),
-                      );
-                      if (picked != null) {
-                        final formatted =
-                            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-                        _setProp('target_date', formatted);
-                      }
-                    },
-                    icon: const Icon(LucideIcons.calendar, size: 15),
-                    label: Text(_props['target_date'] ?? 'Set Target Date'),
+                  Flexible(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          final formatted =
+                              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                          _setProp('target_date', formatted);
+                        }
+                      },
+                      icon: const Icon(LucideIcons.calendar, size: 15),
+                      label: Text(
+                        _props['target_date'] ?? 'Set Target Date',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                   if (_props.containsKey('target_date')) ...[
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.s2),
                     IconButton(
                       icon: const TackIcon(TackIcons.close, size: 16),
                       onPressed: () => _setProp('target_date', null),

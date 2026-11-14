@@ -17,6 +17,7 @@ import '../../../shared/widgets/neo_note_card.dart';
 import '../../../shared/widgets/responsive_card_grid.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/card_peek_sheet.dart';
+import '../../../shared/widgets/sliding_pill_track.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../notes/screens/note_editor_screen.dart';
 import '../../whiteboard/screens/whiteboard_canvas_screen.dart';
@@ -589,61 +590,65 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Segmented Control Bar (Black Pill for Active Segment — Screenshot 2)
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedPill,
-            ),
-            child: Row(
-              children: [
-                _buildSegmentPill(
-                  tokens: tokens,
-                  tab: _TodayTaskTab.todo,
-                  icon: TackIcons.sparkles,
-                  label: 'To do',
-                  count: openTasks.length,
-                ),
-                _buildSegmentPill(
-                  tokens: tokens,
-                  tab: _TodayTaskTab.completed,
-                  icon: TackIcons.check,
-                  label: 'Completed',
-                  count: completedTasks.length,
-                ),
-                _buildSegmentPill(
-                  tokens: tokens,
-                  tab: _TodayTaskTab.inbox,
-                  icon: TackIcons.inbox,
-                  label: 'Inbox',
-                  count: inboxItems.length,
-                  highlightDot: inboxItems.isNotEmpty,
-                ),
-              ],
-            ),
+          // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed` · `Inbox`)
+          SlidingPillTrack(
+            itemCount: 3,
+            selectedIndex: activeTab.index,
+            trackColor: tokens.canvasSunken,
+            indicatorColor: tokens.actionPrimary,
+            children: [
+              _buildSegmentPill(
+                tokens: tokens,
+                tab: _TodayTaskTab.todo,
+                icon: TackIcons.sparkles,
+                label: 'To do',
+                count: openTasks.length,
+              ),
+              _buildSegmentPill(
+                tokens: tokens,
+                tab: _TodayTaskTab.completed,
+                icon: TackIcons.check,
+                label: 'Completed',
+                count: completedTasks.length,
+              ),
+              _buildSegmentPill(
+                tokens: tokens,
+                tab: _TodayTaskTab.inbox,
+                icon: TackIcons.inbox,
+                label: 'Inbox',
+                count: inboxItems.length,
+                highlightDot: inboxItems.isNotEmpty,
+              ),
+            ],
           ),
 
           const SizedBox(height: AppSpacing.s4),
 
-          // 2. Active Tab Body
-          if (activeTab == _TodayTaskTab.todo)
-            _buildGroupedTaskList(
-              context,
-              tokens,
-              openTasks,
-              emptyMessage:
-                  'No open tasks across your notes. Add `- [ ]` to any note to track tasks here.',
-            )
-          else if (activeTab == _TodayTaskTab.completed)
-            _buildGroupedTaskList(
-              context,
-              tokens,
-              completedTasks,
-              emptyMessage: 'No completed tasks yet today.',
-            )
-          else
-            _buildInboxSection(context, tokens),
+          // 2. Smoothly Cross-Faded Active Tab Body
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 170),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: KeyedSubtree(
+              key: ValueKey(activeTab),
+              child: activeTab == _TodayTaskTab.todo
+                  ? _buildGroupedTaskList(
+                      context,
+                      tokens,
+                      openTasks,
+                      emptyMessage:
+                          'No open tasks across your notes. Add `- [ ]` to any note to track tasks here.',
+                    )
+                  : (activeTab == _TodayTaskTab.completed
+                      ? _buildGroupedTaskList(
+                          context,
+                          tokens,
+                          completedTasks,
+                          emptyMessage: 'No completed tasks yet today.',
+                        )
+                      : _buildInboxSection(context, tokens)),
+            ),
+          ),
         ],
       ),
     );
@@ -660,47 +665,39 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     final isSelected = activeTab == tab;
     final fg = isSelected ? tokens.actionPrimaryFg : tokens.textSecondary;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onSelectTab(tab),
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: AppSpacing.durationFast,
-          curve: AppSpacing.curveStandard,
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
-          decoration: BoxDecoration(
-            color: isSelected ? tokens.actionPrimary : Colors.transparent,
-            borderRadius: AppSpacing.roundedPill,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TackIcon(icon, size: 13, color: fg),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.caption(
-                    color: fg,
-                    weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
+    return GestureDetector(
+      onTap: () => onSelectTab(tab),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TackIcon(icon, size: 13, color: fg),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(
+                  color: fg,
+                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              if (highlightDot && !isSelected) ...[
-                const SizedBox(width: 4),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: tokens.accentPin,
-                    shape: BoxShape.circle,
-                  ),
+            ),
+            if (highlightDot && !isSelected) ...[
+              const SizedBox(width: 4),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: tokens.accentPin,
+                  shape: BoxShape.circle,
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -752,6 +749,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.s2),
                   GestureDetector(
                     onTap: () => onOpenSourceNote(entry.value.first.noteId),
                     child: Text(

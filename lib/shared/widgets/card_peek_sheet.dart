@@ -142,8 +142,10 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
                                 ),
                               ),
                             ),
-                            if (_currentItem.isFavorite)
+                            if (_currentItem.isFavorite) ...[
+                              const SizedBox(width: AppSpacing.s2),
                               TackPinBadge(color: tokens.accentPin),
+                            ],
                           ],
                         ),
                         if (summary.trim().isNotEmpty) ...[
@@ -166,6 +168,8 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
                               _currentItem.folderName!,
                             'Updated ${DateFormatter.formatTimestamp(_currentItem.updatedAt)}',
                           ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTypography.caption(
                             color: tokens.textTertiary,
                           ),

@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_colors.dart';
@@ -20,11 +19,11 @@ class AppTheme {
       ],
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.iOS: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.linux: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.macOS: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.windows: _TackFadePageTransitionsBuilder(),
         },
       ),
       brightness: Brightness.light,
@@ -188,11 +187,11 @@ class AppTheme {
       ],
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.iOS: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.linux: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.macOS: _TackFadePageTransitionsBuilder(),
+          TargetPlatform.windows: _TackFadePageTransitionsBuilder(),
         },
       ),
       brightness: Brightness.dark,
@@ -342,6 +341,37 @@ class AppTheme {
         ),
         elevation: 4,
         actionTextColor: AppColors.darkAccentPin,
+      ),
+    );
+  }
+}
+
+/// Clean fade + subtle vertical settle page transition with zero scale
+/// bounding-box artifacts and zero Cupertino parallax shadow shimmer.
+class _TackFadePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _TackFadePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.025),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
       ),
     );
   }

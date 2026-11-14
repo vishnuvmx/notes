@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -9,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'code_syntax_highlighter.dart';
+import 'markdown_math_view.dart';
 import 'mermaid/mermaid_diagram_card.dart';
 import 'whiteboard_embed_card.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
@@ -18,6 +20,7 @@ import '../../../core/utils/url_launcher_helper.dart';
 import '../../../shared/models/base_item.dart';
 import '../../whiteboard/models/whiteboard_item.dart';
 import '../services/frontmatter_service.dart';
+import '../services/latex_math_service.dart';
 import '../services/markdown_table_service.dart';
 import '../services/wiki_link_service.dart';
 
@@ -233,6 +236,23 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           widgets.add(_wrapLineTap(_buildFencedCodeBlock(context, lang, code, isDark, theme), i));
         }
         i = (j < lines.length) ? j + 1 : j;
+        continue;
+      }
+
+      // 1b. Block LaTeX Math: $$ ... $$
+      final blockMath = LatexMathService.tryConsumeBlockMath(lines, i);
+      if (blockMath != null) {
+        widgets.add(
+          _wrapLineTap(
+            BlockMathView(
+              expression: blockMath.expression,
+              rawSource: blockMath.rawSource,
+              paletteId: paletteId,
+            ),
+            i,
+          ),
+        );
+        i = blockMath.nextLineIndex;
         continue;
       }
 
@@ -886,13 +906,20 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                         children: [
                           Icon(alertIcon, size: 15, color: alertColor),
                           const SizedBox(width: 6),
-                          Text(
-                            titleOverride != null && titleOverride.isNotEmpty ? titleOverride : alertType,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: alertColor,
+                          Expanded(
+                            child: Text(
+                              titleOverride != null && titleOverride.isNotEmpty
+                                  ? titleOverride
+                                  : alertType,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: alertColor,
+                              ),
                             ),
                           ),
                         ],
@@ -1420,6 +1447,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     return Container(
       height: 100,
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F5),
         borderRadius: BorderRadius.circular(8),
@@ -1433,12 +1461,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             size: 24,
             color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
           ),
-          const SizedBox(width: 8),
-          Text(
-            alt.isNotEmpty ? alt : 'Image could not be loaded',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+          const SizedBox(width: AppSpacing.s2),
+          Flexible(
+            child: Text(
+              alt.isNotEmpty ? alt : 'Image could not be loaded',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption(
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              ),
             ),
           ),
         ],
@@ -1486,10 +1517,23 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       depth: 0,
     );
 
-    return RichText(
-      text: TextSpan(
-        style: defaultStyle,
-        children: spans,
+    if (context != null) {
+      return RichText(
+        textScaler: MediaQuery.textScalerOf(context),
+        text: TextSpan(
+          style: defaultStyle,
+          children: spans,
+        ),
+      );
+    }
+
+    return Builder(
+      builder: (ctx) => RichText(
+        textScaler: MediaQuery.textScalerOf(ctx),
+        text: TextSpan(
+          style: defaultStyle,
+          children: spans,
+        ),
       ),
     );
   }
@@ -1669,6 +1713,28 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             i = tagMatch.end;
             continue;
           }
+        }
+      }
+
+      // 7b. Inline LaTeX Math: $...$ or inline $$...$$
+      if (codeUnit == 36) {
+        final mathMatch = LatexMathService.tryMatchInlineMath(text, i);
+        if (mathMatch != null) {
+          flushBuffer();
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: InlineMathView(
+                expression: mathMatch.expression,
+                rawSource: mathMatch.rawSource,
+                baseStyle: currentStyle,
+                mathStyle:
+                    mathMatch.isDisplay ? MathStyle.display : MathStyle.text,
+              ),
+            ),
+          );
+          i = mathMatch.endIndex;
+          continue;
         }
       }
 
@@ -2092,6 +2158,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         final closeTick = text.indexOf('`', j + 1);
         if (closeTick != -1 && !text.substring(j + 1, closeTick).contains('\n')) {
           j = closeTick + 1;
+          continue;
+        }
+      }
+
+      // Never match closing marker inside inline $...$ LaTeX math
+      if (ch == 36) {
+        final mathMatch = LatexMathService.tryMatchInlineMath(text, j);
+        if (mathMatch != null) {
+          j = mathMatch.endIndex;
           continue;
         }
       }
@@ -2521,14 +2596,18 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                url,
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w500,
-                  decoration: TextDecoration.underline,
-                  decorationColor: accent,
-                  fontSize: currentStyle?.fontSize,
+              Flexible(
+                child: Text(
+                  url,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
+                    decorationColor: accent,
+                    fontSize: currentStyle?.fontSize,
+                  ),
                 ),
               ),
               const SizedBox(width: 3),
@@ -3075,13 +3154,17 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '[^${entry.id}]',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: muted,
+                const SizedBox(width: AppSpacing.s2),
+                Flexible(
+                  child: Text(
+                    '[^${entry.id}]',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: muted,
+                    ),
                   ),
                 ),
               ],
@@ -3173,6 +3256,15 @@ void _openImageLightbox(BuildContext context, String url, String alt) {
       opaque: false,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.92),
+      transitionDuration: const Duration(milliseconds: 180),
+      reverseTransitionDuration: const Duration(milliseconds: 150),
+      transitionsBuilder: (_, animation, _, child) => FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        ),
+        child: child,
+      ),
       pageBuilder: (ctx, _, _) => _ImageLightboxViewer(url: url, alt: alt),
     ),
   );

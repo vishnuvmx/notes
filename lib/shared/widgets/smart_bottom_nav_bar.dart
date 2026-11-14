@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
+import 'sliding_pill_track.dart';
 
-/// Soft Monochrome Floating Pill Bottom Navigation Bar + Detached Circular (+) FAB
-/// (`docs/design/11-reference-ui-style.md` §3–4, Screenshot 2):
-/// `( [ Today ]  [ Library ]  [ Boards ]  [ Search ] )    ( + )`
+/// Soft Monochrome Floating Pill Bottom Navigation Bar + Detached Circular (+) FAB:
+/// Icon-only 4-slot dock (`Today` · `Library` · `Boards` · `Search`) with a
+/// smooth gliding pill indicator and a detached `( + )` capture button.
 class SmartBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -36,6 +36,10 @@ class SmartBottomNavBar extends StatelessWidget {
       (icon: TackIcons.search, label: 'Search', index: 4, badge: 0),
     ];
 
+    final selectedSlot = navItems
+        .indexWhere((item) => item.index == currentIndex)
+        .clamp(0, navItems.length - 1);
+
     return ColoredBox(
       color: tokens.canvasPrimary,
       child: SafeArea(
@@ -51,23 +55,20 @@ class SmartBottomNavBar extends StatelessWidget {
             height: 58,
             child: Row(
               children: [
-                // 1. Floating Pill Dock (Today · Library · Boards · Search)
+                // 1. Icon-only Floating Pill Dock with gliding pill indicator
                 Expanded(
-                  child: Container(
+                  child: SlidingPillTrack(
                     height: 56,
-                    clipBehavior: Clip.antiAlias,
                     padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: tokens.canvasSunken,
-                      borderRadius: AppSpacing.roundedPill,
-                      boxShadow: AppSpacing.elev1(tokens.isDark),
-                    ),
-                    child: Row(
-                      children: [
-                        for (final item in navItems)
-                          _buildNavItem(context, item, tokens),
-                      ],
-                    ),
+                    itemCount: navItems.length,
+                    selectedIndex: selectedSlot,
+                    trackColor: tokens.canvasSunken,
+                    indicatorColor: tokens.surfacePrimary,
+                    trackShadow: AppSpacing.elev1(tokens.isDark),
+                    children: [
+                      for (final item in navItems)
+                        _buildNavItem(context, item, tokens),
+                    ],
                   ),
                 ),
 
@@ -91,79 +92,51 @@ class SmartBottomNavBar extends StatelessWidget {
     final isSelected = currentIndex == item.index;
     final fgColor = isSelected ? tokens.textPrimary : tokens.textSecondary;
 
-    return Expanded(
-      child: Semantics(
-        button: true,
-        selected: isSelected,
-        label: item.label,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: ValueKey('nav_item_${item.index}'),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onTap(item.index);
-            },
-            borderRadius: AppSpacing.roundedPill,
-            child: AnimatedContainer(
-              duration: AppSpacing.durationFast,
-              curve: AppSpacing.curveStandard,
-              height: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: isSelected ? tokens.surfacePrimary : Colors.transparent,
-                borderRadius: AppSpacing.roundedPill,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      TackIcon(
-                        item.icon,
-                        size: 17,
-                        color: fgColor,
-                        style: isSelected
-                            ? HeroIconStyle.solid
-                            : HeroIconStyle.outline,
-                      ),
-                      if (item.badge > 0)
-                        Positioned(
-                          top: -3,
-                          right: -5,
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: tokens.accentPin,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? tokens.surfacePrimary
-                                    : tokens.canvasSunken,
-                                width: 1.2,
-                              ),
-                            ),
-                          ),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: item.label,
+      child: Tooltip(
+        message: item.label,
+        child: GestureDetector(
+          key: ValueKey('nav_item_${item.index}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap(item.index);
+          },
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                TackIcon(
+                  item.icon,
+                  size: 21,
+                  color: fgColor,
+                  style: isSelected
+                      ? HeroIconStyle.solid
+                      : HeroIconStyle.outline,
+                ),
+                if (item.badge > 0)
+                  Positioned(
+                    top: -2,
+                    right: -4,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: tokens.accentPin,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? tokens.surfacePrimary
+                              : tokens.canvasSunken,
+                          width: 1.2,
                         ),
-                    ],
-                  ),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption(
-                        color: fgColor,
-                        weight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ),

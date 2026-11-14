@@ -470,13 +470,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Note Icon',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
+                  Expanded(
+                    child: Text(
+                      'Note Icon',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleSm(
+                        fontSize: 16,
+                        weight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (_iconEmoji != null)
@@ -2056,61 +2058,81 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                      const SizedBox(height: AppSpacing.lg),
 
                     // Body Content (Editing TextField vs Interactive Rich Preview)
-                    if (_isEditingMode)
-                      TextField(
-                        controller: _contentController,
-                        focusNode: _contentFocusNode,
-                        inputFormatters: const [
-                          SmartMarkdownContinuationFormatter(),
-                        ],
-                        contentInsertionConfiguration: ContentInsertionConfiguration(
-                          allowedMimeTypes: const <String>[
-                            'image/png',
-                            'image/jpeg',
-                            'image/gif',
-                            'image/webp',
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 160),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      layoutBuilder: (currentChild, previousChildren) {
+                        return Stack(
+                          alignment: Alignment.topLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            ?currentChild,
                           ],
-                          onContentInserted: _handleInsertedContent,
-                        ),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          height: 1.55,
-                          fontSize: 16,
-                          fontFamily: AppTypography.fontFamily,
-                        ),
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          hintText: 'Start writing...\n\nTip: Type / for blocks, [[ to link notes or boards, or [ ] for tasks.',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      )
-                    else ...[
-                      SelectionArea(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.deferToChild,
-                          onTap: () {
-                            _toggleViewMode();
-                          },
-                          child: RichNoteContentView(
-                            content: _contentController.text,
-                            paletteId: _paletteId,
-                            workspaceItems: workspace.rawItems,
-                            onWikiLinkTap: _handleWikiLinkTap,
-                            onHeadingJump: _jumpToLineIndex,
-                            onLineTap: (lineIdx) {
-                              _toggleViewMode(targetLineIndex: lineIdx);
-                            },
-                            onContentChanged: (newContent) {
-                              _contentController.text = newContent;
-                              _saveNote();
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                      child: _isEditingMode
+                          ? KeyedSubtree(
+                              key: const ValueKey('editor_edit_mode'),
+                              child: TextField(
+                                controller: _contentController,
+                                focusNode: _contentFocusNode,
+                                inputFormatters: const [
+                                  SmartMarkdownContinuationFormatter(),
+                                ],
+                                contentInsertionConfiguration:
+                                    ContentInsertionConfiguration(
+                                  allowedMimeTypes: const <String>[
+                                    'image/png',
+                                    'image/jpeg',
+                                    'image/gif',
+                                    'image/webp',
+                                  ],
+                                  onContentInserted: _handleInsertedContent,
+                                ),
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  height: 1.55,
+                                  fontSize: 16,
+                                  fontFamily: AppTypography.fontFamily,
+                                ),
+                                maxLines: null,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      'Start writing...\n\nTip: Type / for blocks, [[ to link notes or boards, or [ ] for tasks.',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            )
+                          : KeyedSubtree(
+                              key: const ValueKey('editor_read_mode'),
+                              child: SelectionArea(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.deferToChild,
+                                  onTap: () {
+                                    _toggleViewMode();
+                                  },
+                                  child: RichNoteContentView(
+                                    content: _contentController.text,
+                                    paletteId: _paletteId,
+                                    workspaceItems: workspace.rawItems,
+                                    onWikiLinkTap: _handleWikiLinkTap,
+                                    onHeadingJump: _jumpToLineIndex,
+                                    onLineTap: (lineIdx) {
+                                      _toggleViewMode(targetLineIndex: lineIdx);
+                                    },
+                                    onContentChanged: (newContent) {
+                                      _contentController.text = newContent;
+                                      _saveNote();
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
 
                     // Nested Sub-Notes Section (Feature 9)
                     if (childItems.isNotEmpty)
@@ -2391,37 +2413,39 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(LucideIcons.folderTree, size: 15, color: accent),
-                  const SizedBox(width: 7),
-                  Text(
-                    'Sub-notes (${childItems.length})',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.25,
-                      color: isDark ? Colors.white : const Color(0xFF191A23),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.folderTree, size: 15, color: accent),
+                    const SizedBox(width: AppSpacing.s2),
+                    Flexible(
+                      child: Text(
+                        'Sub-notes (${childItems.length})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.label(
+                          weight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF191A23),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.s2),
               GestureDetector(
                 onTap: _handleCreateSubNote,
                 child: Text(
                   '+ New',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                  style: AppTypography.caption(
+                    weight: FontWeight.w700,
                     color: accent,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s2),
           ...childItems.map((child) {
             return InkWell(
               onTap: () async {

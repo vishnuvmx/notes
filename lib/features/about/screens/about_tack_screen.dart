@@ -113,16 +113,20 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Tack',
-                              style: AppTypography.titleLg(
-                                color: tokens.textPrimary,
+                            Flexible(
+                              child: Text(
+                                'Tack',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleLg(
+                                  color: tokens.textPrimary,
+                                ),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.s2),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                                horizontal: AppSpacing.s2,
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
@@ -142,6 +146,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                         const SizedBox(height: 2),
                         Text(
                           'Soft Monochrome Notes, Tasks & Visual Boards',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTypography.serifItalic(
                             color: tokens.textSecondary,
                             fontSize: 15,
@@ -487,15 +493,23 @@ class _AboutTackScreenState extends State<AboutTackScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                pkg.name,
-                style: AppTypography.titleSm(
-                  color: tokens.textPrimary,
-                  fontSize: 15,
+              Expanded(
+                child: Text(
+                  pkg.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    fontSize: 15,
+                  ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.s2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s2,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: tokens.canvasSunken,
                   borderRadius: AppSpacing.roundedPill,

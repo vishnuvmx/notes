@@ -302,6 +302,8 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                           ),
                           title: Text(
                             matchingTasks[i].text,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: AppTypography.bodySm(
                               color: tokens.textPrimary,
                               weight: FontWeight.w500,
@@ -309,6 +311,8 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                           ),
                           subtitle: Text(
                             'In ${matchingTasks[i].noteTitle}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: AppTypography.caption(
                               color: tokens.textTertiary,
                             ),
@@ -491,6 +495,8 @@ class _CommandRow extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodySm(
                         color: tokens.textPrimary,
                         weight: FontWeight.w600,
@@ -498,6 +504,8 @@ class _CommandRow extends StatelessWidget {
                     ),
                     Text(
                       entry.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.caption(color: tokens.textTertiary),
                     ),
                   ],

@@ -123,8 +123,9 @@ void main() {
         matching: find.byType(Container),
       ).first;
       final container = tester.widget<Container>(containerFinder);
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration?.border, isNotNull);
+      final decoration = container.decoration as ShapeDecoration?;
+      final shape = decoration?.shape as SmoothRectangleBorder?;
+      expect(shape?.side, isNotNull);
 
       // Verify typing and clearing
       await tester.enterText(find.byType(TextField), 'Flutter clean architecture');
@@ -178,8 +179,9 @@ void main() {
         matching: find.byType(Container),
       ).first;
       final container = tester.widget<Container>(containerFinder);
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration?.borderRadius, equals(AppSpacing.roundedModal));
+      final decoration = container.decoration as ShapeDecoration?;
+      final shape = decoration?.shape as SmoothRectangleBorder?;
+      expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
       expect(container.margin, equals(const EdgeInsets.symmetric(horizontal: AppSpacing.s4)));
     });
 
@@ -367,7 +369,7 @@ Footer text.
       expect(workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id), isFalse);
     });
 
-    testWidgets('6. SmartBottomNavBar renders 5 Paper & Pin slots (Today, Library, Capture, Boards, Search)', (tester) async {
+    testWidgets('6. SmartBottomNavBar renders 5 icon-only Paper & Pin slots (Today, Library, Capture, Boards, Search)', (tester) async {
       int tappedIndex = -1;
       bool captureTapped = false;
 
@@ -385,12 +387,19 @@ Footer text.
         ),
       );
 
-      expect(find.text('Today'), findsOneWidget);
-      expect(find.text('Library'), findsOneWidget);
-      expect(find.text('Boards'), findsOneWidget);
-      expect(find.text('Search'), findsOneWidget);
+      // No visible text labels in bottom navigation dock
+      expect(find.text('Today'), findsNothing);
+      expect(find.text('Library'), findsNothing);
+      expect(find.text('Boards'), findsNothing);
+      expect(find.text('Search'), findsNothing);
 
-      await tester.tap(find.text('Library'));
+      // Accessible semantics & slot keys are present
+      expect(find.bySemanticsLabel('Today'), findsOneWidget);
+      expect(find.bySemanticsLabel('Library'), findsOneWidget);
+      expect(find.bySemanticsLabel('Boards'), findsOneWidget);
+      expect(find.bySemanticsLabel('Search'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('nav_item_1')));
       await tester.pump();
       expect(tappedIndex, 1);
 
@@ -563,8 +572,9 @@ Footer text.
         matching: find.byType(Container),
       ).first;
       final card = tester.widget<Container>(cardFinder);
-      final decoration = card.decoration as BoxDecoration?;
-      expect(decoration?.borderRadius, equals(AppSpacing.roundedModal));
+      final decoration = card.decoration as ShapeDecoration?;
+      final shape = decoration?.shape as SmoothRectangleBorder?;
+      expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
 
       // Tap Confirm
       await tester.tap(find.text('Move to Trash'));

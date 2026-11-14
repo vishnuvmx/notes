@@ -2284,12 +2284,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Export settings',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: primaryText,
+                      Expanded(
+                        child: Text(
+                          'Export settings',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleSm(
+                            fontSize: 18,
+                            weight: FontWeight.w700,
+                            color: primaryText,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -2863,10 +2867,17 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const TackIcon(TackIcons.link, color: Colors.white, size: 18),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Tap target node to connect',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                        const SizedBox(width: AppSpacing.s2),
+                        Flexible(
+                          child: Text(
+                            'Tap target node to connect',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.label(
+                              color: Colors.white,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         GestureDetector(
@@ -3099,13 +3110,18 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                         child: Row(
                           children: [
                             _buildShapePreview(item.type, item.color, isDark),
-                            const SizedBox(width: 12),
-                            Text(
-                              item.label,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            const SizedBox(width: AppSpacing.s3),
+                            Expanded(
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.label(
+                                  weight: FontWeight.w500,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
                               ),
                             ),
                           ],
@@ -4080,7 +4096,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Text(palette.name),
+                            Expanded(
+                              child: Text(
+                                palette.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       );

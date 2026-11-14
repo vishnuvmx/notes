@@ -117,22 +117,24 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                     Row(
                       children: [
                         if (customTag != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: softTint,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                            child: Text(
-                              customTag,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption(
-                                color: accentColor,
-                                weight: FontWeight.w600,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: softTint,
+                                borderRadius: AppSpacing.roundedPill,
+                              ),
+                              child: Text(
+                                customTag,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption(
+                                  color: accentColor,
+                                  weight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -142,6 +144,8 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                         Text(
                           DateFormatter.formatTimestamp(widget.item.updatedAt)
                               .toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTypography.mono(
                             fontSize: 10.5,
                             color: tokens.textTertiary,

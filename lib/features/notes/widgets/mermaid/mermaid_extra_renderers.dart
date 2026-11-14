@@ -670,6 +670,8 @@ class MermaidGanttWidget extends StatelessWidget {
                         ),
                         child: Text(
                           'Task',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: AppTypography.fontFamily,
                             fontSize: 10,

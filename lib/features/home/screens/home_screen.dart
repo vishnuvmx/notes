@@ -258,36 +258,51 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: workspace.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : IndexedStack(
-                index: _stackIndexForTab(activeTab),
-                children: [
-                  // 0: Today
-                  TodayScreen(onOpenItem: _openItem),
-
-                  // 1: Library
-                  _LibraryView(
-                    onOpenItem: _openItem,
-                    onCreateNote: () => _openCaptureSheet(
-                      defaultType: ItemType.note,
+            : TweenAnimationBuilder<double>(
+                key: ValueKey('home_tab_${_stackIndexForTab(activeTab)}'),
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                builder: (context, t, child) {
+                  return Opacity(
+                    opacity: t,
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - t) * 6),
+                      child: child,
                     ),
-                  ),
+                  );
+                },
+                child: IndexedStack(
+                  index: _stackIndexForTab(activeTab),
+                  children: [
+                    // 0: Today
+                    TodayScreen(onOpenItem: _openItem),
 
-                  // 2: Boards (tab index 3)
-                  _BoardsView(
-                    onOpenItem: _openItem,
-                    onCreateBoard: () async {
-                      final board = await workspace.createQuickItem(
-                        title: 'Untitled Board',
-                        type: ItemType.whiteboard,
-                        paletteId: 'cyan',
-                      );
-                      if (mounted) _openItem(board);
-                    },
-                  ),
+                    // 1: Library
+                    _LibraryView(
+                      onOpenItem: _openItem,
+                      onCreateNote: () => _openCaptureSheet(
+                        defaultType: ItemType.note,
+                      ),
+                    ),
 
-                  // 3: Search (tab index 4)
-                  SearchCommandScreen(onOpenItem: _openItem),
-                ],
+                    // 2: Boards (tab index 3)
+                    _BoardsView(
+                      onOpenItem: _openItem,
+                      onCreateBoard: () async {
+                        final board = await workspace.createQuickItem(
+                          title: 'Untitled Board',
+                          type: ItemType.whiteboard,
+                          paletteId: 'cyan',
+                        );
+                        if (mounted) _openItem(board);
+                      },
+                    ),
+
+                    // 3: Search (tab index 4)
+                    SearchCommandScreen(onOpenItem: _openItem),
+                  ],
+                ),
               ),
         bottomNavigationBar: SmartBottomNavBar(
           currentIndex: activeTab,

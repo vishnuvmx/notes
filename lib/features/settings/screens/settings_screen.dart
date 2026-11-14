@@ -14,6 +14,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/app_floating_dialog.dart';
+import '../../../shared/widgets/sliding_pill_track.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../folders/screens/folder_view_screen.dart';
 import '../../about/screens/about_tack_screen.dart';
@@ -987,66 +988,51 @@ class _ThemeSegmentedControl extends StatelessWidget {
       (ThemeMode.dark, 'Dark', TackIcons.moon),
     ];
 
-    return Container(
-      clipBehavior: Clip.antiAlias,
+    final selectedIndex = modes
+        .indexWhere((e) => e.$1 == themeProv.themeMode)
+        .clamp(0, modes.length - 1);
+
+    return SlidingPillTrack(
+      itemCount: modes.length,
+      selectedIndex: selectedIndex,
       padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: tokens.canvasSunken,
-        borderRadius: AppSpacing.roundedPill,
-      ),
-      child: Row(
-        children: modes.map((entry) {
-          final isSelected = themeProv.themeMode == entry.$1;
-          return Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  themeProv.setThemeMode(entry.$1);
-                },
-                borderRadius: AppSpacing.roundedPill,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 40),
-                  child: AnimatedContainer(
-                    duration: AppSpacing.durationFast,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? tokens.actionPrimary
-                          : Colors.transparent,
-                      borderRadius: AppSpacing.roundedPill,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        TackIcon(
-                          entry.$3,
-                          size: 15,
-                          color: isSelected
-                              ? tokens.actionPrimaryFg
-                              : tokens.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          entry.$2,
-                          style: AppTypography.label(
-                            color: isSelected
-                                ? tokens.actionPrimaryFg
-                                : tokens.textSecondary,
-                            weight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+      trackColor: tokens.canvasSunken,
+      indicatorColor: tokens.actionPrimary,
+      children: modes.map((entry) {
+        final isSelected = themeProv.themeMode == entry.$1;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            themeProv.setThemeMode(entry.$1);
+          },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TackIcon(
+                  entry.$3,
+                  size: 15,
+                  color: isSelected
+                      ? tokens.actionPrimaryFg
+                      : tokens.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  entry.$2,
+                  style: AppTypography.label(
+                    color: isSelected
+                        ? tokens.actionPrimaryFg
+                        : tokens.textSecondary,
+                    weight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
-              ),
+              ],
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

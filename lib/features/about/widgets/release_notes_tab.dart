@@ -519,11 +519,15 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                 ),
               ),
               const SizedBox(width: AppSpacing.s2),
-              Text(
-                'Initial Tactile Workspace Foundation',
-                style: AppTypography.titleSm(
-                  color: tokens.textPrimary,
-                  fontSize: 15,
+              Expanded(
+                child: Text(
+                  'Initial Tactile Workspace Foundation',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],

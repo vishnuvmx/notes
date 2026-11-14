@@ -418,24 +418,30 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _QuietCaptureOption(
-                icon: TackIcons.sparkles,
-                label: _showTemplatesAndColor ? 'Hide options' : 'Template…',
-                isActive: _showTemplatesAndColor || _selectedTemplateId != 'blank',
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _showTemplatesAndColor = !_showTemplatesAndColor);
-                },
+              Flexible(
+                child: _QuietCaptureOption(
+                  icon: TackIcons.sparkles,
+                  label: _showTemplatesAndColor ? 'Hide options' : 'Template…',
+                  isActive: _showTemplatesAndColor || _selectedTemplateId != 'blank',
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _showTemplatesAndColor = !_showTemplatesAndColor);
+                  },
+                ),
               ),
-              _QuietCaptureOption(
-                icon: TackIcons.boards,
-                label: 'New board',
-                onTap: _handleNewBoard,
+              Flexible(
+                child: _QuietCaptureOption(
+                  icon: TackIcons.boards,
+                  label: 'New board',
+                  onTap: _handleNewBoard,
+                ),
               ),
-              _QuietCaptureOption(
-                icon: TackIcons.clipboard,
-                label: 'Paste clipboard',
-                onTap: _handlePasteClipboard,
+              Flexible(
+                child: _QuietCaptureOption(
+                  icon: TackIcons.clipboard,
+                  label: 'Paste clipboard',
+                  onTap: _handlePasteClipboard,
+                ),
               ),
             ],
           ),
@@ -472,17 +478,21 @@ class _QuietCaptureOption extends StatelessWidget {
           minWidth: AppSpacing.minTouchTarget,
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               TackIcon(icon, size: 16, color: fg),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppTypography.label(
-                  color: fg,
-                  weight: isActive ? FontWeight.w600 : FontWeight.w500,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label(
+                    color: fg,
+                    weight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
 
@@ -96,18 +97,22 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
-                      color: item.isDestructive
-                          ? AppColors.error
-                          : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm(
+                        weight: FontWeight.w500,
+                        color: item.isDestructive
+                            ? AppColors.error
+                            : (isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.s2),
                   TackIcon(
                     item.icon,
                     size: 18,
