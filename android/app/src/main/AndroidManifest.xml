@@ -120,6 +120,11 @@
             android:name=".NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- BroadcastReceiver for AlarmManager task due-date reminders & Snooze actions -->
+        <receiver
+            android:name=".TaskReminderReceiver"
+            android:exported="false" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

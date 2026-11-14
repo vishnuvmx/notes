@@ -229,6 +229,17 @@ class MainActivity : FlutterActivity() {
                 "drainPendingNotificationActions" -> {
                     result.success(NotificationActionReceiver.drainQueuedActions(this))
                 }
+                "syncTaskReminders" -> {
+                    ensureNotificationPermission()
+                    @Suppress("UNCHECKED_CAST")
+                    val list = call.arguments as? List<Map<String, Any?>> ?: emptyList()
+                    TaskReminderReceiver.syncScheduledReminders(this, list)
+                    result.success(true)
+                }
+                "cancelAllTaskReminders" -> {
+                    TaskReminderReceiver.cancelAllScheduledReminders(this)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -276,6 +287,17 @@ class MainActivity : FlutterActivity() {
                 setShowBadge(false)
             }
             notificationManager?.createNotificationChannel(pinnedNotesChannel)
+
+            val taskRemindersChannel = NotificationChannel(
+                TaskReminderReceiver.CHANNEL_TASK_REMINDERS,
+                "Task Due Reminders",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Scheduled due-date and recurring task reminders"
+                enableVibration(true)
+                setShowBadge(true)
+            }
+            notificationManager?.createNotificationChannel(taskRemindersChannel)
         }
     }
 

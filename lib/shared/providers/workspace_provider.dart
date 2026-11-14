@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/task_reminder_service.dart';
 import '../data/i_workspace_repo.dart';
 import '../models/base_item.dart';
 import '../models/item_serializer.dart';
@@ -364,6 +366,7 @@ class WorkspaceProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    unawaited(TaskReminderService.syncWorkspaceReminders(_allActiveItems));
     notifyListeners();
   }
 
@@ -525,13 +528,76 @@ class WorkspaceProvider extends ChangeNotifier {
     }
   }
 
-  /// Toggles a derived Markdown task (`- [ ]` ↔ `- [x]`) directly in its source note.
-  Future<void> toggleTask(DerivedTaskItem task) async {
+  /// Toggles a derived Markdown task (`- [ ]` ↔ `- [x]`) or advances a recurring
+  /// task (`@repeat(...)`) to its next due date directly in its source note.
+  Future<TaskToggleResult?> toggleTask(
+    DerivedTaskItem task, {
+    DateTime? now,
+  }) async {
+    return completeTaskLineByIndex(
+      task.noteId,
+      task.lineIndex,
+      now: now,
+    );
+  }
+
+  /// Toggles/advances checklist line [lineIndex] inside [noteId].
+  Future<TaskToggleResult?> completeTaskLineByIndex(
+    String noteId,
+    int lineIndex, {
+    DateTime? now,
+  }) async {
+    final item = getItemByIdSync(noteId);
+    if (item is TextNote) {
+      final result = OpenTasksService.completeOrToggleTaskAtLine(
+        item.content,
+        lineIndex,
+        now: now,
+      );
+      if (result != null) {
+        await saveItem(
+          item.copyWith(
+            content: result.updatedContent,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+      return result;
+    } else if (item is StickyNote) {
+      final result = OpenTasksService.completeOrToggleTaskAtLine(
+        item.content,
+        lineIndex,
+        now: now,
+      );
+      if (result != null) {
+        await saveItem(
+          item.copyWith(
+            content: result.updatedContent,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+      return result;
+    }
+    return null;
+  }
+
+  /// Updates or clears `@due(...)` and `@repeat(...)` metadata directly on a task's
+  /// Markdown checklist line inside its source note.
+  Future<void> setTaskReminder(
+    DerivedTaskItem task, {
+    DateTime? dueAt,
+    bool hasExplicitTime = false,
+    TaskRecurrence? recurrence,
+  }) async {
     final item = getItemByIdSync(task.noteId);
     if (item is TextNote) {
-      final updatedBody = OpenTasksService.toggleTaskAtLine(
+      final updatedBody = OpenTasksService.setTaskReminderAtLine(
         item.content,
         task.lineIndex,
+        dueAt: dueAt,
+        hasExplicitTime: hasExplicitTime,
+        recurrence: recurrence,
       );
       if (updatedBody != null) {
         await saveItem(
@@ -542,9 +608,12 @@ class WorkspaceProvider extends ChangeNotifier {
         );
       }
     } else if (item is StickyNote) {
-      final updatedBody = OpenTasksService.toggleTaskAtLine(
+      final updatedBody = OpenTasksService.setTaskReminderAtLine(
         item.content,
         task.lineIndex,
+        dueAt: dueAt,
+        hasExplicitTime: hasExplicitTime,
+        recurrence: recurrence,
       );
       if (updatedBody != null) {
         await saveItem(

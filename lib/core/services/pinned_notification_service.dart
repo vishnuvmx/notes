@@ -5,6 +5,7 @@ import '../../shared/models/base_item.dart';
 import '../../shared/models/clipboard_item.dart';
 import '../../shared/models/sticky_note.dart';
 import '../../features/notes/models/text_note.dart';
+import '../../features/tasks/services/open_tasks_service.dart';
 
 /// Service managing Android notification-bar pinning for To-Dos & notes,
 /// inline Quick Add replies, and the persistent Quick Capture tile.
@@ -16,6 +17,7 @@ class PinnedNotificationService {
 
   static Future<void> Function(String noteId, String text)? _onQuickAdd;
   static Future<void> Function(String noteId)? _onCompleteNextTodo;
+  static Future<void> Function(String noteId, int lineIndex)? _onCompleteTaskLine;
   static Future<void> Function(String noteId)? _onUnpin;
   static bool _isInitialized = false;
 
@@ -33,10 +35,12 @@ class PinnedNotificationService {
   static Future<void> initializeCallbacks({
     required Future<void> Function(String noteId, String text) onQuickAdd,
     required Future<void> Function(String noteId) onCompleteNextTodo,
+    Future<void> Function(String noteId, int lineIndex)? onCompleteTaskLine,
     required Future<void> Function(String noteId) onUnpin,
   }) async {
     _onQuickAdd = onQuickAdd;
     _onCompleteNextTodo = onCompleteNextTodo;
+    _onCompleteTaskLine = onCompleteTaskLine;
     _onUnpin = onUnpin;
 
     if (!_isInitialized) {
@@ -55,6 +59,12 @@ class PinnedNotificationService {
           case 'onNotificationCompleteTodo':
             if (noteId.isNotEmpty) {
               await _onCompleteNextTodo?.call(noteId);
+            }
+            break;
+          case 'onNotificationCompleteTaskLine':
+            final lineIndex = (args['lineIndex'] as num?)?.toInt();
+            if (noteId.isNotEmpty && lineIndex != null) {
+              await _onCompleteTaskLine?.call(noteId, lineIndex);
             }
             break;
           case 'onNotificationUnpin':
@@ -87,6 +97,11 @@ class PinnedNotificationService {
           await _onUnpin?.call(noteId);
         } else if (type == 'complete_todo' && noteId.isNotEmpty) {
           await _onCompleteNextTodo?.call(noteId);
+        } else if (type == 'complete_task_line' && noteId.isNotEmpty) {
+          final lineIndex = int.tryParse(raw['lineIndex']?.toString() ?? '');
+          if (lineIndex != null) {
+            await _onCompleteTaskLine?.call(noteId, lineIndex);
+          }
         } else if (type == 'quick_add' && text.isNotEmpty) {
           await _onQuickAdd?.call(noteId, text);
         }
@@ -215,7 +230,26 @@ class PinnedNotificationService {
       if (t.isEmpty) continue;
       final unchecked = _uncheckedTodoRegex.firstMatch(line);
       if (unchecked != null) {
-        formattedLines.add('☐ ${unchecked.group(1)!.trim()}');
+        final raw = unchecked.group(1)!.trim();
+        final parsed = OpenTasksService.parseTaskMetadata(raw);
+        final display = parsed.cleanText.isNotEmpty ? parsed.cleanText : raw;
+        final dueSuffix = parsed.dueAt != null
+            ? DerivedTaskItem(
+                noteId: item.id,
+                noteTitle: title,
+                paletteId: '',
+                lineIndex: 0,
+                text: display,
+                isDone: false,
+                noteUpdatedAt: item.updatedAt,
+                dueAt: parsed.dueAt,
+                hasExplicitTime: parsed.hasExplicitTime,
+                recurrence: parsed.recurrence,
+              ).formatDueLabel()
+            : null;
+        formattedLines.add(
+          dueSuffix != null ? '☐ $display ($dueSuffix)' : '☐ $display',
+        );
         continue;
       }
       final checked = _checkedTodoRegex.firstMatch(line);

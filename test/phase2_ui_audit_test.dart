@@ -17,6 +17,7 @@ import 'package:notes/shared/widgets/app_floating_dialog.dart';
 import 'package:notes/shared/widgets/app_search_field.dart';
 import 'package:notes/shared/widgets/z_order_column.dart';
 import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
+import 'package:notes/features/home/screens/home_screen.dart';
 import 'package:notes/features/notes/screens/note_editor_screen.dart';
 import 'package:notes/features/settings/screens/settings_screen.dart';
 import 'package:notes/features/whiteboard/models/whiteboard_item.dart';
@@ -280,17 +281,21 @@ Footer text.
       await tester.tap(find.text('Open Note'));
       await tester.pumpAndSettle();
 
-      // Note opens in Read Mode
+      // Note opens in Read Mode without any 'Saved' status pill
       expect(find.byType(NoteEditorScreen), findsOneWidget);
       expect(find.byTooltip('Edit Note'), findsOneWidget);
       expect(find.byTooltip('Reader Mode'), findsNothing);
+      expect(find.text('Saved'), findsNothing);
+      expect(find.text('Saving...'), findsNothing);
 
       // 2. Transition from Read Mode -> Edit Mode
       await tester.tap(find.byTooltip('Edit Note'));
       await tester.pumpAndSettle();
 
-      // Now in Edit Mode (reader switch button visible)
+      // Now in Edit Mode (reader switch button visible, still no 'Saved' pill)
       expect(find.byTooltip('Reader Mode'), findsOneWidget);
+      expect(find.text('Saved'), findsNothing);
+      expect(find.text('Saving...'), findsNothing);
 
       // 3. Press back while in Edit Mode
       // Should transition to Read Mode instead of popping the screen
@@ -728,19 +733,23 @@ Footer text.
     });
 
     testWidgets('14. Sort modal clears 28dp corners, aligns title with rows, and paints clean foreground border', (tester) async {
-      final workspace = WorkspaceProvider();
+      final repo = _MockWorkspaceRepo();
+      final workspace = WorkspaceProvider(repo)..setBottomNavIndex(3);
       await tester.pumpWidget(
-        ChangeNotifierProvider<WorkspaceProvider>.value(
-          value: workspace,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
           child: MaterialApp(
             theme: AppTheme.lightTheme,
             home: const HomeScreen(),
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Sort'));
+      await tester.tap(find.byKey(const ValueKey('header_sort_button')));
       await tester.pumpAndSettle();
 
       expect(find.text('Sort items'), findsOneWidget);

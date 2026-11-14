@@ -63,6 +63,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     await PinnedNotificationService.initializeCallbacks(
       onQuickAdd: _handleNotificationQuickAdd,
       onCompleteNextTodo: _handleNotificationCompleteNextTodo,
+      onCompleteTaskLine: _handleNotificationCompleteTaskLine,
       onUnpin: (_) async {},
     );
 
@@ -137,6 +138,19 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     );
     await workspace.saveItem(updated);
     await PinnedNotificationService.syncPinnedNoteIfActive(updated);
+  }
+
+  Future<void> _handleNotificationCompleteTaskLine(
+    String noteId,
+    int lineIndex,
+  ) async {
+    if (!mounted) return;
+    final workspace = context.read<WorkspaceProvider>();
+    await workspace.completeTaskLineByIndex(noteId, lineIndex);
+    final updated = workspace.getItemByIdSync(noteId);
+    if (updated != null) {
+      await PinnedNotificationService.syncPinnedNoteIfActive(updated);
+    }
   }
 
   Future<void> _handleIncomingText(IncomingTextData data) async {

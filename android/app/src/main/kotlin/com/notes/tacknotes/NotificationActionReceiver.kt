@@ -18,6 +18,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_UNPIN_NOTE = "com.notes.tacknotes.UNPIN_NOTE"
         const val ACTION_COMPLETE_NEXT_TODO = "com.notes.tacknotes.COMPLETE_NEXT_TODO"
+        const val ACTION_COMPLETE_TASK_LINE = "com.notes.tacknotes.COMPLETE_TASK_LINE"
         const val ACTION_QUICK_REPLY_NOTE = "com.notes.tacknotes.QUICK_REPLY_NOTE"
         const val KEY_QUICK_REPLY_TEXT = "key_quick_note_text"
         private const val PREF_QUEUE = "tack_native_notif_queue"
@@ -37,7 +38,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         mapOf(
                             "type" to obj.optString("type", ""),
                             "noteId" to obj.optString("noteId", ""),
-                            "text" to obj.optString("text", "")
+                            "text" to obj.optString("text", ""),
+                            "lineIndex" to obj.optString("lineIndex", "")
                         )
                     )
                 }
@@ -47,7 +49,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
             return list
         }
 
-        private fun enqueueAction(context: Context, type: String, noteId: String, text: String = "") {
+        private fun enqueueAction(
+            context: Context,
+            type: String,
+            noteId: String,
+            text: String = "",
+            lineIndex: Int? = null
+        ) {
             val prefs = context.getSharedPreferences(PREF_QUEUE, Context.MODE_PRIVATE)
             val existing = prefs.getString(KEY_ACTIONS, null)
             val arr = try {
@@ -59,6 +67,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 put("type", type)
                 put("noteId", noteId)
                 put("text", text)
+                if (lineIndex != null) {
+                    put("lineIndex", lineIndex.toString())
+                }
             }
             arr.put(obj)
             prefs.edit().putString(KEY_ACTIONS, arr.toString()).apply()
@@ -96,6 +107,30 @@ class NotificationActionReceiver : BroadcastReceiver() {
                             context,
                             noteId,
                             "Task marked done • Tap to view"
+                        )
+                    }
+                }
+            }
+
+            ACTION_COMPLETE_TASK_LINE -> {
+                val notifId = intent.getIntExtra("notifId", 0)
+                val lineIndex = intent.getIntExtra("lineIndex", -1)
+                if (notifId != 0) {
+                    notificationManager.cancel(notifId)
+                }
+                if (noteId.isNotBlank() && lineIndex >= 0) {
+                    val channel = MainActivity.activeNotificationChannel
+                    if (channel != null) {
+                        channel.invokeMethod(
+                            "onNotificationCompleteTaskLine",
+                            mapOf("noteId" to noteId, "lineIndex" to lineIndex)
+                        )
+                    } else {
+                        enqueueAction(
+                            context = context,
+                            type = "complete_task_line",
+                            noteId = noteId,
+                            lineIndex = lineIndex
                         )
                     }
                 }

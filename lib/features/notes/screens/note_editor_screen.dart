@@ -17,6 +17,8 @@ import '../../../shared/models/clipboard_item.dart';
 import '../../whiteboard/models/whiteboard_item.dart';
 import '../services/block_transform_service.dart';
 import '../../../core/services/pinned_notification_service.dart';
+import '../../tasks/services/open_tasks_service.dart';
+import '../../tasks/widgets/task_reminder_sheet.dart';
 import '../services/wiki_link_service.dart';
 import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/color_swatch_picker.dart';
@@ -76,7 +78,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   bool _isEditingMode = true;
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
-  bool _isSaving = false;
   bool _isNotificationPinned = false;
   Timer? _saveDebounce;
 
@@ -442,14 +443,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _saveNote() async {
     if (!mounted) return;
-    _isSaving = true;
     final workspace = context.read<WorkspaceProvider>();
     final updated = _buildUpdatedItem(workspace);
 
     await workspace.saveItem(updated);
     await PinnedNotificationService.syncPinnedNoteIfActive(updated);
-    if (!mounted) return;
-    setState(() => _isSaving = false);
   }
 
   void _showEmojiPickerSheet() {
@@ -1245,6 +1243,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       return;
     }
 
+    if (cmd.id == 'due_task') {
+      final hadSlashTrigger = slashTrigger != null;
+      if (slashTrigger != null) {
+        _removeSlashToken(slashTrigger);
+      }
+      _insertDueTaskFromSheet(hadSlashTrigger: hadSlashTrigger);
+      return;
+    }
+
     final snippet = cmd.markdownSnippet ?? '';
     if (snippet.isEmpty) return;
 
@@ -1296,6 +1303,47 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       text: newText,
       selection: TextSelection.collapsed(offset: start),
     );
+  }
+
+  Future<void> _insertDueTaskFromSheet({required bool hadSlashTrigger}) async {
+    final selection = await TaskReminderSheet.show(
+      context: context,
+      taskTitle: 'New task reminder',
+    );
+    if (!mounted || selection == null) return;
+
+    final tokens = <String>[
+      if (selection.dueAt != null)
+        OpenTasksService.formatDueToken(
+          selection.dueAt!,
+          hasExplicitTime: selection.hasExplicitTime,
+        ),
+      if (selection.recurrence != null) selection.recurrence!.toToken(),
+    ];
+
+    final text = _contentController.text;
+    final sel = _contentController.selection;
+    final replaceStart = sel.isValid ? sel.start.clamp(0, text.length) : text.length;
+    final replaceEnd = sel.isValid ? sel.end.clamp(replaceStart, text.length) : text.length;
+
+    final before = text.substring(0, replaceStart);
+    final after = text.substring(replaceEnd);
+
+    final needsLeadingNewline = !hadSlashTrigger &&
+        before.isNotEmpty &&
+        !before.endsWith('\n');
+    final prefix = '${needsLeadingNewline ? '\n' : ''}- [ ] ';
+    final tokenSuffix = tokens.isEmpty ? '' : ' ${tokens.join(' ')}';
+    final inserted = '$prefix$tokenSuffix';
+    final newText = '$before$inserted$after';
+    final newCursor = (before.length + prefix.length).clamp(0, newText.length);
+
+    _contentController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    _saveNote();
+    _contentFocusNode.requestFocus();
   }
 
   void _showWhiteboardEmbedPicker() {
@@ -1554,53 +1602,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           automaticallyImplyLeading: false,
           centerTitle: false,
           titleSpacing: AppSpacing.md,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const TackIcon(TackIcons.back, size: 22),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                onPressed: _handleBackPress,
-                tooltip: 'Back',
-              ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.9),
-                  borderRadius: AppSpacing.roundedPill,
-                  border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TackIcon(
-                      _isSaving ? TackIcons.saving : TackIcons.checkCircle,
-                      size: 14,
-                      color: _isSaving ? AppColors.accentAmber : AppColors.success,
-                      style: _isSaving ? HeroIconStyle.outline : HeroIconStyle.solid,
-                    ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        _isSaving ? 'Saving...' : 'Saved',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          title: IconButton(
+            icon: const TackIcon(TackIcons.back, size: 22),
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            onPressed: _handleBackPress,
+            tooltip: 'Back',
+          ),
         actions: [
           if (hasHeadings)
             IconButton(

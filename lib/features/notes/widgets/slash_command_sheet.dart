@@ -45,6 +45,14 @@ class SlashCommandsCatalog {
       markdownSnippet: '- [ ] ',
     ),
     SlashCommandItem(
+      id: 'due_task',
+      command: 'due',
+      label: 'Due / Recurring Task',
+      subtitle: 'Checklist task with @due reminder & repeat rule',
+      icon: TackIcons.notification,
+      accentColor: AppColors.lightAccentPin,
+    ),
+    SlashCommandItem(
       id: 'h1',
       command: 'h1',
       label: 'Heading 1',

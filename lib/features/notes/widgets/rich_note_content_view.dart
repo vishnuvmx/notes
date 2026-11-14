@@ -22,6 +22,7 @@ import '../services/frontmatter_service.dart';
 import '../services/latex_math_service.dart';
 import '../services/markdown_table_service.dart';
 import '../services/wiki_link_service.dart';
+import '../../tasks/services/open_tasks_service.dart';
 
 /// Rich Interactive Content View for Tack Notes.
 /// Renders Headings (H1-H6 with section folding), Collapsible Toggle Blocks,
@@ -84,17 +85,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     if (onContentChanged == null) return;
     HapticFeedback.lightImpact();
 
-    final lines = content.split('\n');
-    if (lineIndex >= 0 && lineIndex < lines.length) {
-      final line = lines[lineIndex];
-      if (line.contains('[ ]')) {
-        lines[lineIndex] = line.replaceFirst('[ ]', '[x]');
-      } else if (line.contains('[x]')) {
-        lines[lineIndex] = line.replaceFirst('[x]', '[ ]');
-      } else if (line.contains('[X]')) {
-        lines[lineIndex] = line.replaceFirst('[X]', '[ ]');
-      }
-      onContentChanged!(lines.join('\n'));
+    final updated = OpenTasksService.toggleTaskAtLine(content, lineIndex);
+    if (updated != null && updated != content) {
+      onContentChanged!(updated);
     }
   }
 
@@ -672,10 +665,31 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     if (isUnchecked || isChecked) {
       final leadingSpaces = line.indexOf(RegExp(r'\[|\S'));
       final indent = (leadingSpaces > 0 ? (leadingSpaces / 2).floor() : 0).clamp(0, 5);
-      final taskText = line
+      final rawTaskText = line
           .replaceAll(RegExp(r'^\s*[-*+]?\s*\[[ xX]\]\s*'), '')
           .replaceAll(RegExp(r'\[[ xX]\]'), '')
           .trim();
+      final parsedTask = OpenTasksService.parseTaskMetadata(rawTaskText);
+      final taskText = parsedTask.cleanText.isNotEmpty
+          ? parsedTask.cleanText
+          : rawTaskText;
+      final taskMetaPreview = DerivedTaskItem(
+        noteId: '',
+        noteTitle: '',
+        paletteId: '',
+        lineIndex: lineIndex,
+        text: taskText,
+        rawText: rawTaskText,
+        isDone: isChecked,
+        noteUpdatedAt: DateTime.now(),
+        dueAt: parsedTask.dueAt,
+        hasExplicitTime: parsedTask.hasExplicitTime,
+        recurrence: parsedTask.recurrence,
+      );
+      final dueLabel = taskMetaPreview.formatDueLabel();
+      final repeatLabel = parsedTask.recurrence?.label;
+      final isTaskOverdue = taskMetaPreview.isOverdue();
+      final isTaskDueToday = taskMetaPreview.isDueToday();
 
       return Padding(
         padding: EdgeInsets.only(top: 3, bottom: 3, left: indent * 16.0),
@@ -685,49 +699,92 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: (dueLabel != null || repeatLabel != null)
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: AppSpacing.fastAnim,
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: isChecked
-                        ? palette.resolveBulletColor(isDark)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: (dueLabel != null || repeatLabel != null) ? 2 : 0,
+                  ),
+                  child: AnimatedContainer(
+                    duration: AppSpacing.fastAnim,
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
                       color: isChecked
                           ? palette.resolveBulletColor(isDark)
-                          : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                      width: 1.8,
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isChecked
+                            ? palette.resolveBulletColor(isDark)
+                            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        width: 1.8,
+                      ),
                     ),
+                    child: isChecked
+                        ? const Center(
+                            child: TackIcon(
+                              TackIcons.check,
+                              size: 14,
+                              color: Colors.white,
+                              style: HeroIconStyle.solid,
+                            ),
+                          )
+                        : null,
                   ),
-                  child: isChecked
-                      ? const Center(
-                          child: TackIcon(
-                            TackIcons.check,
-                            size: 14,
-                            color: Colors.white,
-                            style: HeroIconStyle.solid,
-                          ),
-                        )
-                      : null,
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: _buildRichTextSpans(
-                    taskText,
-                    isDark,
-                    theme,
-                    context: context,
-                    baseStyle: theme.textTheme.bodyLarge?.copyWith(
-                      decoration: isChecked ? TextDecoration.lineThrough : null,
-                      color: isChecked
-                          ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-                          : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                      fontWeight: isChecked ? FontWeight.w400 : FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildRichTextSpans(
+                        taskText,
+                        isDark,
+                        theme,
+                        context: context,
+                        baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                          decoration: isChecked ? TextDecoration.lineThrough : null,
+                          color: isChecked
+                              ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
+                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                          fontWeight: isChecked ? FontWeight.w400 : FontWeight.w500,
+                        ),
+                      ),
+                      if (dueLabel != null || repeatLabel != null) ...[
+                        const SizedBox(height: 5),
+                        Wrap(
+                          spacing: AppSpacing.xs + 2,
+                          runSpacing: 4,
+                          children: [
+                            if (dueLabel != null)
+                              _TaskMetaBadge(
+                                icon: TackIcons.clock,
+                                label: dueLabel,
+                                color: isChecked
+                                    ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
+                                    : isTaskOverdue
+                                        ? (isDark ? AppColors.darkStateDanger : AppColors.lightStateDanger)
+                                        : isTaskDueToday
+                                            ? (isDark ? AppColors.darkStateWarning : AppColors.lightStateWarning)
+                                            : (isDark ? AppColors.darkStateInfo : AppColors.lightStateInfo),
+                                isDark: isDark,
+                              ),
+                            if (repeatLabel != null)
+                              _TaskMetaBadge(
+                                icon: TackIcons.refresh,
+                                label: repeatLabel,
+                                color: isChecked
+                                    ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
+                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                isDark: isDark,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -3443,5 +3500,49 @@ class _ParsedDefinitionList {
     required this.groups,
     required this.nextIndex,
   });
+}
+
+class _TaskMetaBadge extends StatelessWidget {
+  final TackSvgIcon icon;
+  final String label;
+  final Color color;
+  final bool isDark;
+
+  const _TaskMetaBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.16 : 0.10),
+        borderRadius: AppSpacing.roundedPill,
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.30 : 0.22),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TackIcon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 

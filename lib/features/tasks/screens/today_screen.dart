@@ -11,6 +11,7 @@ import '../../../shared/models/base_item.dart';
 import '../../notes/models/text_note.dart';
 import '../../whiteboard/models/whiteboard_item.dart';
 import '../services/open_tasks_service.dart';
+import '../widgets/task_reminder_sheet.dart';
 import '../../../shared/providers/workspace_provider.dart';
 import '../../whiteboard/widgets/board_grid_card.dart';
 import '../../../shared/widgets/neo_note_card.dart';
@@ -18,6 +19,7 @@ import '../../../shared/widgets/responsive_card_grid.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/sliding_pill_track.dart';
+import '../../../shared/widgets/tack_toast.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../notes/screens/note_editor_screen.dart';
 import '../../whiteboard/screens/whiteboard_canvas_screen.dart';
@@ -141,9 +143,47 @@ class _TodayScreenState extends State<TodayScreen> {
                       }
                     });
                   },
-                  onToggleTask: (task) {
+                  onToggleTask: (task) async {
                     HapticFeedback.selectionClick();
-                    workspace.toggleTask(task);
+                    final result = await workspace.toggleTask(task);
+                    if (result != null &&
+                        result.advancedRecurrence &&
+                        result.nextDueAt != null &&
+                        context.mounted) {
+                      final nextPreview = DerivedTaskItem(
+                        noteId: task.noteId,
+                        noteTitle: task.noteTitle,
+                        paletteId: task.paletteId,
+                        lineIndex: task.lineIndex,
+                        text: result.cleanText,
+                        isDone: false,
+                        noteUpdatedAt: DateTime.now(),
+                        dueAt: result.nextDueAt,
+                        hasExplicitTime: result.hasExplicitTime,
+                        recurrence: result.recurrence,
+                      );
+                      final dueStr = nextPreview.formatDueLabel() ?? 'next date';
+                      TackToast.show(
+                        context,
+                        message: 'Completed · Next due $dueStr',
+                      );
+                    }
+                  },
+                  onEditReminder: (task) async {
+                    final selection = await TaskReminderSheet.show(
+                      context: context,
+                      taskTitle: task.text,
+                      initialDueAt: task.dueAt,
+                      initialHasExplicitTime: task.hasExplicitTime,
+                      initialRecurrence: task.recurrence,
+                    );
+                    if (selection == null) return;
+                    await workspace.setTaskReminder(
+                      task,
+                      dueAt: selection.dueAt,
+                      hasExplicitTime: selection.hasExplicitTime,
+                      recurrence: selection.recurrence,
+                    );
                   },
                   onOpenSourceNote: (noteId) {
                     final note = workspace.getItemByIdSync(noteId);
@@ -556,6 +596,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
   final Set<String> collapsedGroups;
   final ValueChanged<String> onToggleGroup;
   final ValueChanged<DerivedTaskItem> onToggleTask;
+  final ValueChanged<DerivedTaskItem> onEditReminder;
   final ValueChanged<String> onOpenSourceNote;
   final ValueChanged<BaseWorkspaceItem> onOpenInboxItem;
 
@@ -568,6 +609,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     required this.collapsedGroups,
     required this.onToggleGroup,
     required this.onToggleTask,
+    required this.onEditReminder,
     required this.onOpenSourceNote,
     required this.onOpenInboxItem,
   });
@@ -769,6 +811,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
               _TaskRow(
                 task: task,
                 onToggle: () => onToggleTask(task),
+                onEditReminder: !task.isDone ? () => onEditReminder(task) : null,
                 onOpenSource: () => onOpenSourceNote(task.noteId),
               ),
           const SizedBox(height: AppSpacing.s2),
@@ -1072,11 +1115,13 @@ class _TriageButton extends StatelessWidget {
 class _TaskRow extends StatelessWidget {
   final DerivedTaskItem task;
   final VoidCallback onToggle;
+  final VoidCallback? onEditReminder;
   final VoidCallback onOpenSource;
 
   const _TaskRow({
     required this.task,
     required this.onToggle,
+    this.onEditReminder,
     required this.onOpenSource,
   });
 
@@ -1085,13 +1130,33 @@ class _TaskRow extends StatelessWidget {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(task.paletteId);
     final dotColor = palette.resolveAccentColor(tokens.isDark);
+    final now = DateTime.now();
+    final isOverdue = task.isOverdue(now);
+    final isToday = task.isDueToday(now);
+    final dueLabel = task.formatDueLabel(now);
+    final repeatLabel = task.recurrence?.label;
+
+    final Color dueFg;
+    final Color dueBg;
+    if (isOverdue) {
+      dueFg = tokens.danger;
+      dueBg = tokens.danger.withValues(alpha: 0.12);
+    } else if (isToday) {
+      dueFg = tokens.accentPin;
+      dueBg = tokens.accentPin.withValues(alpha: 0.12);
+    } else {
+      dueFg = tokens.textSecondary;
+      dueBg = tokens.canvasSunken;
+    }
 
     return InkWell(
       onTap: onToggle,
+      onLongPress: onEditReminder,
       borderRadius: AppSpacing.roundedSm,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
             Container(
@@ -1128,20 +1193,108 @@ class _TaskRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                task.text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.body(
-                  color: task.isDone
-                      ? tokens.textTertiary
-                      : tokens.textPrimary,
-                ).copyWith(
-                  decoration:
-                      task.isDone ? TextDecoration.lineThrough : null,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(
+                      color: task.isDone
+                          ? tokens.textTertiary
+                          : tokens.textPrimary,
+                    ).copyWith(
+                      decoration:
+                          task.isDone ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  if (!task.isDone && (dueLabel != null || repeatLabel != null)) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (dueLabel != null)
+                          GestureDetector(
+                            onTap: onEditReminder,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: dueBg,
+                                borderRadius: AppSpacing.roundedPill,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TackIcon(
+                                    TackIcons.notification,
+                                    size: 11,
+                                    color: dueFg,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    dueLabel,
+                                    style: AppTypography.caption(
+                                      color: dueFg,
+                                      weight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (repeatLabel != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.canvasSunken,
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TackIcon(
+                                  TackIcons.refresh,
+                                  size: 11,
+                                  color: tokens.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  repeatLabel,
+                                  style: AppTypography.caption(
+                                    color: tokens.textSecondary,
+                                    weight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
+            if (onEditReminder != null)
+              IconButton(
+                onPressed: onEditReminder,
+                tooltip: 'Set reminder',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: EdgeInsets.zero,
+                icon: TackIcon(
+                  TackIcons.notification,
+                  size: 15,
+                  color: dueLabel != null ? dueFg : tokens.textTertiary,
+                ),
+              ),
           ],
         ),
       ),
