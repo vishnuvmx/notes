@@ -64,7 +64,13 @@ class AppBottomSheet {
           curve: AppSpacing.curveStandard,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: screenHeight * maxHeightFactor,
+              maxHeight: math.min(
+                screenHeight * maxHeightFactor,
+                math.max(
+                  200.0,
+                  screenHeight - viewPadding.top - bottomOffset - AppSpacing.s3,
+                ),
+              ),
             ),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),

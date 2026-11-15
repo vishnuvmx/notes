@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -24,6 +25,7 @@ import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/color_swatch_picker.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/app_floating_dialog.dart';
+import '../../../shared/widgets/permission_rationale_dialog.dart';
 import '../widgets/document_outline_sheet.dart';
 import '../../../shared/widgets/ios_menu_button.dart';
 import '../widgets/note_statistics_sheet.dart';
@@ -75,7 +77,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   String? _parentId;
   String? _iconEmoji;
 
-  bool _isEditingMode = true;
+  bool _isEditingMode = false;
+  late final bool _startedAsBlankDraft;
   bool _isAddingTag = false;
   final bool _autoSaveEnabled = true;
   bool _isNotificationPinned = false;
@@ -101,8 +104,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       text: initialContent,
       paletteId: _paletteId,
     );
-    _isEditingMode = widget.startInEditMode ||
-        (widget.initialHeadingAnchor == null && initialContent.trim().isEmpty);
+    _startedAsBlankDraft =
+        widget.startInEditMode && initialContent.trim().isEmpty;
+    _isEditingMode = widget.startInEditMode;
     _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
     _folderName = widget.item.folderName;
     _parentId = widget.item.parentId;
@@ -291,6 +295,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         _contentFocusNode.requestFocus();
       });
     } else {
+      _saveDebounce?.cancel();
+      _flushSave();
+      FocusScope.of(context).unfocus();
       setState(() => _isEditingMode = false);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -309,8 +316,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
-    // Discard untouched empty draft on Back (`05-information-architecture.md` §2.2 D2)
-    if (_isUntouchedEmptyDraft) {
+    // Discard only newly created blank drafts that were never edited
+    if (_startedAsBlankDraft && _isUntouchedEmptyDraft) {
       _saveDebounce?.cancel();
       FocusScope.of(context).unfocus();
       _workspace?.deletePermanently(widget.item.id);
@@ -318,11 +325,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       return;
     }
     if (_isEditingMode) {
+      _saveDebounce?.cancel();
       FocusScope.of(context).unfocus();
       _flushSave();
       setState(() => _isEditingMode = false);
       return;
     }
+    _saveDebounce?.cancel();
     FocusScope.of(context).unfocus();
     _flushSave();
     Navigator.of(context).pop();
@@ -451,35 +460,38 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   void _showEmojiPickerSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
     const emojis = [
       '📝', '📐', '🎨', '⚖️', '🚀', '💡', '🧠', '☀️',
       '🔥', '✅', '📌', '🗂️', '🧪', '🛠️', '🌟', '🔒',
     ];
     AppBottomSheet.show(
       context: context,
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: AppSpacing.modalSheetPadding,
         child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Note Icon',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleSm(
-                        fontSize: 16,
-                        weight: FontWeight.w700,
-                      ),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Note Icon',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.titleSm(
+                      color: tokens.textPrimary,
+                      weight: FontWeight.w700,
                     ),
                   ),
-                  if (_iconEmoji != null)
-                    TextButton(
+                ),
+                if (_iconEmoji != null)
+                  SizedBox(
+                    height: AppSpacing.minTouchTarget,
+                    child: TextButton(
                       onPressed: () {
                         setState(() => _iconEmoji = null);
                         _saveNote();
@@ -487,15 +499,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       },
                       child: const Text('Remove'),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: emojis.map((e) {
-                  final selected = _iconEmoji == e;
-                  return GestureDetector(
+                  ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: emojis.map((e) {
+                final selected = _iconEmoji == e;
+                return Semantics(
+                  button: true,
+                  selected: selected,
+                  label: 'Use $e icon',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _iconEmoji = e);
@@ -503,8 +530,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       Navigator.of(ctx).pop();
                     },
                     child: Container(
-                      width: 48,
-                      height: 48,
+                      width: AppSpacing.minTouchTarget,
+                      height: AppSpacing.minTouchTarget,
                       decoration: BoxDecoration(
                         color: selected
                             ? AppColors.pastelLimeLight
@@ -512,7 +539,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: selected
-                              ? const Color(0xFF191A23)
+                              ? AppColors.lightTextPrimary
                               : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
                           width: selected ? 1.6 : 1.0,
                         ),
@@ -521,59 +548,71 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         child: Text(e, style: const TextStyle(fontSize: 22)),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   Future<void> _showMoveToFolderSheet() async {
     final workspace = context.read<WorkspaceProvider>();
     final chosen = await AppBottomSheet.show<String?>(
       context: context,
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: AppSpacing.modalSheetPadding,
         child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Move Note to Folder',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Move Note to Folder',
+                  style: AppTypography.titleSm(weight: FontWeight.w800),
                 ),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const TackIcon(TackIcons.inbox, size: 20),
-                title: const Text('No Folder (All Notes)'),
-                trailing: _folderName == null
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.inbox, size: 20),
+              title: const Text('No Folder (All Notes)'),
+              trailing: _folderName == null
+                  ? const TackIcon(TackIcons.check, size: 16)
+                  : null,
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () => Navigator.of(ctx).pop(''),
+            ),
+            ...workspace.userFolders.map(
+              (f) => ListTile(
+                minTileHeight: AppSpacing.minTouchTarget,
+                leading: const TackIcon(TackIcons.folder, size: 20),
+                title: Text(f),
+                trailing: _folderName == f
                     ? const TackIcon(TackIcons.check, size: 16)
                     : null,
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () => Navigator.of(ctx).pop(''),
+                onTap: () => Navigator.of(ctx).pop(f),
               ),
-              ...workspace.userFolders.map(
-                (f) => ListTile(
-                  leading: const TackIcon(TackIcons.folder, size: 20),
-                  title: Text(f),
-                  trailing: _folderName == f
-                      ? const TackIcon(TackIcons.check, size: 16)
-                      : null,
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                  onTap: () => Navigator.of(ctx).pop(f),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
     if (chosen != null && mounted) {
       setState(() => _folderName = chosen.isEmpty ? null : chosen);
       _saveNote();
@@ -849,12 +888,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         final ext = insertedContent.mimeType.contains('png') ? 'png' : 'jpg';
         final file = File('${imagesDir.path}/pasted_${DateTime.now().millisecondsSinceEpoch}.$ext');
         await file.writeAsBytes(bytes);
+        if (!mounted) return;
         _insertImageMarkdown(file.path, alt: 'Pasted Image');
         HapticFeedback.lightImpact();
       }
-    } catch (e) {
-      debugPrint('Error inserting clipboard content: $e');
+    } catch (_) {
+      if (!mounted) return;
+      _showEditorFeedback('Could not paste image into note.', isError: true);
     }
+  }
+
+  void _showEditorFeedback(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.error : null,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _insertAtCursor(String insertion) {
@@ -888,142 +941,182 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   void _showAlertTemplatePicker() {
     AppBottomSheet.show(
       context: context,
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Insert Callout Alert',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Insert Callout Alert',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
             ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                leading: const TackIcon(TackIcons.info, size: 22, color: Color(0xFF0284C7)),
-                title: const Text('Note Alert'),
-                subtitle: const Text('> [!NOTE] Informational notice'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('> [!NOTE]\n> Write your important context or informational notice here.\n');
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.lightbulb, size: 22, color: Color(0xFF059669)),
-                title: const Text('Tip Alert'),
-                subtitle: const Text('> [!TIP] Helpful recommendation'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('> [!TIP]\n> Pro-tip: Organize your notes using tags or custom pastel palettes.\n');
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.star, size: 22, color: Color(0xFF7C3AED)),
-                title: const Text('Important Alert'),
-                subtitle: const Text('> [!IMPORTANT] Crucial requirement'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('> [!IMPORTANT]\n> Essential requirement or critical step to keep in mind.\n');
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.warning, size: 22, color: Color(0xFFD97706)),
-                title: const Text('Warning Alert'),
-                subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('> [!WARNING]\n> Warning: Changes made here cannot be undone once deleted.\n');
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.shield, size: 22, color: Color(0xFFDC2626)),
-                title: const Text('Caution Alert'),
-                subtitle: const Text('> [!CAUTION] High-risk action notice'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _insertAtCursor('> [!CAUTION]\n> High-risk action: Proceed with caution.\n');
-                },
-              ),
-            ],
-          ),
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.info, size: 22, color: Color(0xFF0284C7)),
+              title: const Text('Note Alert'),
+              subtitle: const Text('> [!NOTE] Informational notice'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _insertAtCursor('> [!NOTE]\n> Write your important context or informational notice here.\n');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.lightbulb, size: 22, color: Color(0xFF059669)),
+              title: const Text('Tip Alert'),
+              subtitle: const Text('> [!TIP] Helpful recommendation'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _insertAtCursor('> [!TIP]\n> Pro-tip: Organize your notes using tags or custom pastel palettes.\n');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.star, size: 22, color: Color(0xFF7C3AED)),
+              title: const Text('Important Alert'),
+              subtitle: const Text('> [!IMPORTANT] Crucial requirement'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _insertAtCursor('> [!IMPORTANT]\n> Essential requirement or critical step to keep in mind.\n');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.warning, size: 22, color: Color(0xFFD97706)),
+              title: const Text('Warning Alert'),
+              subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _insertAtCursor('> [!WARNING]\n> Warning: Changes made here cannot be undone once deleted.\n');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.shield, size: 22, color: Color(0xFFDC2626)),
+              title: const Text('Caution Alert'),
+              subtitle: const Text('> [!CAUTION] High-risk action notice'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _insertAtCursor('> [!CAUTION]\n> High-risk action: Proceed with caution.\n');
+              },
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndSaveImage(ImageSource source, {required String alt}) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source);
+      if (picked == null) return;
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${appDir.path}/note_images');
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      final ext = picked.path.split('.').lastOrNull ?? 'jpg';
+      final prefix = source == ImageSource.camera ? 'photo' : 'img';
+      final savedFile = File(
+        '${imagesDir.path}/${prefix}_${DateTime.now().millisecondsSinceEpoch}.$ext',
       );
+      await File(picked.path).copy(savedFile.path);
+      if (!mounted) return;
+      _insertImageMarkdown(savedFile.path, alt: alt);
+    } catch (_) {
+      _showEditorFeedback(
+        source == ImageSource.camera
+            ? 'Could not access camera. Check camera permission in Settings.'
+            : 'Could not import selected image.',
+        isError: true,
+      );
+    }
   }
 
   void _showImageSourcePicker() {
     AppBottomSheet.show(
       context: context,
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: AppSpacing.modalSheetPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Insert Image',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Insert Image',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
             ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                leading: const TackIcon(TackIcons.photo, size: 22, color: AppColors.accentCyan),
-                title: const Text('Choose from Gallery'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  final picker = ImagePicker();
-                  final picked = await picker.pickImage(source: ImageSource.gallery);
-                  if (picked != null) {
-                    final appDir = await getApplicationDocumentsDirectory();
-                    final imagesDir = Directory('${appDir.path}/note_images');
-                    if (!await imagesDir.exists()) {
-                      await imagesDir.create(recursive: true);
-                    }
-                    final ext = picked.path.split('.').lastOrNull ?? 'jpg';
-                    final savedFile = File('${imagesDir.path}/img_${DateTime.now().millisecondsSinceEpoch}.$ext');
-                    await File(picked.path).copy(savedFile.path);
-                    _insertImageMarkdown(savedFile.path, alt: 'Gallery Image');
-                  }
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.camera, size: 22, color: AppColors.accentOrange),
-                title: const Text('Take Photo'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  final picker = ImagePicker();
-                  final picked = await picker.pickImage(source: ImageSource.camera);
-                  if (picked != null) {
-                    final appDir = await getApplicationDocumentsDirectory();
-                    final imagesDir = Directory('${appDir.path}/note_images');
-                    if (!await imagesDir.exists()) {
-                      await imagesDir.create(recursive: true);
-                    }
-                    final ext = picked.path.split('.').lastOrNull ?? 'jpg';
-                    final savedFile = File('${imagesDir.path}/photo_${DateTime.now().millisecondsSinceEpoch}.$ext');
-                    await File(picked.path).copy(savedFile.path);
-                    _insertImageMarkdown(savedFile.path, alt: 'Camera Photo');
-                  }
-                },
-              ),
-              ListTile(
-                leading: const TackIcon(TackIcons.link, size: 22, color: AppColors.accentAmber),
-                title: const Text('Insert Image URL'),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _showImageUrlDialog();
-                },
-              ),
-            ],
-          ),
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.photo, size: 22, color: AppColors.accentCyan),
+              title: const Text('Choose from Gallery'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickAndSaveImage(ImageSource.gallery, alt: 'Gallery Image');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.camera, size: 22, color: AppColors.accentOrange),
+              title: const Text('Take Photo'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickAndSaveImage(ImageSource.camera, alt: 'Camera Photo');
+              },
+            ),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: const TackIcon(TackIcons.link, size: 22, color: AppColors.accentAmber),
+              title: const Text('Insert Image URL'),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showImageUrlDialog();
+              },
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   void _showImageUrlDialog() async {
@@ -1034,8 +1127,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       confirmLabel: 'Insert',
       icon: TackIcons.photo,
     );
-    if (url != null && url.isNotEmpty) {
-      _insertImageMarkdown(url, alt: 'Web Image');
+    final trimmed = url?.trim() ?? '';
+    if (trimmed.isNotEmpty) {
+      _insertImageMarkdown(trimmed, alt: 'Web Image');
     }
   }
 
@@ -1081,6 +1175,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final title = _titleController.text;
     final content = _contentController.text;
 
+    Future<void> runExport(Future<void> Function() task, String failMsg) async {
+      try {
+        await task();
+      } catch (_) {
+        _showEditorFeedback(failMsg, isError: true);
+      }
+    }
+
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => SingleChildScrollView(
@@ -1089,101 +1191,131 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Export & Share Note',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Export & Share Note',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.copy, size: 22),
               title: const Text('Copy Formatted Markdown'),
               onTap: () async {
-                await NoteExportService.copyMarkdown(title: title, content: content, tags: _tags);
-                if (!ctx.mounted || !mounted) return;
                 Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Markdown copied to clipboard!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                await runExport(
+                  () async {
+                    await NoteExportService.copyMarkdown(title: title, content: content, tags: _tags);
+                    _showEditorFeedback('Markdown copied to clipboard!');
+                  },
+                  'Could not copy Markdown.',
                 );
               },
             ),
             const Divider(),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.notes, size: 22),
               title: const Text('Copy Plain Text'),
               onTap: () async {
-                await NoteExportService.copyPlainText(title: title, content: content);
-                if (!ctx.mounted || !mounted) return;
                 Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Plain text copied to clipboard!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                await runExport(
+                  () async {
+                    await NoteExportService.copyPlainText(title: title, content: content);
+                    _showEditorFeedback('Plain text copied to clipboard!');
+                  },
+                  'Could not copy plain text.',
                 );
               },
             ),
             const Divider(),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.photo, size: 22),
               title: Text(widget.item is StickyNote ? 'Export Sticky as Image (PNG)' : 'Export as Image (PNG)'),
               subtitle: const Text('High-resolution shareable card image'),
               onTap: () async {
-                Navigator.of(ctx).pop();
                 final isDark = Theme.of(context).brightness == Brightness.dark;
-                await NoteExportService.exportImage(
-                  title: title,
-                  content: content,
-                  tags: _tags,
-                  paletteId: _paletteId,
-                  isSticky: widget.item is StickyNote,
-                  isDark: isDark,
+                Navigator.of(ctx).pop();
+                await runExport(
+                  () => NoteExportService.exportImage(
+                    title: title,
+                    content: content,
+                    tags: _tags,
+                    paletteId: _paletteId,
+                    isSticky: widget.item is StickyNote,
+                    isDark: isDark,
+                  ),
+                  'Could not export image.',
                 );
               },
             ),
             const Divider(),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.exportData, size: 22),
               title: const Text('Export as PDF Document'),
               subtitle: const Text('Formatted stationery PDF layout'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await NoteExportService.exportPdf(
-                  title: title,
-                  content: content,
-                  tags: _tags,
-                  paletteId: _paletteId,
+                await runExport(
+                  () => NoteExportService.exportPdf(
+                    title: title,
+                    content: content,
+                    tags: _tags,
+                    paletteId: _paletteId,
+                  ),
+                  'Could not export PDF.',
                 );
               },
             ),
             const Divider(),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.tag, size: 22),
               title: const Text('Print / Save PDF'),
               subtitle: const Text('Native Android Print Preview'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await NoteExportService.printPdf(
-                  title: title,
-                  content: content,
-                  tags: _tags,
-                  paletteId: _paletteId,
+                await runExport(
+                  () => NoteExportService.printPdf(
+                    title: title,
+                    content: content,
+                    tags: _tags,
+                    paletteId: _paletteId,
+                  ),
+                  'Could not open print preview.',
                 );
               },
             ),
             const Divider(),
             ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.share, size: 22),
               title: const Text('Share Note'),
               subtitle: const Text('System share sheet'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await NoteExportService.shareNote(
-                  title: title,
-                  content: content,
-                  tags: _tags,
+                await runExport(
+                  () => NoteExportService.shareNote(
+                    title: title,
+                    content: content,
+                    tags: _tags,
+                  ),
+                  'Could not open share sheet.',
                 );
               },
             ),
@@ -1348,8 +1480,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _showWhiteboardEmbedPicker() {
     final workspace = context.read<WorkspaceProvider>();
-    final boards = workspace.rawItems.whereType<WhiteboardCanvasItem>().where((b) => !b.isTrash).toList();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final boards = workspace.rawItems
+        .whereType<WhiteboardCanvasItem>()
+        .where((b) => !b.isTrash)
+        .toList();
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
 
     AppBottomSheet.show(
       context: context,
@@ -1359,37 +1495,60 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Embed Whiteboard Canvas',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Embed Whiteboard Canvas',
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Inserts a live interactive preview right inside this note.',
+                        style: AppTypography.caption(color: tokens.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
             ),
-              const SizedBox(height: 4),
-              Text(
-                'Inserts a live interactive preview right inside this note.',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
+            const SizedBox(height: AppSpacing.md),
+            ListTile(
+              minTileHeight: AppSpacing.minTouchTarget,
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accentCyan.withValues(alpha: 0.16),
+                  borderRadius: AppSpacing.roundedXs,
+                ),
+                child: const Center(
+                  child: TackIcon(TackIcons.plus, size: 18, color: AppColors.accentCyan),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentCyan.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Center(
-                    child: TackIcon(TackIcons.plus, size: 18, color: AppColors.accentCyan),
-                  ),
-                ),
-                title: const Text(
-                  'Create & Embed New Whiteboard',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
+              title: Text(
+                'Create & Embed New Whiteboard',
+                style: AppTypography.bodySm(weight: FontWeight.w700),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                try {
                   final baseTitle = _titleController.text.trim();
                   final boardTitle = baseTitle.isEmpty ? 'Spec Flow' : '$baseTitle (Flow)';
                   final created = await workspace.createQuickItem(
@@ -1397,10 +1556,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     type: ItemType.whiteboard,
                     paletteId: 'cyan',
                   );
+                  if (!mounted) return;
                   _insertAtCursor('![[${created.title}]]');
-                },
+                } catch (_) {
+                  _showEditorFeedback('Could not create whiteboard embed.', isError: true);
+                }
+              },
+            ),
+            if (boards.isEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
+                child: Text(
+                  'No existing whiteboards yet. Tap above to create and embed a new board.',
+                  style: AppTypography.caption(color: tokens.textSecondary),
+                ),
               ),
-              if (boards.isNotEmpty) const Divider(),
+            ] else ...[
+              const Divider(),
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -1408,17 +1581,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   itemBuilder: (_, idx) {
                     final board = boards[idx];
                     return ListTile(
+                      minTileHeight: AppSpacing.minTouchTarget,
                       leading: TackIcon(
                         TackIcons.whiteboardSvg,
                         size: 20,
-                        color: AppColors.getPaletteById(board.paletteId).resolveAccentColor(isDark),
+                        color: AppColors.getPaletteById(board.paletteId)
+                            .resolveAccentColor(isDark),
                       ),
                       title: Text(
                         board.title,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: AppTypography.bodySm(weight: FontWeight.w700),
                       ),
                       subtitle: Text(board.getSummary()),
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.roundedMd,
+                      ),
                       onTap: () {
                         Navigator.of(ctx).pop();
                         _insertAtCursor('![[${board.title}]]');
@@ -1428,9 +1605,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 ),
               ),
             ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   void _completeWikiTrigger(ActiveWikiTrigger trigger, String completionToken) {
@@ -1532,7 +1710,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final content = _contentController.text;
     final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
     final wordCount = content.trim().isEmpty ? 0 : content.trim().split(RegExp(r'\s+')).length;
-    final readTime = ((wordCount / 180).ceil()).clamp(1, 60);
+    final readTime = wordCount == 0 ? 0 : ((wordCount / 180).ceil()).clamp(1, 60);
 
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
@@ -1642,7 +1820,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: IosThreeDotMenu<String>(
-              size: 36,
+              size: AppSpacing.minTouchTarget,
               icon: TackIcons.more,
               iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               onSelected: (val) async {
@@ -1665,54 +1843,43 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   await _handleSaveAsTemplate();
                 } else if (val == 'duplicate') {
                   HapticFeedback.lightImpact();
-                  workspace.duplicateItem(widget.item);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Note duplicated!'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  await workspace.duplicateItem(widget.item);
+                  _showEditorFeedback('Note duplicated!');
                 } else if (val == 'pin_notification') {
                   HapticFeedback.lightImpact();
                   _flushSave();
-                  final messenger = ScaffoldMessenger.of(context);
                   final latest = workspace.getItemByIdSync(widget.item.id) ??
                       _buildUpdatedItem(workspace);
                   if (_isNotificationPinned) {
                     await PinnedNotificationService.unpinNote(latest.id);
                     if (mounted) {
                       setState(() => _isNotificationPinned = false);
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Unpinned from notification bar'),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      _showEditorFeedback('Unpinned from notification bar');
                     }
                   } else {
+                    final allowed = await ensureNotificationPermissionWithRationale(
+                      context,
+                      title: 'Allow notifications to pin notes?',
+                      rationale:
+                          'Tack uses Android notifications to keep your pinned note visible in the notification shade.',
+                    );
+                    if (!allowed || !mounted) return;
                     final ok = await PinnedNotificationService.pinNote(latest);
                     if (mounted) {
                       setState(() => _isNotificationPinned = ok);
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            ok
-                                ? 'Pinned to notification bar'
-                                : 'Enable notifications to pin notes',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
-                        ),
+                      _showEditorFeedback(
+                        ok
+                            ? 'Pinned to notification bar'
+                            : 'Could not pin note to notification bar',
+                        isError: !ok,
                       );
                     }
                   }
                 } else if (val == 'share') {
                   _showShareExportSheet();
                 } else if (val == 'trash') {
-                  workspace.moveToTrash(widget.item.id);
-                  Navigator.of(context).pop();
+                  await workspace.moveToTrash(widget.item.id);
+                  if (mounted) Navigator.of(context).pop();
                 }
               },
               items: [
@@ -1817,13 +1984,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         if (_iconEmoji != null && _iconEmoji!.isNotEmpty) ...[
-                          GestureDetector(
-                            onTap: _showEmojiPickerSheet,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: Text(
-                                _iconEmoji!,
-                                style: const TextStyle(fontSize: 30),
+                          Tooltip(
+                            message: 'Change note icon',
+                            child: InkWell(
+                              borderRadius: AppSpacing.roundedSm,
+                              onTap: _showEmojiPickerSheet,
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: Text(
+                                  _iconEmoji!,
+                                  style: const TextStyle(fontSize: 30),
+                                ),
                               ),
                             ),
                           ),
@@ -1832,10 +2003,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                           child: _isEditingMode
                               ? TextField(
                                   controller: _titleController,
-                                  style: theme.textTheme.displaySmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.7,
-                                    height: 1.18,
+                                  style: AppTypography.display(
+                                    color: tokens.textPrimary,
                                   ),
                                   maxLines: null,
                                   decoration: const InputDecoration(
@@ -1883,7 +2052,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               children: [
                                 TackIcon(
                                   TackIcons.folder,
-                                  size: 11,
+                                  size: 12,
                                   color: palette.resolveAccentColor(isDark),
                                 ),
                                 const SizedBox(width: 4),
@@ -1897,16 +2066,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               ],
                             ),
                           ),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            _showNoteStatisticsSheet();
-                          },
-                          child: Text(
-                            '$wordCount ${wordCount == 1 ? 'word' : 'words'}  •  ${readTime}m read',
-                            style: AppTypography.caption(
-                              color: tokens.textSecondary,
-                              weight: FontWeight.w500,
+                        Semantics(
+                          button: true,
+                          label: 'Open note statistics',
+                          child: Tooltip(
+                            message: 'Note statistics',
+                            child: InkWell(
+                              borderRadius: AppSpacing.roundedPill,
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                _showNoteStatisticsSheet();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 6,
+                                ),
+                                child: Text(
+                                  '$wordCount ${wordCount == 1 ? 'word' : 'words'}  •  ${readTime}m read',
+                                  style: AppTypography.caption(
+                                    color: tokens.textSecondary,
+                                    weight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -1943,18 +2126,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               children: [
                                 TackIcon(
                                   TackIcons.share,
-                                  size: 11,
+                                  size: 12,
                                   color: palette.resolveAccentColor(isDark),
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
                                   'Saved from ${(widget.item as TextNote).sourceApp}',
-                                  style: TextStyle(
-                                    fontFamily: AppTypography.fontFamily,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.2,
+                                  style: AppTypography.caption(
                                     color: palette.resolveAccentColor(isDark),
+                                    weight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -1973,15 +2153,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         ..._tags.map(
                           (tag) => Chip(
                             label: Text('#$tag'),
-                            labelStyle: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            labelStyle: AppTypography.caption(
+                              color: tokens.textPrimary,
+                              weight: FontWeight.w600,
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 4),
-                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize: MaterialTapTargetSize.padded,
                             shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                            backgroundColor: isDark ? AppColors.darkSurfaceAlt : Colors.white,
+                            backgroundColor: tokens.canvasSunken,
+                            deleteButtonTooltipMessage: 'Remove #$tag',
                             onDeleted: _isEditingMode ? () => _removeTag(tag) : null,
                             deleteIcon: _isEditingMode ? const TackIcon(TackIcons.close, size: 14) : null,
                           ),
@@ -1989,10 +2169,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         if (_isEditingMode)
                           if (_isAddingTag)
                             Container(
-                              height: 28,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              constraints: const BoxConstraints(minHeight: 38),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurfaceAlt : Colors.white,
+                                color: tokens.canvasSunken,
                                 borderRadius: AppSpacing.roundedPill,
                                 border: Border.all(color: AppColors.accentAmber, width: 1.4),
                               ),
@@ -2002,21 +2182,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                   const Text(
                                     '#',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       color: AppColors.accentAmber,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
                                   SizedBox(
-                                    width: 76,
+                                    width: 84,
                                     child: TextField(
                                       controller: _newTagController,
                                       autofocus: true,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                                      style: AppTypography.caption(
+                                        color: tokens.textPrimary,
+                                        weight: FontWeight.w600,
                                       ),
                                       decoration: const InputDecoration(
                                         isDense: true,
@@ -2027,14 +2206,44 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                       onSubmitted: (_) => _submitNewTag(),
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: _submitNewTag,
-                                    child: const TackIcon(TackIcons.check, size: 14, color: AppColors.accentAmber),
+                                  Tooltip(
+                                    message: 'Add tag',
+                                    child: InkWell(
+                                      borderRadius: AppSpacing.roundedPill,
+                                      onTap: _submitNewTag,
+                                      child: const SizedBox(
+                                        width: 32,
+                                        height: 32,
+                                        child: Center(
+                                          child: TackIcon(
+                                            TackIcons.check,
+                                            size: 15,
+                                            color: AppColors.accentAmber,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: () => setState(() => _isAddingTag = false),
-                                    child: const TackIcon(TackIcons.close, size: 13, color: Colors.grey),
+                                  Tooltip(
+                                    message: 'Cancel tag',
+                                    child: InkWell(
+                                      borderRadius: AppSpacing.roundedPill,
+                                      onTap: () {
+                                        _newTagController.clear();
+                                        setState(() => _isAddingTag = false);
+                                      },
+                                      child: SizedBox(
+                                        width: 32,
+                                        height: 32,
+                                        child: Center(
+                                          child: TackIcon(
+                                            TackIcons.close,
+                                            size: 14,
+                                            color: tokens.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -2043,32 +2252,38 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             ActionChip(
                               avatar: const TackIcon(TackIcons.plus, size: 14),
                               label: const Text('Add Tag'),
-                              labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                              visualDensity: VisualDensity.compact,
+                              labelStyle: AppTypography.caption(
+                                color: tokens.textPrimary,
+                                weight: FontWeight.w600,
+                              ),
+                              materialTapTargetSize: MaterialTapTargetSize.padded,
                               shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                               onPressed: () => setState(() => _isAddingTag = true),
-                             ),
-                       ],
-                     ),
+                              onPressed: () => setState(() => _isAddingTag = true),
+                            ),
+                      ],
+                    ),
 
-                     // Structured YAML Frontmatter Properties Bar
-                     FrontmatterPropertiesBar(
-                       rawContent: _contentController.text,
-                       paletteId: _paletteId,
-                       isEditingMode: _isEditingMode,
-                       onContentChanged: (updatedContent) {
-                         _contentController.text = updatedContent;
-                         _saveNote();
-                         setState(() {});
-                       },
-                     ),
-                     const SizedBox(height: AppSpacing.lg),
+                    // Structured YAML Frontmatter Properties Bar
+                    FrontmatterPropertiesBar(
+                      rawContent: _contentController.text,
+                      paletteId: _paletteId,
+                      isEditingMode: _isEditingMode,
+                      onContentChanged: (updatedContent) {
+                        _contentController.text = updatedContent;
+                        _saveNote();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
 
                     // Body Content (Editing TextField vs Interactive Rich Preview)
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 160),
+                      reverseDuration: const Duration(milliseconds: 110),
                       switchInCurve: Curves.easeOutCubic,
                       switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder:
+                          TackAnimatedTransition.switcherTransition,
                       layoutBuilder: (currentChild, previousChildren) {
                         return Stack(
                           alignment: Alignment.topLeft,
@@ -2097,11 +2312,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                   ],
                                   onContentInserted: _handleInsertedContent,
                                 ),
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  height: 1.55,
-                                  fontSize: 16,
-                                  fontFamily: AppTypography.fontFamily,
-                                ),
+                                style: AppTypography.body(
+                                  color: tokens.textPrimary,
+                                ).copyWith(fontSize: 16, height: 1.55),
                                 maxLines: null,
                                 decoration: const InputDecoration(
                                   hintText:
@@ -2218,24 +2431,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             // Always-at-bottom Status Footer (Last edited & Char count)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkBackground : AppColors.lightSurface,
+                color: tokens.surfacePrimary,
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? AppColors.darkBorder.withValues(alpha: 0.5) : AppColors.lightBorder.withValues(alpha: 0.6),
-                    width: 0.8,
+                    color: tokens.borderSubtle.withValues(alpha: 0.6),
+                    width: 1,
                   ),
                 ),
               ),
               child: Center(
                 child: Text(
                   'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.2,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption(
+                    color: tokens.textSecondary,
+                    weight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -2252,9 +2465,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     required bool isDark,
     required TackColorPalette palette,
   }) {
-    final pillBg = isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.85);
-    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final muted = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final tokens = context.tokens;
+    final pillBg = tokens.canvasSunken;
+    final borderColor = tokens.borderSubtle;
+    final muted = tokens.textSecondary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -2264,10 +2478,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           children: [
             // Folder pill
             if (_folderName != null || _isEditingMode)
-              GestureDetector(
+              InkWell(
+                borderRadius: AppSpacing.roundedPill,
                 onTap: _showMoveToFolderSheet,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  constraints: const BoxConstraints(minHeight: 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: pillBg,
                     borderRadius: AppSpacing.roundedPill,
@@ -2277,14 +2493,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TackIcon(TackIcons.folder, size: 13, color: muted),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
                         _folderName ?? 'Folder',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
+                        style: AppTypography.caption(
                           color: muted,
+                          weight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -2298,7 +2512,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: TackIcon(TackIcons.chevronRight, size: 13, color: muted),
               ),
-              GestureDetector(
+              InkWell(
+                borderRadius: AppSpacing.roundedPill,
                 onTap: () async {
                   _flushSave();
                   await Navigator.of(context).push(
@@ -2309,21 +2524,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   if (mounted) setState(() {});
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  constraints: const BoxConstraints(minHeight: 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: pillBg,
                     borderRadius: AppSpacing.roundedPill,
                     border: Border.all(color: borderColor),
                   ),
-                  child: Text(
-                    ancestor.iconEmoji != null
-                        ? '${ancestor.iconEmoji} ${ancestor.title}'
-                        : ancestor.title,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : const Color(0xFF191A23),
+                  child: Center(
+                    child: Text(
+                      ancestor.iconEmoji != null
+                          ? '${ancestor.iconEmoji} ${ancestor.title}'
+                          : ancestor.title,
+                      style: AppTypography.caption(
+                        color: tokens.textPrimary,
+                        weight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -2333,10 +2549,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             if (_isEditingMode) ...[
               if (_iconEmoji == null) ...[
                 const SizedBox(width: 6),
-                GestureDetector(
+                InkWell(
+                  borderRadius: AppSpacing.roundedPill,
                   onTap: _showEmojiPickerSheet,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    constraints: const BoxConstraints(minHeight: 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: pillBg,
                       borderRadius: AppSpacing.roundedPill,
@@ -2346,14 +2564,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TackIcon(TackIcons.smile, size: 13, color: muted),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Text(
                           'Add Icon',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
+                          style: AppTypography.caption(
                             color: muted,
+                            weight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -2363,10 +2579,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               ],
               if (widget.item is TextNote) ...[
                 const SizedBox(width: 6),
-                GestureDetector(
+                InkWell(
+                  borderRadius: AppSpacing.roundedPill,
                   onTap: _handleCreateSubNote,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    constraints: const BoxConstraints(minHeight: 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: pillBg,
                       borderRadius: AppSpacing.roundedPill,
@@ -2376,14 +2594,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TackIcon(TackIcons.add, size: 13, color: muted),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Text(
                           '+ Sub-note',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
+                          style: AppTypography.caption(
                             color: muted,
+                            weight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -2403,16 +2619,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     required bool isDark,
     required TackColorPalette palette,
   }) {
+    final tokens = context.tokens;
     final accent = palette.resolveAccentColor(isDark);
     return Container(
       margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-        ),
+        color: tokens.surfacePrimary,
+        borderRadius: AppSpacing.roundedMd,
+        border: Border.all(color: tokens.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2432,7 +2647,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.label(
                           weight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF191A23),
+                          color: tokens.textPrimary,
                         ),
                       ),
                     ),
@@ -2440,8 +2655,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 ),
               ),
               const SizedBox(width: AppSpacing.s2),
-              GestureDetector(
-                onTap: _handleCreateSubNote,
+              TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(
+                    AppSpacing.minTouchTarget,
+                    AppSpacing.minTouchTarget,
+                  ),
+                ),
+                onPressed: _handleCreateSubNote,
                 child: Text(
                   '+ New',
                   style: AppTypography.caption(
@@ -2452,7 +2673,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.s2),
+          const SizedBox(height: AppSpacing.s1),
           ...childItems.map((child) {
             return InkWell(
               onTap: () async {
@@ -2464,53 +2685,53 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 );
                 if (mounted) setState(() {});
               },
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                child: Row(
-                  children: [
-                    Text(
-                      child.iconEmoji ?? '📄',
-                      style: const TextStyle(fontSize: 15),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            child.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : const Color(0xFF191A23),
-                            ),
-                          ),
-                          if (child.getSummary().isNotEmpty)
+              borderRadius: AppSpacing.roundedSm,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        child.iconEmoji ?? '📄',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
                             Text(
-                              child.getSummary(),
+                              child.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11.5,
-                                color: isDark
-                                    ? AppColors.darkTextMuted
-                                    : AppColors.lightTextMuted,
+                              style: AppTypography.bodySm(
+                                color: tokens.textPrimary,
+                                weight: FontWeight.w700,
                               ),
                             ),
-                        ],
+                            if (child.getSummary().isNotEmpty)
+                              Text(
+                                child.getSummary(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption(
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    TackIcon(
-                      TackIcons.chevronRight,
-                      size: 15,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
-                  ],
+                      TackIcon(
+                        TackIcons.chevronRight,
+                        size: 15,
+                        color: tokens.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

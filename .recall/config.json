@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "agentFile": "AGENTS.md",
+  "profile": "standard",
+  "retentionDays": 14,
+  "maxLogEntries": 50,
+  "writes": "auto",
+  "tenantId": "default",
+  "workspaceId": "default",
+  "projectId": "default",
+  "authRequired": false,
+  "hybridRetrieval": true
+}

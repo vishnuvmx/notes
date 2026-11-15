@@ -17,6 +17,7 @@ import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/create_item_sheet.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/smart_bottom_nav_bar.dart';
+import '../../../shared/widgets/tack_toast.dart';
 import '../../search/screens/search_command_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../tasks/screens/today_screen.dart';
@@ -50,6 +51,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isCreatingBoard = false;
+
   void _openItem(BaseWorkspaceItem item, {bool startInEditMode = false}) {
     if (widget.onOpenItem != null) {
       widget.onOpenItem!(item, startInEditMode: startInEditMode);
@@ -127,12 +130,12 @@ class _HomeScreenState extends State<HomeScreen> {
           (mode: HomeSortMode.oldestFirst, label: 'Oldest created first'),
           (mode: HomeSortMode.alphabetical, label: 'Title (A – Z)'),
         ];
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.s4,
             AppSpacing.s7,
             AppSpacing.s4,
-            AppSpacing.s5,
+            AppSpacing.s6,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -147,41 +150,46 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: AppSpacing.s3),
               for (final opt in options)
-                InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    workspace.setSortMode(opt.mode);
-                    Navigator.of(ctx).pop();
-                  },
-                  borderRadius: AppSpacing.roundedSm,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.minTouchTarget,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s4,
+                Semantics(
+                  button: true,
+                  selected: current == opt.mode,
+                  label: opt.label,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      workspace.setSortMode(opt.mode);
+                      Navigator.of(ctx).pop();
+                    },
+                    borderRadius: AppSpacing.roundedSm,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: AppSpacing.minTouchTarget,
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              opt.label,
-                              style: AppTypography.body(
-                                color: tokens.textPrimary,
-                                weight: current == opt.mode
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s4,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                opt.label,
+                                style: AppTypography.body(
+                                  color: tokens.textPrimary,
+                                  weight: current == opt.mode
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
                               ),
                             ),
-                          ),
-                          if (current == opt.mode)
-                            TackIcon(
-                              TackIcons.check,
-                              size: 18,
-                              color: tokens.accentPin,
-                            ),
-                        ],
+                            if (current == opt.mode)
+                              TackIcon(
+                                TackIcons.check,
+                                size: 18,
+                                color: tokens.accentPin,
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -284,12 +292,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _BoardsView(
                       onOpenItem: _openItem,
                       onCreateBoard: () async {
-                        final board = await workspace.createQuickItem(
-                          title: 'Untitled Board',
-                          type: ItemType.whiteboard,
-                          paletteId: 'cyan',
-                        );
-                        if (mounted) _openItem(board);
+                        if (_isCreatingBoard) return;
+                        _isCreatingBoard = true;
+                        try {
+                          final board = await workspace.createQuickItem(
+                            title: 'Untitled Board',
+                            type: ItemType.whiteboard,
+                            paletteId: 'cyan',
+                          );
+                          if (mounted) _openItem(board);
+                        } catch (_) {
+                          if (mounted) {
+                            TackToast.show(
+                              context,
+                              message: 'Could not create board',
+                              icon: TackIcons.close,
+                              iconColor: tokens.danger,
+                            );
+                          }
+                        } finally {
+                          _isCreatingBoard = false;
+                        }
                       },
                     ),
                   ),
@@ -338,95 +361,9 @@ class _LibraryView extends StatelessWidget {
   });
 
   void _showFolderSheet(BuildContext context, WorkspaceProvider workspace) {
-    final newFolderCtrl = TextEditingController();
     AppBottomSheet.show<void>(
       context: context,
-      builder: (ctx) {
-        final tokens = ctx.tokens;
-        final folders = workspace.folders;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s5,
-            AppSpacing.s2,
-            AppSpacing.s5,
-            AppSpacing.s5,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Folders',
-                style: AppTypography.titleSm(color: tokens.textPrimary),
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 240),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: folders.length,
-                  itemBuilder: (_, idx) {
-                    final f = folders[idx];
-                    final selected = workspace.selectedFolder == f;
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: TackIcon(
-                        TackIcons.folder,
-                        size: 18,
-                        color: selected
-                            ? tokens.accentPin
-                            : tokens.textSecondary,
-                      ),
-                      title: Text(
-                        f,
-                        style: AppTypography.body(
-                          color: tokens.textPrimary,
-                          weight: selected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                      trailing: selected
-                          ? TackIcon(
-                              TackIcons.check,
-                              size: 18,
-                              color: tokens.accentPin,
-                            )
-                          : null,
-                      onTap: () {
-                        workspace.setSelectedFolder(f);
-                        Navigator.of(ctx).pop();
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: newFolderCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'New folder name…',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final name = newFolderCtrl.text.trim();
-                      if (name.isEmpty) return;
-                      await workspace.addFolder(name);
-                      workspace.setSelectedFolder(name);
-                      if (ctx.mounted) Navigator.of(ctx).pop();
-                    },
-                    child: const Text('Add'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => _FolderPickerSheet(workspace: workspace),
     );
   }
 
@@ -439,129 +376,155 @@ class _LibraryView extends StatelessWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final gutter = AppSpacing.screenGutter(screenWidth);
     final cols = AppSpacing.gridColumnsForWidth(screenWidth);
+    final hasActiveFilter = workspace.pinnedFilterOnly ||
+        workspace.selectedTag != null ||
+        workspace.selectedFolder != 'All Notes';
 
-    return CustomScrollView(
-      key: const ValueKey('library_custom_scroll'),
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      slivers: [
-        // Single-row Filter Bar: Folder pill · Pinned chip · Real #tag chips.
-        // Lives inside the scroll view so it slides away while browsing and
-        // returns cleanly when scrolling back to the top.
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 50,
-            child: ListView(
-              key: const ValueKey('library_filter_bar'),
-              scrollDirection: Axis.horizontal,
+    void resetAllFilters() {
+      workspace.setPinnedFilterOnly(false);
+      workspace.setTagFilter(null);
+      workspace.setSelectedFolder('All Notes');
+    }
+
+    String emptyTitle() {
+      if (workspace.pinnedFilterOnly) return 'No pinned notes yet';
+      if (workspace.selectedTag != null) {
+        return 'No #${workspace.selectedTag} notes';
+      }
+      if (workspace.selectedFolder != 'All Notes') {
+        return 'No notes in ${workspace.selectedFolder}';
+      }
+      return 'Your Library is empty';
+    }
+
+    String emptySubtitle() {
+      if (hasActiveFilter) {
+        return 'Try clearing active filters, or create a new note here.';
+      }
+      return 'Tap (+) below to write a note or save a thought.';
+    }
+
+    return SafeArea(
+      top: false,
+      child: CustomScrollView(
+        key: const ValueKey('library_custom_scroll'),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        slivers: [
+          // Single-row Filter Bar: Folder pill · Pinned chip · Real #tag chips.
+          // Lives inside the scroll view so it slides away while browsing and
+          // returns cleanly when scrolling back to the top.
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 56,
+              child: ListView(
+                key: const ValueKey('library_filter_bar'),
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  AppSpacing.s1,
+                  gutter,
+                  AppSpacing.s1,
+                ),
+                children: [
+                  // Folder selector chip
+                  _LibraryFilterChip(
+                    icon: TackIcons.folder,
+                    label: workspace.selectedFolder,
+                    isSelected: workspace.selectedFolder != 'All Notes',
+                    showChevron: true,
+                    onTap: () => _showFolderSheet(context, workspace),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+
+                  // Pinned filter chip
+                  _LibraryFilterChip(
+                    leadingWidget: TackPinBadge(
+                      color: workspace.pinnedFilterOnly
+                          ? tokens.actionPrimaryFg
+                          : tokens.accentPin,
+                      size: 8,
+                    ),
+                    label: 'Pinned',
+                    isSelected: workspace.pinnedFilterOnly,
+                    onTap: () => workspace.setPinnedFilterOnly(
+                      !workspace.pinnedFilterOnly,
+                    ),
+                  ),
+
+                  // Inline clear chip when any filter is active
+                  if (hasActiveFilter) ...[
+                    const SizedBox(width: AppSpacing.s2),
+                    _LibraryFilterChip(
+                      icon: TackIcons.close,
+                      label: 'Clear',
+                      isSelected: false,
+                      onTap: resetAllFilters,
+                    ),
+                  ],
+
+                  // Dynamic user tags (only real tags present in user notes)
+                  for (final tag in tags) ...[
+                    const SizedBox(width: AppSpacing.s2),
+                    _LibraryFilterChip(
+                      label: '#$tag',
+                      isSelected: workspace.selectedTag?.toLowerCase() ==
+                          tag.toLowerCase(),
+                      onTap: () => workspace.setTagFilter(tag),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          if (notes.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyStateWidget(
+                icon: TackIcons.notes,
+                showMascot: !hasActiveFilter,
+                title: emptyTitle(),
+                subtitle: emptySubtitle(),
+                actionLabel: hasActiveFilter ? 'Reset filters' : 'New note',
+                actionIcon:
+                    hasActiveFilter ? TackIcons.close : TackIcons.plus,
+                onAction: hasActiveFilter ? resetAllFilters : onCreateNote,
+                secondaryActionLabel: hasActiveFilter ? 'New note' : null,
+                onSecondaryAction: hasActiveFilter ? onCreateNote : null,
+              ),
+            )
+          else
+            SliverPadding(
               padding: EdgeInsets.fromLTRB(
                 gutter,
                 AppSpacing.s1,
                 gutter,
-                AppSpacing.s2,
+                AppSpacing.s9 + MediaQuery.paddingOf(context).bottom,
               ),
-              children: [
-                // Folder selector chip
-                _LibraryFilterChip(
-                  icon: TackIcons.folder,
-                  label: workspace.selectedFolder,
-                  isSelected: workspace.selectedFolder != 'All Notes',
-                  showChevron: true,
-                  onTap: () => _showFolderSheet(context, workspace),
-                ),
-                const SizedBox(width: AppSpacing.s2),
-
-                // Pinned filter chip
-                _LibraryFilterChip(
-                  leadingWidget: TackPinBadge(
-                    color: workspace.pinnedFilterOnly
-                        ? tokens.actionPrimaryFg
-                        : tokens.accentPin,
-                    size: 8,
-                  ),
-                  label: 'Pinned',
-                  isSelected: workspace.pinnedFilterOnly,
-                  onTap: () => workspace.setPinnedFilterOnly(
-                    !workspace.pinnedFilterOnly,
-                  ),
-                ),
-
-                // Dynamic user tags (only real tags present in user notes)
-                for (final tag in tags) ...[
-                  const SizedBox(width: AppSpacing.s2),
-                  _LibraryFilterChip(
-                    label: '#$tag',
-                    isSelected: workspace.selectedTag?.toLowerCase() ==
-                        tag.toLowerCase(),
-                    onTap: () => workspace.setTagFilter(tag),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-
-        if (notes.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: EmptyStateWidget(
-              icon: TackIcons.notes,
-              title: workspace.pinnedFilterOnly
-                  ? 'No pinned notes yet'
-                  : (workspace.selectedTag != null
-                      ? 'No #${workspace.selectedTag} notes'
-                      : 'Your Library is empty'),
-              subtitle: workspace.pinnedFilterOnly
-                  ? 'Long-press any note to pin it to the top.'
-                  : 'Tap (+) below to write a note or save a thought.',
-              actionLabel: workspace.pinnedFilterOnly ||
-                      workspace.selectedTag != null ||
-                      workspace.selectedFolder != 'All Notes'
-                  ? 'Reset filters'
-                  : 'New note',
-              onAction: () {
-                if (workspace.pinnedFilterOnly ||
-                    workspace.selectedTag != null ||
-                    workspace.selectedFolder != 'All Notes') {
-                  workspace.setPinnedFilterOnly(false);
-                  workspace.setTagFilter(null);
-                  workspace.setSelectedFolder('All Notes');
-                } else {
-                  onCreateNote();
-                }
-              },
-            ),
-          )
-        else
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              AppSpacing.s1,
-              gutter,
-              AppSpacing.s9,
-            ),
-            sliver: SliverResponsiveCardGrid(
-              crossAxisCount: cols,
-              mainAxisSpacing: AppSpacing.cardGridGap,
-              crossAxisSpacing: AppSpacing.cardGridGap,
-              itemCount: notes.length,
-              itemBuilder: (context, index) {
-                final note = notes[index];
-                return NeoNoteCard(
-                  key: ValueKey('lib_note_${note.id}'),
-                  item: note,
-                  onTap: () => onOpenItem(note),
-                  onLongPress: () => CardPeekSheet.show(
-                    context: context,
+              sliver: SliverResponsiveCardGrid(
+                crossAxisCount: cols,
+                mainAxisSpacing: AppSpacing.cardGridGap,
+                crossAxisSpacing: AppSpacing.cardGridGap,
+                itemCount: notes.length,
+                itemBuilder: (context, index) {
+                  final note = notes[index];
+                  return NeoNoteCard(
+                    key: ValueKey('lib_note_${note.id}'),
                     item: note,
-                    onOpen: () => onOpenItem(note),
-                  ),
-                );
-              },
+                    onTap: () => onOpenItem(note),
+                    onLongPress: () => CardPeekSheet.show(
+                      context: context,
+                      item: note,
+                      onOpen: () => onOpenItem(note),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -590,37 +553,192 @@ class _BoardsView extends StatelessWidget {
         subtitle:
             'Map flowcharts, system diagrams, and pin Markdown Spec Cards on an infinite board.',
         actionLabel: 'Create Board',
+        actionIcon: TackIcons.plus,
         onAction: onCreateBoard,
       );
     }
 
-    return ResponsiveCardGrid(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
+    return SafeArea(
+      top: false,
+      child: ResponsiveCardGrid(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          gutter,
+          AppSpacing.s2,
+          gutter,
+          AppSpacing.s9 + MediaQuery.paddingOf(context).bottom,
+        ),
+        crossAxisCount: cols,
+        mainAxisSpacing: AppSpacing.cardGridGap,
+        crossAxisSpacing: AppSpacing.cardGridGap,
+        itemCount: boards.length,
+        itemBuilder: (context, index) {
+          final board = boards[index];
+          return BoardGridCard(
+            key: ValueKey('board_card_${board.id}'),
+            board: board,
+            onTap: () => onOpenItem(board),
+            onLongPress: () => CardPeekSheet.show(
+              context: context,
+              item: board,
+              onOpen: () => onOpenItem(board),
+            ),
+          );
+        },
       ),
-      padding: EdgeInsets.fromLTRB(
-        gutter,
-        AppSpacing.s2,
-        gutter,
-        AppSpacing.s9,
-      ),
-      crossAxisCount: cols,
-      mainAxisSpacing: AppSpacing.cardGridGap,
-      crossAxisSpacing: AppSpacing.cardGridGap,
-      itemCount: boards.length,
-      itemBuilder: (context, index) {
-        final board = boards[index];
-        return BoardGridCard(
-          key: ValueKey('board_card_${board.id}'),
-          board: board,
-          onTap: () => onOpenItem(board),
-          onLongPress: () => CardPeekSheet.show(
-            context: context,
-            item: board,
-            onOpen: () => onOpenItem(board),
-          ),
+    );
+  }
+}
+
+class _FolderPickerSheet extends StatefulWidget {
+  final WorkspaceProvider workspace;
+
+  const _FolderPickerSheet({required this.workspace});
+
+  @override
+  State<_FolderPickerSheet> createState() => _FolderPickerSheetState();
+}
+
+class _FolderPickerSheetState extends State<_FolderPickerSheet> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorText;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addFolder() async {
+    if (_isSaving) return;
+    final raw = _controller.text.trim();
+    if (raw.isEmpty) {
+      setState(() => _errorText = 'Enter a folder name');
+      return;
+    }
+    final existing = widget.workspace.folders.cast<String?>().firstWhere(
+          (f) => f!.toLowerCase() == raw.toLowerCase(),
+          orElse: () => null,
         );
-      },
+    if (existing != null) {
+      widget.workspace.setSelectedFolder(existing);
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _isSaving = true;
+      _errorText = null;
+    });
+    try {
+      await widget.workspace.addFolder(raw);
+      widget.workspace.setSelectedFolder(raw);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _errorText = 'Could not create folder';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final folders = widget.workspace.folders;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s5,
+        AppSpacing.s4,
+        AppSpacing.s5,
+        AppSpacing.s5,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Folders',
+            style: AppTypography.titleSm(color: tokens.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: folders.length,
+                itemBuilder: (_, idx) {
+                  final f = folders[idx];
+                  final selected = widget.workspace.selectedFolder == f;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: TackIcon(
+                      TackIcons.folder,
+                      size: 18,
+                      color: selected ? tokens.accentPin : tokens.textSecondary,
+                    ),
+                    title: Text(
+                      f,
+                      style: AppTypography.body(
+                        color: tokens.textPrimary,
+                        weight: selected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                    trailing: selected
+                        ? TackIcon(
+                            TackIcons.check,
+                            size: 18,
+                            color: tokens.accentPin,
+                          )
+                        : null,
+                    onTap: () {
+                      widget.workspace.setSelectedFolder(f);
+                      Navigator.of(context).pop();
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addFolder(),
+                  onChanged: (_) {
+                    if (_errorText != null) setState(() => _errorText = null);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'New folder name…',
+                    errorText: _errorText,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(
+                    AppSpacing.minTouchTarget,
+                    AppSpacing.minTouchTarget,
+                  ),
+                ),
+                onPressed: _isSaving ? null : _addFolder,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -648,44 +766,57 @@ class _LibraryFilterChip extends StatelessWidget {
     final bg = isSelected ? tokens.actionPrimary : tokens.surfacePrimary;
     final fg = isSelected ? tokens.actionPrimaryFg : tokens.textPrimary;
 
-    return Center(
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: AppSpacing.roundedPill,
-        child: AnimatedContainer(
-          duration: AppSpacing.durationFast,
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: AppSpacing.roundedPill,
-            boxShadow: AppSpacing.elev1(tokens.isDark),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (leadingWidget != null) ...[
-                leadingWidget!,
-                const SizedBox(width: 6),
-              ] else if (icon != null) ...[
-                TackIcon(icon, size: 14, color: fg),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: AppTypography.label(
-                  color: fg,
-                  weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: Center(
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: AppSpacing.roundedPill,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: AnimatedContainer(
+                duration: AppSpacing.durationFast,
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: AppSpacing.roundedPill,
+                  boxShadow: AppSpacing.elev1(tokens.isDark),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (leadingWidget != null) ...[
+                      leadingWidget!,
+                      const SizedBox(width: 6),
+                    ] else if (icon != null) ...[
+                      TackIcon(icon, size: 14, color: fg),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      label,
+                      style: AppTypography.label(
+                        color: fg,
+                        weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                    if (showChevron) ...[
+                      const SizedBox(width: 4),
+                      TackIcon(TackIcons.chevronDown, size: 13, color: fg),
+                    ],
+                  ],
                 ),
               ),
-              if (showChevron) ...[
-                const SizedBox(width: 4),
-                TackIcon(TackIcons.chevronDown, size: 13, color: fg),
-              ],
-            ],
+            ),
           ),
         ),
       ),

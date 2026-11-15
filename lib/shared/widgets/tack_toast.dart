@@ -12,7 +12,7 @@ class TackToast {
   static void show(
     BuildContext context, {
     required String message,
-    IconData? icon,
+    dynamic icon,
     Color? iconColor,
     Duration duration = const Duration(milliseconds: 2200),
     String? actionLabel,
@@ -22,8 +22,8 @@ class TackToast {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -32,30 +32,20 @@ class TackToast {
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(side: BorderSide.none),
-        margin: EdgeInsets.fromLTRB(24, 0, 24, bottomMargin),
+        margin: EdgeInsets.fromLTRB(AppSpacing.s6, 0, AppSpacing.s6, bottomMargin),
         padding: EdgeInsets.zero,
         duration: duration,
         content: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
+              color: tokens.surfacePrimary,
               borderRadius: AppSpacing.roundedPill,
               border: Border.all(
-                color: isDark
-                    ? AppColors.darkBorder
-                    : const Color(0xFF191A23).withValues(alpha: 0.08),
+                color: tokens.borderSubtle,
                 width: 1.2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.5)
-                      : const Color(0xFF191A23).withValues(alpha: 0.09),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: AppSpacing.elevModal(isDark),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -65,10 +55,7 @@ class TackToast {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: (iconColor ??
-                              (isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.lightTextPrimary))
+                      color: (iconColor ?? tokens.textPrimary)
                           .withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
@@ -76,55 +63,52 @@ class TackToast {
                       child: TackIcon(
                         icon,
                         size: 13,
-                        color: iconColor ??
-                            (isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.lightTextPrimary),
+                        color: iconColor ?? tokens.textPrimary,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: AppSpacing.s2),
                 ],
                 Flexible(
                   child: Text(
                     message,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.lightTextPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      letterSpacing: -0.3,
+                    style: AppTypography.label(
+                      color: tokens.textPrimary,
+                      weight: FontWeight.w700,
                     ),
                   ),
                 ),
                 if (actionLabel != null && onAction != null) ...[
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () {
-                      messenger.hideCurrentSnackBar();
-                      onAction();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.pastelAmberLight.withValues(alpha: 0.22)
-                            : const Color(0xFF191A23),
-                        borderRadius: AppSpacing.roundedPill,
-                      ),
-                      child: Text(
-                        actionLabel,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          color: isDark ? AppColors.pastelAmberLight : Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11.5,
-                          letterSpacing: -0.2,
+                  const SizedBox(width: AppSpacing.s3),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: AppSpacing.roundedPill,
+                      onTap: () {
+                        messenger.hideCurrentSnackBar();
+                        onAction();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s3,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.pastelAmberLight.withValues(alpha: 0.22)
+                              : tokens.actionPrimary,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          actionLabel,
+                          style: AppTypography.caption(
+                            color: isDark
+                                ? AppColors.pastelAmberLight
+                                : tokens.actionPrimaryFg,
+                            weight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),

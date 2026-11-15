@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -3308,12 +3309,10 @@ void _openImageLightbox(BuildContext context, String url, String alt) {
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.92),
       transitionDuration: const Duration(milliseconds: 180),
-      reverseTransitionDuration: const Duration(milliseconds: 150),
-      transitionsBuilder: (_, animation, _, child) => FadeTransition(
-        opacity: CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        ),
+      reverseTransitionDuration: const Duration(milliseconds: 140),
+      transitionsBuilder: (_, animation, _, child) => TackAnimatedTransition(
+        animation: animation,
+        fadeReverseCurve: Curves.easeInCubic,
         child: child,
       ),
       pageBuilder: (ctx, _, _) => _ImageLightboxViewer(url: url, alt: alt),

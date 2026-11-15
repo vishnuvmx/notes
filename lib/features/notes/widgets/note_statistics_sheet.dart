@@ -31,7 +31,7 @@ class NoteStatisticsSheet extends StatelessWidget {
     final chars = content.length;
     final charsNoSpaces = content.replaceAll(RegExp(r'\s'), '').length;
     final paragraphs = content.split('\n').where((l) => l.trim().isNotEmpty).length;
-    final readTime = ((words / 180).ceil()).clamp(1, 60);
+    final readTime = words == 0 ? 0 : ((words / 180).ceil()).clamp(1, 60);
 
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
@@ -58,78 +58,104 @@ class NoteStatisticsSheet extends StatelessWidget {
               ),
               IconButton(
                 icon: const TackIcon(TackIcons.close, size: 18),
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'Close',
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackSingle = constraints.maxWidth < 290;
+              final cards = <Widget>[
                 _buildStatCard('Words', '$words', isDark),
-                const SizedBox(width: AppSpacing.sm),
                 _buildStatCard('Characters', '$chars', isDark),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
                 _buildStatCard('Chars (no spaces)', '$charsNoSpaces', isDark),
-                const SizedBox(width: AppSpacing.sm),
                 _buildStatCard('Paragraphs', '$paragraphs', isDark),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
                 _buildStatCard('Reading Time', '$readTime min read', isDark),
-                if (totalChecklists > 0) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  _buildStatCard('Tasks', '$completedChecklists/$totalChecklists done', isDark),
-                ],
-              ],
-            ),
-          ],
-        ),
-      );
+                if (totalChecklists > 0)
+                  _buildStatCard(
+                    'Tasks',
+                    '$completedChecklists/$totalChecklists done',
+                    isDark,
+                  ),
+              ];
+              if (stackSingle) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (int i = 0; i < cards.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.sm),
+                      cards[i],
+                    ],
+                  ],
+                );
+              }
+              final rows = <Widget>[];
+              for (int i = 0; i < cards.length; i += 2) {
+                if (i > 0) rows.add(const SizedBox(height: AppSpacing.sm));
+                rows.add(
+                  Row(
+                    children: [
+                      Expanded(child: cards[i]),
+                      if (i + 1 < cards.length) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: cards[i + 1]),
+                      ],
+                    ],
+                  ),
+                );
+              }
+              return Column(children: rows);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildStatCard(String label, String value, bool isDark) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-            width: 0.8,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+        borderRadius: AppSpacing.roundedSm,
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption(
+              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.caption(
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.titleSm(
+              fontSize: 15,
+              weight: FontWeight.w700,
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.lightTextPrimary,
             ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.titleSm(
-                fontSize: 15,
-                weight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

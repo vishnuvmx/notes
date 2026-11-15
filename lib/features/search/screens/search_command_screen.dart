@@ -13,6 +13,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/create_item_sheet.dart';
 import '../../../shared/widgets/app_search_field.dart';
+import '../../../shared/widgets/tack_toast.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../folders/screens/folder_view_screen.dart';
 import '../../settings/screens/settings_screen.dart';
@@ -55,8 +56,19 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         subtitle: 'Jump to today’s note with carried-forward tasks',
         keywords: 'today daily note journal focus',
         onExecute: () async {
-          final daily = await workspace.openOrCreateTodaysNote();
-          if (mounted) widget.onOpenItem(daily);
+          try {
+            final daily = await workspace.openOrCreateTodaysNote();
+            if (mounted) widget.onOpenItem(daily);
+          } catch (_) {
+            if (mounted) {
+              TackToast.show(
+                context,
+                message: "Could not open Today's Note",
+                icon: TackIcons.close,
+                iconColor: context.tokens.danger,
+              );
+            }
+          }
         },
       ),
       _CommandEntry(
@@ -77,12 +89,23 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         subtitle: 'Start a visual flowchart & spec board',
         keywords: 'new board canvas whiteboard flowchart diagram',
         onExecute: () async {
-          final board = await workspace.createQuickItem(
-            title: 'Untitled Board',
-            type: ItemType.whiteboard,
-            paletteId: 'cyan',
-          );
-          if (mounted) widget.onOpenItem(board);
+          try {
+            final board = await workspace.createQuickItem(
+              title: 'Untitled Board',
+              type: ItemType.whiteboard,
+              paletteId: 'cyan',
+            );
+            if (mounted) widget.onOpenItem(board);
+          } catch (_) {
+            if (mounted) {
+              TackToast.show(
+                context,
+                message: 'Could not create board',
+                icon: TackIcons.close,
+                iconColor: context.tokens.danger,
+              );
+            }
+          }
         },
       ),
       _CommandEntry(
@@ -168,71 +191,120 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         matchingBoards.isEmpty &&
         matchingTasks.isEmpty;
 
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            gutter,
-            AppSpacing.s2,
-            gutter,
-            AppSpacing.s3,
-          ),
-          child: AppSearchField(
-            controller: _queryController,
-            hintText: 'Search notes, boards, tasks, or actions…',
-            onChanged: (val) => setState(() => _query = val),
-            onClear: () => setState(() => _query = ''),
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              AppSpacing.s2,
-              gutter,
-              AppSpacing.s9,
-            ),
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+          child: Column(
             children: [
-              ZOrderColumn(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (hasNoResults)
-                    Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
-                  child: Column(
-                    children: [
-                      TackIcon(
-                        TackIcons.search,
-                        size: 32,
-                        color: tokens.textTertiary,
-                      ),
-                      const SizedBox(height: AppSpacing.s3),
-                      Text(
-                        'No results for "$q"',
-                        style: AppTypography.titleSm(color: tokens.textPrimary),
-                      ),
-                      const SizedBox(height: AppSpacing.s1),
-                      Text(
-                        'Create a new note with this title directly below.',
-                        style: AppTypography.bodySm(color: tokens.textSecondary),
-                      ),
-                      const SizedBox(height: AppSpacing.s4),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final note = await workspace.createQuickItem(
-                            title: q,
-                            type: ItemType.note,
-                            paletteId: 'amber',
-                          );
-                          if (context.mounted) {
-                            widget.onOpenItem(note, startInEditMode: true);
-                          }
-                        },
-                        child: Text('Create note "$q"'),
-                      ),
-                    ],
-                  ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  AppSpacing.s2,
+                  gutter,
+                  AppSpacing.s3,
                 ),
+                child: AppSearchField(
+                  controller: _queryController,
+                  hintText: 'Search notes, boards, tasks, or actions…',
+                  onChanged: (val) => setState(() => _query = val),
+                  onClear: () => setState(() => _query = ''),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    AppSpacing.s2,
+                    gutter,
+                    AppSpacing.s9 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  children: [
+                    ZOrderColumn(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (hasNoResults)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.s8,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                TackIcon(
+                                  TackIcons.search,
+                                  size: 32,
+                                  color: tokens.textTertiary,
+                                ),
+                                const SizedBox(height: AppSpacing.s3),
+                                Text(
+                                  'No results for "$q"',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.titleSm(
+                                    color: tokens.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.s1),
+                                Text(
+                                  'Create a new note with this title directly below.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.bodySm(
+                                    color: tokens.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.s4),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(
+                                      0,
+                                      AppSpacing.minTouchTarget,
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    try {
+                                      final note =
+                                          await workspace.createQuickItem(
+                                        title: q,
+                                        type: ItemType.note,
+                                        paletteId: 'amber',
+                                      );
+                                      if (context.mounted) {
+                                        widget.onOpenItem(
+                                          note,
+                                          startInEditMode: true,
+                                        );
+                                      }
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        TackToast.show(
+                                          context,
+                                          message: 'Could not create note',
+                                          icon: TackIcons.close,
+                                          iconColor: tokens.danger,
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Text('Create note "$q"'),
+                                ),
+                                const SizedBox(height: AppSpacing.s2),
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(
+                                      0,
+                                      AppSpacing.minTouchTarget,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    _queryController.clear();
+                                    setState(() => _query = '');
+                                  },
+                                  child: const Text('Clear search'),
+                                ),
+                              ],
+                            ),
+                          ),
 
               // 1. Actions Group
               if (matchingCommands.isNotEmpty) ...[
@@ -288,16 +360,53 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                           if (i > 0)
                             Divider(height: 1, color: tokens.borderSubtle),
                           ListTile(
-                          leading: IconButton(
-                            icon: TackIcon(
-                              TackIcons.taskOpen,
-                              size: 20,
-                              color: tokens.textSecondary,
+                          leading: Semantics(
+                            button: true,
+                            label: 'Complete ${matchingTasks[i].text}',
+                            child: IconButton(
+                              tooltip: 'Complete task',
+                              constraints: const BoxConstraints(
+                                minWidth: AppSpacing.minTouchTarget,
+                                minHeight: AppSpacing.minTouchTarget,
+                              ),
+                              icon: TackIcon(
+                                TackIcons.taskOpen,
+                                size: 20,
+                                color: tokens.textSecondary,
+                              ),
+                              onPressed: () async {
+                                HapticFeedback.selectionClick();
+                                final task = matchingTasks[i];
+                                final previousItem =
+                                    workspace.getItemByIdSync(task.noteId);
+                                try {
+                                  await workspace.toggleTask(task);
+                                  if (!context.mounted) return;
+                                  TackToast.show(
+                                    context,
+                                    message: 'Completed "${task.text}"',
+                                    icon: TackIcons.check,
+                                    iconColor: tokens.success,
+                                    duration: const Duration(seconds: 4),
+                                    actionLabel: previousItem != null
+                                        ? 'Undo'
+                                        : null,
+                                    onAction: previousItem != null
+                                        ? () => workspace.saveItem(previousItem)
+                                        : null,
+                                  );
+                                } catch (_) {
+                                  if (context.mounted) {
+                                    TackToast.show(
+                                      context,
+                                      message: 'Could not update task',
+                                      icon: TackIcons.close,
+                                      iconColor: tokens.danger,
+                                    );
+                                  }
+                                }
+                              },
                             ),
-                            onPressed: () {
-                              HapticFeedback.selectionClick();
-                              workspace.toggleTask(matchingTasks[i]);
-                            },
                           ),
                           title: Text(
                             matchingTasks[i].text,
@@ -411,7 +520,10 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
       ),
     ),
   ],
-);
+),
+        ),
+      ),
+    );
   }
 }
 
@@ -494,7 +606,7 @@ class _CommandRow extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodySm(
                         color: tokens.textPrimary,
@@ -503,7 +615,7 @@ class _CommandRow extends StatelessWidget {
                     ),
                     Text(
                       entry.subtitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.caption(color: tokens.textTertiary),
                     ),

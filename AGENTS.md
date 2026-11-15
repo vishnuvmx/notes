@@ -118,3 +118,13 @@ lib/
     ├── tasks/ (screens/today_screen, services/open_tasks_service)
     └── whiteboard/ (models/whiteboard_item, screens/whiteboard_canvas_screen, widgets/board_grid_card)
 ```
+
+<!-- recall:begin -->
+## Project memory (Recall)
+Memory is in `.recall/`. Skip for trivial edits.
+- New chat: read `.recall/PASSPORT.md` & `CURRENT_STATE.md` (blueprint + active file line map).
+- Past decisions/bugs: `recall context "<topic>"`
+- Locate symbol/file: `recall where <name>`
+- Save rule/fix: `recall remember "<text>" -t "<title>" --type <decision|convention|lesson|bugfix>`
+Chats sync locally via hooks.
+<!-- recall:end -->

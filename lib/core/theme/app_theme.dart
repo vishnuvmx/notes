@@ -353,11 +353,6 @@ class AppTheme {
 class _TackFadePageTransitionsBuilder extends PageTransitionsBuilder {
   const _TackFadePageTransitionsBuilder();
 
-  static final Tween<Offset> _slideTween = Tween<Offset>(
-    begin: const Offset(0, 0.02),
-    end: Offset.zero,
-  );
-
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
@@ -366,18 +361,162 @@ class _TackFadePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+    return TackAnimatedTransition(
+      animation: animation,
+      slideBegin: const Offset(0, 0.02),
+      child: child,
     );
+  }
+}
+
+/// Composited fade and optional slide/scale transition that manages and
+/// disposes its [CurvedAnimation] listeners properly and uses responsive exit
+/// curves so route pops, dialogs, and previews never stall at high opacity.
+class TackAnimatedTransition extends StatefulWidget {
+  const TackAnimatedTransition({
+    super.key,
+    required this.animation,
+    required this.child,
+    this.fadeCurve = Curves.easeOutCubic,
+    this.fadeReverseCurve = const Interval(
+      0.28,
+      1.0,
+      curve: Curves.easeInCubic,
+    ),
+    this.motionCurve = Curves.easeOutCubic,
+    this.motionReverseCurve = const Interval(
+      0.28,
+      1.0,
+      curve: Curves.easeInCubic,
+    ),
+    this.slideBegin,
+    this.scaleBegin,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+  final Curve fadeCurve;
+  final Curve fadeReverseCurve;
+  final Curve motionCurve;
+  final Curve motionReverseCurve;
+  final Offset? slideBegin;
+  final double? scaleBegin;
+
+  /// Shared [AnimatedSwitcher] transition builder that isolates the fading
+  /// subtree in a [RepaintBoundary] so complex children do not re-rasterize
+  /// every cross-fade frame.
+  static Widget switcherTransition(Widget child, Animation<double> animation) {
     return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: _slideTween.animate(curved),
-        child: RepaintBoundary(child: child),
-      ),
+      opacity: animation,
+      child: RepaintBoundary(child: child),
     );
+  }
+
+  @override
+  State<TackAnimatedTransition> createState() => _TackAnimatedTransitionState();
+}
+
+class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
+  late CurvedAnimation _fadeAnimation;
+  CurvedAnimation? _motionAnimation;
+  Animation<Offset>? _slideAnimation;
+  Animation<double>? _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimations();
+  }
+
+  @override
+  void didUpdateWidget(covariant TackAnimatedTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final configChanged = oldWidget.animation != widget.animation ||
+        oldWidget.fadeCurve != widget.fadeCurve ||
+        oldWidget.fadeReverseCurve != widget.fadeReverseCurve ||
+        oldWidget.motionCurve != widget.motionCurve ||
+        oldWidget.motionReverseCurve != widget.motionReverseCurve ||
+        oldWidget.slideBegin != widget.slideBegin ||
+        oldWidget.scaleBegin != widget.scaleBegin;
+    if (configChanged) {
+      _disposeAnimations();
+      _initAnimations();
+    }
+  }
+
+  void _initAnimations() {
+    _fadeAnimation = CurvedAnimation(
+      parent: widget.animation,
+      curve: widget.fadeCurve,
+      reverseCurve: widget.fadeReverseCurve,
+    );
+
+    final hasMotion = widget.slideBegin != null || widget.scaleBegin != null;
+    if (!hasMotion) {
+      _motionAnimation = null;
+      _slideAnimation = null;
+      _scaleAnimation = null;
+      return;
+    }
+
+    final useSeparateMotion = widget.motionCurve != widget.fadeCurve ||
+        widget.motionReverseCurve != widget.fadeReverseCurve;
+    final motionBase = useSeparateMotion
+        ? (_motionAnimation = CurvedAnimation(
+            parent: widget.animation,
+            curve: widget.motionCurve,
+            reverseCurve: widget.motionReverseCurve,
+          ))
+        : _fadeAnimation;
+
+    _slideAnimation = widget.slideBegin == null
+        ? null
+        : Tween<Offset>(
+            begin: widget.slideBegin,
+            end: Offset.zero,
+          ).animate(motionBase);
+
+    _scaleAnimation = widget.scaleBegin == null
+        ? null
+        : Tween<double>(
+            begin: widget.scaleBegin,
+            end: 1.0,
+          ).animate(motionBase);
+  }
+
+  void _disposeAnimations() {
+    _fadeAnimation.dispose();
+    _motionAnimation?.dispose();
+    _motionAnimation = null;
+  }
+
+  @override
+  void dispose() {
+    _disposeAnimations();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Keep RepaintBoundary directly around child so FadeTransition alpha-blends
+    // the cached layer, and apply transform motion outside FadeTransition.
+    Widget current = FadeTransition(
+      opacity: _fadeAnimation,
+      child: RepaintBoundary(child: widget.child),
+    );
+    if (_slideAnimation != null) {
+      current = SlideTransition(
+        position: _slideAnimation!,
+        child: current,
+      );
+    }
+    if (_scaleAnimation != null) {
+      current = ScaleTransition(
+        scale: _scaleAnimation!,
+        child: current,
+      );
+    }
+    return current;
   }
 }
 

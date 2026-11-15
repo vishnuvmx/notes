@@ -111,15 +111,67 @@ class PinnedNotificationService {
     }
   }
 
+  /// Checks OS notification & exact alarm permission status on Android.
+  /// Returns `supported: false` in non-Android/headless test environments.
+  static Future<({bool supported, bool granted, bool canScheduleExactAlarms})>
+      getPermissionStatus() async {
+    try {
+      final raw = await _channel.invokeMapMethod<String, dynamic>(
+        'checkNotificationPermission',
+      );
+      if (raw == null) {
+        return (supported: false, granted: true, canScheduleExactAlarms: true);
+      }
+      return (
+        supported: true,
+        granted: raw['granted'] as bool? ?? true,
+        canScheduleExactAlarms: raw['canScheduleExactAlarms'] as bool? ?? true,
+      );
+    } on MissingPluginException {
+      return (supported: false, granted: true, canScheduleExactAlarms: true);
+    } catch (_) {
+      return (supported: false, granted: true, canScheduleExactAlarms: true);
+    }
+  }
+
+  /// Requests Android `POST_NOTIFICATIONS` permission and awaits the user choice.
+  static Future<bool> requestPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestNotificationPermission') ??
+          false;
+    } on MissingPluginException {
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the system app notification settings screen for Tack.
+  static Future<void> openNotificationSettings() async {
+    try {
+      await _channel.invokeMethod<void>('openNotificationSettings');
+    } catch (_) {}
+  }
+
+  /// Opens the Android Alarms & Reminders setting screen on Android 12+.
+  static Future<void> openExactAlarmSettings() async {
+    try {
+      await _channel.invokeMethod<void>('openExactAlarmSettings');
+    } catch (_) {}
+  }
+
   /// Enables or disables the persistent Quick Capture notification tile in the status bar.
   static Future<bool> setQuickCaptureEnabled(bool enabled) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_prefQuickCaptureKey, enabled);
-
       if (enabled) {
-        return await _channel.invokeMethod<bool>('showQuickCapture') ?? false;
+        final ok = await _channel.invokeMethod<bool>('showQuickCapture') ?? false;
+        if (ok) {
+          await prefs.setBool(_prefQuickCaptureKey, true);
+        }
+        return ok;
       } else {
+        await prefs.setBool(_prefQuickCaptureKey, false);
         return await _channel.invokeMethod<bool>('hideQuickCapture') ?? false;
       }
     } catch (_) {
@@ -254,7 +306,10 @@ class PinnedNotificationService {
       }
       final checked = _checkedTodoRegex.firstMatch(line);
       if (checked != null) {
-        formattedLines.add('☑ ${checked.group(1)!.trim()}');
+        final raw = checked.group(1)!.trim();
+        final parsed = OpenTasksService.parseTaskMetadata(raw);
+        final display = parsed.cleanText.isNotEmpty ? parsed.cleanText : raw;
+        formattedLines.add('☑ $display');
         continue;
       }
       formattedLines.add(t.replaceAll(RegExp(r'^#{1,6}\s+'), ''));

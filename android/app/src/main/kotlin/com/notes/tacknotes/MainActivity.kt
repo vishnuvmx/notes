@@ -2,6 +2,7 @@ package com.notes.tacknotes
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -22,6 +24,7 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     companion object {
         private const val QUICK_CAPTURE_NOTIF_ID = 7777
+        private const val REQ_NOTIFICATION_PERMISSION = 9001
         private const val CHANNEL_QUICK_CAPTURE = "tack_quick_capture"
         private const val CHANNEL_PINNED_NOTES = "tack_pinned_notes"
 
@@ -141,6 +144,7 @@ class MainActivity : FlutterActivity() {
     private var methodChannel: MethodChannel? = null
     private var notificationMethodChannel: MethodChannel? = null
     private var pendingPayload: Map<String, Any?>? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -189,8 +193,12 @@ class MainActivity : FlutterActivity() {
                     result.success(payload)
                 }
                 "showQuickCapture" -> {
-                    showQuickCaptureNotification()
-                    result.success(true)
+                    if (hasNotificationPermission()) {
+                        showQuickCaptureNotification()
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
                 }
                 "hideQuickCapture" -> {
                     hideQuickCaptureNotification()
@@ -215,17 +223,42 @@ class MainActivity : FlutterActivity() {
         activeNotificationChannel = notificationMethodChannel
         notificationMethodChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
-                "showQuickCapture" -> {
-                    ensureNotificationPermission()
-                    showQuickCaptureNotification()
+                "checkNotificationPermission" -> {
+                    result.success(
+                        mapOf(
+                            "granted" to hasNotificationPermission(),
+                            "canScheduleExactAlarms" to canScheduleExactAlarmsCompat(),
+                        )
+                    )
+                }
+                "requestNotificationPermission" -> {
+                    requestNotificationPermissionWithResult(result)
+                }
+                "openNotificationSettings" -> {
+                    openAppNotificationSettings()
                     result.success(true)
+                }
+                "openExactAlarmSettings" -> {
+                    openAppExactAlarmSettings()
+                    result.success(true)
+                }
+                "showQuickCapture" -> {
+                    if (hasNotificationPermission()) {
+                        showQuickCaptureNotification()
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
                 }
                 "hideQuickCapture" -> {
                     hideQuickCaptureNotification()
                     result.success(true)
                 }
                 "pinNoteNotification" -> {
-                    ensureNotificationPermission()
+                    if (!hasNotificationPermission()) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
                     val noteId = call.argument<String>("noteId") ?: ""
                     val title = call.argument<String>("title") ?: "Pinned Note"
                     val body = call.argument<String>("body") ?: ""
@@ -254,11 +287,18 @@ class MainActivity : FlutterActivity() {
                     result.success(NotificationActionReceiver.drainQueuedActions(this))
                 }
                 "syncTaskReminders" -> {
-                    ensureNotificationPermission()
                     @Suppress("UNCHECKED_CAST")
                     val list = call.arguments as? List<Map<String, Any?>> ?: emptyList()
-                    TaskReminderReceiver.syncScheduledReminders(this, list)
-                    result.success(true)
+                    if (list.isEmpty()) {
+                        TaskReminderReceiver.cancelAllScheduledReminders(this)
+                        result.success(true)
+                    } else if (!hasNotificationPermission()) {
+                        // Never trigger an unprompted OS dialog on passive load/sync.
+                        result.success(false)
+                    } else {
+                        TaskReminderReceiver.syncScheduledReminders(this, list)
+                        result.success(true)
+                    }
                 }
                 "cancelAllTaskReminders" -> {
                     TaskReminderReceiver.cancelAllScheduledReminders(this)
@@ -270,18 +310,83 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        pendingPermissionResult?.success(false)
+        pendingPermissionResult = null
         if (activeNotificationChannel === notificationMethodChannel) {
             activeNotificationChannel = null
         }
         super.onDestroy()
     }
 
-    private fun ensureNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+    private fun hasNotificationPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9001)
+    }
+
+    private fun canScheduleExactAlarmsCompat(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return false
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    private fun requestNotificationPermissionWithResult(result: MethodChannel.Result) {
+        if (hasNotificationPermission()) {
+            result.success(true)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingPermissionResult?.success(false)
+            pendingPermissionResult = result
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQ_NOTIFICATION_PERMISSION
+            )
+        } else {
+            result.success(true)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
+            val granted = (grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED) ||
+                hasNotificationPermission()
+            pendingPermissionResult?.success(granted)
+            pendingPermissionResult = null
+            return
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    private fun openAppNotificationSettings() {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        }
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {}
+    }
+
+    private fun openAppExactAlarmSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            try {
+                startActivity(intent)
+            } catch (_: Exception) {
+                openAppNotificationSettings()
             }
         }
     }

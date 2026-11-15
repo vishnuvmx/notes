@@ -22,8 +22,11 @@ import 'package:notes/shared/widgets/sliding_pill_track.dart';
 import 'package:notes/features/home/screens/home_screen.dart';
 import 'package:notes/features/notes/screens/note_editor_screen.dart';
 import 'package:notes/features/settings/screens/settings_screen.dart';
+import 'package:notes/features/about/screens/about_tack_screen.dart';
+import 'package:notes/features/graph/screens/knowledge_graph_screen.dart';
 import 'package:notes/features/whiteboard/models/whiteboard_item.dart';
 import 'package:notes/features/whiteboard/screens/whiteboard_canvas_screen.dart';
+import 'package:notes/shared/widgets/empty_state_widget.dart';
 
 class _MockWorkspaceRepo extends IWorkspaceRepository {
   final List<BaseWorkspaceItem> _store = [];
@@ -492,7 +495,7 @@ Footer text.
       expect(find.text('All files'), findsOneWidget);
       expect(find.text('Export backup'), findsOneWidget);
       expect(find.text('Restore backup'), findsOneWidget);
-      expect(find.text('About Tack'), findsOneWidget);
+      expect(find.text('About & Privacy'), findsOneWidget);
 
       expect(find.text('On-device JSON store'), findsNothing);
       expect(find.text('Trash & Deleted Items'), findsNothing);
@@ -898,6 +901,202 @@ Footer text.
       expect(standaloneScroll.clipBehavior, equals(Clip.hardEdge));
     });
 
+    testWidgets('16. AboutTackScreen includes Privacy & Legal tab with local-first & permissions coverage', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const AboutTackScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Architecture'), findsOneWidget);
+      expect(find.text('Privacy & Legal'), findsOneWidget);
+      expect(find.text('Open Source'), findsOneWidget);
+
+      await tester.tap(find.text('Privacy & Legal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Local-First Storage & Zero Telemetry'), findsOneWidget);
+      expect(find.textContaining('AlarmManager'), findsOneWidget);
+    });
+
+    testWidgets('17. ProfileSettingsScreen Restore Backup validates inline and preserves input on invalid JSON/schema', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final workspace = WorkspaceProvider(repo);
+      await workspace.loadItems();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const ProfileSettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Restore backup'),
+        200,
+        scrollable: find.descendant(
+          of: find.byType(ListView).first,
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.ensureVisible(find.text('Restore backup'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Restore backup'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Restore Backup'), findsOneWidget);
+      final fieldFinder = find.byType(TextField);
+      expect(fieldFinder, findsOneWidget);
+
+      await tester.enterText(fieldFinder, '{"foo":"bar"}');
+      await tester.pump();
+      expect(find.text('Not a recognized Tack backup schema'), findsOneWidget);
+      expect(tester.widget<TextField>(fieldFinder).controller?.text, '{"foo":"bar"}');
+
+      await tester.enterText(fieldFinder, 'invalid json{');
+      await tester.pump();
+      expect(find.text('Invalid JSON format'), findsOneWidget);
+      expect(tester.widget<TextField>(fieldFinder).controller?.text, 'invalid json{');
+    });
+
+    testWidgets('18. EmptyStateWidget renders custom actionIcon and invokes action callback', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: EmptyStateWidget(
+              icon: TackIcons.search,
+              title: 'Nothing found',
+              subtitle: 'Try clearing your active filters.',
+              actionLabel: 'Clear filters',
+              actionIcon: TackIcons.close,
+              onAction: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing found'), findsOneWidget);
+      expect(find.text('Clear filters'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is TackIcon && w.icon == TackIcons.close,
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Clear filters'));
+      await tester.pump();
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('19. KnowledgeGraphScreen strips # when opening a tag node and switches to Library', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final now = DateTime(2026, 11, 15, 10, 0);
+      await repo.saveItem(
+        TextNote(
+          id: 'tag-note-1',
+          title: 'Design Spec',
+          content: 'Specs #design',
+          paletteId: 'slate',
+          tags: const ['design'],
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      final workspace = WorkspaceProvider(repo);
+      await workspace.loadItems();
+      workspace.setBottomNavIndex(0);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const KnowledgeGraphScreen(
+                            focusItemId: 'tag:#design',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Push Graph'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Push Graph'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('#design'), findsOneWidget);
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(workspace.selectedTag, 'design');
+      expect(workspace.bottomNavIndex, 1);
+      expect(find.text('Push Graph'), findsOneWidget);
+    });
+
+    testWidgets('20. AppFloatingDialog.prompt returns entered text and disposes controller cleanly', (tester) async {
+      String? promptResult;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    promptResult = await AppFloatingDialog.prompt(
+                      context: context,
+                      title: 'Rename Section',
+                      hintText: 'Section name',
+                      initialValue: 'Draft',
+                    );
+                  },
+                  child: const Text('Prompt'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Prompt'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Architecture');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(promptResult, 'Architecture');
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('13. 120fps optimizations: composited SlidingPillTrack & RepaintBoundary IndexedStack tabs', (tester) async {
       // SlidingPillTrack uses SlideTransition + RepaintBoundary (never AnimatedAlign relayouts)
       await tester.pumpWidget(
@@ -998,5 +1197,137 @@ Footer text.
         findsNothing,
       );
     });
+
+    testWidgets(
+      '21. Fade-out transitions use responsive exit curves and composited RepaintBoundary without Opacity saveLayers',
+      (tester) async {
+        // A. Real MaterialPageRoute pop drops opacity immediately on exit (AppTheme pageTransitionsTheme)
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const Scaffold(body: Text('Second Page')),
+                      ),
+                    );
+                  },
+                  child: const Text('Push Page'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Push Page'));
+        await tester.pumpAndSettle();
+        expect(find.text('Second Page'), findsOneWidget);
+
+        Navigator.of(tester.element(find.text('Second Page'))).pop();
+        await tester.pump();
+        // After 75ms (25% of 300ms route pop), outgoing page should already be well below 0.45
+        await tester.pump(const Duration(milliseconds: 75));
+        final poppedFadeFinder = find.ancestor(
+          of: find.text('Second Page'),
+          matching: find.byType(FadeTransition),
+        );
+        expect(poppedFadeFinder, findsOneWidget);
+        expect(tester.widget<FadeTransition>(poppedFadeFinder).opacity.value, lessThan(0.45));
+        expect(
+          find.descendant(
+            of: poppedFadeFinder,
+            matching: find.byType(RepaintBoundary),
+          ),
+          findsWidgets,
+        );
+
+        // After +145ms (220ms elapsed, >72% fade interval), outgoing page reaches 0.0 cleanly
+        await tester.pump(const Duration(milliseconds: 145));
+        expect(tester.widget<FadeTransition>(poppedFadeFinder).opacity.value, equals(0.0));
+        await tester.pumpAndSettle();
+
+        // B. AppFloatingDialog uses TackAnimatedTransition (ScaleTransition + FadeTransition), never raw Opacity
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () {
+                    AppFloatingDialog.showCustom<void>(
+                      context: ctx,
+                      builder: (dlgCtx) => const Text('Dialog Body'),
+                    );
+                  },
+                  child: const Text('Show Dialog'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Show Dialog'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+
+        final dialogTransitionFinder = find.ancestor(
+          of: find.text('Dialog Body'),
+          matching: find.byType(TackAnimatedTransition),
+        );
+        expect(dialogTransitionFinder, findsOneWidget);
+        expect(
+          find.descendant(
+            of: dialogTransitionFinder,
+            matching: find.byType(Opacity),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: dialogTransitionFinder,
+            matching: find.byType(ScaleTransition),
+          ),
+          findsOneWidget,
+        );
+        await tester.pumpAndSettle();
+
+        // Dismiss dialog and verify rapid fade-out within 60ms of 190ms duration
+        Navigator.of(tester.element(find.text('Dialog Body'))).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        final dialogFadeFinder = find.descendant(
+          of: dialogTransitionFinder,
+          matching: find.byType(FadeTransition),
+        );
+        expect(tester.widget<FadeTransition>(dialogFadeFinder).opacity.value, lessThan(0.45));
+        await tester.pumpAndSettle();
+
+        // C. SmartBottomNavBar uses alpha-tinted TackIcon color instead of Opacity saveLayer
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              bottomNavigationBar: SmartBottomNavBar(
+                currentIndex: 0,
+                onTap: (_) {},
+                onFabTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: find.byType(SmartBottomNavBar),
+            matching: find.byType(Opacity),
+          ),
+          findsNothing,
+        );
+      },
+    );
   });
 }

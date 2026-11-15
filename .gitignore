@@ -49,3 +49,11 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Installed AI agent skills
+/.agents/skills/
+/skills-lock.json
+
+# Impeccable per-developer local consent & cache
+/.impeccable/config.local.json
+/.impeccable/hook.cache.json

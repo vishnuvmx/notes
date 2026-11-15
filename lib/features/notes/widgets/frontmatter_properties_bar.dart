@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../services/frontmatter_service.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
+import '../../../shared/widgets/tack_toast.dart';
 
 /// Zero-clutter YAML Frontmatter Properties Bar.
 ///
@@ -64,18 +66,27 @@ class FrontmatterPropertiesBar extends StatelessWidget {
     onContentChanged(FrontmatterService.upsertProperty(rawContent, 'priority', next));
   }
 
+  static DateTime _clampDate(DateTime dt, DateTime min, DateTime max) {
+    if (dt.isBefore(min)) return min;
+    if (dt.isAfter(max)) return max;
+    return dt;
+  }
+
   Future<void> _pickTargetDate(BuildContext context, String? current) async {
     HapticFeedback.lightImpact();
+    final minDate = DateTime(2020);
+    final maxDate = DateTime(2035);
     DateTime initial = DateTime.now();
     if (current != null) {
-      final parsed = DateTime.tryParse(current);
+      final parsed = DateTime.tryParse(current.trim());
       if (parsed != null) initial = parsed;
     }
+    initial = _clampDate(initial, minDate, maxDate);
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
+      firstDate: minDate,
+      lastDate: maxDate,
     );
     if (picked != null) {
       final formatted =
@@ -125,12 +136,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
                 const SizedBox(width: 5),
                 Text(
                   '+ Properties',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
+                  style: AppTypography.caption(
                     color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    weight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -295,12 +303,9 @@ class _PropertyPill extends StatelessWidget {
             ],
             Text(
               label,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+              style: AppTypography.caption(
                 color: fg,
+                weight: FontWeight.w700,
               ),
             ),
           ],
@@ -348,6 +353,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
   late String _body;
   final TextEditingController _customKeyCtrl = TextEditingController();
   final TextEditingController _customValCtrl = TextEditingController();
+  String? _customFieldError;
 
   @override
   void initState() {
@@ -379,9 +385,29 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
     _commit();
   }
 
+  void _addCustomField() {
+    final key = _customKeyCtrl.text.trim();
+    final val = _customValCtrl.text.trim();
+    if (key.isEmpty || val.isEmpty) {
+      setState(() {
+        _customFieldError = key.isEmpty && val.isEmpty
+            ? 'Enter both a property key and value.'
+            : (key.isEmpty
+                ? 'Enter a property key (e.g. aliases).'
+                : 'Enter a value for "$key".');
+      });
+      return;
+    }
+    setState(() => _customFieldError = null);
+    _setProp(key, val);
+    _customKeyCtrl.clear();
+    _customValCtrl.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.paletteId);
     final accent = palette.resolveAccentColor(isDark);
 
@@ -395,96 +421,135 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
             Row(
               children: [
                 TackIcon(TackIcons.settings, size: 18, color: accent),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Note Properties (YAML)',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Note Properties (YAML)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          weight: FontWeight.w700,
+                        ),
                       ),
-                    ),
+                      Text(
+                        'Saved as portable --- YAML --- metadata at the top of your note.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(color: tokens.textSecondary),
+                      ),
+                    ],
                   ),
-                  if (_props.isNotEmpty)
-                    TextButton(
+                ),
+                if (_props.isNotEmpty)
+                  SizedBox(
+                    height: AppSpacing.minTouchTarget,
+                    child: TextButton(
                       onPressed: () {
+                        final backup = Map<String, String>.from(_props);
                         setState(() => _props.clear());
                         _commit();
+                        TackToast.show(
+                          context,
+                          message: 'Cleared ${backup.length} properties',
+                          actionLabel: 'Undo',
+                          onAction: () {
+                            if (!mounted) return;
+                            setState(() => _props = backup);
+                            _commit();
+                          },
+                        );
                       },
                       child: const Text('Clear all'),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'STATUS',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  ),
+                IconButton(
+                  tooltip: 'Done',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'STATUS',
+              style: AppTypography.caption(
+                color: tokens.textSecondary,
+                weight: FontWeight.w700,
               ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: FrontmatterService.statusPresets.map((preset) {
-                  final selected =
-                      _props['status']?.toLowerCase() == preset.toLowerCase();
-                  return ChoiceChip(
-                    label: Text(preset),
-                    selected: selected,
-                    onSelected: (v) => _setProp('status', v ? preset : null),
-                  );
-                }).toList(),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: FrontmatterService.statusPresets.map((preset) {
+                final selected =
+                    _props['status']?.toLowerCase() == preset.toLowerCase();
+                return ChoiceChip(
+                  label: Text(preset),
+                  selected: selected,
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  onSelected: (v) => _setProp('status', v ? preset : null),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'PRIORITY',
+              style: AppTypography.caption(
+                color: tokens.textSecondary,
+                weight: FontWeight.w700,
               ),
-              const SizedBox(height: 12),
-              Text(
-                'PRIORITY',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: FrontmatterService.priorityPresets.map((preset) {
-                  final selected =
-                      _props['priority']?.toLowerCase() == preset.toLowerCase();
-                  return ChoiceChip(
-                    label: Text(preset),
-                    selected: selected,
-                    onSelected: (v) => _setProp('priority', v ? preset : null),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Flexible(
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: FrontmatterService.priorityPresets.map((preset) {
+                final selected =
+                    _props['priority']?.toLowerCase() == preset.toLowerCase();
+                return ChoiceChip(
+                  label: Text(preset),
+                  selected: selected,
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  onSelected: (v) => _setProp('priority', v ? preset : null),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Flexible(
+                  child: SizedBox(
+                    height: AppSpacing.minTouchTarget,
                     child: OutlinedButton.icon(
                       onPressed: () async {
+                        final minDate = DateTime(2020);
+                        final maxDate = DateTime(2035);
+                        final existing = _props['target_date'] != null
+                            ? DateTime.tryParse(_props['target_date']!)
+                            : null;
+                        final initial = FrontmatterPropertiesBar._clampDate(
+                          existing ?? DateTime.now(),
+                          minDate,
+                          maxDate,
+                        );
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2035),
+                          initialDate: initial,
+                          firstDate: minDate,
+                          lastDate: maxDate,
                         );
                         if (picked != null) {
                           final formatted =
-                              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                              '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
                           _setProp('target_date', formatted);
                         }
                       },
@@ -496,141 +561,167 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                       ),
                     ),
                   ),
-                  if (_props.containsKey('target_date')) ...[
-                    const SizedBox(width: AppSpacing.s2),
-                    IconButton(
-                      icon: const TackIcon(TackIcons.close, size: 16),
-                      onPressed: () => _setProp('target_date', null),
-                    ),
-                  ],
-                ],
-              ),
-              if (_props.entries
-                  .any((e) => !{'status', 'priority', 'target_date'}.contains(e.key))) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'CUSTOM FIELDS',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
                 ),
-                const SizedBox(height: 6),
-                ..._props.entries
-                    .where((e) => !{'status', 'priority', 'target_date'}.contains(e.key))
-                    .map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${e.key}: ${e.value}',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.lightTextPrimary,
-                                ),
+                if (_props.containsKey('target_date')) ...[
+                  const SizedBox(width: AppSpacing.s2),
+                  IconButton(
+                    tooltip: 'Clear target date',
+                    constraints: const BoxConstraints(
+                      minWidth: AppSpacing.minTouchTarget,
+                      minHeight: AppSpacing.minTouchTarget,
+                    ),
+                    icon: const TackIcon(TackIcons.close, size: 16),
+                    onPressed: () => _setProp('target_date', null),
+                  ),
+                ],
+              ],
+            ),
+            if (_props.entries
+                .any((e) => !{'status', 'priority', 'target_date'}.contains(e.key))) ...[
+              const SizedBox(height: 12),
+              Text(
+                'CUSTOM FIELDS',
+                style: AppTypography.caption(
+                  color: tokens.textSecondary,
+                  weight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ..._props.entries
+                  .where((e) => !{'status', 'priority', 'target_date'}.contains(e.key))
+                  .map(
+                    (e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${e.key}: ${e.value}',
+                              style: AppTypography.bodySm(
+                                color: tokens.textPrimary,
+                                weight: FontWeight.w600,
                               ),
                             ),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const TackIcon(TackIcons.close, size: 15),
-                              onPressed: () => _setProp(e.key, null),
+                          ),
+                          IconButton(
+                            tooltip: 'Remove ${e.key}',
+                            constraints: const BoxConstraints(
+                              minWidth: AppSpacing.minTouchTarget,
+                              minHeight: AppSpacing.minTouchTarget,
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-              ],
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: _customKeyCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Key (e.g. aliases)',
-                        isDense: true,
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurfaceAlt
-                            : const Color(0xFFF3F4F6),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder, width: 1.5),
-                        ),
+                            icon: const TackIcon(TackIcons.close, size: 16),
+                            onPressed: () => _setProp(e.key, null),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: _customValCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Value',
-                        isDense: true,
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurfaceAlt
-                            : const Color(0xFFF3F4F6),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkFocusBorder : AppColors.lightFocusBorder, width: 1.5),
-                        ),
-                      ),
-                      onSubmitted: (_) {
-                        if (_customKeyCtrl.text.trim().isNotEmpty &&
-                            _customValCtrl.text.trim().isNotEmpty) {
-                          _setProp(_customKeyCtrl.text, _customValCtrl.text);
-                          _customKeyCtrl.clear();
-                          _customValCtrl.clear();
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  IconButton.filledTonal(
-                    onPressed: () {
-                      if (_customKeyCtrl.text.trim().isNotEmpty &&
-                          _customValCtrl.text.trim().isNotEmpty) {
-                        _setProp(_customKeyCtrl.text, _customValCtrl.text);
-                        _customKeyCtrl.clear();
-                        _customValCtrl.clear();
+            ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _customKeyCtrl,
+                    onChanged: (_) {
+                      if (_customFieldError != null) {
+                        setState(() => _customFieldError = null);
                       }
                     },
-                    icon: const TackIcon(TackIcons.plus, size: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Key (e.g. aliases)',
+                      isDense: true,
+                      filled: true,
+                      fillColor: tokens.canvasSunken,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: tokens.borderSubtle),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: tokens.borderSubtle),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.darkFocusBorder
+                              : AppColors.lightFocusBorder,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _customValCtrl,
+                    onChanged: (_) {
+                      if (_customFieldError != null) {
+                        setState(() => _customFieldError = null);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Value',
+                      isDense: true,
+                      filled: true,
+                      fillColor: tokens.canvasSunken,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: tokens.borderSubtle),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: tokens.borderSubtle),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.darkFocusBorder
+                              : AppColors.lightFocusBorder,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onSubmitted: (_) => _addCustomField(),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: 'Add custom property',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  onPressed: _addCustomField,
+                  icon: const TackIcon(TackIcons.plus, size: 16),
+                ),
+              ],
+            ),
+            if (_customFieldError != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _customFieldError!,
+                style: AppTypography.caption(color: AppColors.error),
               ),
             ],
-          ),
+            const SizedBox(height: AppSpacing.s3),
+            SizedBox(
+              width: double.infinity,
+              height: AppSpacing.minTouchTarget,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 

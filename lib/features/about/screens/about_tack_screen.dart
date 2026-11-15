@@ -19,16 +19,21 @@ class AboutTackScreen extends StatefulWidget {
 class _AboutTackScreenState extends State<AboutTackScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _lastTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
   }
 
   void _onTabChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (_tabController.index != _lastTabIndex) {
+      _lastTabIndex = _tabController.index;
+      setState(() {});
+    }
   }
 
   @override
@@ -62,15 +67,23 @@ class _AboutTackScreenState extends State<AboutTackScreen>
           style: AppTypography.title(color: tokens.textPrimary),
         ),
       ),
-      body: Column(
-        children: [
-          // Header Hero Card
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s5,
-              vertical: AppSpacing.s2,
-            ),
-            child: Container(
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+            child: Column(
+              children: [
+                // Header Hero Card
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenGutter(
+                      MediaQuery.sizeOf(context).width,
+                    ),
+                    vertical: AppSpacing.s2,
+                  ),
+                  child: Container(
               clipBehavior: Clip.antiAlias,
               padding: const EdgeInsets.all(AppSpacing.s5),
               decoration: ShapeDecoration(
@@ -163,10 +176,14 @@ class _AboutTackScreenState extends State<AboutTackScreen>
 
           const SizedBox(height: AppSpacing.s2),
 
-          // Black-Pill Segmented Tab Selector (matching Screenshot 2)
+          // Black-Pill Segmented Tab Selector
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s5),
-            padding: const EdgeInsets.all(4),
+            margin: EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenGutter(
+                MediaQuery.sizeOf(context).width,
+              ),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.s2),
             decoration: BoxDecoration(
               color: tokens.canvasSunken,
               borderRadius: AppSpacing.roundedPill,
@@ -194,7 +211,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                 weight: FontWeight.w500,
               ),
               tabs: const [
-                Tab(text: 'Stack & Journey'),
+                Tab(text: 'Architecture'),
+                Tab(text: 'Privacy & Legal'),
                 Tab(text: 'Open Source'),
               ],
             ),
@@ -207,11 +225,15 @@ class _AboutTackScreenState extends State<AboutTackScreen>
               index: _tabController.index,
               children: [
                 _buildStackJourneyTab(tokens),
+                _buildPrivacyLegalTab(tokens),
                 _buildOpenSourceTab(tokens),
               ],
             ),
           ),
-        ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -224,8 +246,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         paletteId: 'peach',
         icon: TackIcons.notes,
         description:
-            'Engineered strict Object-Oriented Dart abstractions with `BaseWorkspaceItem` '
-            'polymorphism across `TextNote`, `StickyNote`, `WhiteboardCanvasItem`, and `ClipboardItem`.',
+            'Engineered clean Object-Oriented Dart abstractions with BaseWorkspaceItem '
+            'polymorphism across TextNote, StickyNote, WhiteboardCanvasItem, and ClipboardItem.',
       ),
       _JourneyStage(
         phase: 'Stage 2',
@@ -233,7 +255,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         paletteId: 'amber',
         icon: TackIcons.exportData,
         description:
-            'Implemented Clean Architecture with `IWorkspaceRepository`, corrupt-store recovery, '
+            'Implemented Clean Architecture with IWorkspaceRepository, corrupt-store recovery, '
             'and atomic offline-first JSON persistence.',
       ),
       _JourneyStage(
@@ -260,8 +282,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         paletteId: 'lavender',
         icon: TackIcons.today,
         description:
-            'Integrated daily note carry-forward, 1-tap inbox capture triage, cross-note open task checklists, '
-            'and vector PDF + PNG document generation.',
+            'Integrated daily note carry-forward, 1-tap inbox capture triage, cross-note task checklists, '
+            'task reminders, and vector PDF + PNG document generation.',
       ),
       _JourneyStage(
         phase: 'Stage 6',
@@ -269,20 +291,24 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         paletteId: 'cyan',
         icon: TackIcons.bolt,
         description:
-            'Optimized release binaries with ABI-split compilation (ARM64, ARMv7, x86_64), icon tree-shaking '
-            '(>96% reduction), and edge-to-edge gesture clearances.',
+            'Optimized release binaries with ABI-split compilation (ARM64, ARMv7, x86_64), icon tree-shaking, '
+            'and composited 120fps scrolling.',
       ),
     ];
 
+    final gutter = AppSpacing.screenGutter(MediaQuery.sizeOf(context).width);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return ListView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s5,
-        vertical: AppSpacing.s3,
+      padding: EdgeInsets.fromLTRB(
+        gutter,
+        AppSpacing.s3,
+        gutter,
+        AppSpacing.s7 + bottomInset,
       ),
       physics: const BouncingScrollPhysics(),
       children: [
         ...stages.map((stage) => _buildStageCard(stage, tokens)),
-        const SizedBox(height: AppSpacing.s6),
       ],
     );
   }
@@ -313,7 +339,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
               Text(
                 stage.phase.toUpperCase(),
                 style: AppTypography.mono(
-                  fontSize: 11,
+                  fontSize: 12,
                   weight: FontWeight.w600,
                   color: tokens.textTertiary,
                 ),
@@ -380,12 +406,124 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     );
   }
 
+  Widget _buildPrivacyLegalTab(TackTokens tokens) {
+    final gutter = AppSpacing.screenGutter(MediaQuery.sizeOf(context).width);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    final policies = [
+      (
+        icon: TackIcons.lock,
+        paletteId: 'cyan',
+        title: 'Local-First Storage & Zero Telemetry',
+        body:
+            'Tack stores all notes, tasks, folders, whiteboards, and preferences exclusively in your '
+            'device app storage. Tack contains no analytics SDKs, ad trackers, user accounts, or remote servers.',
+      ),
+      (
+        icon: TackIcons.shield,
+        paletteId: 'lime',
+        title: 'Android Cloud Backup Disabled',
+        body:
+            'Automatic OS cloud backup is disabled in the app manifest (allowBackup=false) so private workspace '
+            'notes are never synced to third-party cloud storage automatically.',
+      ),
+      (
+        icon: TackIcons.notification,
+        paletteId: 'amber',
+        title: 'Notifications & Task Reminders',
+        body:
+            'Notification and exact-alarm permissions are requested only when you schedule a task reminder '
+            'or pin a note to the notification shade. Alarms execute locally on Android AlarmManager.',
+      ),
+      (
+        icon: TackIcons.photo,
+        paletteId: 'peach',
+        title: 'Photos, Camera & Clipboard Access',
+        body:
+            'Images are copied into internal app storage only when picked or captured by you. Clipboard text is '
+            'read strictly on explicit Paste actions, and shared exports leave the device only via apps you choose.',
+      ),
+      (
+        icon: TackIcons.info,
+        paletteId: 'slate',
+        title: 'Software Notice & Data Responsibility',
+        body:
+            'Tack Notes (v2.0.0) is provided as local productivity software without warranty. Because there is no '
+            'cloud sync, please use Export Backup in Settings periodically to safeguard important notes.',
+      ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        gutter,
+        AppSpacing.s3,
+        gutter,
+        AppSpacing.s7 + bottomInset,
+      ),
+      physics: const BouncingScrollPhysics(),
+      children: policies.map((item) {
+        final palette = AppColors.getPaletteById(item.paletteId);
+        final accent = palette.resolveAccentColor(tokens.isDark);
+        final softBg = palette.resolveSoftBackground(tokens.isDark);
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          margin: const EdgeInsets.only(bottom: AppSpacing.s3),
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          decoration: ShapeDecoration(
+            color: tokens.surfacePrimary,
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+            ),
+            shadows: AppSpacing.elev1(tokens.isDark),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: softBg,
+                  borderRadius: AppSpacing.roundedSm,
+                ),
+                child: Center(
+                  child: TackIcon(item.icon, size: 18, color: accent),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: AppTypography.titleSm(
+                        color: tokens.textPrimary,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s1),
+                    Text(
+                      item.body,
+                      style: AppTypography.bodySm(color: tokens.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildOpenSourceTab(TackTokens tokens) {
     final packages = [
       const _OssPackage(
         name: 'flutter',
         author: 'Google LLC',
-        version: 'SDK 3.29.0',
+        version: 'Dart SDK ^3.13.1',
         license: 'BSD-3-Clause',
         role: 'Cross-platform reactive UI framework and rendering engine.',
       ),
@@ -399,14 +537,14 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       const _OssPackage(
         name: 'google_fonts',
         author: 'Material Design & Google',
-        version: '^8.2.1',
+        version: '^9.0.0',
         license: 'Apache-2.0 / OFL',
         role: 'Typography engine delivering DM Sans, Newsreader, and JetBrains Mono.',
       ),
       const _OssPackage(
         name: 'lucide_icons_flutter',
         author: 'Lucide Team',
-        version: '^3.1.19',
+        version: '^4.0.3',
         license: 'ISC',
         role: 'Minimalist, rounded-cap iconography across workspace controls.',
       ),
@@ -415,7 +553,14 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         author: 'Dan Field & Community',
         version: '^2.3.0',
         license: 'MIT',
-        role: 'Scalable vector graphics rendering for app badges and brand assets.',
+        role: 'Scalable vector graphics rendering for app icons and brand assets.',
+      ),
+      const _OssPackage(
+        name: 'flutter_math_fork',
+        author: 'Flutter Math Contributors',
+        version: '^0.7.4',
+        license: 'Apache-2.0',
+        role: 'Inline and block KaTeX math formula typesetting inside notes.',
       ),
       const _OssPackage(
         name: 'pdf & printing',
@@ -453,23 +598,53 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         role: 'Lightweight on-device persistent key-value store for app settings.',
       ),
       const _OssPackage(
-        name: 'url_launcher',
+        name: 'url_launcher & vector_math',
         author: 'Flutter Team',
-        version: '^6.3.2',
-        license: 'BSD-3-Clause',
-        role: 'Web hyperlink dispatching from markdown content and preview sheets.',
+        version: '^6.3.2 / ^2.1.4',
+        license: 'BSD-3-Clause / Zlib',
+        role: 'External URL launching and 2D matrix transforms for whiteboards.',
       ),
     ];
 
+    final gutter = AppSpacing.screenGutter(MediaQuery.sizeOf(context).width);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return ListView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s5,
-        vertical: AppSpacing.s3,
+      padding: EdgeInsets.fromLTRB(
+        gutter,
+        AppSpacing.s3,
+        gutter,
+        AppSpacing.s7 + bottomInset,
       ),
       physics: const BouncingScrollPhysics(),
       children: [
         ...packages.map((pkg) => _buildPackageCard(pkg, tokens)),
-        const SizedBox(height: AppSpacing.s6),
+        const SizedBox(height: AppSpacing.s2),
+        SizedBox(
+          height: AppSpacing.minTouchTarget,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: tokens.borderSubtle),
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppSpacing.roundedPill,
+              ),
+            ),
+            onPressed: () {
+              showLicensePage(
+                context: context,
+                applicationName: 'Tack',
+                applicationVersion: 'v2.0.0',
+              );
+            },
+            child: Text(
+              'View Full License Notices',
+              style: AppTypography.label(
+                color: tokens.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

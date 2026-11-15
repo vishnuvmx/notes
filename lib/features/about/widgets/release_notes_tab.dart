@@ -187,80 +187,111 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     final filtered = _selectedCategory == _ReleaseCategory.all
         ? _v2Entries
         : _v2Entries.where((e) => e.category == _selectedCategory).toList();
+    final gutter = AppSpacing.screenGutter(MediaQuery.sizeOf(context).width);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s5,
-        AppSpacing.s3,
-        AppSpacing.s5,
-        AppSpacing.s9,
-      ),
-      children: [
-        ZOrderColumn(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Hero Release Card (v2.0.0)
-            _buildHeroReleaseBanner(tokens),
-            const SizedBox(height: AppSpacing.s4),
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              AppSpacing.s3,
+              gutter,
+              AppSpacing.s8 + bottomInset,
+            ),
+            children: [
+              ZOrderColumn(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Hero Release Card (v2.0.0)
+                  _buildHeroReleaseBanner(tokens),
+                  const SizedBox(height: AppSpacing.s4),
 
-            // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
-            SingleChildScrollView(
-              clipBehavior: Clip.none,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _ReleaseCategory.values.map((cat) {
-                  final selected = _selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.s2),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedCategory = cat);
-                        },
-                        borderRadius: AppSpacing.roundedPill,
-                        child: AnimatedContainer(
-                          duration: AppSpacing.durationFast,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.s4,
-                            vertical: AppSpacing.s2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selected ? tokens.actionPrimary : tokens.surfacePrimary,
-                            borderRadius: AppSpacing.roundedPill,
-                            border: selected
-                                ? null
-                                : Border.all(color: tokens.borderSubtle, width: 1),
-                          ),
-                          child: Text(
-                            cat.label,
-                            style: AppTypography.label(
-                              color: selected
-                                  ? tokens.actionPrimaryFg
-                                  : tokens.textSecondary,
-                              weight: selected ? FontWeight.w600 : FontWeight.w500,
+                  // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
+                  SingleChildScrollView(
+                    clipBehavior: Clip.none,
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _ReleaseCategory.values.map((cat) {
+                        final selected = _selectedCategory == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: AppSpacing.s2),
+                          child: Semantics(
+                            button: true,
+                            selected: selected,
+                            label: '${cat.label} category filter',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _selectedCategory = cat);
+                                },
+                                borderRadius: AppSpacing.roundedPill,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: AppSpacing.minTouchTarget,
+                                    minWidth: AppSpacing.minTouchTarget,
+                                  ),
+                                  child: Center(
+                                    child: AnimatedContainer(
+                                      duration: AppSpacing.durationFast,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.s4,
+                                        vertical: AppSpacing.s2 + 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: selected
+                                            ? tokens.actionPrimary
+                                            : tokens.surfacePrimary,
+                                        borderRadius: AppSpacing.roundedPill,
+                                        border: selected
+                                            ? null
+                                            : Border.all(
+                                                color: tokens.borderSubtle,
+                                                width: 1,
+                                              ),
+                                      ),
+                                      child: Text(
+                                        cat.label,
+                                        style: AppTypography.label(
+                                          color: selected
+                                              ? tokens.actionPrimaryFg
+                                              : tokens.textSecondary,
+                                          weight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+
+                  // 3. Major Feature Cards
+                  ...filtered.map((entry) => _buildReleaseCard(entry, tokens)),
+
+                  const SizedBox(height: AppSpacing.s3),
+
+                  // 4. Previous Milestone Card (v1.0.0)
+                  _buildPreviousVersionCard(tokens),
+                ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.s4),
-
-            // 3. Major Feature Cards
-            ...filtered.map((entry) => _buildReleaseCard(entry, tokens)),
-
-            const SizedBox(height: AppSpacing.s3),
-
-            // 4. Previous Milestone Card (v1.0.0)
-            _buildPreviousVersionCard(tokens),
-          ],
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -279,7 +310,11 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: AppSpacing.s2,
+            runSpacing: AppSpacing.s2,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -298,7 +333,6 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                   ),
                 ),
               ),
-              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.s3,

@@ -53,13 +53,13 @@ class SmartBottomNavBar extends StatelessWidget {
               AppSpacing.s3,
             ),
             child: SizedBox(
-              height: 58,
+              height: 60,
               child: Row(
                 children: [
                   // 1. Icon-only Floating Pill Dock with gliding pill indicator
                   Expanded(
                     child: SlidingPillTrack(
-                      height: 56,
+                      height: 58,
                       padding: const EdgeInsets.all(5),
                       itemCount: navItems.length,
                       selectedIndex: selectedSlot,

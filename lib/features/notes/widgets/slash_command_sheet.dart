@@ -433,8 +433,8 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
             Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F7),
-                borderRadius: BorderRadius.circular(12),
+                color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+                borderRadius: AppSpacing.roundedSm,
               ),
               child: Row(
                 children: [
@@ -469,60 +469,110 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
               ),
               const SizedBox(height: 8),
               Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: filteredCommands.length,
-                  itemBuilder: (context, index) {
-                    final cmd = filteredCommands[index];
-                    return ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      leading: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: cmd.accentColor.withValues(alpha: isDark ? 0.2 : 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                child: filteredCommands.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.s6,
+                            horizontal: AppSpacing.s4,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TackIcon(
+                                TackIcons.search,
+                                size: 28,
+                                color: isDark
+                                    ? AppColors.darkTextMuted
+                                    : AppColors.lightTextMuted,
+                              ),
+                              const SizedBox(height: AppSpacing.s2),
+                              Text(
+                                'No blocks match "${_searchController.text.trim()}"',
+                                textAlign: TextAlign.center,
+                                style: AppTypography.body(
+                                  color: isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.lightTextSecondary,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.s3),
+                              SizedBox(
+                                height: AppSpacing.minTouchTarget,
+                                child: TextButton.icon(
+                                  onPressed: () =>
+                                      setState(() => _searchController.clear()),
+                                  icon: const TackIcon(TackIcons.close, size: 16),
+                                  label: const Text('Clear search'),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Center(
-                          child: TackIcon(cmd.icon, size: 19, color: cmd.accentColor),
-                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredCommands.length,
+                        itemBuilder: (context, index) {
+                          final cmd = filteredCommands[index];
+                          return ListTile(
+                            minTileHeight: AppSpacing.minTouchTarget,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                            ),
+                            leading: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: cmd.accentColor.withValues(
+                                  alpha: isDark ? 0.2 : 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: TackIcon(
+                                  cmd.icon,
+                                  size: 19,
+                                  color: cmd.accentColor,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              cmd.label,
+                              style: AppTypography.body(
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              cmd.subtitle,
+                              style: AppTypography.caption(
+                                color: isDark
+                                    ? AppColors.darkTextMuted
+                                    : AppColors.lightTextMuted,
+                              ),
+                            ),
+                            trailing: Text(
+                              '/${cmd.command}',
+                              style: AppTypography.caption(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).pop();
+                              widget.onInsertCommand(cmd);
+                            },
+                          );
+                        },
                       ),
-                      title: Text(
-                        cmd.label,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      subtitle: Text(
-                        cmd.subtitle,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                        ),
-                      ),
-                      trailing: Text(
-                        '/${cmd.command}',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                        ),
-                      ),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.of(context).pop();
-                        widget.onInsertCommand(cmd);
-                      },
-                    );
-                  },
-                ),
               ),
             ] else ...[
               Flexible(
@@ -531,34 +581,42 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                   children: [
                     for (final kind in BlockKind.values)
                       ListTile(
-                        dense: true,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        minTileHeight: AppSpacing.minTouchTarget,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppSpacing.roundedSm,
+                        ),
                         selected: kind == widget.currentBlockKind,
                         leading: TackIcon(
                           _iconForBlockKind(kind),
                           size: 19,
                           color: kind == widget.currentBlockKind
                               ? AppColors.accentAmber
-                              : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              : (isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary),
                         ),
                         title: Text(
                           kind.label,
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 14,
-                            fontWeight: kind == widget.currentBlockKind ? FontWeight.w800 : FontWeight.w600,
+                          style: AppTypography.body(
+                            weight: kind == widget.currentBlockKind
+                                ? FontWeight.w800
+                                : FontWeight.w600,
                           ),
                         ),
                         subtitle: Text(
                           kind.subtitle,
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 12,
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                          style: AppTypography.caption(
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted,
                           ),
                         ),
                         trailing: kind == widget.currentBlockKind
-                            ? const TackIcon(TackIcons.checkCircle, size: 17, color: AppColors.accentAmber)
+                            ? const TackIcon(
+                                TackIcons.checkCircle,
+                                size: 17,
+                                color: AppColors.accentAmber,
+                              )
                             : null,
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -581,35 +639,38 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     required String label,
     required VoidCallback onTap,
   }) {
+    final textColor =
+        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
     return Expanded(
-      child: Material(
-        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF3F5F8),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            height: 44,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TackIcon(icon, size: 16, color: isDark ? Colors.white : const Color(0xFF191A23)),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                      color: isDark ? Colors.white : const Color(0xFF191A23),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
+          borderRadius: AppSpacing.roundedSm,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppSpacing.roundedSm,
+            child: SizedBox(
+              height: AppSpacing.minTouchTarget,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TackIcon(icon, size: 16, color: textColor),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: textColor,
+                        weight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -623,38 +684,55 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? (isDark ? AppColors.darkCard : Colors.white) : Colors.transparent,
+    final activeText =
+        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final mutedText =
+        isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(9),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12.5,
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              letterSpacing: -0.2,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            decoration: BoxDecoration(
               color: selected
-                  ? (isDark ? Colors.white : const Color(0xFF191A23))
-                  : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                  ? (isDark ? AppColors.darkCard : AppColors.lightCard)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(9),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.25 : 0.06,
+                        ),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(
+                  color: selected ? activeText : mutedText,
+                  weight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/pinned_notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -48,6 +50,30 @@ class TodayScreen extends StatefulWidget {
 class _TodayScreenState extends State<TodayScreen> {
   _TodayTaskTab _activeTab = _TodayTaskTab.todo;
   final Set<String> _collapsedGroups = {};
+  bool _showAllTasks = false;
+
+  Future<void> _openDailyNote(
+    WorkspaceProvider workspace,
+    TextNote? existingDaily,
+  ) async {
+    try {
+      HapticFeedback.lightImpact();
+      final isNew = existingDaily == null;
+      final note = await workspace.openOrCreateTodaysNote();
+      if (mounted) {
+        widget.onOpenItem(note, startInEditMode: isNew);
+      }
+    } catch (_) {
+      if (mounted) {
+        TackToast.show(
+          context,
+          message: "Could not open Today's Daily Note",
+          icon: TackIcons.close,
+          iconColor: context.tokens.danger,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +82,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final gutter = AppSpacing.screenGutter(screenWidth);
     final cols = AppSpacing.gridColumnsForWidth(screenWidth);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     final now = DateTime.now();
     final dateStr =
@@ -76,238 +103,293 @@ class _TodayScreenState extends State<TodayScreen> {
     final pinned = workspace.pinnedItems;
     final revisitNote = workspace.worthRevisitingNote;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            gutter,
-            AppSpacing.s2,
-            gutter,
-            AppSpacing.s4,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: ZOrderColumn(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Horizontal Week Strip Card (Screenshot 2)
-                _WeekStripCard(
-                  now: now,
-                  hasDailyNote: existingDaily != null,
-                  onTapToday: () async {
-                    HapticFeedback.lightImpact();
-                    final isNew = existingDaily == null;
-                    final note = await workspace.openOrCreateTodaysNote();
-                    widget.onOpenItem(note, startInEditMode: isNew);
-                  },
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  AppSpacing.s2,
+                  gutter,
+                  AppSpacing.s4,
                 ),
+                sliver: SliverToBoxAdapter(
+                  child: ZOrderColumn(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Horizontal Week Strip Card (Screenshot 2)
+                      _WeekStripCard(
+                        now: now,
+                        hasDailyNote: existingDaily != null,
+                        onTapToday: () =>
+                            _openDailyNote(workspace, existingDaily),
+                      ),
 
-                const SizedBox(height: AppSpacing.s5),
+                      const SizedBox(height: AppSpacing.s5),
 
-                // 2. Today's Daily Note Hero Card (Screenshot 1 & 3)
-                _TodaysDailyNoteCard(
-                  now: now,
-                  existingDaily: existingDaily,
-                  dateLabel: DateFormatter.formatOrdinalDate(now),
-                  onTap: () async {
-                    HapticFeedback.lightImpact();
-                    final isNew = existingDaily == null;
-                    final note = await workspace.openOrCreateTodaysNote();
-                    widget.onOpenItem(note, startInEditMode: isNew);
-                  },
+                      // 2. Today's Daily Note Hero Card (Screenshot 1 & 3)
+                      _TodaysDailyNoteCard(
+                        now: now,
+                        existingDaily: existingDaily,
+                        carryForwardEnabled:
+                            workspace.carryForwardTasksEnabled,
+                        dateLabel: DateFormatter.formatOrdinalDate(now),
+                        onTap: () => _openDailyNote(workspace, existingDaily),
+                      ),
+
+                      const SizedBox(height: AppSpacing.s5),
+
+                      // 3. DailyLoop Segmented Tasks & Inbox Triage Card (Screenshot 2)
+                      _SegmentedTasksAndInboxCard(
+                        activeTab: _activeTab,
+                        onSelectTab: (tab) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _activeTab = tab;
+                            _showAllTasks = false;
+                          });
+                        },
+                        openTasks: openTasks,
+                        completedTasks: completedTasks,
+                        inboxItems: inbox,
+                        showAllTasks: _showAllTasks,
+                        onToggleShowAll: () => setState(
+                          () => _showAllTasks = !_showAllTasks,
+                        ),
+                        collapsedGroups: _collapsedGroups,
+                        onToggleGroup: (groupId) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            if (_collapsedGroups.contains(groupId)) {
+                              _collapsedGroups.remove(groupId);
+                            } else {
+                              _collapsedGroups.add(groupId);
+                            }
+                          });
+                        },
+                        onToggleTask: (task) async {
+                          HapticFeedback.selectionClick();
+                          try {
+                            final result = await workspace.toggleTask(task);
+                            if (result != null &&
+                                result.advancedRecurrence &&
+                                result.nextDueAt != null &&
+                                context.mounted) {
+                              final nextPreview = DerivedTaskItem(
+                                noteId: task.noteId,
+                                noteTitle: task.noteTitle,
+                                paletteId: task.paletteId,
+                                lineIndex: task.lineIndex,
+                                text: result.cleanText,
+                                isDone: false,
+                                noteUpdatedAt: DateTime.now(),
+                                dueAt: result.nextDueAt,
+                                hasExplicitTime: result.hasExplicitTime,
+                                recurrence: result.recurrence,
+                              );
+                              final dueStr =
+                                  nextPreview.formatDueLabel() ?? 'next date';
+                              TackToast.show(
+                                context,
+                                message: 'Completed · Next due $dueStr',
+                                icon: TackIcons.check,
+                                iconColor: tokens.success,
+                              );
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              TackToast.show(
+                                context,
+                                message: 'Could not update task',
+                                icon: TackIcons.close,
+                                iconColor: tokens.danger,
+                              );
+                            }
+                          }
+                        },
+                        onEditReminder: (task) async {
+                          final selection = await TaskReminderSheet.show(
+                            context: context,
+                            taskTitle: task.text,
+                            initialDueAt: task.dueAt,
+                            initialHasExplicitTime: task.hasExplicitTime,
+                            initialRecurrence: task.recurrence,
+                          );
+                          if (selection == null) return;
+                          try {
+                            await workspace.setTaskReminder(
+                              task,
+                              dueAt: selection.dueAt,
+                              hasExplicitTime: selection.hasExplicitTime,
+                              recurrence: selection.recurrence,
+                            );
+                            if (selection.dueAt != null && context.mounted) {
+                              final status =
+                                  await PinnedNotificationService
+                                      .getPermissionStatus();
+                              if (!status.canScheduleExactAlarms &&
+                                  context.mounted) {
+                                TackToast.show(
+                                  context,
+                                  message:
+                                      'Reminder saved (allow exact alarms for on-time alerts)',
+                                  icon: TackIcons.notification,
+                                  iconColor: tokens.accentPin,
+                                  actionLabel: 'Settings',
+                                  onAction: PinnedNotificationService
+                                      .openExactAlarmSettings,
+                                );
+                              }
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              TackToast.show(
+                                context,
+                                message: 'Could not update reminder',
+                                icon: TackIcons.close,
+                                iconColor: tokens.danger,
+                              );
+                            }
+                          }
+                        },
+                        onOpenSourceNote: (noteId) {
+                          final note = workspace.getItemByIdSync(noteId);
+                          if (note != null) widget.onOpenItem(note);
+                        },
+                        onOpenDailyNote: () =>
+                            _openDailyNote(workspace, existingDaily),
+                        onOpenInboxItem: (item) => widget.onOpenItem(item),
+                      ),
+
+                      // 4. Pinned Section Header
+                      if (pinned.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.s6),
+                        Row(
+                          children: [
+                            TackPinBadge(color: tokens.accentPin, size: 13),
+                            const SizedBox(width: AppSpacing.s2),
+                            Text(
+                              'Pinned notes',
+                              style: AppTypography.titleSm(
+                                color: tokens.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: tokens.surfacePrimary,
+                                borderRadius: AppSpacing.roundedPill,
+                              ),
+                              child: Text(
+                                '${pinned.length}',
+                                style: AppTypography.caption(
+                                  color: tokens.textSecondary,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                      ],
+                    ],
+                  ),
                 ),
+              ),
 
-                const SizedBox(height: AppSpacing.s5),
-
-                // 3. DailyLoop Segmented Tasks & Inbox Triage Card (Screenshot 2)
-                _SegmentedTasksAndInboxCard(
-                  activeTab: _activeTab,
-                  onSelectTab: (tab) {
-                    HapticFeedback.selectionClick();
-                    setState(() => _activeTab = tab);
-                  },
-                  openTasks: openTasks,
-                  completedTasks: completedTasks,
-                  inboxItems: inbox,
-                  collapsedGroups: _collapsedGroups,
-                  onToggleGroup: (groupTitle) {
-                    HapticFeedback.selectionClick();
-                    setState(() {
-                      if (_collapsedGroups.contains(groupTitle)) {
-                        _collapsedGroups.remove(groupTitle);
-                      } else {
-                        _collapsedGroups.add(groupTitle);
+              // 4b. Pinned Grid
+              if (pinned.isNotEmpty)
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: gutter),
+                  sliver: SliverResponsiveCardGrid(
+                    crossAxisCount: cols,
+                    mainAxisSpacing: AppSpacing.cardGridGap,
+                    crossAxisSpacing: AppSpacing.cardGridGap,
+                    itemCount: pinned.length,
+                    itemBuilder: (context, index) {
+                      final item = pinned[index];
+                      if (item is WhiteboardCanvasItem) {
+                        return BoardGridCard(
+                          key: ValueKey('today_pin_${item.id}'),
+                          board: item,
+                          onTap: () => widget.onOpenItem(item),
+                          onLongPress: () => CardPeekSheet.show(
+                            context: context,
+                            item: item,
+                            onOpen: () => widget.onOpenItem(item),
+                          ),
+                        );
                       }
-                    });
-                  },
-                  onToggleTask: (task) async {
-                    HapticFeedback.selectionClick();
-                    final result = await workspace.toggleTask(task);
-                    if (result != null &&
-                        result.advancedRecurrence &&
-                        result.nextDueAt != null &&
-                        context.mounted) {
-                      final nextPreview = DerivedTaskItem(
-                        noteId: task.noteId,
-                        noteTitle: task.noteTitle,
-                        paletteId: task.paletteId,
-                        lineIndex: task.lineIndex,
-                        text: result.cleanText,
-                        isDone: false,
-                        noteUpdatedAt: DateTime.now(),
-                        dueAt: result.nextDueAt,
-                        hasExplicitTime: result.hasExplicitTime,
-                        recurrence: result.recurrence,
+                      return NeoNoteCard(
+                        key: ValueKey('today_pin_${item.id}'),
+                        item: item,
+                        onTap: () => widget.onOpenItem(item),
+                        onLongPress: () => CardPeekSheet.show(
+                          context: context,
+                          item: item,
+                          onOpen: () => widget.onOpenItem(item),
+                        ),
                       );
-                      final dueStr = nextPreview.formatDueLabel() ?? 'next date';
-                      TackToast.show(
-                        context,
-                        message: 'Completed · Next due $dueStr',
-                      );
-                    }
-                  },
-                  onEditReminder: (task) async {
-                    final selection = await TaskReminderSheet.show(
-                      context: context,
-                      taskTitle: task.text,
-                      initialDueAt: task.dueAt,
-                      initialHasExplicitTime: task.hasExplicitTime,
-                      initialRecurrence: task.recurrence,
-                    );
-                    if (selection == null) return;
-                    await workspace.setTaskReminder(
-                      task,
-                      dueAt: selection.dueAt,
-                      hasExplicitTime: selection.hasExplicitTime,
-                      recurrence: selection.recurrence,
-                    );
-                  },
-                  onOpenSourceNote: (noteId) {
-                    final note = workspace.getItemByIdSync(noteId);
-                    if (note != null) widget.onOpenItem(note);
-                  },
-                  onOpenInboxItem: (item) => widget.onOpenItem(item),
+                    },
+                  ),
                 ),
 
-                // 4. Pinned Section Header
-                if (pinned.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.s6),
-                  Row(
-                    children: [
-                      TackPinBadge(color: tokens.accentPin, size: 13),
-                      const SizedBox(width: AppSpacing.s2),
-                      Text(
-                        'Pinned notes',
-                        style: AppTypography.titleSm(color: tokens.textPrimary),
-                      ),
-                      const SizedBox(width: AppSpacing.s2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tokens.surfacePrimary,
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          '${pinned.length}',
-                          style: AppTypography.caption(
-                            color: tokens.textSecondary,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.s3),
-                ],
-              ],
-            ),
+              // 5. Worth Revisiting Section
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  revisitNote != null ? AppSpacing.s6 : AppSpacing.s2,
+                  gutter,
+                  AppSpacing.s9 + bottomInset,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: revisitNote != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Worth revisiting',
+                                  style: AppTypography.titleSm(
+                                    color: tokens.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s2),
+                                Text(
+                                  '1 older note',
+                                  style: AppTypography.serifItalic(
+                                    color: tokens.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.s3),
+                            _WorthRevisitingCard(
+                              note: revisitNote,
+                              onTap: () => widget.onOpenItem(revisitNote),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ],
           ),
         ),
-
-        // 4b. Pinned Grid
-        if (pinned.isNotEmpty)
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: gutter),
-            sliver: SliverResponsiveCardGrid(
-              crossAxisCount: cols,
-              mainAxisSpacing: AppSpacing.cardGridGap,
-              crossAxisSpacing: AppSpacing.cardGridGap,
-              itemCount: pinned.length,
-              itemBuilder: (context, index) {
-                final item = pinned[index];
-                if (item is WhiteboardCanvasItem) {
-                  return BoardGridCard(
-                    key: ValueKey('today_pin_${item.id}'),
-                    board: item,
-                    onTap: () => widget.onOpenItem(item),
-                    onLongPress: () => CardPeekSheet.show(
-                      context: context,
-                      item: item,
-                      onOpen: () => widget.onOpenItem(item),
-                    ),
-                  );
-                }
-                return NeoNoteCard(
-                  key: ValueKey('today_pin_${item.id}'),
-                  item: item,
-                  onTap: () => widget.onOpenItem(item),
-                  onLongPress: () => CardPeekSheet.show(
-                    context: context,
-                    item: item,
-                    onOpen: () => widget.onOpenItem(item),
-                  ),
-                );
-              },
-            ),
-          ),
-
-        // 5. Worth Revisiting Section
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            gutter,
-            AppSpacing.s6,
-            gutter,
-            AppSpacing.s9,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: revisitNote != null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Worth revisiting',
-                            style: AppTypography.titleSm(
-                              color: tokens.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.s2),
-                          Text(
-                            '1 older note',
-                            style: AppTypography.serifItalic(
-                              color: tokens.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.s3),
-                      _WorthRevisitingCard(
-                        note: revisitNote,
-                        onTap: () => widget.onOpenItem(revisitNote),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -365,60 +447,75 @@ class _WeekStripCard extends StatelessWidget {
           );
 
           return Expanded(
-            child: GestureDetector(
-              onTap: isToday ? onTapToday : null,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: ShapeDecoration(
-                  color: isToday ? tokens.canvasSunken : Colors.transparent,
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
-                    smoothness: 0.60,
+            child: Semantics(
+              button: isToday,
+              label: isToday
+                  ? "Open today's note (${_dayLabels[i]} ${dayDate.day})"
+                  : '${_dayLabels[i]} ${dayDate.day}',
+              child: GestureDetector(
+                onTap: isToday ? onTapToday : null,
+                behavior: HitTestBehavior.opaque,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: AppSpacing.minTouchTarget,
                   ),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _dayLabels[i],
-                        style: AppTypography.caption(
-                          color: isToday
-                              ? tokens.textSecondary
-                              : (isPast
-                                  ? tokens.textTertiary.withValues(alpha: 0.7)
-                                  : tokens.textTertiary),
-                          weight: isToday ? FontWeight.w600 : FontWeight.w500,
-                        ),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: ShapeDecoration(
+                      color: isToday ? tokens.canvasSunken : Colors.transparent,
+                      shape: const SmoothRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(14)),
+                        smoothness: 0.60,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${dayDate.day}',
-                        style: AppTypography.titleSm(
-                          color: isToday
-                              ? tokens.textPrimary
-                              : (isPast
-                                  ? tokens.textTertiary
-                                  : tokens.textSecondary),
-                          fontSize: 16,
-                          weight: isToday ? FontWeight.w700 : FontWeight.w500,
-                        ),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _dayLabels[i],
+                            style: AppTypography.caption(
+                              color: isToday
+                                  ? tokens.textSecondary
+                                  : (isPast
+                                      ? tokens.textTertiary.withValues(
+                                          alpha: 0.7,
+                                        )
+                                      : tokens.textTertiary),
+                              weight:
+                                  isToday ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${dayDate.day}',
+                            style: AppTypography.titleSm(
+                              color: isToday
+                                  ? tokens.textPrimary
+                                  : (isPast
+                                      ? tokens.textTertiary
+                                      : tokens.textSecondary),
+                              fontSize: 16,
+                              weight:
+                                  isToday ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: isToday && hasDailyNote
+                                  ? tokens.accentPin
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 3),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isToday && hasDailyNote
-                              ? tokens.accentPin
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -434,12 +531,14 @@ class _WeekStripCard extends StatelessWidget {
 class _TodaysDailyNoteCard extends StatelessWidget {
   final DateTime now;
   final TextNote? existingDaily;
+  final bool carryForwardEnabled;
   final String dateLabel;
   final VoidCallback onTap;
 
   const _TodaysDailyNoteCard({
     required this.now,
     required this.existingDaily,
+    required this.carryForwardEnabled,
     required this.dateLabel,
     required this.onTap,
   });
@@ -498,7 +597,7 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                     Text(
                       dateLabel.toUpperCase(),
                       style: AppTypography.mono(
-                        fontSize: 11,
+                        fontSize: 12,
                         weight: FontWeight.w600,
                         color: tokens.textTertiary,
                       ),
@@ -544,7 +643,9 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                                       summary.isNotEmpty &&
                                       summary != 'Empty note'
                                   ? summary
-                                  : 'Tap to start today’s note — open tasks carry forward automatically.',
+                                  : (carryForwardEnabled
+                                      ? 'Tap to start today’s note — open tasks carry forward automatically.'
+                                      : 'Tap to start today’s note.'),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.bodySm(
@@ -591,11 +692,14 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
   final List<DerivedTaskItem> openTasks;
   final List<DerivedTaskItem> completedTasks;
   final List<BaseWorkspaceItem> inboxItems;
+  final bool showAllTasks;
+  final VoidCallback onToggleShowAll;
   final Set<String> collapsedGroups;
   final ValueChanged<String> onToggleGroup;
   final ValueChanged<DerivedTaskItem> onToggleTask;
   final ValueChanged<DerivedTaskItem> onEditReminder;
   final ValueChanged<String> onOpenSourceNote;
+  final VoidCallback onOpenDailyNote;
   final ValueChanged<BaseWorkspaceItem> onOpenInboxItem;
 
   const _SegmentedTasksAndInboxCard({
@@ -604,11 +708,14 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     required this.openTasks,
     required this.completedTasks,
     required this.inboxItems,
+    required this.showAllTasks,
+    required this.onToggleShowAll,
     required this.collapsedGroups,
     required this.onToggleGroup,
     required this.onToggleTask,
     required this.onEditReminder,
     required this.onOpenSourceNote,
+    required this.onOpenDailyNote,
     required this.onOpenInboxItem,
   });
 
@@ -667,8 +774,10 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
           // 2. Smoothly Cross-Faded Active Tab Body
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 170),
+            reverseDuration: const Duration(milliseconds: 110),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: TackAnimatedTransition.switcherTransition,
             child: KeyedSubtree(
               key: ValueKey(activeTab),
               child: activeTab == _TodayTaskTab.todo
@@ -677,7 +786,9 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
                       tokens,
                       openTasks,
                       emptyMessage:
-                          'No open tasks across your notes. Add `- [ ]` to any note to track tasks here.',
+                          "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
+                      emptyActionLabel: "Open Today's Note",
+                      onEmptyAction: onOpenDailyNote,
                     )
                   : (activeTab == _TodayTaskTab.completed
                       ? _buildGroupedTaskList(
@@ -705,39 +816,52 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     final isSelected = activeTab == tab;
     final fg = isSelected ? tokens.actionPrimaryFg : tokens.textSecondary;
 
-    return GestureDetector(
-      onTap: () => onSelectTab(tab),
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TackIcon(icon, size: 13, color: fg),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.caption(
-                  color: fg,
-                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$label, $count items',
+      child: GestureDetector(
+        onTap: () => onSelectTab(tab),
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.s2,
+              horizontal: AppSpacing.s1,
             ),
-            if (highlightDot && !isSelected) ...[
-              const SizedBox(width: 4),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: tokens.accentPin,
-                  shape: BoxShape.circle,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TackIcon(icon, size: 13, color: fg),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    count > 0 ? '$label ($count)' : label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: fg,
+                      weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ],
+                if (highlightDot && !isSelected) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: tokens.accentPin,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -748,59 +872,123 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     TackTokens tokens,
     List<DerivedTaskItem> tasks, {
     required String emptyMessage,
+    String? emptyActionLabel,
+    VoidCallback? onEmptyAction,
   }) {
     if (tasks.isEmpty) {
-      return _QuietEmptyBox(message: emptyMessage);
+      return _QuietEmptyBox(
+        message: emptyMessage,
+        actionLabel: emptyActionLabel,
+        onAction: onEmptyAction,
+      );
     }
 
-    // Group tasks by source note title (like "▾ Morning", "▾ Workload" in Screenshot 2)
+    const previewLimit = 12;
+    final now = DateTime.now();
+    final overdueCount = activeTab == _TodayTaskTab.todo
+        ? tasks.where((t) => !t.isDone && t.isOverdue(now)).length
+        : 0;
+    final visibleTasks =
+        (showAllTasks || tasks.length <= previewLimit)
+            ? tasks
+            : tasks.take(previewLimit).toList();
+
+    // Group tasks by source noteId so identically-titled notes remain separate.
     final grouped = <String, List<DerivedTaskItem>>{};
-    for (final t in tasks.take(12)) {
-      grouped.putIfAbsent(t.noteTitle, () => []).add(t);
+    for (final t in visibleTasks) {
+      grouped.putIfAbsent(t.noteId, () => []).add(t);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (overdueCount > 0) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.s3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s3,
+              vertical: AppSpacing.s2,
+            ),
+            decoration: BoxDecoration(
+              color: tokens.danger.withValues(alpha: 0.10),
+              borderRadius: AppSpacing.roundedSm,
+            ),
+            child: Row(
+              children: [
+                TackIcon(TackIcons.warning, size: 15, color: tokens.danger),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(
+                  child: Text(
+                    '$overdueCount overdue ${overdueCount == 1 ? 'task' : 'tasks'}',
+                    style: AppTypography.caption(
+                      color: tokens.danger,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         for (final entry in grouped.entries) ...[
           InkWell(
             onTap: () => onToggleGroup(entry.key),
             borderRadius: AppSpacing.roundedSm,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-              child: Row(
-                children: [
-                  TackIcon(
-                    collapsedGroups.contains(entry.key)
-                        ? TackIcons.chevronRight
-                        : TackIcons.chevronDown,
-                    size: 14,
-                    color: tokens.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      entry.key,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleSm(
-                        color: tokens.textPrimary,
-                        fontSize: 15,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.minTouchTarget,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.s1,
+                  horizontal: 2,
+                ),
+                child: Row(
+                  children: [
+                    TackIcon(
+                      collapsedGroups.contains(entry.key)
+                          ? TackIcons.chevronRight
+                          : TackIcons.chevronDown,
+                      size: 14,
+                      color: tokens.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        entry.value.first.noteTitle.trim().isEmpty
+                            ? 'Untitled'
+                            : entry.value.first.noteTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  GestureDetector(
-                    onTap: () => onOpenSourceNote(entry.value.first.noteId),
-                    child: Text(
-                      'Open note',
-                      style: AppTypography.caption(
-                        color: tokens.textTertiary,
-                        weight: FontWeight.w600,
+                    const SizedBox(width: AppSpacing.s2),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(
+                          AppSpacing.minTouchTarget,
+                          AppSpacing.minTouchTarget,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s2,
+                        ),
+                      ),
+                      onPressed: () =>
+                          onOpenSourceNote(entry.value.first.noteId),
+                      child: Text(
+                        'Open note',
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -809,11 +997,24 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
               _TaskRow(
                 task: task,
                 onToggle: () => onToggleTask(task),
-                onEditReminder: !task.isDone ? () => onEditReminder(task) : null,
+                onEditReminder:
+                    !task.isDone ? () => onEditReminder(task) : null,
                 onOpenSource: () => onOpenSourceNote(task.noteId),
               ),
           const SizedBox(height: AppSpacing.s2),
         ],
+        if (tasks.length > previewLimit)
+          TextButton(
+            style: TextButton.styleFrom(
+              minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+            ),
+            onPressed: onToggleShowAll,
+            child: Text(
+              showAllTasks
+                  ? 'Show fewer'
+                  : 'Show all ${tasks.length} tasks',
+            ),
+          ),
       ],
     );
   }
@@ -913,14 +1114,25 @@ class _InboxTriageCard extends StatelessWidget {
     );
 
     if (chosen != null && context.mounted) {
-      await workspace.appendInboxItemToNote(item.id, chosen.id);
-      if (context.mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text('Appended to "${chosen.title}"'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      try {
+        await workspace.appendInboxItemToNote(item.id, chosen.id);
+        if (context.mounted) {
+          TackToast.show(
+            context,
+            message: 'Appended to "${chosen.title}"',
+            icon: TackIcons.check,
+            iconColor: context.tokens.success,
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          TackToast.show(
+            context,
+            message: 'Could not append capture',
+            icon: TackIcons.close,
+            iconColor: context.tokens.danger,
+          );
+        }
       }
     }
   }
@@ -987,7 +1199,7 @@ class _InboxTriageCard extends StatelessWidget {
                         Text(
                           '$remainingCount in stack',
                           style: AppTypography.mono(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: accentColor,
                             weight: FontWeight.w600,
                           ),
@@ -1018,9 +1230,28 @@ class _InboxTriageCard extends StatelessWidget {
                     icon: TackIcons.check,
                     label: 'Keep as note',
                     isPrimary: true,
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.lightImpact();
-                      workspace.keepInboxItemAsNote(item.id);
+                      try {
+                        await workspace.keepInboxItemAsNote(item.id);
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: 'Saved to Library',
+                            icon: TackIcons.check,
+                            iconColor: tokens.success,
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: 'Could not save note',
+                            icon: TackIcons.close,
+                            iconColor: tokens.danger,
+                          );
+                        }
+                      }
                     },
                   ),
                   _TriageButton(
@@ -1034,18 +1265,60 @@ class _InboxTriageCard extends StatelessWidget {
                   _TriageButton(
                     icon: TackIcons.task,
                     label: 'Make task',
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.lightImpact();
-                      workspace.convertInboxItemToTodayTask(item.id);
+                      try {
+                        await workspace.convertInboxItemToTodayTask(item.id);
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: "Added to Today's Note",
+                            icon: TackIcons.check,
+                            iconColor: tokens.success,
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: 'Could not create task',
+                            icon: TackIcons.close,
+                            iconColor: tokens.danger,
+                          );
+                        }
+                      }
                     },
                   ),
                   _TriageButton(
                     icon: TackIcons.trash,
                     label: 'Trash',
                     isDestructive: true,
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.mediumImpact();
-                      workspace.moveToTrash(item.id);
+                      final id = item.id;
+                      try {
+                        await workspace.moveToTrash(id);
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: 'Moved capture to Trash',
+                            icon: TackIcons.trash,
+                            iconColor: tokens.danger,
+                            duration: const Duration(seconds: 4),
+                            actionLabel: 'Undo',
+                            onAction: () => workspace.restoreFromTrash(id),
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          TackToast.show(
+                            context,
+                            message: 'Could not move to Trash',
+                            icon: TackIcons.close,
+                            iconColor: tokens.danger,
+                          );
+                        }
+                      }
                     },
                   ),
                 ],
@@ -1081,27 +1354,40 @@ class _TriageButton extends StatelessWidget {
         ? tokens.actionPrimaryFg
         : (isDestructive ? tokens.danger : tokens.textPrimary);
 
-    return Material(
-      color: bg,
-      borderRadius: AppSpacing.roundedPill,
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: bg,
         borderRadius: AppSpacing.roundedPill,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TackIcon(icon, size: 14, color: fg),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: AppTypography.caption(
-                  color: fg,
-                  weight: FontWeight.w600,
-                ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppSpacing.roundedPill,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+              minWidth: AppSpacing.minTouchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s3,
+                vertical: AppSpacing.s2,
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TackIcon(icon, size: 14, color: fg),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: AppTypography.caption(
+                      color: fg,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -1147,153 +1433,166 @@ class _TaskRow extends StatelessWidget {
       dueBg = tokens.canvasSunken;
     }
 
-    return InkWell(
-      onTap: onToggle,
-      onLongPress: onEditReminder,
-      borderRadius: AppSpacing.roundedSm,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: task.isDone ? tokens.actionPrimary : Colors.transparent,
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
-                  color: task.isDone
-                      ? tokens.actionPrimary
-                      : tokens.borderStrong,
-                  width: 1.5,
-                ),
-              ),
-              child: task.isDone
-                  ? Center(
-                      child: TackIcon(
-                        TackIcons.check,
-                        size: 13,
-                        color: tokens.actionPrimaryFg,
-                      ),
-                    )
-                  : null,
+    return Semantics(
+      toggled: task.isDone,
+      label: task.text,
+      child: InkWell(
+        onTap: onToggle,
+        onLongPress: onEditReminder,
+        borderRadius: AppSpacing.roundedSm,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.s2,
+              horizontal: AppSpacing.s1,
             ),
-            const SizedBox(width: 10),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: dotColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.text,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color:
+                        task.isDone ? tokens.actionPrimary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
                       color: task.isDone
-                          ? tokens.textTertiary
-                          : tokens.textPrimary,
-                    ).copyWith(
-                      decoration:
-                          task.isDone ? TextDecoration.lineThrough : null,
+                          ? tokens.actionPrimary
+                          : tokens.borderStrong,
+                      width: 1.5,
                     ),
                   ),
-                  if (!task.isDone && (dueLabel != null || repeatLabel != null)) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (dueLabel != null)
-                          GestureDetector(
-                            onTap: onEditReminder,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: dueBg,
-                                borderRadius: AppSpacing.roundedPill,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TackIcon(
-                                    TackIcons.notification,
-                                    size: 11,
-                                    color: dueFg,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    dueLabel,
-                                    style: AppTypography.caption(
-                                      color: dueFg,
-                                      weight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                  child: task.isDone
+                      ? Center(
+                          child: TackIcon(
+                            TackIcons.check,
+                            size: 13,
+                            color: tokens.actionPrimaryFg,
                           ),
-                        if (repeatLabel != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.canvasSunken,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TackIcon(
-                                  TackIcons.refresh,
-                                  size: 11,
-                                  color: tokens.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  repeatLabel,
-                                  style: AppTypography.caption(
-                                    color: tokens.textSecondary,
-                                    weight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (onEditReminder != null)
-              IconButton(
-                onPressed: onEditReminder,
-                tooltip: 'Set reminder',
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                padding: EdgeInsets.zero,
-                icon: TackIcon(
-                  TackIcons.notification,
-                  size: 15,
-                  color: dueLabel != null ? dueFg : tokens.textTertiary,
+                        )
+                      : null,
                 ),
-              ),
-          ],
+                const SizedBox(width: 10),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.text,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.body(
+                          color: task.isDone
+                              ? tokens.textTertiary
+                              : tokens.textPrimary,
+                        ).copyWith(
+                          decoration:
+                              task.isDone ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      if (!task.isDone &&
+                          (dueLabel != null || repeatLabel != null)) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            if (dueLabel != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: dueBg,
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TackIcon(
+                                      TackIcons.notification,
+                                      size: 11,
+                                      color: dueFg,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      dueLabel,
+                                      style: AppTypography.caption(
+                                        color: dueFg,
+                                        weight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (repeatLabel != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: tokens.canvasSunken,
+                                  borderRadius: AppSpacing.roundedPill,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TackIcon(
+                                      TackIcons.refresh,
+                                      size: 11,
+                                      color: tokens.textSecondary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      repeatLabel,
+                                      style: AppTypography.caption(
+                                        color: tokens.textSecondary,
+                                        weight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (onEditReminder != null)
+                  IconButton(
+                    onPressed: onEditReminder,
+                    tooltip: 'Set reminder',
+                    constraints: const BoxConstraints(
+                      minWidth: AppSpacing.minTouchTarget,
+                      minHeight: AppSpacing.minTouchTarget,
+                    ),
+                    padding: EdgeInsets.zero,
+                    icon: TackIcon(
+                      TackIcons.notification,
+                      size: 16,
+                      color: dueLabel != null ? dueFg : tokens.textTertiary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1340,7 +1639,7 @@ class _WorthRevisitingCard extends StatelessWidget {
                     Text(
                       'WORTH REVISITING',
                       style: AppTypography.mono(
-                        fontSize: 11,
+                        fontSize: 12,
                         weight: FontWeight.w600,
                         color: tokens.textTertiary,
                       ),
@@ -1350,7 +1649,7 @@ class _WorthRevisitingCard extends StatelessWidget {
                       DateFormatter.formatTimestamp(note.updatedAt)
                           .toUpperCase(),
                       style: AppTypography.mono(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: tokens.textTertiary,
                       ),
                     ),
@@ -1412,8 +1711,14 @@ class _WorthRevisitingCard extends StatelessWidget {
 
 class _QuietEmptyBox extends StatelessWidget {
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const _QuietEmptyBox({required this.message});
+  const _QuietEmptyBox({
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1424,9 +1729,25 @@ class _QuietEmptyBox extends StatelessWidget {
         color: tokens.canvasSunken.withValues(alpha: 0.65),
         borderRadius: AppSpacing.roundedSm,
       ),
-      child: Text(
-        message,
-        style: AppTypography.bodySm(color: tokens.textSecondary),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: AppTypography.bodySm(color: tokens.textSecondary),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: AppSpacing.s2),
+            TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+              ),
+              onPressed: onAction,
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
       ),
     );
   }

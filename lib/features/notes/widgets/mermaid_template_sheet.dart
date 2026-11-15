@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 
@@ -53,6 +54,7 @@ class _MermaidTemplateSheetState extends State<MermaidTemplateSheet>
     'Sequence',
     'Pie / Metrics',
     'Timeline',
+    'ERD & Gantt',
   ];
 
   static const Map<String, List<MermaidTemplateItem>> _templatesByCategory = {
@@ -230,6 +232,36 @@ timeline
 ''',
       ),
     ],
+    'ERD & Gantt': [
+      MermaidTemplateItem(
+        title: 'Entity Relationship Diagram',
+        subtitle: 'Tables, keys, and one-to-many data links',
+        icon: TackIcons.table,
+        accentColor: AppColors.pastelLavenderLight,
+        code: '''```mermaid
+erDiagram
+    WORKSPACE ||--o{ NOTE : contains
+    NOTE ||--o{ TASK : tracks
+    NOTE }o--o{ TAG : labeled_with
+```
+''',
+      ),
+      MermaidTemplateItem(
+        title: 'Project Gantt Schedule',
+        subtitle: 'Timed tasks, milestones, and parallel workstreams',
+        icon: TackIcons.calendar,
+        accentColor: AppColors.accentCyan,
+        code: '''```mermaid
+gantt
+    title Release Schedule
+    dateFormat YYYY-MM-DD
+    section Build
+    Core Engine :a1, 2026-11-01, 5d
+    UI Polish   :after a1, 4d
+```
+''',
+      ),
+    ],
   };
 
   @override
@@ -248,9 +280,10 @@ timeline
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s5),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -258,195 +291,229 @@ timeline
           // Sheet title and close
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentCyan.withValues(alpha: isDark ? 0.25 : 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const TackIcon(TackIcons.flow, size: 20, color: AppColors.accentCyan),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentCyan.withValues(alpha: isDark ? 0.25 : 0.15),
+                    borderRadius: AppSpacing.roundedXs,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mermaid Diagram Studio',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
-                          ),
+                  child: const TackIcon(TackIcons.flow, size: 20, color: AppColors.accentCyan),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mermaid Diagram Studio',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          weight: FontWeight.w800,
                         ),
-                        Text(
-                          'Select a curated template to insert directly',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            fontSize: 12,
-                          ),
+                      ),
+                      Text(
+                        'Tap a template to insert editable ```mermaid code into your note.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const TackIcon(TackIcons.close, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
                   ),
-                ],
-              ),
+                  icon: const TackIcon(TackIcons.close, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xs),
+          ),
+          const SizedBox(height: AppSpacing.xs),
 
-            // Category Tab Bar
-            TabBar(
+          // Category Tab Bar
+          TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+            indicatorSize: TabBarIndicatorSize.label,
+            labelColor: tokens.textPrimary,
+            unselectedLabelColor: tokens.textSecondary,
+            labelStyle: AppTypography.label(
+              color: tokens.textPrimary,
+              weight: FontWeight.w700,
+            ),
+            indicatorColor: AppColors.accentAmber,
+            indicatorWeight: 3,
+            tabs: _categories.map((cat) => Tab(height: AppSpacing.minTouchTarget, text: cat)).toList(),
+          ),
+          const Divider(height: 1),
+
+          // Tab Views with Template Cards
+          Expanded(
+            child: TabBarView(
               controller: _tabController,
-              isScrollable: true,
-              labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-              indicatorSize: TabBarIndicatorSize.label,
-              labelColor: isDark ? Colors.white : AppColors.lightTextPrimary,
-              unselectedLabelColor: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              indicatorColor: AppColors.accentAmber,
-              indicatorWeight: 3,
-              tabs: _categories.map((cat) => Tab(text: cat)).toList(),
+              children: _categories.map((cat) {
+                final list = _templatesByCategory[cat] ?? [];
+                return ListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    final template = list[i];
+                    return _buildTemplateCard(template, isDark, tokens);
+                  },
+                );
+              }).toList(),
             ),
-            const Divider(height: 1),
-
-            // Tab Views with Template Cards
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: _categories.map((cat) {
-                  final list = _templatesByCategory[cat] ?? [];
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: list.length,
-                    itemBuilder: (context, i) {
-                      final template = list[i];
-                      return _buildTemplateCard(template, isDark, theme);
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
-      );
-  }
-
-  Widget _buildTemplateCard(MermaidTemplateItem template, bool isDark, ThemeData theme) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E212B) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF333D52) : const Color(0xFFE2E8F0),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.of(context).pop();
-            widget.onSelectTemplate(template.code);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: template.accentColor.withValues(alpha: isDark ? 0.25 : 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TackIcon(template.icon, size: 18, color: template.accentColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            template.title,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          Text(
-                            template.subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              fontSize: 11.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: template.accentColor,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const TackIcon(TackIcons.plus, size: 14, color: Colors.white),
-                          const SizedBox(width: 2),
-                          const Text(
-                            'Insert',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+    );
+  }
 
-                // Code snippet preview block
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF13151D) : const Color(0xFFEFF2F6),
-                    borderRadius: BorderRadius.circular(8),
+  Widget _buildTemplateCard(
+    MermaidTemplateItem template,
+    bool isDark,
+    TackTokens tokens,
+  ) {
+    final pillInk = template.accentColor.computeLuminance() > 0.45
+        ? AppColors.lightTextPrimary
+        : Colors.white;
+    return Semantics(
+      button: true,
+      label: 'Insert ${template.title} diagram template',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: tokens.canvasSunken,
+          borderRadius: AppSpacing.roundedMd,
+          border: Border.all(
+            color: tokens.borderSubtle,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: AppSpacing.roundedMd,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop();
+              widget.onSelectTemplate(template.code);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: template.accentColor.withValues(
+                            alpha: isDark ? 0.25 : 0.15,
+                          ),
+                          borderRadius: AppSpacing.roundedXs,
+                        ),
+                        child: TackIcon(
+                          template.icon,
+                          size: 18,
+                          color: template.accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              template.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.label(
+                                color: tokens.textPrimary,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              template.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption(
+                                color: tokens.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: template.accentColor,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TackIcon(TackIcons.plus, size: 14, color: pillInk),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Insert',
+                              style: AppTypography.caption(
+                                color: pillInk,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    template.code.trim(),
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      height: 1.35,
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                  const SizedBox(height: 10),
+
+                  // Code snippet preview block
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedXs,
+                    ),
+                    child: Text(
+                      template.code.trim(),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.mono(
+                        color: tokens.textSecondary,
+                      ).copyWith(height: 1.35),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -52,13 +52,20 @@ class DocumentOutlineSheet extends StatefulWidget {
 }
 
 class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
+  final TextEditingController _filterController = TextEditingController();
   String _filter = '';
 
   @override
+  void dispose() {
+    _filterController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.paletteId);
-    final accent = palette.resolveAccentColor(isDark);
+    final accent = palette.resolveAccentColor(tokens.isDark);
     final allHeadings = WikiLinkService.extractHeadings(widget.content);
     final minLevel = allHeadings.isEmpty
         ? 1
@@ -92,59 +99,101 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
               Expanded(
                 child: Text(
                   'Document Outline',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.lightTextPrimary,
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    weight: FontWeight.w700,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
                   borderRadius: AppSpacing.roundedPill,
                 ),
                 child: Text(
                   '${allHeadings.length} sections',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  style: AppTypography.caption(
                     color: accent,
+                    weight: FontWeight.w700,
                   ),
                 ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Close',
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                icon: TackIcon(
+                  TackIcons.close,
+                  size: 18,
+                  color: tokens.textSecondary,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
           if (allHeadings.length > 5) ...[
             const SizedBox(height: 10),
             AppSearchField(
+              controller: _filterController,
               hintText: 'Jump to section...',
-              height: 40,
               onChanged: (v) => setState(() => _filter = v),
-              onClear: () => setState(() => _filter = ''),
+              onClear: () {
+                _filterController.clear();
+                setState(() => _filter = '');
+              },
             ),
           ],
-            const SizedBox(height: 10),
-            if (allHeadings.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text(
-                  'Add # H1, ## H2, or ### H3 headings to automatically generate a navigable document outline.',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 13,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
+          const SizedBox(height: 10),
+          if (allHeadings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'Add # H1, ## H2, or ### H3 headings to automatically generate a navigable document outline.',
+                style: AppTypography.bodySm(color: tokens.textSecondary),
+              ),
+            )
+          else if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s5),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'No headings match "${_filter.trim()}"',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodySm(
+                        color: tokens.textSecondary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s1),
+                    SizedBox(
+                      height: AppSpacing.minTouchTarget,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          _filterController.clear();
+                          setState(() => _filter = '');
+                        },
+                        icon: TackIcon(
+                          TackIcons.close,
+                          size: 15,
+                          color: tokens.actionPrimary,
+                        ),
+                        label: const Text('Clear filter'),
+                      ),
+                    ),
+                  ],
                 ),
-              )
-            else
-              ConstrainedBox(
+              ),
+            )
+          else
+            Flexible(
+              child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 360),
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -160,40 +209,39 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                         Navigator.of(context).pop();
                         widget.onSelectHeading(h);
                       },
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: AppSpacing.roundedSm,
                       child: Container(
+                        constraints: const BoxConstraints(
+                          minHeight: AppSpacing.minTouchTarget,
+                        ),
                         margin: const EdgeInsets.symmetric(vertical: 2),
-                        padding: EdgeInsets.fromLTRB(10 + indent, 9, 10, 9),
+                        padding: EdgeInsets.fromLTRB(10 + indent, 10, 10, 10),
                         decoration: BoxDecoration(
                           color: isCurrent
-                              ? accent.withValues(alpha: isDark ? 0.18 : 0.11)
+                              ? accent.withValues(
+                                  alpha: tokens.isDark ? 0.18 : 0.11,
+                                )
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppSpacing.roundedSm,
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 1.5,
+                                horizontal: 6,
+                                vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? AppColors.darkSurfaceAlt
-                                    : const Color(0xFFF1F5F9),
+                                color: tokens.canvasSunken,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
                                 'H${h.level}',
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                                style: AppTypography.caption(
                                   color: isCurrent
                                       ? accent
-                                      : (isDark
-                                          ? AppColors.darkTextMuted
-                                          : AppColors.lightTextMuted),
+                                      : tokens.textSecondary,
+                                  weight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -203,19 +251,21 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                                 h.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: h.level == 1 ? 14 : 13,
-                                  fontWeight: h.level <= 2 || isCurrent
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  letterSpacing: -0.25,
-                                  color: isCurrent
-                                      ? accent
-                                      : (isDark
-                                          ? AppColors.darkTextPrimary
-                                          : AppColors.lightTextPrimary),
-                                ),
+                                style: h.level == 1
+                                    ? AppTypography.body(
+                                        color: isCurrent
+                                            ? accent
+                                            : tokens.textPrimary,
+                                        weight: FontWeight.w700,
+                                      )
+                                    : AppTypography.bodySm(
+                                        color: isCurrent
+                                            ? accent
+                                            : tokens.textPrimary,
+                                        weight: h.level <= 2 || isCurrent
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
                               ),
                             ),
                           ],
@@ -225,9 +275,10 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                   },
                 ),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -261,15 +312,14 @@ class _InlineTocCardState extends State<InlineTocCard> {
 
     final minLevel = headings.map((h) => h.level).reduce((a, b) => a < b ? a : b);
 
+    final tokens = context.tokens;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurfaceAlt.withValues(alpha: 0.7)
-            : Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
+        color: tokens.surfacePrimary.withValues(alpha: isDark ? 0.85 : 0.92),
+        borderRadius: AppSpacing.roundedMd,
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          color: tokens.borderSubtle,
         ),
       ),
       child: Column(
@@ -277,33 +327,33 @@ class _InlineTocCardState extends State<InlineTocCard> {
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  TackIcon(TackIcons.nestedList, size: 16, color: accent),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      'Table of Contents',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
+            borderRadius: AppSpacing.roundedMd,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.minTouchTarget,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    TackIcon(TackIcons.nestedList, size: 16, color: accent),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        'Table of Contents',
+                        style: AppTypography.caption(
+                          color: tokens.textPrimary,
+                          weight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  TackIcon(
-                    _expanded ? TackIcons.chevronUp : TackIcons.chevronDown,
-                    size: 15,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  ),
-                ],
+                    TackIcon(
+                      _expanded ? TackIcons.chevronUp : TackIcons.chevronDown,
+                      size: 15,
+                      color: tokens.textSecondary,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -316,39 +366,39 @@ class _InlineTocCardState extends State<InlineTocCard> {
                   final indent = ((h.level - minLevel).clamp(0, 4)) * 14.0;
                   return InkWell(
                     onTap: () => widget.onJumpToLine?.call(h.lineIndex),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(indent, 4, 4, 4),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: 0.7),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              h.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 12.5,
-                                fontWeight: h.level <= 2
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                letterSpacing: -0.2,
-                                color: isDark
-                                    ? AppColors.darkTextPrimary
-                                    : AppColors.lightTextPrimary,
+                    borderRadius: AppSpacing.roundedXs,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: AppSpacing.minTouchTarget,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(indent, 8, 8, 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.7),
+                                shape: BoxShape.circle,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                h.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodySm(
+                                  color: tokens.textPrimary,
+                                  weight: h.level <= 2
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

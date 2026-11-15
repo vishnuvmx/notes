@@ -14,6 +14,8 @@ import '../../core/services/pinned_notification_service.dart';
 import '../providers/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';
+import 'permission_rationale_dialog.dart';
+import 'tack_toast.dart';
 
 /// Card Long-Press Peek & Action Sheet (`05-information-architecture.md` §5, `07-design-system.md` §7).
 ///
@@ -225,8 +227,20 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
             iconColor: _currentItem.isFavorite ? tokens.accentPin : null,
             label: _currentItem.isFavorite ? 'Unpin' : 'Pin to top',
             onTap: () async {
+              final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
               Navigator.of(context).pop();
-              await workspace.toggleFavorite(_currentItem.id);
+              try {
+                await workspace.toggleFavorite(_currentItem.id);
+              } catch (_) {
+                if (hostContext != null && hostContext.mounted) {
+                  TackToast.show(
+                    hostContext,
+                    message: 'Could not update pin state',
+                    icon: TackIcons.close,
+                    iconColor: tokens.danger,
+                  );
+                }
+              }
             },
           ),
           if (workspace.userFolders.isNotEmpty)
@@ -241,15 +255,28 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
             icon: TackIcons.copy,
             label: 'Duplicate',
             onTap: () async {
-              final messenger = ScaffoldMessenger.maybeOf(context);
+              final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
               Navigator.of(context).pop();
-              await workspace.duplicateItem(_currentItem);
-              messenger?.showSnackBar(
-                const SnackBar(
-                  content: Text('Duplicated'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              try {
+                await workspace.duplicateItem(_currentItem);
+                if (hostContext != null && hostContext.mounted) {
+                  TackToast.show(
+                    hostContext,
+                    message: 'Duplicated',
+                    icon: TackIcons.check,
+                    iconColor: tokens.success,
+                  );
+                }
+              } catch (_) {
+                if (hostContext != null && hostContext.mounted) {
+                  TackToast.show(
+                    hostContext,
+                    message: 'Could not duplicate item',
+                    icon: TackIcons.close,
+                    iconColor: tokens.danger,
+                  );
+                }
+              }
             },
           ),
           if (_currentItem is TextNote)
@@ -260,32 +287,51 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
                   : 'Pin to Notification Bar',
               onTap: () async {
                 final item = _currentItem;
+                final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
                 final nav = Navigator.of(context);
-                final messenger = ScaffoldMessenger.maybeOf(context);
                 if (_isNotifPinned) {
-                  await PinnedNotificationService.unpinNote(item.id);
-                  if (mounted) nav.pop();
-                  messenger?.showSnackBar(
-                    const SnackBar(
-                      content: Text('Unpinned from notification bar'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  try {
+                    await PinnedNotificationService.unpinNote(item.id);
+                    if (mounted) nav.pop();
+                    if (hostContext != null && hostContext.mounted) {
+                      TackToast.show(
+                        hostContext,
+                        message: 'Unpinned from notification bar',
+                        icon: TackIcons.check,
+                        iconColor: tokens.success,
+                      );
+                    }
+                  } catch (_) {
+                    if (hostContext != null && hostContext.mounted) {
+                      TackToast.show(
+                        hostContext,
+                        message: 'Could not unpin notification',
+                        icon: TackIcons.close,
+                        iconColor: tokens.danger,
+                      );
+                    }
+                  }
                 } else {
+                  final permitted =
+                      await ensureNotificationPermissionWithRationale(
+                    context,
+                    title: 'Pin Note to Notification Bar',
+                    rationale:
+                        'Notifications are needed to keep this note pinned in your status bar for quick access.',
+                  );
+                  if (!permitted) return;
                   final ok = await PinnedNotificationService.pinNote(item);
                   if (mounted) nav.pop();
-                  messenger?.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        ok
-                            ? 'Pinned to notification bar'
-                            : 'Enable notifications to pin notes',
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  if (hostContext != null && hostContext.mounted) {
+                    TackToast.show(
+                      hostContext,
+                      message: ok
+                          ? 'Pinned to notification bar'
+                          : 'Enable notifications in Settings to pin notes',
+                      icon: ok ? TackIcons.check : TackIcons.warning,
+                      iconColor: ok ? tokens.success : tokens.warning,
+                    );
+                  }
                 }
               },
             ),
@@ -295,12 +341,24 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
               label: 'Share note',
               onTap: () async {
                 final note = _currentItem as TextNote;
+                final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
                 Navigator.of(context).pop();
-                await NoteExportService.shareNote(
-                  title: note.title,
-                  content: note.content,
-                  tags: note.tags,
-                );
+                try {
+                  await NoteExportService.shareNote(
+                    title: note.title,
+                    content: note.content,
+                    tags: note.tags,
+                  );
+                } catch (_) {
+                  if (hostContext != null && hostContext.mounted) {
+                    TackToast.show(
+                      hostContext,
+                      message: 'Could not share note',
+                      icon: TackIcons.close,
+                      iconColor: tokens.danger,
+                    );
+                  }
+                }
               },
             ),
           _PeekActionRow(
@@ -310,22 +368,33 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
             label: 'Move to Trash',
             onTap: () async {
               final itemId = _currentItem.id;
-              final itemTitle = _currentItem.title;
-              final messenger = ScaffoldMessenger.maybeOf(context);
+              final rawTitle = _currentItem.title.trim();
+              final displayTitle = rawTitle.isEmpty ? 'Untitled' : rawTitle;
+              final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
               Navigator.of(context).pop();
-              await workspace.moveToTrash(itemId);
-              messenger?.showSnackBar(
-                SnackBar(
-                  content: Text('Moved "$itemTitle" to Trash'),
-                  duration: const Duration(seconds: 4),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    onPressed: () {
-                      workspace.restoreFromTrash(itemId);
-                    },
-                  ),
-                ),
-              );
+              try {
+                await workspace.moveToTrash(itemId);
+                if (hostContext != null && hostContext.mounted) {
+                  TackToast.show(
+                    hostContext,
+                    message: 'Moved "$displayTitle" to Trash',
+                    icon: TackIcons.trash,
+                    iconColor: tokens.danger,
+                    duration: const Duration(seconds: 4),
+                    actionLabel: 'Undo',
+                    onAction: () => workspace.restoreFromTrash(itemId),
+                  );
+                }
+              } catch (_) {
+                if (hostContext != null && hostContext.mounted) {
+                  TackToast.show(
+                    hostContext,
+                    message: 'Could not move to Trash',
+                    icon: TackIcons.close,
+                    iconColor: tokens.danger,
+                  );
+                }
+              }
             },
           ),
         ],
@@ -405,27 +474,45 @@ class _FolderOptionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppSpacing.roundedSm,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s3,
-          vertical: AppSpacing.s2,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? tokens.actionPrimary : tokens.canvasPrimary,
-          borderRadius: AppSpacing.roundedSm,
-          border: Border.all(
-            color: isSelected ? tokens.actionPrimary : tokens.borderSubtle,
-            width: 1,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppSpacing.roundedSm,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+            minWidth: AppSpacing.minTouchTarget,
           ),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.label(
-            color: isSelected ? tokens.actionPrimaryFg : tokens.textPrimary,
-            weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s3,
+                vertical: AppSpacing.s2,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected ? tokens.actionPrimary : tokens.canvasPrimary,
+                borderRadius: AppSpacing.roundedSm,
+                border: Border.all(
+                  color: isSelected
+                      ? tokens.actionPrimary
+                      : tokens.borderSubtle,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                label,
+                style: AppTypography.label(
+                  color: isSelected
+                      ? tokens.actionPrimaryFg
+                      : tokens.textPrimary,
+                  weight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         ),
       ),

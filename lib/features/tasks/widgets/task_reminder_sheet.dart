@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
+import '../../../shared/widgets/permission_rationale_dialog.dart';
 import '../services/open_tasks_service.dart';
 
 /// Result returned from [TaskReminderSheet].
@@ -64,6 +68,7 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
   DateTime? _dueAt;
   bool _hasExplicitTime = false;
   TaskRecurrence? _recurrence;
+  bool _isSaving = false;
 
   static final List<({String label, TaskRecurrence? value})> _repeatChoices = [
     (label: 'None', value: null),
@@ -92,12 +97,17 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
 
   Future<void> _pickCustomDate() async {
     final now = DateTime.now();
-    final initial = _dueAt ?? now;
+    final firstDate = DateTime(now.year - 1);
+    final lastDate = DateTime(now.year + 10);
+    final rawInitial = _dueAt ?? now;
+    final initial = rawInitial.isBefore(firstDate)
+        ? firstDate
+        : (rawInitial.isAfter(lastDate) ? lastDate : rawInitial);
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial.isBefore(DateTime(now.year - 1)) ? now : initial,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 10),
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -160,6 +170,36 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
     return '$dueText · Repeats ${_recurrence!.label.toLowerCase()}';
   }
 
+  Future<void> _handleSave() async {
+    if (_isSaving) return;
+    HapticFeedback.mediumImpact();
+    if (!kIsWeb &&
+        Platform.isAndroid &&
+        (_dueAt != null || _recurrence != null)) {
+      setState(() => _isSaving = true);
+      try {
+        await ensureNotificationPermissionWithRationale(
+          context,
+          title: 'Enable Task Reminders',
+          rationale:
+              'Allow notifications so Tack can alert you when your scheduled tasks are due.',
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop(
+      TaskReminderSelection(
+        dueAt: _dueAt,
+        hasExplicitTime: _hasExplicitTime,
+        recurrence: _recurrence,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -168,6 +208,15 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
     final tonightSix = DateTime(now.year, now.month, now.day, 18, 0);
     final tomorrowNine = DateTime(now.year, now.month, now.day + 1, 9, 0);
     final nextWeekNine = DateTime(now.year, now.month, now.day + 7, 9, 0);
+    final hasAnySelection = _dueAt != null ||
+        _recurrence != null ||
+        widget.initialDueAt != null ||
+        widget.initialRecurrence != null;
+    final isPastSelection = _dueAt != null &&
+        (_hasExplicitTime
+            ? _dueAt!.isBefore(now)
+            : DateTime(_dueAt!.year, _dueAt!.month, _dueAt!.day, 9, 0)
+                .isBefore(now));
 
     return SingleChildScrollView(
       padding: AppSpacing.modalSheetPadding,
@@ -208,11 +257,47 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
                     const SizedBox(height: 2),
                     Text(
                       _previewLabel(),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.caption(color: tokens.textSecondary),
                     ),
                   ],
+                ),
+              ),
+              if (hasAnySelection)
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tokens.danger,
+                    minimumSize: const Size(
+                      AppSpacing.minTouchTarget,
+                      AppSpacing.minTouchTarget,
+                    ),
+                  ),
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(context).pop(
+                            const TaskReminderSelection(
+                              dueAt: null,
+                              hasExplicitTime: false,
+                              recurrence: null,
+                            ),
+                          );
+                        },
+                  child: const Text('Clear'),
+                ),
+              IconButton(
+                tooltip: 'Close',
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                icon: TackIcon(
+                  TackIcons.close,
+                  size: 18,
+                  color: tokens.textSecondary,
                 ),
               ),
             ],
@@ -277,6 +362,30 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
               ),
             ],
           ),
+          if (isPastSelection) ...[
+            const SizedBox(height: AppSpacing.s2),
+            Row(
+              children: [
+                TackIcon(TackIcons.warning, size: 14, color: tokens.warning),
+                const SizedBox(width: AppSpacing.s1),
+                Expanded(
+                  child: Text(
+                    'Selected time is in the past — set a time later today or pick tomorrow.',
+                    style: AppTypography.caption(
+                      color: tokens.warning,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (_dueAt != null && !_hasExplicitTime) ...[
+            const SizedBox(height: AppSpacing.s2),
+            Text(
+              'Date-only tasks notify at 9:00 AM on the due date.',
+              style: AppTypography.caption(color: tokens.textTertiary),
+            ),
+          ],
 
           const SizedBox(height: AppSpacing.s5),
           Text(
@@ -299,9 +408,13 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
                     HapticFeedback.selectionClick();
                     setState(() {
                       _recurrence = choice.value;
-                      // Ensure recurring tasks start with an initial due date if unset.
+                      // Seed recurring tasks with the next upcoming 9 AM slot.
                       if (_recurrence != null && _dueAt == null) {
-                        _dueAt = DateTime(now.year, now.month, now.day, 9, 0);
+                        final todayNineStart =
+                            DateTime(now.year, now.month, now.day, 9, 0);
+                        _dueAt = now.isBefore(todayNineStart)
+                            ? todayNineStart
+                            : tomorrowNine;
                         _hasExplicitTime = true;
                       }
                     });
@@ -316,24 +429,24 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
               Expanded(
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
+                    minimumSize: const Size.fromHeight(
+                      AppSpacing.minTouchTarget,
+                    ),
                     side: BorderSide(color: tokens.borderSubtle),
                     shape: const RoundedRectangleBorder(
                       borderRadius: AppSpacing.roundedPill,
                     ),
                   ),
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    Navigator.of(context).pop(
-                      const TaskReminderSelection(
-                        dueAt: null,
-                        hasExplicitTime: false,
-                        recurrence: null,
-                      ),
-                    );
-                  },
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(context).pop(null);
+                        },
                   child: Text(
-                    'Clear',
+                    'Cancel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.label(
                       color: tokens.textPrimary,
                       weight: FontWeight.w600,
@@ -346,7 +459,9 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
                 flex: 2,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
+                    minimumSize: const Size.fromHeight(
+                      AppSpacing.minTouchTarget,
+                    ),
                     backgroundColor: tokens.actionPrimary,
                     foregroundColor: tokens.actionPrimaryFg,
                     elevation: 0,
@@ -354,18 +469,11 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
                       borderRadius: AppSpacing.roundedPill,
                     ),
                   ),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    Navigator.of(context).pop(
-                      TaskReminderSelection(
-                        dueAt: _dueAt,
-                        hasExplicitTime: _hasExplicitTime,
-                        recurrence: _recurrence,
-                      ),
-                    );
-                  },
+                  onPressed: _isSaving ? null : _handleSave,
                   child: Text(
                     'Save Reminder',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.label(
                       color: tokens.actionPrimaryFg,
                       weight: FontWeight.w700,
@@ -400,27 +508,43 @@ class _ReminderChoiceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppSpacing.durationFast,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s4,
-          vertical: AppSpacing.s2 + 2,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? tokens.actionPrimary : tokens.canvasSunken,
-          borderRadius: AppSpacing.roundedPill,
-          border: Border.all(
-            color: isSelected ? tokens.actionPrimary : tokens.borderSubtle,
-            width: 0.9,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppSpacing.roundedPill,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+            minWidth: AppSpacing.minTouchTarget,
           ),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.caption(
-            color: isSelected ? tokens.actionPrimaryFg : tokens.textPrimary,
-            weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          child: Center(
+            widthFactor: 1,
+            child: AnimatedContainer(
+              duration: AppSpacing.durationFast,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s4,
+                vertical: AppSpacing.s2 + 2,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected ? tokens.actionPrimary : tokens.canvasSunken,
+                borderRadius: AppSpacing.roundedPill,
+                border: Border.all(
+                  color: isSelected ? tokens.actionPrimary : tokens.borderSubtle,
+                  width: 0.9,
+                ),
+              ),
+              child: Text(
+                label,
+                style: AppTypography.caption(
+                  color:
+                      isSelected ? tokens.actionPrimaryFg : tokens.textPrimary,
+                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         ),
       ),

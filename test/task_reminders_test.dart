@@ -451,5 +451,128 @@ void main() {
       expect(result!.dueAt!.hour, 9);
       expect(result!.recurrence, TaskRecurrence.monthly);
     });
+
+    testWidgets('TodayScreen groups identically-titled notes separately by noteId and supports Show all / Show fewer', (tester) async {
+      final now = DateTime(2026, 11, 14, 10, 0);
+      final manyTasks = List.generate(14, (i) => '- [ ] Task ${i + 1}').join('\n');
+      final repo = _InMemoryWorkspaceRepo([
+        TextNote(
+          id: 'plan-a',
+          title: 'Roadmap',
+          paletteId: 'slate',
+          content: '- [ ] Alpha deliverable',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        TextNote(
+          id: 'plan-b',
+          title: 'Roadmap',
+          paletteId: 'amber',
+          content: manyTasks,
+          createdAt: now.subtract(const Duration(minutes: 1)),
+          updatedAt: now.subtract(const Duration(minutes: 1)),
+        ),
+      ]);
+      final workspace = WorkspaceProvider(repo);
+      await workspace.loadItems();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider.value(value: workspace),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: TodayScreen(onOpenItem: (_, {bool startInEditMode = false}) {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Alpha deliverable'), findsOneWidget);
+      expect(find.text('Roadmap'), findsNWidgets(2));
+      expect(find.text('Show all 15 tasks'), findsOneWidget);
+      expect(find.text('Task 14'), findsNothing);
+
+      await tester.ensureVisible(find.text('Show all 15 tasks'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Show all 15 tasks'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Show fewer'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Task 14'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Task 14'), findsOneWidget);
+    });
+
+    testWidgets('TaskReminderSheet Cancel returns null cleanly and Pick Date clamps distant future dates', (tester) async {
+      TaskReminderSelection? result = const TaskReminderSelection();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  result = await TaskReminderSheet.show(
+                    context: context,
+                    taskTitle: 'Far future goal',
+                    initialDueAt: DateTime(2099, 5, 1, 9, 0),
+                    initialHasExplicitTime: true,
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Pick Date…'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Cancel').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(result, isNull);
+    });
+
+    test('TaskReminderService.syncWorkspaceReminders handles empty and scheduled workspaces passively', () async {
+      final futureDue = DateTime.now().add(const Duration(days: 2));
+      final dateStr =
+          '${futureDue.year.toString().padLeft(4, '0')}-${futureDue.month.toString().padLeft(2, '0')}-${futureDue.day.toString().padLeft(2, '0')}';
+
+      await expectLater(
+        TaskReminderService.syncWorkspaceReminders(const []),
+        completes,
+      );
+      await expectLater(
+        TaskReminderService.syncWorkspaceReminders([
+          TextNote(
+            id: 'sched-note',
+            title: 'Errands',
+            paletteId: 'slate',
+            content: '- [ ] Renew lease @due($dateStr 09:00)',
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 1),
+          ),
+        ]),
+        completes,
+      );
+    });
   });
 }

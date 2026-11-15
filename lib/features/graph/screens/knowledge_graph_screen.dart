@@ -362,8 +362,13 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   void _openNodeItem(_GraphNode node) {
     final workspace = context.read<WorkspaceProvider>();
     if (node.isTagHub) {
-      workspace.setSelectedTag(node.label);
-      Navigator.of(context).pop();
+      final rawTag =
+          node.label.startsWith('#') ? node.label.substring(1) : node.label;
+      if (workspace.selectedTag?.toLowerCase() != rawTag.toLowerCase()) {
+        workspace.setSelectedTag(rawTag);
+      }
+      workspace.setBottomNavIndex(1);
+      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
     final item = node.item;
@@ -382,7 +387,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
     final workspace = context.watch<WorkspaceProvider>();
     _rebuildGraphIfNeeded(workspace.rawItems);
 
@@ -393,242 +399,424 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
               orElse: () => null,
             );
 
-    final bgColor = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
-    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFF191A23);
+    final hasFiltersActive =
+        !_showTags || !_showBoards || !_showHierarchy || !_showOrphans;
+    final hasSearchMiss = _query.isNotEmpty &&
+        _nodes.isNotEmpty &&
+        !_nodes.any((n) => n.label.toLowerCase().contains(_query));
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: surfaceColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const TackIcon(TackIcons.back, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
-          tooltip: 'Back',
-        ),
-        titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isLocalMode ? 'Local Graph' : 'Knowledge Graph',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.4,
-                color: isDark ? Colors.white : const Color(0xFF191A23),
-              ),
+    return PopScope(
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isSearching) {
+          setState(() {
+            _isSearching = false;
+            _searchController.clear();
+            _query = '';
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: tokens.canvasPrimary,
+        appBar: AppBar(
+          backgroundColor: tokens.surfacePrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: TackIcon(
+              TackIcons.back,
+              size: 20,
+              color: tokens.textPrimary,
             ),
-            Text(
-              '${_nodes.length} nodes  •  ${_edges.length} links',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+            onPressed: () {
+              if (_isSearching) {
+                setState(() {
+                  _isSearching = false;
+                  _searchController.clear();
+                  _query = '';
+                });
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+            tooltip: 'Back',
+          ),
+          titleSpacing: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isLocalMode ? 'Local Graph' : 'Knowledge Graph',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.titleSm(
+                  color: tokens.textPrimary,
+                  weight: FontWeight.w800,
+                ),
               ),
+              Text(
+                '${_nodes.length} nodes · ${_edges.length} links',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(
+                  color: tokens.textTertiary,
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (widget.focusItemId != null)
+              Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.s1),
+                child: Semantics(
+                  button: true,
+                  selected: _isLocalMode,
+                  label: _isLocalMode
+                      ? 'Showing 1-hop local graph'
+                      : 'Showing global graph',
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: AppSpacing.minTouchTarget,
+                    ),
+                    child: Center(
+                      child: ActionChip(
+                        label: Text(_isLocalMode ? '1-Hop' : 'Global'),
+                        labelStyle: AppTypography.caption(
+                          color: _isLocalMode
+                              ? tokens.actionPrimaryFg
+                              : tokens.textPrimary,
+                          weight: FontWeight.w700,
+                        ),
+                        backgroundColor: _isLocalMode
+                            ? tokens.actionPrimary
+                            : tokens.canvasSunken,
+                        side: BorderSide(color: tokens.borderSubtle),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _isLocalMode = !_isLocalMode;
+                            _lastGraphSignature = '';
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            IconButton(
+              icon: TackIcon(
+                _isSearching ? TackIcons.close : TackIcons.search,
+                size: 20,
+                color: tokens.textPrimary,
+              ),
+              tooltip: _isSearching ? 'Close filter' : 'Filter Graph',
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                    _query = '';
+                  }
+                });
+              },
+            ),
+            IconButton(
+              icon: TackIcon(
+                TackIcons.expandNavigation,
+                size: 20,
+                color: tokens.textPrimary,
+              ),
+              tooltip: 'Recenter',
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _centerCamera();
+              },
             ),
           ],
         ),
-        actions: [
-          if (widget.focusItemId != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ActionChip(
-                label: Text(_isLocalMode ? '1-Hop' : 'Global'),
-                labelStyle: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: _isLocalMode ? const Color(0xFF191A23) : null,
+        body: Stack(
+          children: [
+            // Interactive 2D Graph Canvas
+            if (workspace.isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (_nodes.isEmpty)
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.s7),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TackIcon(
+                          TackIcons.graph,
+                          size: 48,
+                          color: tokens.textTertiary,
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        Text(
+                          hasFiltersActive
+                              ? 'No nodes match current filters'
+                              : (_isLocalMode
+                                  ? 'No local connections yet'
+                                  : 'No connected notes yet'),
+                          textAlign: TextAlign.center,
+                          style: AppTypography.title(color: tokens.textPrimary),
+                        ),
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(
+                          hasFiltersActive
+                              ? 'Reset one or more graph filters to see notes and boards again.'
+                              : (_isLocalMode
+                                  ? 'Add [[Wiki-Links]], #tags, or switch to the Global Graph.'
+                                  : 'Link notes with [[Wiki-Links]], embed boards with ![[Board]], or add #tags to grow your knowledge graph.'),
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s5),
+                        if (hasFiltersActive)
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(
+                                0,
+                                AppSpacing.minTouchTarget,
+                              ),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _showTags = true;
+                                _showBoards = true;
+                                _showHierarchy = true;
+                                _showOrphans = true;
+                                _lastGraphSignature = '';
+                              });
+                            },
+                            child: const Text('Reset filters'),
+                          )
+                        else if (_isLocalMode)
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(
+                                0,
+                                AppSpacing.minTouchTarget,
+                              ),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isLocalMode = false;
+                                _lastGraphSignature = '';
+                              });
+                            },
+                            child: const Text('Show Global Graph'),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(
+                                0,
+                                AppSpacing.minTouchTarget,
+                              ),
+                            ),
+                            icon: TackIcon(
+                              TackIcons.back,
+                              size: 16,
+                              color: tokens.textPrimary,
+                            ),
+                            label: const Text('Back to Notes'),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-                backgroundColor:
-                    _isLocalMode ? AppColors.pastelLimeLight : surfaceColor,
-                shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                visualDensity: VisualDensity.compact,
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _isLocalMode = !_isLocalMode;
-                    _lastGraphSignature = '';
-                  });
-                },
+              )
+            else
+              InteractiveViewer(
+                transformationController: _transformController,
+                constrained: false,
+                boundaryMargin: const EdgeInsets.all(420),
+                minScale: 0.35,
+                maxScale: 2.6,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: _handleCanvasTapUp,
+                  child: SizedBox(
+                    width: _kCanvasSize,
+                    height: _kCanvasSize,
+                    child: CustomPaint(
+                      painter: _KnowledgeGraphPainter(
+                        nodes: _nodes,
+                        edges: _edges,
+                        selectedNodeId: _selectedNodeId,
+                        searchQuery: _query,
+                        tokens: tokens,
+                        textScale: textScale,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          IconButton(
-            icon: TackIcon(
-              _isSearching ? TackIcons.close : TackIcons.search,
-              size: 20,
-            ),
-            tooltip: 'Filter Graph',
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchController.clear();
-                  _query = '';
-                }
-              });
-            },
-          ),
-          IconButton(
-            icon: const TackIcon(TackIcons.expandNavigation, size: 20),
-            tooltip: 'Recenter',
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _centerCamera();
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Interactive 2D Graph Canvas
-          if (_nodes.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
+
+            // Top Filter Chips & Search Bar
+            Positioned(
+              top: AppSpacing.s2,
+              left: AppSpacing.s4,
+              right: AppSpacing.s4,
+              child: SafeArea(
+                bottom: false,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TackIcon(
-                      TackIcons.graph,
-                      size: 48,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No connected notes yet',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                        color: isDark ? Colors.white : const Color(0xFF191A23),
+                    if (_isSearching)
+                      AppSearchField(
+                        controller: _searchController,
+                        autofocus: true,
+                        hintText: 'Highlight node by title or #tag...',
+                        margin: const EdgeInsets.only(bottom: AppSpacing.s2),
+                        onChanged: (val) =>
+                            setState(() => _query = val.trim().toLowerCase()),
+                        onClear: () => setState(() => _query = ''),
+                      ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            label: '#Tags',
+                            active: _showTags,
+                            tokens: tokens,
+                            onTap: () => setState(() {
+                              _showTags = !_showTags;
+                              _lastGraphSignature = '';
+                            }),
+                          ),
+                          const SizedBox(width: AppSpacing.s2),
+                          _buildFilterChip(
+                            label: 'Boards',
+                            active: _showBoards,
+                            tokens: tokens,
+                            onTap: () => setState(() {
+                              _showBoards = !_showBoards;
+                              _lastGraphSignature = '';
+                            }),
+                          ),
+                          const SizedBox(width: AppSpacing.s2),
+                          _buildFilterChip(
+                            label: 'Sub-notes',
+                            active: _showHierarchy,
+                            tokens: tokens,
+                            onTap: () => setState(() {
+                              _showHierarchy = !_showHierarchy;
+                              _lastGraphSignature = '';
+                            }),
+                          ),
+                          if (!_isLocalMode) ...[
+                            const SizedBox(width: AppSpacing.s2),
+                            _buildFilterChip(
+                              label: 'Orphans',
+                              active: _showOrphans,
+                              tokens: tokens,
+                              onTap: () => setState(() {
+                                _showOrphans = !_showOrphans;
+                                _lastGraphSignature = '';
+                              }),
+                            ),
+                          ],
+                          if (hasFiltersActive) ...[
+                            const SizedBox(width: AppSpacing.s2),
+                            _buildFilterChip(
+                              label: 'Reset',
+                              active: false,
+                              tokens: tokens,
+                              onTap: () => setState(() {
+                                _showTags = true;
+                                _showBoards = true;
+                                _showHierarchy = true;
+                                _showOrphans = true;
+                                _lastGraphSignature = '';
+                              }),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Link notes with [[Wiki-Links]], embed boards with ![[Board]], or add #tags to grow your local knowledge graph.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13.5,
-                        height: 1.45,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    if (hasSearchMiss) ...[
+                      const SizedBox(height: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s3,
+                          vertical: AppSpacing.s1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.surfacePrimary,
+                          borderRadius: AppSpacing.roundedPill,
+                          border: Border.all(color: tokens.borderSubtle),
+                          boxShadow: AppSpacing.elev1(isDark),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'No nodes match "$_query"',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption(
+                                  color: tokens.textSecondary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s2),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(
+                                  AppSpacing.minTouchTarget,
+                                  AppSpacing.minTouchTarget,
+                                ),
+                                tapTargetSize: MaterialTapTargetSize.padded,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                              child: const Text('Clear'),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            )
-          else
-            InteractiveViewer(
-              transformationController: _transformController,
-              constrained: false,
-              boundaryMargin: const EdgeInsets.all(420),
-              minScale: 0.35,
-              maxScale: 2.6,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapUp: _handleCanvasTapUp,
-                child: SizedBox(
-                  width: _kCanvasSize,
-                  height: _kCanvasSize,
-                  child: CustomPaint(
-                    painter: _KnowledgeGraphPainter(
-                      nodes: _nodes,
-                      edges: _edges,
-                      selectedNodeId: _selectedNodeId,
-                      searchQuery: _query,
-                      isDark: isDark,
+            ),
+
+            // Bottom Selected Node Card
+            if (selectedNode != null)
+              Positioned(
+                left: AppSpacing.s4,
+                right: AppSpacing.s4,
+                bottom: AppSpacing.s4 + MediaQuery.paddingOf(context).bottom,
+                child: SafeArea(
+                  top: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSpacing.readMaxWidth,
+                      ),
+                      child: _buildSelectedNodeDock(selectedNode, tokens),
                     ),
                   ),
                 ),
               ),
-            ),
-
-          // Top Filter Chips & Search Bar
-          Positioned(
-            top: 10,
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_isSearching)
-                  AppSearchField(
-                    controller: _searchController,
-                    autofocus: true,
-                    hintText: 'Highlight node by title or #tag...',
-                    margin: const EdgeInsets.only(bottom: 8),
-                    onChanged: (val) => setState(() => _query = val.trim().toLowerCase()),
-                    onClear: () => setState(() => _query = ''),
-                  ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip(
-                        label: '#Tags',
-                        active: _showTags,
-                        isDark: isDark,
-                        onTap: () => setState(() {
-                          _showTags = !_showTags;
-                          _lastGraphSignature = '';
-                        }),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Boards',
-                        active: _showBoards,
-                        isDark: isDark,
-                        onTap: () => setState(() {
-                          _showBoards = !_showBoards;
-                          _lastGraphSignature = '';
-                        }),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Sub-notes',
-                        active: _showHierarchy,
-                        isDark: isDark,
-                        onTap: () => setState(() {
-                          _showHierarchy = !_showHierarchy;
-                          _lastGraphSignature = '';
-                        }),
-                      ),
-                      if (!_isLocalMode) ...[
-                        const SizedBox(width: 8),
-                        _buildFilterChip(
-                          label: 'Orphans',
-                          active: _showOrphans,
-                          isDark: isDark,
-                          onTap: () => setState(() {
-                            _showOrphans = !_showOrphans;
-                            _lastGraphSignature = '';
-                          }),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Bottom Selected Node Card
-          if (selectedNode != null)
-            Positioned(
-              left: AppSpacing.lg,
-              right: AppSpacing.lg,
-              bottom: AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
-              child: _buildSelectedNodeDock(selectedNode, isDark, surfaceColor, borderColor),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -636,70 +824,73 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   Widget _buildFilterChip({
     required String label,
     required bool active,
-    required bool isDark,
+    required TackTokens tokens,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? AppColors.pastelLimeLight
-              : (isDark ? AppColors.darkSurface.withValues(alpha: 0.92) : Colors.white.withValues(alpha: 0.92)),
-          borderRadius: AppSpacing.roundedPill,
-          border: Border.all(
-            color: active
-                ? const Color(0xFF191A23)
-                : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-            width: 1.2,
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        borderRadius: AppSpacing.roundedPill,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+            minWidth: AppSpacing.minTouchTarget,
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-            color: active
-                ? const Color(0xFF191A23)
-                : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s3,
+                vertical: AppSpacing.s2,
+              ),
+              decoration: BoxDecoration(
+                color: active
+                    ? tokens.actionPrimary
+                    : tokens.surfacePrimary.withValues(alpha: 0.94),
+                borderRadius: AppSpacing.roundedPill,
+                border: Border.all(
+                  color: active ? tokens.actionPrimary : tokens.borderSubtle,
+                  width: 1.2,
+                ),
+              ),
+              child: Text(
+                label,
+                style: AppTypography.label(
+                  color: active ? tokens.actionPrimaryFg : tokens.textPrimary,
+                  weight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSelectedNodeDock(
-    _GraphNode node,
-    bool isDark,
-    Color surfaceColor,
-    Color borderColor,
-  ) {
+  Widget _buildSelectedNodeDock(_GraphNode node, TackTokens tokens) {
     final palette = AppColors.getPaletteById(node.paletteId);
-    final accent = palette.resolveAccentColor(isDark);
+    final accent = palette.resolveAccentColor(tokens.isDark);
     final item = node.item;
     final subtitle = node.isTagHub
-        ? '${node.degree} tagged notes  •  Tap Open to filter feed'
-        : '${node.degree} connections  •  ${item?.getSummary() ?? ''}';
+        ? '${node.degree} tagged notes · Open in Library'
+        : '${node.degree} connections${(item?.getSummary().trim().isNotEmpty ?? false) ? ' · ${item!.getSummary()}' : ''}';
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      decoration: ShapeDecoration(
+        color: tokens.surfacePrimary,
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(color: tokens.borderSubtle, width: 1.0),
+        ),
+        shadows: AppSpacing.elev2(tokens.isDark),
       ),
       child: Row(
         children: [
@@ -707,13 +898,16 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: palette.lightColor.withValues(alpha: isDark ? 0.22 : 0.35),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accent.withValues(alpha: 0.5)),
+              color: palette.resolveSoftBackground(tokens.isDark),
+              borderRadius: AppSpacing.roundedSm,
+              border: Border.all(color: accent.withValues(alpha: 0.45)),
             ),
             child: Center(
               child: node.iconEmoji != null && node.iconEmoji!.isNotEmpty
-                  ? Text(node.iconEmoji!, style: const TextStyle(fontSize: 18))
+                  ? Text(
+                      node.iconEmoji!,
+                      style: AppTypography.titleSm(color: tokens.textPrimary),
+                    )
                   : TackIcon(
                       node.isTagHub
                           ? TackIcons.tag
@@ -725,7 +919,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                     ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.s3),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,46 +929,31 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                   node.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    color: isDark ? Colors.white : const Color(0xFF191A23),
-                  ),
+                  style: AppTypography.titleSm(color: tokens.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                  ),
+                  style: AppTypography.caption(color: tokens.textSecondary),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s3),
           ElevatedButton(
             onPressed: () => _openNodeItem(node),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : const Color(0xFF191A23),
-              foregroundColor: isDark ? const Color(0xFF191A23) : Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(
-              'Open →',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+              minimumSize: const Size(0, AppSpacing.minTouchTarget),
+              backgroundColor: tokens.actionPrimary,
+              foregroundColor: tokens.actionPrimaryFg,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppSpacing.roundedPill,
               ),
             ),
+            child: const Text('Open'),
           ),
         ],
       ),
@@ -787,23 +966,24 @@ class _KnowledgeGraphPainter extends CustomPainter {
   final List<_GraphEdge> edges;
   final String? selectedNodeId;
   final String searchQuery;
-  final bool isDark;
+  final TackTokens tokens;
+  final double textScale;
 
   _KnowledgeGraphPainter({
     required this.nodes,
     required this.edges,
     required this.selectedNodeId,
     required this.searchQuery,
-    required this.isDark,
+    required this.tokens,
+    required this.textScale,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final isDark = tokens.isDark;
     // 1. Subtle tactile dot matrix
     final gridPaint = Paint()
-      ..color = isDark
-          ? Colors.white.withValues(alpha: 0.05)
-          : const Color(0xFF191A23).withValues(alpha: 0.06);
+      ..color = tokens.textPrimary.withValues(alpha: isDark ? 0.05 : 0.06);
     const step = 36.0;
     for (double x = step; x < size.width; x += step) {
       for (double y = step; y < size.height; y += step) {
@@ -835,8 +1015,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
       switch (edge.kind) {
         case _GraphEdgeKind.wikiLink:
           edgeColor = isHighlighted
-              ? AppColors.accentAmber
-              : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569));
+              ? tokens.accentPin
+              : tokens.textSecondary;
           break;
         case _GraphEdgeKind.specBoard:
           edgeColor = AppColors.accentCyan;
@@ -845,13 +1025,16 @@ class _KnowledgeGraphPainter extends CustomPainter {
           edgeColor = AppColors.pastelLavenderLight;
           break;
         case _GraphEdgeKind.tag:
-          edgeColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+          edgeColor = tokens.textTertiary;
           break;
       }
 
       final paint = Paint()
-        ..color = edgeColor.withValues(alpha: isDimmed ? 0.14 : (isHighlighted ? 0.92 : 0.45))
-        ..strokeWidth = isHighlighted ? 2.4 : (edge.kind == _GraphEdgeKind.tag ? 1.1 : 1.6)
+        ..color = edgeColor.withValues(
+          alpha: isDimmed ? 0.14 : (isHighlighted ? 0.92 : 0.45),
+        )
+        ..strokeWidth =
+            isHighlighted ? 2.4 : (edge.kind == _GraphEdgeKind.tag ? 1.1 : 1.6)
         ..style = PaintingStyle.stroke;
 
       canvas.drawLine(a.position, b.position, paint);
@@ -860,18 +1043,19 @@ class _KnowledgeGraphPainter extends CustomPainter {
     // 3. Draw nodes & crisp labels
     for (final node in nodes) {
       final isSelected = node.id == selectedNodeId;
-      final matchesSearch =
-          searchQuery.isNotEmpty && node.label.toLowerCase().contains(searchQuery);
-      final isDimmed = (selectedNodeId != null && !activeNeighbors.contains(node.id)) ||
-          (searchQuery.isNotEmpty && !matchesSearch);
+      final matchesSearch = searchQuery.isNotEmpty &&
+          node.label.toLowerCase().contains(searchQuery);
+      final isDimmed =
+          (selectedNodeId != null && !activeNeighbors.contains(node.id)) ||
+              (searchQuery.isNotEmpty && !matchesSearch);
 
       final palette = AppColors.getPaletteById(node.paletteId);
       final fillColor = node.isTagHub
-          ? (isDark ? const Color(0xFF283018) : AppColors.pastelLimeSoft)
+          ? AppColors.getPaletteById('lime').resolveSoftBackground(isDark)
           : palette.resolveCardColor(isDark);
       final strokeColor = isSelected || matchesSearch
-          ? AppColors.accentAmber
-          : (isDark ? palette.lightColor : const Color(0xFF191A23));
+          ? tokens.accentPin
+          : (isDark ? palette.lightColor : tokens.textPrimary);
 
       final r = node.radius;
       final fillPaint = Paint()
@@ -886,7 +1070,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
         canvas.drawCircle(
           node.position,
           r + 6,
-          Paint()..color = AppColors.accentAmber.withValues(alpha: 0.22),
+          Paint()..color = tokens.accentPin.withValues(alpha: 0.22),
         );
       }
 
@@ -920,22 +1104,22 @@ class _KnowledgeGraphPainter extends CustomPainter {
       }
 
       // Label below node
+      final baseLabelSize = (node.isTagHub ? 12.0 : 12.5) * textScale;
       final labelPainter = TextPainter(
         text: TextSpan(
           text: node.label,
           style: TextStyle(
             fontFamily: AppTypography.fontFamily,
-            fontSize: node.isTagHub ? 11.0 : 12.2,
+            fontSize: baseLabelSize,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
             letterSpacing: -0.25,
-            color: (isDark ? Colors.white : const Color(0xFF191A23))
-                .withValues(alpha: isDimmed ? 0.28 : 0.92),
+            color: tokens.textPrimary.withValues(alpha: isDimmed ? 0.28 : 0.92),
           ),
         ),
         maxLines: 1,
         ellipsis: '…',
         textDirection: TextDirection.ltr,
-      )..layout(maxWidth: 140);
+      )..layout(maxWidth: 148 * textScale);
 
       labelPainter.paint(
         canvas,
@@ -953,6 +1137,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
         oldDelegate.edges != edges ||
         oldDelegate.selectedNodeId != selectedNodeId ||
         oldDelegate.searchQuery != searchQuery ||
-        oldDelegate.isDark != isDark;
+        oldDelegate.tokens != tokens ||
+        oldDelegate.textScale != textScale;
   }
 }

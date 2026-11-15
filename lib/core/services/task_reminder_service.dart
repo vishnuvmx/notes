@@ -119,6 +119,10 @@ class TaskReminderService {
   }) async {
     final payloads = buildUpcomingReminders(items, now: now);
     try {
+      if (payloads.isEmpty) {
+        await _channel.invokeMethod<bool>('cancelAllTaskReminders');
+        return;
+      }
       await _channel.invokeMethod<bool>(
         'syncTaskReminders',
         payloads.map((p) => p.toChannelMap()).toList(),

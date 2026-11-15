@@ -17,6 +17,7 @@ import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/app_floating_dialog.dart';
 import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/tack_toast.dart';
 import '../../tasks/screens/today_screen.dart';
 
 enum FolderType {
@@ -53,17 +54,37 @@ class FolderViewScreen extends StatelessWidget {
     WorkspaceProvider workspace,
     BaseWorkspaceItem item,
   ) async {
+    final tokens = context.tokens;
     final title = item.title.trim().isEmpty ? 'Untitled' : item.title;
     final confirmed = await AppFloatingDialog.confirm(
       context: context,
-      title: 'Delete permanently?',
-      message: '"$title" will be permanently deleted and cannot be recovered.',
-      confirmLabel: 'Delete Forever',
+      title: 'Delete forever?',
+      message:
+          '"$title" will be permanently deleted and cannot be recovered.',
+      confirmLabel: 'Delete forever',
       isDestructive: true,
       icon: TackIcons.trash,
     );
-    if (confirmed) {
+    if (!confirmed) return;
+    try {
       await workspace.deletePermanently(item.id);
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Deleted forever',
+          icon: TackIcons.trash,
+          iconColor: tokens.danger,
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Could not delete item',
+          icon: TackIcons.close,
+          iconColor: tokens.danger,
+        );
+      }
     }
   }
 
@@ -71,16 +92,64 @@ class FolderViewScreen extends StatelessWidget {
     BuildContext context,
     WorkspaceProvider workspace,
   ) async {
+    final tokens = context.tokens;
     final confirmed = await AppFloatingDialog.confirm(
       context: context,
       title: 'Empty Trash?',
-      message: 'All items in Trash will be permanently deleted. This cannot be undone.',
+      message:
+          'All items in Trash will be permanently deleted. This cannot be undone.',
       confirmLabel: 'Empty Trash',
       isDestructive: true,
       icon: TackIcons.trash,
     );
-    if (confirmed) {
+    if (!confirmed) return;
+    try {
       await workspace.emptyTrash();
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Emptied Trash',
+          icon: TackIcons.trash,
+          iconColor: tokens.danger,
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Could not empty Trash',
+          icon: TackIcons.close,
+          iconColor: tokens.danger,
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreItem(
+    BuildContext context,
+    WorkspaceProvider workspace,
+    BaseWorkspaceItem item,
+  ) async {
+    final tokens = context.tokens;
+    try {
+      await workspace.restoreFromTrash(item.id);
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Restored from Trash',
+          icon: TackIcons.check,
+          iconColor: tokens.success,
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        TackToast.show(
+          context,
+          message: 'Could not restore item',
+          icon: TackIcons.close,
+          iconColor: tokens.danger,
+        );
+      }
     }
   }
 
@@ -93,10 +162,11 @@ class FolderViewScreen extends StatelessWidget {
       context: context,
       builder: (ctx) {
         final tokens = ctx.tokens;
-        return Padding(
+        final summary = item.getSummary().trim();
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.s5,
-            AppSpacing.s2,
+            AppSpacing.s4,
             AppSpacing.s5,
             AppSpacing.s5,
           ),
@@ -113,42 +183,74 @@ class FolderViewScreen extends StatelessWidget {
                 'Deleted ${DateFormatter.formatTimestamp(item.updatedAt)}',
                 style: AppTypography.caption(color: tokens.textTertiary),
               ),
-              const SizedBox(height: AppSpacing.s3),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: Text(
-                    item.getSummary(),
-                    style: AppTypography.bodySm(color: tokens.textSecondary),
+              if (summary.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.s3),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      summary,
+                      style: AppTypography.bodySm(color: tokens.textSecondary),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: AppSpacing.s5),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        Navigator.of(ctx).pop();
-                        await _confirmDeleteSingle(context, workspace, item);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: tokens.danger,
+              LayoutBuilder(
+                builder: (layoutCtx, constraints) {
+                  final stacked = constraints.maxWidth < 300;
+                  final deleteBtn = OutlinedButton(
+                    onPressed: () async {
+                      Navigator.of(ctx).pop();
+                      await _confirmDeleteSingle(context, workspace, item);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(
+                        AppSpacing.minTouchTarget,
                       ),
-                      child: const Text('Delete forever'),
+                      foregroundColor: tokens.danger,
+                      side: BorderSide(color: tokens.danger.withValues(alpha: 0.45)),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.s3),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        Navigator.of(ctx).pop();
-                        await workspace.restoreFromTrash(item.id);
-                      },
-                      child: const Text('Restore'),
+                    child: const Text(
+                      'Delete forever',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  );
+                  final restoreBtn = ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(ctx).pop();
+                      await _restoreItem(context, workspace, item);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(
+                        AppSpacing.minTouchTarget,
+                      ),
+                    ),
+                    child: const Text(
+                      'Restore',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                  if (stacked) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        restoreBtn,
+                        const SizedBox(height: AppSpacing.s2),
+                        deleteBtn,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: deleteBtn),
+                      const SizedBox(width: AppSpacing.s3),
+                      Expanded(child: restoreBtn),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -197,6 +299,12 @@ class FolderViewScreen extends StatelessWidget {
         actions: [
           if (folderType == FolderType.trash && items.isNotEmpty)
             TextButton.icon(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(
+                  AppSpacing.minTouchTarget,
+                  AppSpacing.minTouchTarget,
+                ),
+              ),
               icon: TackIcon(TackIcons.trash, size: 17, color: tokens.danger),
               label: Text(
                 'Empty',
@@ -212,120 +320,161 @@ class FolderViewScreen extends StatelessWidget {
       ),
       body: items.isEmpty
           ? EmptyStateWidget(
-              icon: folderType == FolderType.trash
-                  ? TackIcons.trash
-                  : TackIcons.pin,
+              icon: switch (folderType) {
+                FolderType.trash => TackIcons.trash,
+                FolderType.archive => TackIcons.inbox,
+                FolderType.favorites => TackIcons.pin,
+              },
               title: 'No items in ${folderType.title}',
-              subtitle: folderType == FolderType.trash
-                  ? 'Deleted notes and boards rest here until you empty Trash.'
-                  : 'Pinned items appear here.',
+              subtitle: switch (folderType) {
+                FolderType.trash =>
+                  'Deleted notes and boards rest here until you empty Trash.',
+                FolderType.archive => 'Archived notes and boards appear here.',
+                FolderType.favorites => 'Pinned notes and boards appear here.',
+              },
+              actionLabel: 'Go back',
+              actionIcon: TackIcons.back,
+              onAction: () => Navigator.of(context).pop(),
             )
           : folderType == FolderType.trash
-              ? ListView.separated(
-                  padding: EdgeInsets.fromLTRB(
-                    gutter,
-                    AppSpacing.s3,
-                    gutter,
-                    AppSpacing.s8,
-                  ),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.s3),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final palette = AppColors.getPaletteById(item.paletteId);
-                    final bandColor = palette.resolveCardColor(tokens.isDark);
-
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: tokens.surfacePrimary,
-                        borderRadius: AppSpacing.roundedMd,
-                        border: Border.all(
-                          color: tokens.borderSubtle,
-                          width: 1,
-                        ),
+              ? SafeArea(
+                  top: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSpacing.readMaxWidth,
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Container(
-                              width: AppSpacing.cardColorBandWidth,
-                              color: bandColor,
+                      child: ListView.separated(
+                        padding: EdgeInsets.fromLTRB(
+                          gutter,
+                          AppSpacing.s3,
+                          gutter,
+                          AppSpacing.s8 + MediaQuery.paddingOf(context).bottom,
+                        ),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.s3),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final palette = AppColors.getPaletteById(
+                            item.paletteId,
+                          );
+                          final bandColor = palette.resolveCardColor(
+                            tokens.isDark,
+                          );
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: tokens.surfacePrimary,
+                              borderRadius: AppSpacing.roundedMd,
+                              border: Border.all(
+                                color: tokens.borderSubtle,
+                                width: 1,
+                              ),
                             ),
-                            Expanded(
-                              child: ListTile(
-                                onTap: () => _previewTrashedItem(
-                                  context,
-                                  workspace,
-                                  item,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.s4,
-                                  vertical: AppSpacing.s1,
-                                ),
-                                title: Text(
-                                  item.title.trim().isEmpty
-                                      ? 'Untitled'
-                                      : item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.titleSm(
-                                    color: tokens.textPrimary,
+                            clipBehavior: Clip.antiAlias,
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(
+                                    width: AppSpacing.cardColorBandWidth,
+                                    color: bandColor,
                                   ),
-                                ),
-                                subtitle: Text(
-                                  item.getSummary(),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.bodySm(
-                                    color: tokens.textSecondary,
-                                  ),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: TackIcon(
-                                        TackIcons.undo,
-                                        size: 19,
-                                        color: tokens.textPrimary,
-                                      ),
-                                      tooltip: 'Restore',
-                                      onPressed: () =>
-                                          workspace.restoreFromTrash(item.id),
-                                    ),
-                                    IconButton(
-                                      icon: TackIcon(
-                                        TackIcons.trash,
-                                        size: 19,
-                                        color: tokens.danger,
-                                      ),
-                                      tooltip: 'Delete Forever',
-                                      onPressed: () => _confirmDeleteSingle(
+                                  Expanded(
+                                    child: ListTile(
+                                      onTap: () => _previewTrashedItem(
                                         context,
                                         workspace,
                                         item,
                                       ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.s4,
+                                        vertical: AppSpacing.s1,
+                                      ),
+                                      title: Text(
+                                        item.title.trim().isEmpty
+                                            ? 'Untitled'
+                                            : item.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.titleSm(
+                                          color: tokens.textPrimary,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        item.getSummary(),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.bodySm(
+                                          color: tokens.textSecondary,
+                                        ),
+                                      ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            constraints: const BoxConstraints(
+                                              minWidth:
+                                                  AppSpacing.minTouchTarget,
+                                              minHeight:
+                                                  AppSpacing.minTouchTarget,
+                                            ),
+                                            icon: TackIcon(
+                                              TackIcons.undo,
+                                              size: 19,
+                                              color: tokens.textPrimary,
+                                            ),
+                                            tooltip: 'Restore',
+                                            onPressed: () => _restoreItem(
+                                              context,
+                                              workspace,
+                                              item,
+                                            ),
+                                          ),
+                                          IconButton(
+                                            constraints: const BoxConstraints(
+                                              minWidth:
+                                                  AppSpacing.minTouchTarget,
+                                              minHeight:
+                                                  AppSpacing.minTouchTarget,
+                                            ),
+                                            icon: TackIcon(
+                                              TackIcons.trash,
+                                              size: 19,
+                                              color: tokens.danger,
+                                            ),
+                                            tooltip: 'Delete forever',
+                                            onPressed: () =>
+                                                _confirmDeleteSingle(
+                                              context,
+                                              workspace,
+                                              item,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                )
-              : ResponsiveCardGrid(
-                  padding: EdgeInsets.fromLTRB(
-                    gutter,
-                    AppSpacing.s3,
-                    gutter,
-                    AppSpacing.s8,
+                    ),
                   ),
+                )
+              : SafeArea(
+                  top: false,
+                  child: ResponsiveCardGrid(
+                    padding: EdgeInsets.fromLTRB(
+                      gutter,
+                      AppSpacing.s3,
+                      gutter,
+                      AppSpacing.s8 + MediaQuery.paddingOf(context).bottom,
+                    ),
                   crossAxisCount: cols,
                   mainAxisSpacing: AppSpacing.cardGridGap,
                   crossAxisSpacing: AppSpacing.cardGridGap,
@@ -361,6 +510,7 @@ class FolderViewScreen extends StatelessWidget {
                     );
                   },
                 ),
+              ),
     );
   }
 }

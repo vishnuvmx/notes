@@ -138,33 +138,22 @@ class EditorFormattingToolbar extends StatelessWidget {
     IconToolbarItem(
       label: 'Bullet List',
       action: 'bullet',
-      icon: TackIcons.menu,
+      icon: TackIcons.bulletList,
     ),
     IconToolbarItem(
       label: 'Numbered List',
       action: 'numbered',
-      icon: TackIcons.listView,
+      icon: TackIcons.numberedList,
     ),
-    TextToolbarItem(
+    IconToolbarItem(
       label: 'Quote',
       action: 'quote',
-      display: '”',
-      customStyle: TextStyle(
-        fontWeight: FontWeight.w900,
-        fontSize: 20,
-        height: 1.0,
-        fontFamily: 'serif',
-      ),
+      icon: TackIcons.quote,
     ),
-    TextToolbarItem(
+    IconToolbarItem(
       label: 'Table',
       action: 'table',
-      display: '⊞',
-      customStyle: TextStyle(
-        fontWeight: FontWeight.w700,
-        fontSize: 16,
-        height: 1.0,
-      ),
+      icon: TackIcons.table,
     ),
     IconToolbarItem(
       label: 'Diagram / Flowchart',
@@ -215,53 +204,66 @@ class EditorFormattingToolbar extends StatelessWidget {
           }
 
           final isPrimaryCommand = item.action == 'slash';
+          final isHighlight = item.action == 'highlight';
 
-          return Tooltip(
-            message: item.label,
-            child: InkWell(
-              borderRadius: AppSpacing.roundedSm,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onFormatAction?.call(item.action);
-              },
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 44,
-                  minHeight: AppSpacing.minTouchTarget,
-                ),
-                child: Center(
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    alignment: Alignment.center,
-                    decoration: isPrimaryCommand
-                        ? BoxDecoration(
-                            color: tokens.canvasSunken,
-                            borderRadius: AppSpacing.roundedXs,
-                            border: Border.all(
-                              color: tokens.borderStrong,
-                              width: 1,
-                            ),
-                          )
-                        : null,
-                    child: switch (item) {
-                      IconToolbarItem iconItem => TackIcon(
-                          iconItem.icon,
-                          size: 19,
-                          color: tokens.textPrimary,
-                        ),
-                      TextToolbarItem textItem => Text(
-                          textItem.display,
-                          style: (textItem.customStyle ??
-                                  AppTypography.label(color: tokens.textPrimary))
-                              .copyWith(
-                            color: textItem.action == 'highlight'
-                                ? AppColors.lightTextPrimary
-                                : tokens.textPrimary,
+          return Semantics(
+            button: true,
+            label: item.label,
+            child: Tooltip(
+              message: item.label,
+              child: InkWell(
+                borderRadius: AppSpacing.roundedSm,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onFormatAction?.call(item.action);
+                },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: isPrimaryCommand
+                          ? BoxDecoration(
+                              color: tokens.canvasSunken,
+                              borderRadius: AppSpacing.roundedXs,
+                              border: Border.all(
+                                color: tokens.borderStrong,
+                                width: 1,
+                              ),
+                            )
+                          : (isHighlight
+                              ? BoxDecoration(
+                                  color: AppColors.pastelAmberLight
+                                      .withValues(alpha: 0.85),
+                                  borderRadius: AppSpacing.roundedXs,
+                                )
+                              : null),
+                      child: switch (item) {
+                        IconToolbarItem iconItem => TackIcon(
+                            iconItem.icon,
+                            size: 19,
+                            color: tokens.textPrimary,
                           ),
-                        ),
-                      DividerToolbarItem() => const SizedBox.shrink(),
-                    },
+                        TextToolbarItem textItem => Text(
+                            textItem.display,
+                            style: (textItem.customStyle ??
+                                    AppTypography.label(
+                                      color: tokens.textPrimary,
+                                    ))
+                                .copyWith(
+                              color: isHighlight
+                                  ? AppColors.lightTextPrimary
+                                  : tokens.textPrimary,
+                            ),
+                          ),
+                        DividerToolbarItem() => const SizedBox.shrink(),
+                      },
+                    ),
                   ),
                 ),
               ),

@@ -51,6 +51,7 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
   late List<TextEditingController> _headerCtrls;
   late List<TableColumnAlign> _alignments;
   late List<List<TextEditingController>> _rowCtrls;
+  late final String _initialSnapshot;
 
   @override
   void initState() {
@@ -73,6 +74,61 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
       _rowCtrls.add(
         List.generate(_headerCtrls.length, (_) => TextEditingController()),
       );
+    }
+    _initialSnapshot = _serializeState();
+  }
+
+  String _serializeState() {
+    final h = _headerCtrls.map((c) => c.text).join('\x1f');
+    final a = _alignments.map((e) => e.name).join(',');
+    final r = _rowCtrls
+        .map((row) => row.map((c) => c.text).join('\x1f'))
+        .join('\x1e');
+    return '$h|$a|$r';
+  }
+
+  bool get _hasChanges => _serializeState() != _initialSnapshot;
+
+  Future<void> _handleClose() async {
+    if (!_hasChanges) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final tokens = context.tokens;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        backgroundColor: tokens.surfacePrimary,
+        shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedLg),
+        title: Text(
+          'Discard table edits?',
+          style: AppTypography.titleSm(color: tokens.textPrimary),
+        ),
+        content: Text(
+          'You have unsaved changes in this table.',
+          style: AppTypography.bodySm(color: tokens.textSecondary),
+        ),
+        actions: [
+          SizedBox(
+            height: AppSpacing.minTouchTarget,
+            child: TextButton(
+              onPressed: () => Navigator.of(dlgCtx).pop(false),
+              child: const Text('Keep editing'),
+            ),
+          ),
+          SizedBox(
+            height: AppSpacing.minTouchTarget,
+            child: TextButton(
+              onPressed: () => Navigator.of(dlgCtx).pop(true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: const Text('Discard'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -164,256 +220,305 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final palette = AppColors.getPaletteById(widget.paletteId);
     final accent = palette.resolveAccentColor(isDark);
 
-    return Padding(
-      padding: AppSpacing.modalSheetPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              TackIcon(TackIcons.table, size: 19, color: accent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Visual Table Editor',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.lightTextPrimary,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleClose();
+      },
+      child: Padding(
+        padding: AppSpacing.modalSheetPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                TackIcon(TackIcons.table, size: 19, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Visual Table Editor',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Tap the alignment icon on a header to cycle left, center, or right.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              TextButton.icon(
-                onPressed: _addColumn,
-                icon: const TackIcon(TackIcons.plus, size: 14),
-                label: const Text('Column'),
-              ),
-              TextButton.icon(
-                onPressed: _addRow,
-                icon: const TackIcon(TackIcons.plus, size: 14),
-                label: const Text('Row'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 330),
-            child: SingleChildScrollView(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Row
-                    Row(
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: const TackIcon(TackIcons.close, size: 18),
+                  onPressed: _handleClose,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            Wrap(
+              spacing: AppSpacing.s2,
+              runSpacing: AppSpacing.s1,
+              children: [
+                SizedBox(
+                  height: AppSpacing.minTouchTarget,
+                  child: OutlinedButton.icon(
+                    onPressed: _addColumn,
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.roundedSm,
+                      ),
+                    ),
+                    icon: const TackIcon(TackIcons.plus, size: 15),
+                    label: const Text('Add column'),
+                  ),
+                ),
+                SizedBox(
+                  height: AppSpacing.minTouchTarget,
+                  child: OutlinedButton.icon(
+                    onPressed: _addRow,
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.roundedSm,
+                      ),
+                    ),
+                    icon: const TackIcon(TackIcons.plus, size: 15),
+                    label: const Text('Add row'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 330),
+                child: SingleChildScrollView(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(width: 34),
-                        ...List.generate(_headerCtrls.length, (colIdx) {
-                          return Container(
-                            width: 176,
-                            margin: const EdgeInsets.only(right: 6, bottom: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: isDark ? 0.18 : 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: accent.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                        // Header Row
+                        Row(
+                          children: [
+                            const SizedBox(width: AppSpacing.minTouchTarget),
+                            ...List.generate(_headerCtrls.length, (colIdx) {
+                              return Container(
+                                width: 184,
+                                margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: isDark ? 0.18 : 0.1),
+                                  borderRadius: AppSpacing.roundedSm,
+                                  border: Border.all(
+                                    color: accent.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(
-                                      width: 28,
-                                      height: 28,
-                                      child: IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                        icon: TackIcon(
-                                          _alignIcon(_alignments[colIdx]),
-                                          size: 15,
-                                          color: accent,
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: AppSpacing.minTouchTarget,
+                                            minHeight: AppSpacing.minTouchTarget,
+                                          ),
+                                          icon: TackIcon(
+                                            _alignIcon(_alignments[colIdx]),
+                                            size: 16,
+                                            color: accent,
+                                          ),
+                                          tooltip: 'Align: ${_alignments[colIdx].name}',
+                                          onPressed: () => _cycleAlign(colIdx),
                                         ),
-                                        tooltip: 'Cycle Alignment',
-                                        onPressed: () => _cycleAlign(colIdx),
+                                        const Spacer(),
+                                        if (_headerCtrls.length > 1)
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                              minWidth: AppSpacing.minTouchTarget,
+                                              minHeight: AppSpacing.minTouchTarget,
+                                            ),
+                                            icon: const TackIcon(
+                                              TackIcons.close,
+                                              size: 15,
+                                            ),
+                                            tooltip: 'Delete Column',
+                                            onPressed: () => _removeColumn(colIdx),
+                                          ),
+                                      ],
+                                    ),
+                                    TextField(
+                                      controller: _headerCtrls[colIdx],
+                                      minLines: 1,
+                                      maxLines: 3,
+                                      keyboardType: TextInputType.multiline,
+                                      style: AppTypography.label(
+                                        color: tokens.textPrimary,
+                                        weight: FontWeight.w700,
+                                      ),
+                                      decoration: AppInputDecorations.bareWithHint(
+                                        'Header',
+                                        hintStyle: AppTypography.label(
+                                          color: tokens.textSecondary,
+                                          weight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
-                                    const Spacer(),
-                                    if (_headerCtrls.length > 1)
-                                      SizedBox(
-                                        width: 28,
-                                        height: 28,
-                                        child: IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                          icon: const TackIcon(
-                                            TackIcons.close,
-                                            size: 14,
-                                          ),
-                                          tooltip: 'Delete Column',
-                                          onPressed: () => _removeColumn(colIdx),
-                                        ),
-                                      ),
                                   ],
                                 ),
-                                TextField(
-                                  controller: _headerCtrls[colIdx],
-                                  minLines: 1,
-                                  maxLines: 3,
-                                  keyboardType: TextInputType.multiline,
-                                  style: TextStyle(
-                                    fontFamily: AppTypography.fontFamily,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: isDark
-                                        ? AppColors.darkTextPrimary
-                                        : AppColors.lightTextPrimary,
+                              );
+                            }),
+                          ],
+                        ),
+                        // Data Rows
+                        ...List.generate(_rowCtrls.length, (rowIdx) {
+                          return Row(
+                            children: [
+                              SizedBox(
+                                width: AppSpacing.minTouchTarget,
+                                height: AppSpacing.minTouchTarget,
+                                child: _rowCtrls.length > 1
+                                    ? IconButton(
+                                        tooltip: 'Delete Row ${rowIdx + 1}',
+                                        constraints: const BoxConstraints(
+                                          minWidth: AppSpacing.minTouchTarget,
+                                          minHeight: AppSpacing.minTouchTarget,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        icon: const TackIcon(
+                                          TackIcons.trash,
+                                          size: 15,
+                                          color: AppColors.error,
+                                        ),
+                                        onPressed: () => _removeRow(rowIdx),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          '${rowIdx + 1}',
+                                          style: AppTypography.caption(
+                                            color: tokens.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              ...List.generate(_headerCtrls.length, (colIdx) {
+                                return Container(
+                                  width: 184,
+                                  margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
                                   ),
-                                  decoration: AppInputDecorations.bareWithHint(
-                                    'Header',
-                                    hintStyle: TextStyle(
-                                      fontFamily: AppTypography.fontFamily,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                      color: isDark
-                                          ? AppColors.darkTextMuted
-                                          : AppColors.lightTextMuted,
+                                  decoration: BoxDecoration(
+                                    color: tokens.canvasSunken,
+                                    borderRadius: AppSpacing.roundedSm,
+                                    border: Border.all(
+                                      color: tokens.borderSubtle,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  child: TextField(
+                                    controller: _rowCtrls[rowIdx][colIdx],
+                                    minLines: 1,
+                                    maxLines: 4,
+                                    keyboardType: TextInputType.multiline,
+                                    textAlign: _alignments[colIdx] ==
+                                            TableColumnAlign.center
+                                        ? TextAlign.center
+                                        : (_alignments[colIdx] ==
+                                                TableColumnAlign.right
+                                            ? TextAlign.right
+                                            : TextAlign.left),
+                                    style: AppTypography.bodySm(
+                                      color: tokens.textPrimary,
+                                    ),
+                                    decoration: AppInputDecorations.bareWithHint(
+                                      'Cell...',
+                                      hintStyle: AppTypography.bodySm(
+                                        color: tokens.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
                           );
                         }),
                       ],
                     ),
-                    // Data Rows
-                    ...List.generate(_rowCtrls.length, (rowIdx) {
-                      return Row(
-                        children: [
-                          SizedBox(
-                            width: 34,
-                            child: _rowCtrls.length > 1
-                                ? IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    icon: const TackIcon(
-                                      TackIcons.trash,
-                                      size: 14,
-                                      color: AppColors.error,
-                                    ),
-                                    onPressed: () => _removeRow(rowIdx),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      '${rowIdx + 1}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? AppColors.darkTextMuted
-                                            : AppColors.lightTextMuted,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          ...List.generate(_headerCtrls.length, (colIdx) {
-                            return Container(
-                              width: 176,
-                              margin: const EdgeInsets.only(right: 6, bottom: 6),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? AppColors.darkSurfaceAlt
-                                    : const Color(0xFFF8F9FA),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.lightBorder,
-                                ),
-                              ),
-                              child: TextField(
-                                controller: _rowCtrls[rowIdx][colIdx],
-                                minLines: 1,
-                                maxLines: 4,
-                                keyboardType: TextInputType.multiline,
-                                textAlign: _alignments[colIdx] ==
-                                        TableColumnAlign.center
-                                    ? TextAlign.center
-                                    : (_alignments[colIdx] ==
-                                            TableColumnAlign.right
-                                        ? TextAlign.right
-                                        : TextAlign.left),
-                                style: TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontSize: 13,
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.lightTextPrimary,
-                                ),
-                                decoration: AppInputDecorations.bareWithHint(
-                                  'Cell...',
-                                  hintStyle: TextStyle(
-                                    fontFamily: AppTypography.fontFamily,
-                                    fontSize: 13,
-                                    color: isDark
-                                        ? AppColors.darkTextMuted
-                                        : AppColors.lightTextMuted,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
-                      );
-                    }),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              final updated = _buildTableSnapshot();
-              Navigator.of(context).pop();
-              widget.onSave(updated);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : AppColors.primaryDark,
-              foregroundColor: isDark ? AppColors.primaryDark : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+            const SizedBox(height: AppSpacing.s3),
+            Row(
+              children: [
+                SizedBox(
+                  height: AppSpacing.minTouchTarget,
+                  child: TextButton(
+                    onPressed: _handleClose,
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(
+                  child: SizedBox(
+                    height: AppSpacing.minTouchTarget,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final updated = _buildTableSnapshot();
+                        Navigator.of(context).pop();
+                        widget.onSave(updated);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? tokens.textPrimary : AppColors.primaryDark,
+                        foregroundColor: isDark ? tokens.surfacePrimary : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppSpacing.roundedSm,
+                        ),
+                      ),
+                      icon: const TackIcon(TackIcons.check, size: 16),
+                      label: Text(
+                        'Apply Table Changes',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.label(
+                          color: isDark ? tokens.surfacePrimary : Colors.white,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            icon: const TackIcon(TackIcons.check, size: 16),
-            label: Text(
-              'Apply Table Changes',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../shared/models/item_serializer.dart';
+import '../../../shared/widgets/tack_toast.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -48,7 +50,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late int _lastTabIndex;
-  String _userName = 'Karthik';
+  String _userName = 'My Desk';
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -109,275 +112,92 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
   }
 
   Future<void> _exportBackup(BuildContext context) async {
+    if (_isExporting) return;
+    setState(() => _isExporting = true);
+    final tokens = context.tokens;
     final workspace = context.read<WorkspaceProvider>();
     final jsonStr = workspace.exportWorkspaceJson();
     final totalExported = workspace.allActiveItems.length +
         workspace.trashItems.length +
         workspace.archivedItems.length;
+    File? tempFile;
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final docsDir = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      tempFile = File('${tempDir.path}/tack_backup_$timestamp.json');
+      await tempFile.writeAsString(jsonStr, flush: true);
 
-      final localBackup = File('${docsDir.path}/tack_backup_$timestamp.json');
-      await localBackup.writeAsString(jsonStr);
-
-      final file = File('${tempDir.path}/tack_backup_$timestamp.json');
-      await file.writeAsString(jsonStr);
-
-      if (context.mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text('Exported $totalExported items to backup'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-
-      await SharePlus.instance.share(
+      final result = await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(file.path, mimeType: 'application/json')],
+          files: [XFile(tempFile.path, mimeType: 'application/json')],
           subject: 'Tack Workspace Backup ($timestamp)',
         ),
       );
+      if (!context.mounted) return;
+      if (result.status != ShareResultStatus.dismissed) {
+        TackToast.show(
+          context,
+          message: 'Exported $totalExported items to backup',
+          icon: TackIcons.check,
+          iconColor: tokens.success,
+        );
+      }
     } catch (_) {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: jsonStr,
-          subject: 'Tack Workspace Backup',
-        ),
-      );
+      if (!context.mounted) return;
+      try {
+        final fallback = await SharePlus.instance.share(
+          ShareParams(
+            text: jsonStr,
+            subject: 'Tack Workspace Backup',
+          ),
+        );
+        if (!context.mounted) return;
+        if (fallback.status != ShareResultStatus.dismissed) {
+          TackToast.show(
+            context,
+            message: 'Exported $totalExported items as text backup',
+            icon: TackIcons.check,
+            iconColor: tokens.success,
+          );
+        }
+      } catch (_) {
+        if (!context.mounted) return;
+        TackToast.show(
+          context,
+          message: 'Could not export backup. Please try again.',
+          icon: TackIcons.close,
+          iconColor: tokens.danger,
+        );
+      }
+    } finally {
+      if (tempFile != null && await tempFile.exists()) {
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
     }
   }
 
   Future<void> _showRestoreDialog(BuildContext context) async {
-    final controller = TextEditingController();
     final tokens = context.tokens;
-
-    try {
-      final confirmed = await AppFloatingDialog.showCustom<bool>(
-        context: context,
-        builder: (dialogCtx) {
-          String? validationMessage;
-          bool isValid = false;
-
-          void validateInput(
-            String text,
-            void Function(void Function()) setDialogState,
-          ) {
-            final trimmed = text.trim();
-            if (trimmed.isEmpty) {
-              setDialogState(() {
-                validationMessage = null;
-                isValid = false;
-              });
-              return;
-            }
-
-            try {
-              final dynamic decoded = jsonDecode(trimmed);
-              int count = 0;
-              if (decoded is Map<String, dynamic> &&
-                  decoded.containsKey('items')) {
-                count = (decoded['items'] as List<dynamic>).length;
-              } else if (decoded is List<dynamic>) {
-                count = decoded.length;
-              }
-
-              setDialogState(() {
-                if (count > 0) {
-                  validationMessage = 'Valid Tack backup: $count items found';
-                  isValid = true;
-                } else {
-                  validationMessage = 'Backup contains 0 items';
-                  isValid = false;
-                }
-              });
-            } catch (_) {
-              setDialogState(() {
-                validationMessage = 'Invalid JSON format';
-                isValid = false;
-              });
-            }
-          }
-
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              final isDark = tokens.isDark;
-              final viewInsets = MediaQuery.viewInsetsOf(dialogCtx);
-
-              return AnimatedPadding(
-                padding: EdgeInsets.only(bottom: viewInsets.bottom),
-                duration: AppSpacing.durationFast,
-                curve: AppSpacing.curveStandard,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
-                      decoration: ShapeDecoration(
-                        color: tokens.surfacePrimary,
-                        shape: SmoothRectangleBorder(
-                          borderRadius: AppSpacing.roundedModal,
-                          smoothness: AppSpacing.defaultSmoothing,
-                          side: BorderSide(
-                            color: tokens.borderSubtle.withValues(alpha: isDark ? 0.35 : 0.6),
-                            width: 0.8,
-                          ),
-                        ),
-                        shadows: AppSpacing.elevModal(isDark),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Material(
-                        color: tokens.surfacePrimary,
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.s6),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                'Restore Backup',
-                                style: AppTypography.titleSm(
-                                  color: tokens.textPrimary,
-                                  weight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.s2),
-                              Text(
-                                'Paste a previously exported Tack JSON backup to merge and restore your workspace.',
-                                style: AppTypography.bodySm(
-                                  color: tokens.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.s3),
-                              OutlinedButton.icon(
-                                icon: TackIcon(
-                                  TackIcons.clipboard,
-                                  size: 16,
-                                  color: tokens.textPrimary,
-                                ),
-                                label: const Text('Paste from Clipboard'),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: tokens.borderSubtle),
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: AppSpacing.roundedPill,
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  final data =
-                                      await Clipboard.getData(Clipboard.kTextPlain);
-                                  final text = data?.text?.trim() ?? '';
-                                  if (text.isNotEmpty) {
-                                    controller.text = text;
-                                    validateInput(text, setDialogState);
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: AppSpacing.s3),
-                              TextField(
-                                controller: controller,
-                                maxLines: 4,
-                                style: AppTypography.mono(color: tokens.textPrimary),
-                                onChanged: (val) => validateInput(val, setDialogState),
-                                decoration: InputDecoration(
-                                  hintText: 'Paste backup JSON content here…',
-                                  hintStyle: AppTypography.caption(color: tokens.textTertiary),
-                                  filled: true,
-                                  fillColor: tokens.canvasSunken,
-                                  border: OutlineInputBorder(
-                                    borderRadius: AppSpacing.roundedSm,
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                              if (validationMessage != null) ...[
-                                const SizedBox(height: AppSpacing.s2),
-                                Text(
-                                  validationMessage!,
-                                  style: AppTypography.caption(
-                                    color: isValid ? tokens.success : tokens.danger,
-                                    weight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: AppSpacing.s6),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size.fromHeight(46),
-                                        side: BorderSide(color: tokens.borderSubtle),
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: AppSpacing.roundedPill,
-                                        ),
-                                      ),
-                                      onPressed: () => Navigator.of(dialogCtx).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.s3),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        minimumSize: const Size.fromHeight(46),
-                                        backgroundColor: tokens.actionPrimary,
-                                        foregroundColor: tokens.actionPrimaryFg,
-                                        elevation: 0,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: AppSpacing.roundedPill,
-                                        ),
-                                      ),
-                                      onPressed: isValid
-                                          ? () => Navigator.of(dialogCtx).pop(true)
-                                          : null,
-                                      child: const Text('Restore'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+    final workspace = context.read<WorkspaceProvider>();
+    final restoredCount = await AppFloatingDialog.showCustom<int>(
+      context: context,
+      builder: (_) => _RestoreBackupDialog(
+        onRestore: (json) => workspace.importWorkspaceJson(json),
+      ),
+    );
+    if (restoredCount != null && context.mounted) {
+      TackToast.show(
+        context,
+        message: 'Restored $restoredCount items',
+        icon: TackIcons.check,
+        iconColor: tokens.success,
       );
-
-      if (confirmed == true && context.mounted) {
-        final text = controller.text.trim();
-        if (text.isEmpty) return;
-        try {
-          final count =
-              await context.read<WorkspaceProvider>().importWorkspaceJson(text);
-          if (context.mounted) {
-            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              SnackBar(
-                content: Text('Restored $count items'),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        } catch (_) {
-          if (context.mounted) {
-            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              const SnackBar(
-                content: Text('Failed to restore: invalid backup format'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-      }
-    } finally {
-      controller.dispose();
     }
   }
 
@@ -443,7 +263,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 weight: FontWeight.w500,
               ),
               tabs: const [
-                Tab(text: 'Profile & Settings'),
+                Tab(text: 'Preferences'),
                 Tab(text: "What's New"),
               ],
             ),
@@ -475,157 +295,211 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     final totalActive = workspace.allActiveItems.length;
     final totalItems = totalActive + trashCount + workspace.archivedItems.length;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s5,
-        AppSpacing.s3,
-        AppSpacing.s5,
-        AppSpacing.s9,
-      ),
-      children: [
-        ZOrderColumn(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
-            Container(
-              clipBehavior: Clip.antiAlias,
-              padding: const EdgeInsets.all(AppSpacing.s4),
-              decoration: ShapeDecoration(
-                color: tokens.surfacePrimary,
-                shape: SmoothRectangleBorder(
-                  borderRadius: AppSpacing.roundedMd,
-                  smoothness: AppSpacing.defaultSmoothing,
-                ),
-                shadows: AppSpacing.elev1(tokens.isDark),
-              ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final gutter = AppSpacing.screenGutter(MediaQuery.sizeOf(context).width);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              AppSpacing.s3,
+              gutter,
+              AppSpacing.s9 + bottomInset,
+            ),
             children: [
-              Row(
+              ZOrderColumn(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Stack(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: ShapeDecoration(
-                          color: tokens.actionPrimary,
-                          shape: SmoothRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            smoothness: AppSpacing.defaultSmoothing,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _userName.isNotEmpty
-                                ? _userName[0].toUpperCase()
-                                : 'K',
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: tokens.actionPrimaryFg,
-                            ),
-                          ),
-                        ),
+                  // 1. Profile & Workspace Hero Card (DailyLoop & Regent style)
+                  Container(
+                    clipBehavior: Clip.antiAlias,
+                    padding: const EdgeInsets.all(AppSpacing.s4),
+                    decoration: ShapeDecoration(
+                      color: tokens.surfacePrimary,
+                      shape: SmoothRectangleBorder(
+                        borderRadius: AppSpacing.roundedMd,
+                        smoothness: AppSpacing.defaultSmoothing,
                       ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: tokens.accentPin,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: tokens.surfacePrimary,
-                              width: 2.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: AppSpacing.s3),
-                  Expanded(
+                      shadows: AppSpacing.elev1(tokens.isDark),
+                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                _userName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.title(
-                                  color: tokens.textPrimary,
+                            Stack(
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: ShapeDecoration(
+                                    color: tokens.actionPrimary,
+                                    shape: SmoothRectangleBorder(
+                                      borderRadius: AppSpacing.roundedMd,
+                                      smoothness: AppSpacing.defaultSmoothing,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _userName.isNotEmpty
+                                          ? _userName[0].toUpperCase()
+                                          : 'M',
+                                      style: AppTypography.titleLg(
+                                        color: tokens.actionPrimaryFg,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: tokens.accentPin,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: tokens.surfacePrimary,
+                                        width: 2.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: _editProfileName,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: tokens.canvasSunken,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: TackIcon(
-                                  TackIcons.editSvg,
-                                  size: 13,
-                                  color: tokens.textSecondary,
-                                ),
+                            const SizedBox(width: AppSpacing.s3),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _userName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.title(
+                                        color: tokens.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.s1),
+                                  IconButton(
+                                    tooltip: 'Edit workspace name',
+                                    onPressed: _editProfileName,
+                                    constraints: const BoxConstraints(
+                                      minWidth: AppSpacing.minTouchTarget,
+                                      minHeight: AppSpacing.minTouchTarget,
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: tokens.canvasSunken,
+                                      minimumSize: const Size(36, 36),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.padded,
+                                    ),
+                                    icon: TackIcon(
+                                      TackIcons.editSvg,
+                                      size: 16,
+                                      color: tokens.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: AppSpacing.s4),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isCompact = constraints.maxWidth < 340;
+                            if (isCompact) {
+                              return Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _StatMetricPill(
+                                          label: 'Notes',
+                                          count: '$noteCount',
+                                          tokens: tokens,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.s2),
+                                      Expanded(
+                                        child: _StatMetricPill(
+                                          label: 'Boards',
+                                          count: '$boardCount',
+                                          tokens: tokens,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.s2),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _StatMetricPill(
+                                          label: 'Tasks',
+                                          count: '$taskCount',
+                                          tokens: tokens,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.s2),
+                                      Expanded(
+                                        child: _StatMetricPill(
+                                          label: 'Trash',
+                                          count: '$trashCount',
+                                          tokens: tokens,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: _StatMetricPill(
+                                    label: 'Notes',
+                                    count: '$noteCount',
+                                    tokens: tokens,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s2),
+                                Expanded(
+                                  child: _StatMetricPill(
+                                    label: 'Boards',
+                                    count: '$boardCount',
+                                    tokens: tokens,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s2),
+                                Expanded(
+                                  child: _StatMetricPill(
+                                    label: 'Tasks',
+                                    count: '$taskCount',
+                                    tokens: tokens,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s2),
+                                Expanded(
+                                  child: _StatMetricPill(
+                                    label: 'Trash',
+                                    count: '$trashCount',
+                                    tokens: tokens,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s4),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatMetricPill(
-                      label: 'Notes',
-                      count: '$noteCount',
-                      tokens: tokens,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  Expanded(
-                    child: _StatMetricPill(
-                      label: 'Boards',
-                      count: '$boardCount',
-                      tokens: tokens,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  Expanded(
-                    child: _StatMetricPill(
-                      label: 'Tasks',
-                      count: '$taskCount',
-                      tokens: tokens,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  Expanded(
-                    child: _StatMetricPill(
-                      label: 'Trash',
-                      count: '$trashCount',
-                      tokens: tokens,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
 
         const SizedBox(height: AppSpacing.s4),
 
@@ -808,7 +682,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                     weight: FontWeight.w500,
                   ),
                 ),
-                onTap: () => _exportBackup(context),
+                trailing: _isExporting
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: tokens.actionPrimary,
+                        ),
+                      )
+                    : null,
+                onTap: _isExporting ? null : () => _exportBackup(context),
               ),
               Divider(height: 1, color: tokens.borderSubtle),
               ListTile(
@@ -855,7 +739,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                   color: tokens.textPrimary,
                 ),
                 title: Text(
-                  'About Tack',
+                  'About & Privacy',
                   style: AppTypography.body(
                     color: tokens.textPrimary,
                     weight: FontWeight.w500,
@@ -879,6 +763,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           ],
         ),
       ],
+    ),
+        ),
+      ),
     );
   }
 }
@@ -948,44 +835,350 @@ class _ThemeSegmentedControl extends StatelessWidget {
     return SlidingPillTrack(
       itemCount: modes.length,
       selectedIndex: selectedIndex,
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(AppSpacing.s1),
       trackColor: tokens.canvasSunken,
       indicatorColor: tokens.actionPrimary,
       children: modes.map((entry) {
         final isSelected = themeProv.themeMode == entry.$1;
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            themeProv.setThemeMode(entry.$1);
-          },
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 40),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TackIcon(
-                  entry.$3,
-                  size: 15,
-                  color: isSelected
-                      ? tokens.actionPrimaryFg
-                      : tokens.textSecondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  entry.$2,
-                  style: AppTypography.label(
+        return Semantics(
+          button: true,
+          selected: isSelected,
+          label: '${entry.$2} theme',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              themeProv.setThemeMode(entry.$1);
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.minTouchTarget,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TackIcon(
+                    entry.$3,
+                    size: 16,
                     color: isSelected
                         ? tokens.actionPrimaryFg
                         : tokens.textSecondary,
-                    weight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.s2),
+                  Flexible(
+                    child: Text(
+                      entry.$2,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.label(
+                        color: isSelected
+                            ? tokens.actionPrimaryFg
+                            : tokens.textSecondary,
+                        weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _RestoreBackupDialog extends StatefulWidget {
+  final Future<int> Function(String json) onRestore;
+
+  const _RestoreBackupDialog({required this.onRestore});
+
+  @override
+  State<_RestoreBackupDialog> createState() => _RestoreBackupDialogState();
+}
+
+class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
+  final TextEditingController _controller = TextEditingController();
+  String? _validationMessage;
+  bool _isValid = false;
+  bool _isRestoring = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _validateInput(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _validationMessage = null;
+        _isValid = false;
+      });
+      return;
+    }
+
+    try {
+      final dynamic decoded = jsonDecode(trimmed);
+      final List<dynamic>? rawItems;
+      if (decoded is Map<String, dynamic> && decoded['items'] is List<dynamic>) {
+        rawItems = decoded['items'] as List<dynamic>;
+      } else if (decoded is List<dynamic>) {
+        rawItems = decoded;
+      } else {
+        rawItems = null;
+      }
+
+      if (rawItems == null) {
+        setState(() {
+          _validationMessage = 'Not a recognized Tack backup schema';
+          _isValid = false;
+        });
+        return;
+      }
+
+      int validCount = 0;
+      for (final entry in rawItems) {
+        if (entry is Map<String, dynamic> &&
+            ItemSerializer.fromJson(entry) != null) {
+          validCount++;
+        }
+      }
+
+      setState(() {
+        if (validCount > 0) {
+          _validationMessage = 'Ready to restore $validCount items';
+          _isValid = true;
+        } else {
+          _validationMessage = 'No valid Tack items found in backup';
+          _isValid = false;
+        }
+      });
+    } catch (_) {
+      setState(() {
+        _validationMessage = 'Invalid JSON format';
+        _isValid = false;
+      });
+    }
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (!mounted) return;
+    if (text.isEmpty) {
+      setState(() {
+        _validationMessage = 'Clipboard is empty';
+        _isValid = false;
+      });
+      return;
+    }
+    _controller.text = text;
+    _validateInput(text);
+  }
+
+  Future<void> _submitRestore() async {
+    if (_isRestoring || !_isValid) return;
+    final raw = _controller.text.trim();
+    if (raw.isEmpty) return;
+
+    setState(() => _isRestoring = true);
+    try {
+      final count = await widget.onRestore(raw);
+      if (!mounted) return;
+      Navigator.of(context).pop(count);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRestoring = false;
+        _validationMessage =
+            'Restore failed: invalid or incompatible backup items';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+
+    return SafeArea(
+      child: AnimatedPadding(
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        duration: AppSpacing.durationFast,
+        curve: AppSpacing.curveStandard,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s6,
+              vertical: AppSpacing.s4,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Container(
+                decoration: ShapeDecoration(
+                  color: tokens.surfacePrimary,
+                  shape: SmoothRectangleBorder(
+                    borderRadius: AppSpacing.roundedModal,
+                    smoothness: AppSpacing.defaultSmoothing,
+                    side: BorderSide(
+                      color: tokens.borderSubtle.withValues(
+                        alpha: isDark ? 0.35 : 0.6,
+                      ),
+                      width: 0.8,
+                    ),
+                  ),
+                  shadows: AppSpacing.elevModal(isDark),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: tokens.surfacePrimary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.s6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Restore Backup',
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(
+                          'Paste an exported Tack JSON backup. Matching IDs update existing items; new items are added.',
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        OutlinedButton.icon(
+                          icon: TackIcon(
+                            TackIcons.clipboard,
+                            size: 16,
+                            color: tokens.textPrimary,
+                          ),
+                          label: const Text(
+                            'Paste from Clipboard',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(
+                              AppSpacing.minTouchTarget,
+                            ),
+                            side: BorderSide(color: tokens.borderSubtle),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
+                          ),
+                          onPressed: _isRestoring ? null : _pasteFromClipboard,
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        TextField(
+                          controller: _controller,
+                          enabled: !_isRestoring,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          minLines: 3,
+                          maxLines: 5,
+                          style: AppTypography.mono(color: tokens.textPrimary),
+                          onChanged: _validateInput,
+                          decoration: InputDecoration(
+                            hintText: 'Paste backup JSON content here…',
+                            hintStyle: AppTypography.caption(
+                              color: tokens.textTertiary,
+                            ),
+                            filled: true,
+                            fillColor: tokens.canvasSunken,
+                            border: const OutlineInputBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        if (_validationMessage != null) ...[
+                          const SizedBox(height: AppSpacing.s2),
+                          Text(
+                            _validationMessage!,
+                            style: AppTypography.caption(
+                              color: _isValid ? tokens.success : tokens.danger,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.s6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(
+                                    AppSpacing.minTouchTarget,
+                                  ),
+                                  side: BorderSide(color: tokens.borderSubtle),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                  ),
+                                ),
+                                onPressed: _isRestoring
+                                    ? null
+                                    : () => Navigator.of(context).pop(),
+                                child: const Text(
+                                  'Cancel',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s3),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(
+                                    AppSpacing.minTouchTarget,
+                                  ),
+                                  backgroundColor: tokens.actionPrimary,
+                                  foregroundColor: tokens.actionPrimaryFg,
+                                  elevation: 0,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                  ),
+                                ),
+                                onPressed: (_isValid && !_isRestoring)
+                                    ? _submitRestore
+                                    : null,
+                                child: _isRestoring
+                                    ? SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: tokens.actionPrimaryFg,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Restore',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

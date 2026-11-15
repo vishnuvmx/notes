@@ -12,6 +12,7 @@ import '../../features/notes/services/note_template_service.dart';
 import '../providers/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';
+import 'tack_toast.dart';
 
 /// Fast Capture Sheet (`05-information-architecture.md` §4, `07-design-system.md` §7).
 ///
@@ -48,6 +49,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   String _selectedPaletteId = 'amber';
   String? _selectedFolder;
   bool _showTemplatesAndColor = false;
+  bool _isSubmitting = false;
   List<NoteTemplate> _templates = NoteTemplateService.builtInTemplates;
   String _selectedTemplateId = 'blank';
 
@@ -93,31 +95,49 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
   }
 
   Future<void> _handleSaveToInbox() async {
+    if (_isSubmitting) return;
     HapticFeedback.mediumImpact();
     final raw = _captureController.text.trim();
     if (raw.isEmpty) {
       _captureFocusNode.requestFocus();
       return;
     }
+    setState(() => _isSubmitting = true);
+    final tokens = context.tokens;
     final workspace = context.read<WorkspaceProvider>();
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    await workspace.captureToInbox(
-      raw,
-      paletteId: _selectedPaletteId,
-    );
-    if (mounted) {
+    final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
+    try {
+      await workspace.captureToInbox(
+        raw,
+        paletteId: _selectedPaletteId,
+      );
+      if (!mounted) return;
       Navigator.of(context).pop(null);
-      messenger?.showSnackBar(
-        const SnackBar(
-          content: Text('Saved to Inbox'),
-          duration: Duration(seconds: 2),
-        ),
+      if (hostContext != null && hostContext.mounted) {
+        TackToast.show(
+          hostContext,
+          message: 'Saved to Inbox',
+          icon: TackIcons.check,
+          iconColor: tokens.success,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      TackToast.show(
+        context,
+        message: 'Could not save to Inbox. Please try again.',
+        icon: TackIcons.close,
+        iconColor: tokens.danger,
       );
     }
   }
 
   Future<void> _handleOpenAsNote() async {
+    if (_isSubmitting) return;
     HapticFeedback.mediumImpact();
+    setState(() => _isSubmitting = true);
+    final tokens = context.tokens;
     final raw = _captureController.text.trim();
     final workspace = context.read<WorkspaceProvider>();
     final tpl = _activeTemplate;
@@ -148,64 +168,103 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
       final lines = raw.split('\n');
       final firstLine = lines.first.replaceAll(RegExp(r'^#+\s*'), '').trim();
       resolvedTitle = firstLine.isNotEmpty
-          ? (firstLine.length > 56 ? '${firstLine.substring(0, 56)}…' : firstLine)
+          ? (firstLine.length > 56
+              ? '${firstLine.substring(0, 56)}…'
+              : firstLine)
           : 'Untitled Note';
-      resolvedBody = lines.length > 1 ? lines.sublist(1).join('\n').trimLeft() : raw;
+      resolvedBody =
+          lines.length > 1 ? lines.sublist(1).join('\n').trimLeft() : raw;
     }
 
-    final item = await workspace.createQuickItem(
-      title: resolvedTitle,
-      type: ItemType.note,
-      paletteId: _selectedPaletteId,
-      extraContent: resolvedBody,
-      folderName: _selectedFolder,
-      iconEmoji: tpl.id == 'blank' ? null : tpl.iconEmoji,
-      isInbox: false,
-    );
-    if (mounted) {
+    try {
+      final item = await workspace.createQuickItem(
+        title: resolvedTitle,
+        type: ItemType.note,
+        paletteId: _selectedPaletteId,
+        extraContent: resolvedBody,
+        folderName: _selectedFolder,
+        iconEmoji: tpl.id == 'blank' ? null : tpl.iconEmoji,
+        isInbox: false,
+      );
+      if (!mounted) return;
       Navigator.of(context).pop(item);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      TackToast.show(
+        context,
+        message: 'Could not create note. Please try again.',
+        icon: TackIcons.close,
+        iconColor: tokens.danger,
+      );
     }
   }
 
   Future<void> _handleNewBoard() async {
+    if (_isSubmitting) return;
     HapticFeedback.mediumImpact();
+    setState(() => _isSubmitting = true);
+    final tokens = context.tokens;
     final raw = _captureController.text.trim();
     final firstLine = raw.split('\n').first.trim();
     final title = firstLine.isEmpty ? 'Untitled Board' : firstLine;
     final workspace = context.read<WorkspaceProvider>();
-    final board = await workspace.createQuickItem(
-      title: title,
-      type: ItemType.whiteboard,
-      paletteId: _selectedPaletteId == 'amber' ? 'cyan' : _selectedPaletteId,
-      folderName: _selectedFolder,
-    );
-    if (mounted) {
+    try {
+      final board = await workspace.createQuickItem(
+        title: title,
+        type: ItemType.whiteboard,
+        paletteId:
+            _selectedPaletteId == 'amber' ? 'cyan' : _selectedPaletteId,
+        folderName: _selectedFolder,
+      );
+      if (!mounted) return;
       Navigator.of(context).pop(board);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      TackToast.show(
+        context,
+        message: 'Could not create board. Please try again.',
+        icon: TackIcons.close,
+        iconColor: tokens.danger,
+      );
     }
   }
 
   Future<void> _handlePasteClipboard() async {
     HapticFeedback.selectionClick();
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text?.trim() ?? '';
-    if (text.isEmpty) {
+    final tokens = context.tokens;
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim() ?? '';
+      if (text.isEmpty) {
+        if (mounted) {
+          TackToast.show(
+            context,
+            message: 'Clipboard is empty',
+            icon: TackIcons.info,
+            iconColor: tokens.textSecondary,
+          );
+        }
+        return;
+      }
+      final current = _captureController.text;
+      final next = current.isEmpty ? text : '$current\n$text';
+      _captureController.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+      if (mounted) setState(() {});
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('Clipboard is empty'),
-            duration: Duration(seconds: 2),
-          ),
+        TackToast.show(
+          context,
+          message: 'Could not read clipboard',
+          icon: TackIcons.close,
+          iconColor: tokens.danger,
         );
       }
-      return;
     }
-    final current = _captureController.text;
-    final next = current.isEmpty ? text : '$current\n$text';
-    _captureController.value = TextEditingValue(
-      text: next,
-      selection: TextSelection.collapsed(offset: next.length),
-    );
-    setState(() {});
   }
 
   @override
@@ -265,6 +324,73 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
           const SizedBox(height: AppSpacing.s2),
 
+          if (_selectedFolder != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Semantics(
+                button: true,
+                label: 'Notes and boards file to $_selectedFolder. Tap to clear.',
+                child: InkWell(
+                  borderRadius: AppSpacing.roundedPill,
+                  onTap: _isSubmitting
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedFolder = null);
+                        },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: AppSpacing.minTouchTarget,
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s3,
+                          vertical: AppSpacing.s1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.canvasSunken,
+                          borderRadius: AppSpacing.roundedPill,
+                          border: Border.all(color: tokens.borderSubtle),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TackIcon(
+                              TackIcons.folder,
+                              size: 14,
+                              color: tokens.textSecondary,
+                            ),
+                            const SizedBox(width: AppSpacing.s1),
+                            Flexible(
+                              child: Text(
+                                'File in $_selectedFolder',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption(
+                                  color: tokens.textSecondary,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s1),
+                            TackIcon(
+                              TackIcons.close,
+                              size: 12,
+                              color: tokens.textTertiary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s2),
+          ],
+
           // Auto-focused capture input field (`body-lg`, single clean container)
           Container(
             constraints: const BoxConstraints(minHeight: 96, maxHeight: 180),
@@ -313,7 +439,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
             ),
             const SizedBox(height: AppSpacing.s2),
             SizedBox(
-              height: 76,
+              height: 92,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _templates.length,
@@ -321,60 +447,73 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                 itemBuilder: (ctx, idx) {
                   final tpl = _templates[idx];
                   final selected = tpl.id == _selectedTemplateId;
-                  return InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedTemplateId = tpl.id;
-                        _selectedPaletteId = AppColors.normalizePaletteId(tpl.paletteId);
-                      });
-                    },
-                    borderRadius: AppSpacing.roundedSm,
-                    child: Container(
-                      width: 148,
-                      padding: const EdgeInsets.all(AppSpacing.s3),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? tokens.canvasSunken
-                            : tokens.surfacePrimary,
-                        borderRadius: AppSpacing.roundedSm,
-                        border: Border.all(
+                  return Semantics(
+                    button: true,
+                    selected: selected,
+                    label: '${tpl.name}. ${tpl.subtitle}',
+                    child: InkWell(
+                      onTap: _isSubmitting
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _selectedTemplateId = tpl.id;
+                                _selectedPaletteId =
+                                    AppColors.normalizePaletteId(tpl.paletteId);
+                              });
+                            },
+                      borderRadius: AppSpacing.roundedSm,
+                      child: Container(
+                        width: 152,
+                        padding: const EdgeInsets.all(AppSpacing.s3),
+                        decoration: BoxDecoration(
                           color: selected
-                              ? tokens.borderFocus
-                              : tokens.borderSubtle,
-                          width: selected ? 1.5 : 1.0,
+                              ? tokens.canvasSunken
+                              : tokens.surfacePrimary,
+                          borderRadius: AppSpacing.roundedSm,
+                          border: Border.all(
+                            color: selected
+                                ? tokens.borderFocus
+                                : tokens.borderSubtle,
+                            width: selected ? 1.5 : 1.0,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Text(tpl.iconEmoji, style: const TextStyle(fontSize: 14)),
-                              const SizedBox(width: AppSpacing.s1),
-                              Expanded(
-                                child: Text(
-                                  tpl.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.label(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  tpl.iconEmoji,
+                                  style: AppTypography.bodySm(
                                     color: tokens.textPrimary,
-                                    weight: FontWeight.w600,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            tpl.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.caption(
-                              color: tokens.textTertiary,
+                                const SizedBox(width: AppSpacing.s1),
+                                Expanded(
+                                  child: Text(
+                                    tpl.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.label(
+                                      color: tokens.textPrimary,
+                                      weight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            Text(
+                              tpl.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption(
+                                color: tokens.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -391,22 +530,49 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               Expanded(
                 child: OutlinedButton(
                   key: const ValueKey('capture_open_as_note_btn'),
-                  onPressed: _handleOpenAsNote,
-                  child: const Text('Open as note'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(
+                      AppSpacing.minTouchTarget,
+                    ),
+                  ),
+                  onPressed: _isSubmitting ? null : _handleOpenAsNote,
+                  child: const Text(
+                    'Open as note',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.s3),
               Expanded(
                 child: ElevatedButton(
                   key: const ValueKey('capture_save_to_inbox_btn'),
-                  onPressed: _captureController.text.trim().isEmpty
-                      ? _handleOpenAsNote
-                      : _handleSaveToInbox,
-                  child: Text(
-                    _captureController.text.trim().isEmpty
-                        ? 'New blank note'
-                        : 'Save to Inbox',
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(
+                      AppSpacing.minTouchTarget,
+                    ),
                   ),
+                  onPressed: _isSubmitting
+                      ? null
+                      : (_captureController.text.trim().isEmpty
+                          ? _handleOpenAsNote
+                          : _handleSaveToInbox),
+                  child: _isSubmitting
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: tokens.actionPrimaryFg,
+                          ),
+                        )
+                      : Text(
+                          _captureController.text.trim().isEmpty
+                              ? 'New blank note'
+                              : 'Save to Inbox',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
               ),
             ],
@@ -415,33 +581,32 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           const SizedBox(height: AppSpacing.s2),
 
           // Quiet bottom action row (`Template…` · `New board` · `Paste clipboard`)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: AppSpacing.s1,
+            runSpacing: AppSpacing.s1,
             children: [
-              Flexible(
-                child: _QuietCaptureOption(
-                  icon: TackIcons.sparkles,
-                  label: _showTemplatesAndColor ? 'Hide options' : 'Template…',
-                  isActive: _showTemplatesAndColor || _selectedTemplateId != 'blank',
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _showTemplatesAndColor = !_showTemplatesAndColor);
-                  },
-                ),
+              _QuietCaptureOption(
+                icon: TackIcons.sparkles,
+                label: _showTemplatesAndColor ? 'Hide options' : 'Template…',
+                isActive:
+                    _showTemplatesAndColor || _selectedTemplateId != 'blank',
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(
+                    () => _showTemplatesAndColor = !_showTemplatesAndColor,
+                  );
+                },
               ),
-              Flexible(
-                child: _QuietCaptureOption(
-                  icon: TackIcons.boards,
-                  label: 'New board',
-                  onTap: _handleNewBoard,
-                ),
+              _QuietCaptureOption(
+                icon: TackIcons.boards,
+                label: 'New board',
+                onTap: _isSubmitting ? () {} : _handleNewBoard,
               ),
-              Flexible(
-                child: _QuietCaptureOption(
-                  icon: TackIcons.clipboard,
-                  label: 'Paste clipboard',
-                  onTap: _handlePasteClipboard,
-                ),
+              _QuietCaptureOption(
+                icon: TackIcons.clipboard,
+                label: 'Paste clipboard',
+                onTap: _isSubmitting ? () {} : _handlePasteClipboard,
               ),
             ],
           ),
@@ -469,23 +634,26 @@ class _QuietCaptureOption extends StatelessWidget {
     final tokens = context.tokens;
     final fg = isActive ? tokens.textPrimary : tokens.textSecondary;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppSpacing.roundedSm,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.minTouchTarget,
-          minWidth: AppSpacing.minTouchTarget,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TackIcon(icon, size: 16, color: fg),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppSpacing.roundedSm,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+            minWidth: AppSpacing.minTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TackIcon(icon, size: 16, color: fg),
+                const SizedBox(width: AppSpacing.s2),
+                Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -494,8 +662,8 @@ class _QuietCaptureOption extends StatelessWidget {
                     weight: isActive ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

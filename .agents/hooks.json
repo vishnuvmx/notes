@@ -1,0 +1,11 @@
+{
+  "recall-session-checkpoint": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "recall checkpoint --hook",
+        "timeout": 15
+      }
+    ]
+  }
+}
