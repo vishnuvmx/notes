@@ -14,6 +14,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       platform: TargetPlatform.android,
+      splashFactory: InkRipple.splashFactory,
       extensions: const <ThemeExtension<dynamic>>[
         TackTokens.light,
       ],
@@ -182,6 +183,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       platform: TargetPlatform.android,
+      splashFactory: InkRipple.splashFactory,
       extensions: const <ThemeExtension<dynamic>>[
         TackTokens.dark,
       ],
@@ -351,6 +353,11 @@ class AppTheme {
 class _TackFadePageTransitionsBuilder extends PageTransitionsBuilder {
   const _TackFadePageTransitionsBuilder();
 
+  static final Tween<Offset> _slideTween = Tween<Offset>(
+    begin: const Offset(0, 0.02),
+    end: Offset.zero,
+  );
+
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
@@ -367,11 +374,8 @@ class _TackFadePageTransitionsBuilder extends PageTransitionsBuilder {
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.025),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
+        position: _slideTween.animate(curved),
+        child: RepaintBoundary(child: child),
       ),
     );
   }

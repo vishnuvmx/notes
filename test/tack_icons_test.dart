@@ -198,5 +198,34 @@ void main() {
         }
       },
     );
+
+    test('dark-icons SVGs avoid harsh pitch-black and heavy near-black body fills', () {
+      const heavyColorizedNames = <String>[
+        'notes',
+        'clipboard',
+        'today_tasks',
+        'camera',
+        'palette',
+        'image',
+        'image_tool',
+      ];
+      for (final name in heavyColorizedNames) {
+        final content = File('icons/dark-icons/$name.svg').readAsStringSync();
+        expect(content, isNot(contains('#191A23')), reason: '$name still uses #191A23');
+        expect(content, isNot(contains('#1E293B')), reason: '$name still uses #1E293B');
+        expect(content, isNot(contains('fill="black"')), reason: '$name still uses black');
+      }
+      final allDark = Directory('icons/dark-icons')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.svg'));
+      for (final file in allDark) {
+        expect(
+          file.readAsStringSync(),
+          isNot(contains('fill="black"')),
+          reason: '${file.path} should soften raw fill="black"',
+        );
+      }
+    });
   });
 }

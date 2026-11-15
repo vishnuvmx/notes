@@ -189,7 +189,6 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
         : _v2Entries.where((e) => e.category == _selectedCategory).toList();
 
     return ListView(
-      clipBehavior: Clip.none,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s5,
         AppSpacing.s3,

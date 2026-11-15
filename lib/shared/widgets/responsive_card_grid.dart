@@ -36,7 +36,6 @@ class ResponsiveCardGrid extends StatelessWidget {
       );
     }
     return SingleChildScrollView(
-      clipBehavior: Clip.none,
       physics: physics ?? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: padding,
       child: columns,
@@ -52,7 +51,7 @@ class ResponsiveCardGrid extends StatelessWidget {
       if (columnChildren[colIndex].isNotEmpty) {
         columnChildren[colIndex].add(SizedBox(height: mainAxisSpacing));
       }
-      columnChildren[colIndex].add(itemBuilder(context, i));
+      columnChildren[colIndex].add(RepaintBoundary(child: itemBuilder(context, i)));
     }
 
     return Row(

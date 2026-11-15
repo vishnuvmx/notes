@@ -12,11 +12,13 @@ import 'package:notes/features/notes/services/markdown_table_service.dart';
 import 'package:notes/core/theme/theme_provider.dart';
 import 'package:notes/shared/providers/workspace_provider.dart';
 import 'package:notes/shared/widgets/neo_note_card.dart';
+import 'package:notes/shared/widgets/responsive_card_grid.dart';
 import 'package:notes/shared/widgets/app_bottom_sheet.dart';
 import 'package:notes/shared/widgets/app_floating_dialog.dart';
 import 'package:notes/shared/widgets/app_search_field.dart';
 import 'package:notes/shared/widgets/z_order_column.dart';
 import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
+import 'package:notes/shared/widgets/sliding_pill_track.dart';
 import 'package:notes/features/home/screens/home_screen.dart';
 import 'package:notes/features/notes/screens/note_editor_screen.dart';
 import 'package:notes/features/settings/screens/settings_screen.dart';
@@ -417,8 +419,11 @@ Footer text.
 
       // Verify the background pill fill smoothly glides across the dock when index changes
       final pillFinder = find.descendant(
-        of: find.byType(SmartBottomNavBar),
-        matching: find.byType(FractionallySizedBox),
+        of: find.descendant(
+          of: find.byType(SmartBottomNavBar),
+          matching: find.byType(SlideTransition),
+        ),
+        matching: find.byType(DecoratedBox),
       );
       final startX = tester.getTopLeft(pillFinder).dx;
 
@@ -475,9 +480,33 @@ Footer text.
       expect(find.byType(IndexedStack), findsOneWidget);
       expect(find.byType(TabBarView), findsNothing);
 
-      // Initially shows Profile & Settings content
-      expect(find.text('Trash & Deleted Items'), findsOneWidget);
+      // Initially shows clean simplified Profile & Settings labels without subheadings/subtitles
+      expect(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Trash'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Carry forward unfinished tasks'), findsOneWidget);
+      expect(find.text('All files'), findsOneWidget);
+      expect(find.text('Export backup'), findsOneWidget);
+      expect(find.text('Restore backup'), findsOneWidget);
+      expect(find.text('About Tack'), findsOneWidget);
+
+      expect(find.text('On-device JSON store'), findsNothing);
+      expect(find.text('Trash & Deleted Items'), findsNothing);
+      expect(find.text('Appearance'), findsNothing);
+      expect(find.text('Today & Daily Note'), findsNothing);
+      expect(find.text('Local Storage & Backup'), findsNothing);
+      expect(find.text('About'), findsNothing);
+      expect(find.text('Restore or permanently delete items'), findsNothing);
+
+      // Tapping Dark theme updates ThemeProvider synchronously and animates SlidingPillTrack cleanly
+      await tester.tap(find.text('Dark'));
+      await tester.pump();
+      expect(themeProvider.themeMode, ThemeMode.dark);
+      await tester.pumpAndSettle();
 
       // Switch to What's New tab
       await tester.tap(find.text("What's New"));
@@ -783,6 +812,191 @@ Footer text.
       expect(headerRect.top - sheetRect.top, greaterThanOrEqualTo(22.0));
       expect(headerRect.left - sheetRect.left, greaterThanOrEqualTo(22.0));
       expect((headerRect.left - optionRect.left).abs(), lessThanOrEqualTo(1.0));
+    });
+
+    testWidgets('15. Library filter bar scrolls away cleanly with grid and clips within viewport', (tester) async {
+      final repo = _MockWorkspaceRepo();
+      final now = DateTime(2026, 11, 15, 9, 0);
+      for (var i = 0; i < 16; i++) {
+        await repo.saveItem(
+          TextNote(
+            id: 'lib_$i',
+            title: 'Note $i',
+            content: '#work Item $i',
+            paletteId: 'slate',
+            tags: const ['work'],
+            createdAt: now.subtract(Duration(minutes: i)),
+            updatedAt: now.subtract(Duration(minutes: i)),
+          ),
+        );
+      }
+      final workspace = WorkspaceProvider(repo);
+      await workspace.loadItems();
+      workspace.setBottomNavIndex(1); // Library
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollFinder = find.byKey(const ValueKey('library_custom_scroll'));
+      expect(scrollFinder, findsOneWidget);
+      final customScroll = tester.widget<CustomScrollView>(scrollFinder);
+      expect(customScroll.clipBehavior, isNot(equals(Clip.none)));
+
+      // Initially at top: filter chips are visible inside viewport.
+      final initialFilterTop = tester.getTopLeft(find.text('All Notes')).dy;
+      final scrollTop = tester.getTopLeft(scrollFinder).dy;
+      expect(initialFilterTop, greaterThanOrEqualTo(scrollTop));
+
+      // Scroll down strongly -> filter bar slides out of view above the viewport.
+      await tester.drag(scrollFinder, const Offset(0, -450));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Scrollable>(find.descendant(of: scrollFinder, matching: find.byType(Scrollable)).first),
+        isNotNull,
+      );
+      expect(find.text('All Notes'), findsNothing);
+
+      // Scroll back to top -> filter bar returns cleanly.
+      await tester.drag(scrollFinder, const Offset(0, 600));
+      await tester.pumpAndSettle();
+      expect(find.text('All Notes'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('library_filter_bar')),
+          matching: find.text('#work'),
+        ),
+        findsOneWidget,
+      );
+
+      // Standalone ResponsiveCardGrid does not disable viewport clipping.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: ResponsiveCardGrid(
+              crossAxisCount: 2,
+              itemCount: 2,
+              itemBuilder: (_, i) => Text('Item $i'),
+            ),
+          ),
+        ),
+      );
+      final standaloneScroll = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect(standaloneScroll.clipBehavior, equals(Clip.hardEdge));
+    });
+
+    testWidgets('13. 120fps optimizations: composited SlidingPillTrack & RepaintBoundary IndexedStack tabs', (tester) async {
+      // SlidingPillTrack uses SlideTransition + RepaintBoundary (never AnimatedAlign relayouts)
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Center(
+              child: SlidingPillTrack(
+                itemCount: 3,
+                selectedIndex: 0,
+                trackColor: Colors.grey.shade200,
+                indicatorColor: Colors.black,
+                children: const [
+                  Center(child: Text('System')),
+                  Center(child: Text('Light')),
+                  Center(child: Text('Dark')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AnimatedAlign), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(SlidingPillTrack),
+          matching: find.byType(SlideTransition),
+        ),
+        findsOneWidget,
+      );
+
+      // Re-pump with new selectedIndex transitions pill smoothly via SlideTransition
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Center(
+              child: SlidingPillTrack(
+                itemCount: 3,
+                selectedIndex: 2,
+                trackColor: Colors.grey.shade200,
+                indicatorColor: Colors.black,
+                children: const [
+                  Center(child: Text('System')),
+                  Center(child: Text('Light')),
+                  Center(child: Text('Dark')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      final slideTransition = tester.widget<SlideTransition>(
+        find.descendant(
+          of: find.byType(SlidingPillTrack),
+          matching: find.byType(SlideTransition),
+        ),
+      );
+      expect(slideTransition.position.value.dx, greaterThan(0.0));
+      expect(slideTransition.position.value.dx, lessThan(2.0));
+      await tester.pumpAndSettle();
+      expect(slideTransition.position.value.dx, closeTo(2.0, 0.001));
+
+      // HomeScreen isolates IndexedStack tabs in RepaintBoundary without full-screen FadeTransition
+      final repo = _MockWorkspaceRepo();
+      final workspaceProvider = WorkspaceProvider(repo);
+      final themeProvider = ThemeProvider();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: workspaceProvider),
+            ChangeNotifierProvider.value(value: themeProvider),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            themeAnimationDuration: Duration.zero,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final indexedStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
+      expect(indexedStack.children.length, 4);
+      for (final child in indexedStack.children) {
+        expect(child, isA<RepaintBoundary>());
+      }
+      expect(
+        find.descendant(
+          of: find.byType(Scaffold),
+          matching: find.ancestor(
+            of: find.byType(IndexedStack),
+            matching: find.byType(FadeTransition),
+          ),
+        ),
+        findsNothing,
+      );
     });
   });
 }

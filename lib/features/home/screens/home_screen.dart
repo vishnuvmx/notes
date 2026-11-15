@@ -49,55 +49,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _tabFadeController;
-  late final Animation<double> _tabFadeOpacity;
-  WorkspaceProvider? _workspace;
-  int _lastStackIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabFadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 160),
-      value: 1.0,
-    );
-    _tabFadeOpacity = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(parent: _tabFadeController, curve: Curves.easeOutCubic),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final ws = context.read<WorkspaceProvider>();
-    if (_workspace != ws) {
-      _workspace?.removeListener(_syncTabTransition);
-      _workspace = ws;
-      _lastStackIndex = _stackIndexForTab(ws.bottomNavIndex);
-      ws.addListener(_syncTabTransition);
-    }
-  }
-
-  void _syncTabTransition() {
-    final ws = _workspace;
-    if (ws == null || !mounted) return;
-    final next = _stackIndexForTab(ws.bottomNavIndex);
-    if (next != _lastStackIndex) {
-      _lastStackIndex = next;
-      _tabFadeController.forward(from: 0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _workspace?.removeListener(_syncTabTransition);
-    _tabFadeController.dispose();
-    super.dispose();
-  }
-
+class _HomeScreenState extends State<HomeScreen> {
   void _openItem(BaseWorkspaceItem item, {bool startInEditMode = false}) {
     if (widget.onOpenItem != null) {
       widget.onOpenItem!(item, startInEditMode: startInEditMode);
@@ -309,24 +261,27 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         body: workspace.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : FadeTransition(
-                opacity: _tabFadeOpacity,
-                child: IndexedStack(
-                  index: _stackIndexForTab(activeTab),
-                  children: [
-                    // 0: Today
-                    TodayScreen(onOpenItem: _openItem),
+            : IndexedStack(
+                index: _stackIndexForTab(activeTab),
+                children: [
+                  // 0: Today
+                  RepaintBoundary(
+                    child: TodayScreen(onOpenItem: _openItem),
+                  ),
 
-                    // 1: Library
-                    _LibraryView(
+                  // 1: Library
+                  RepaintBoundary(
+                    child: _LibraryView(
                       onOpenItem: _openItem,
                       onCreateNote: () => _openCaptureSheet(
                         defaultType: ItemType.note,
                       ),
                     ),
+                  ),
 
-                    // 2: Boards (tab index 3)
-                    _BoardsView(
+                  // 2: Boards (tab index 3)
+                  RepaintBoundary(
+                    child: _BoardsView(
                       onOpenItem: _openItem,
                       onCreateBoard: () async {
                         final board = await workspace.createQuickItem(
@@ -337,11 +292,13 @@ class _HomeScreenState extends State<HomeScreen>
                         if (mounted) _openItem(board);
                       },
                     ),
+                  ),
 
-                    // 3: Search (tab index 4)
-                    SearchCommandScreen(onOpenItem: _openItem),
-                  ],
-                ),
+                  // 3: Search (tab index 4)
+                  RepaintBoundary(
+                    child: SearchCommandScreen(onOpenItem: _openItem),
+                  ),
+                ],
               ),
         bottomNavigationBar: SmartBottomNavBar(
           currentIndex: activeTab,
@@ -483,115 +440,127 @@ class _LibraryView extends StatelessWidget {
     final gutter = AppSpacing.screenGutter(screenWidth);
     final cols = AppSpacing.gridColumnsForWidth(screenWidth);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Single-row Filter Bar: Folder pill · Pinned chip · Real #tag chips
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: gutter),
-            children: [
-              // Folder selector chip
-              _LibraryFilterChip(
-                icon: TackIcons.folder,
-                label: workspace.selectedFolder,
-                isSelected: workspace.selectedFolder != 'All Notes',
-                showChevron: true,
-                onTap: () => _showFolderSheet(context, workspace),
+    return CustomScrollView(
+      key: const ValueKey('library_custom_scroll'),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
+        // Single-row Filter Bar: Folder pill · Pinned chip · Real #tag chips.
+        // Lives inside the scroll view so it slides away while browsing and
+        // returns cleanly when scrolling back to the top.
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 50,
+            child: ListView(
+              key: const ValueKey('library_filter_bar'),
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.fromLTRB(
+                gutter,
+                AppSpacing.s1,
+                gutter,
+                AppSpacing.s2,
               ),
-              const SizedBox(width: AppSpacing.s2),
-
-              // Pinned filter chip
-              _LibraryFilterChip(
-                leadingWidget: TackPinBadge(
-                  color: workspace.pinnedFilterOnly
-                      ? tokens.actionPrimaryFg
-                      : tokens.accentPin,
-                  size: 8,
-                ),
-                label: 'Pinned',
-                isSelected: workspace.pinnedFilterOnly,
-                onTap: () => workspace.setPinnedFilterOnly(
-                  !workspace.pinnedFilterOnly,
-                ),
-              ),
-
-              // Dynamic user tags (only real tags present in user notes)
-              for (final tag in tags) ...[
-                const SizedBox(width: AppSpacing.s2),
+              children: [
+                // Folder selector chip
                 _LibraryFilterChip(
-                  label: '#$tag',
-                  isSelected: workspace.selectedTag?.toLowerCase() ==
-                      tag.toLowerCase(),
-                  onTap: () => workspace.setTagFilter(tag),
+                  icon: TackIcons.folder,
+                  label: workspace.selectedFolder,
+                  isSelected: workspace.selectedFolder != 'All Notes',
+                  showChevron: true,
+                  onTap: () => _showFolderSheet(context, workspace),
                 ),
+                const SizedBox(width: AppSpacing.s2),
+
+                // Pinned filter chip
+                _LibraryFilterChip(
+                  leadingWidget: TackPinBadge(
+                    color: workspace.pinnedFilterOnly
+                        ? tokens.actionPrimaryFg
+                        : tokens.accentPin,
+                    size: 8,
+                  ),
+                  label: 'Pinned',
+                  isSelected: workspace.pinnedFilterOnly,
+                  onTap: () => workspace.setPinnedFilterOnly(
+                    !workspace.pinnedFilterOnly,
+                  ),
+                ),
+
+                // Dynamic user tags (only real tags present in user notes)
+                for (final tag in tags) ...[
+                  const SizedBox(width: AppSpacing.s2),
+                  _LibraryFilterChip(
+                    label: '#$tag',
+                    isSelected: workspace.selectedTag?.toLowerCase() ==
+                        tag.toLowerCase(),
+                    onTap: () => workspace.setTagFilter(tag),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: AppSpacing.s2),
 
-        // Grid feed
-        Expanded(
-          child: notes.isEmpty
-              ? EmptyStateWidget(
-                  icon: TackIcons.notes,
-                  title: workspace.pinnedFilterOnly
-                      ? 'No pinned notes yet'
-                      : (workspace.selectedTag != null
-                          ? 'No #${workspace.selectedTag} notes'
-                          : 'Your Library is empty'),
-                  subtitle: workspace.pinnedFilterOnly
-                      ? 'Long-press any note to pin it to the top.'
-                      : 'Tap (+) below to write a note or save a thought.',
-                  actionLabel: workspace.pinnedFilterOnly ||
-                          workspace.selectedTag != null ||
-                          workspace.selectedFolder != 'All Notes'
-                      ? 'Reset filters'
-                      : 'New note',
-                  onAction: () {
-                    if (workspace.pinnedFilterOnly ||
-                        workspace.selectedTag != null ||
-                        workspace.selectedFolder != 'All Notes') {
-                      workspace.setPinnedFilterOnly(false);
-                      workspace.setTagFilter(null);
-                      workspace.setSelectedFolder('All Notes');
-                    } else {
-                      onCreateNote();
-                    }
-                  },
-                )
-              : ResponsiveCardGrid(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
+        if (notes.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyStateWidget(
+              icon: TackIcons.notes,
+              title: workspace.pinnedFilterOnly
+                  ? 'No pinned notes yet'
+                  : (workspace.selectedTag != null
+                      ? 'No #${workspace.selectedTag} notes'
+                      : 'Your Library is empty'),
+              subtitle: workspace.pinnedFilterOnly
+                  ? 'Long-press any note to pin it to the top.'
+                  : 'Tap (+) below to write a note or save a thought.',
+              actionLabel: workspace.pinnedFilterOnly ||
+                      workspace.selectedTag != null ||
+                      workspace.selectedFolder != 'All Notes'
+                  ? 'Reset filters'
+                  : 'New note',
+              onAction: () {
+                if (workspace.pinnedFilterOnly ||
+                    workspace.selectedTag != null ||
+                    workspace.selectedFolder != 'All Notes') {
+                  workspace.setPinnedFilterOnly(false);
+                  workspace.setTagFilter(null);
+                  workspace.setSelectedFolder('All Notes');
+                } else {
+                  onCreateNote();
+                }
+              },
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              AppSpacing.s1,
+              gutter,
+              AppSpacing.s9,
+            ),
+            sliver: SliverResponsiveCardGrid(
+              crossAxisCount: cols,
+              mainAxisSpacing: AppSpacing.cardGridGap,
+              crossAxisSpacing: AppSpacing.cardGridGap,
+              itemCount: notes.length,
+              itemBuilder: (context, index) {
+                final note = notes[index];
+                return NeoNoteCard(
+                  key: ValueKey('lib_note_${note.id}'),
+                  item: note,
+                  onTap: () => onOpenItem(note),
+                  onLongPress: () => CardPeekSheet.show(
+                    context: context,
+                    item: note,
+                    onOpen: () => onOpenItem(note),
                   ),
-                  padding: EdgeInsets.fromLTRB(
-                    gutter,
-                    AppSpacing.s2,
-                    gutter,
-                    AppSpacing.s9,
-                  ),
-                  crossAxisCount: cols,
-                  mainAxisSpacing: AppSpacing.cardGridGap,
-                  crossAxisSpacing: AppSpacing.cardGridGap,
-                  itemCount: notes.length,
-                  itemBuilder: (context, index) {
-                    final note = notes[index];
-                    return NeoNoteCard(
-                      key: ValueKey('lib_note_${note.id}'),
-                      item: note,
-                      onTap: () => onOpenItem(note),
-                      onLongPress: () => CardPeekSheet.show(
-                        context: context,
-                        item: note,
-                        onOpen: () => onOpenItem(note),
-                      ),
-                    );
-                  },
-                ),
-        ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }

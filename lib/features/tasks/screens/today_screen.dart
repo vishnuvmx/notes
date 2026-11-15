@@ -77,7 +77,6 @@ class _TodayScreenState extends State<TodayScreen> {
     final revisitNote = workspace.worthRevisitingNote;
 
     return CustomScrollView(
-      clipBehavior: Clip.none,
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
@@ -369,8 +368,7 @@ class _WeekStripCard extends StatelessWidget {
             child: GestureDetector(
               onTap: isToday ? onTapToday : null,
               behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: AppSpacing.durationFast,
+              child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: ShapeDecoration(

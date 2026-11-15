@@ -49,31 +49,34 @@ class ColorSwatchPicker extends StatelessWidget {
                 width: AppSpacing.minTouchTarget,
                 height: AppSpacing.minTouchTarget,
                 child: Center(
-                  child: AnimatedContainer(
+                  child: AnimatedScale(
                     duration: AppSpacing.durationFast,
                     curve: AppSpacing.curveStandard,
-                    width: isSelected ? 34 : 30,
-                    height: isSelected ? 34 : 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: swatchColor,
-                      border: Border.all(
-                        color: isSelected
-                            ? tokens.textPrimary
-                            : tokens.borderStrong.withValues(alpha: 0.45),
-                        width: isSelected ? 2.0 : 1.0,
+                    scale: isSelected ? 1.0 : 30 / 34,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: swatchColor,
+                        border: Border.all(
+                          color: isSelected
+                              ? tokens.textPrimary
+                              : tokens.borderStrong.withValues(alpha: 0.45),
+                          width: isSelected ? 2.0 : 1.0,
+                        ),
                       ),
+                      child: isSelected
+                          ? const Center(
+                              child: TackIcon(
+                                TackIcons.check,
+                                size: 16,
+                                color: AppColors.lightTextPrimary,
+                                style: HeroIconStyle.solid,
+                              ),
+                            )
+                          : null,
                     ),
-                    child: isSelected
-                        ? const Center(
-                            child: TackIcon(
-                              TackIcons.check,
-                              size: 16,
-                              color: AppColors.lightTextPrimary,
-                              style: HeroIconStyle.solid,
-                            ),
-                          )
-                        : null,
                   ),
                 ),
               ),

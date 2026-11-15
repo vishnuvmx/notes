@@ -47,22 +47,29 @@ typedef SettingsScreen = ProfileSettingsScreen;
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late int _lastTabIndex;
   String _userName = 'Karthik';
 
   @override
   void initState() {
     super.initState();
+    _lastTabIndex = widget.initialTabIndex.clamp(0, 1);
     _tabController = TabController(
       length: 2,
       vsync: this,
-      initialIndex: widget.initialTabIndex.clamp(0, 1),
+      initialIndex: _lastTabIndex,
     );
     _tabController.addListener(_onTabChanged);
     _loadProfileName();
   }
 
   void _onTabChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final nextIndex = _tabController.index;
+    if (nextIndex != _lastTabIndex) {
+      _lastTabIndex = nextIndex;
+      setState(() {});
+    }
   }
 
   @override
@@ -469,7 +476,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
     final totalItems = totalActive + trashCount + workspace.archivedItems.length;
 
     return ListView(
-      clipBehavior: Clip.none,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s5,
         AppSpacing.s3,
@@ -576,13 +582,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Local & offline-first • Paper & Pin',
-                          style: AppTypography.caption(
-                            color: tokens.textTertiary,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -663,15 +662,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
               ),
             ),
             title: Text(
-              'Trash & Deleted Items',
+              'Trash',
               style: AppTypography.body(
                 color: tokens.textPrimary,
                 weight: FontWeight.w600,
               ),
-            ),
-            subtitle: Text(
-              'Restore or permanently delete items',
-              style: AppTypography.caption(color: tokens.textSecondary),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -719,15 +714,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         const SizedBox(height: AppSpacing.s6),
 
         // 3. Appearance
-        _SectionLabel(text: 'Appearance'),
-        const SizedBox(height: AppSpacing.s2),
         _ThemeSegmentedControl(themeProv: themeProv),
 
-        const SizedBox(height: AppSpacing.s6),
+        const SizedBox(height: AppSpacing.s4),
 
         // 4. Daily Desk Behavior
-        _SectionLabel(text: 'Today & Daily Note'),
-        const SizedBox(height: AppSpacing.s2),
         Container(
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
@@ -741,18 +732,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
           child: Material(
             color: Colors.transparent,
             child: SwitchListTile(
-            title: Text(
-              'Carry forward unfinished tasks',
-              style: AppTypography.body(
-                color: tokens.textPrimary,
-                weight: FontWeight.w500,
+              title: Text(
+                'Carry forward unfinished tasks',
+                style: AppTypography.body(
+                  color: tokens.textPrimary,
+                  weight: FontWeight.w500,
+                ),
               ),
-            ),
-            subtitle: Text(
-              'Automatically copy unchecked `- [ ]` tasks from your previous Daily Note into today’s note.',
-              style: AppTypography.bodySm(color: tokens.textSecondary),
-            ),
-            value: workspace.carryForwardTasksEnabled,
+              value: workspace.carryForwardTasksEnabled,
             activeThumbColor: tokens.surfacePrimary,
             activeTrackColor: tokens.actionPrimary,
             onChanged: (val) {
@@ -763,11 +750,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         ),
       ),
 
-        const SizedBox(height: AppSpacing.s6),
+        const SizedBox(height: AppSpacing.s4),
 
-        // 5. Storage & Backup
-        _SectionLabel(text: 'Local Storage & Backup'),
-        const SizedBox(height: AppSpacing.s2),
+        // 5. Files & Backup
         Container(
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
@@ -798,12 +783,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                     const SizedBox(width: AppSpacing.s2),
                     Expanded(
                       child: Text(
-                        'On-device JSON store',
+                        'All files',
                         style: AppTypography.titleSm(color: tokens.textPrimary),
                       ),
                     ),
                     Text(
-                      '$totalItems total items ($trashCount in Trash)',
+                      '$totalItems items',
                       style: AppTypography.caption(color: tokens.textTertiary),
                     ),
                   ],
@@ -817,15 +802,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                   color: tokens.textPrimary,
                 ),
                 title: Text(
-                  'Export Workspace Backup',
+                  'Export backup',
                   style: AppTypography.body(
                     color: tokens.textPrimary,
                     weight: FontWeight.w500,
                   ),
-                ),
-                subtitle: Text(
-                  'Save or share a complete JSON backup of all notes, boards, and trash',
-                  style: AppTypography.caption(color: tokens.textSecondary),
                 ),
                 onTap: () => _exportBackup(context),
               ),
@@ -837,15 +818,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                   color: tokens.textPrimary,
                 ),
                 title: Text(
-                  'Restore from Backup',
+                  'Restore backup',
                   style: AppTypography.body(
                     color: tokens.textPrimary,
                     weight: FontWeight.w500,
                   ),
-                ),
-                subtitle: Text(
-                  'Merge items from an exported Tack JSON file',
-                  style: AppTypography.caption(color: tokens.textSecondary),
                 ),
                 onTap: () => _showRestoreDialog(context),
               ),
@@ -854,11 +831,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
         ),
       ),
 
-        const SizedBox(height: AppSpacing.s6),
+        const SizedBox(height: AppSpacing.s4),
 
         // 6. About
-        _SectionLabel(text: 'About'),
-        const SizedBox(height: AppSpacing.s2),
         Container(
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
@@ -885,10 +860,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                     color: tokens.textPrimary,
                     weight: FontWeight.w500,
                   ),
-                ),
-                subtitle: Text(
-                  'Soft Monochrome design system & open-source libraries',
-                  style: AppTypography.caption(color: tokens.textSecondary),
                 ),
                 trailing: TackIcon(
                   TackIcons.chevronRight,
@@ -951,24 +922,6 @@ class _StatMetricPill extends StatelessWidget {
             style: AppTypography.caption(color: tokens.textTertiary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-
-  const _SectionLabel({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return Text(
-      text,
-      style: AppTypography.label(
-        color: tokens.textSecondary,
-        weight: FontWeight.w600,
       ),
     );
   }

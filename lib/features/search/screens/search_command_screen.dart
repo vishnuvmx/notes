@@ -186,7 +186,6 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         ),
         Expanded(
           child: ListView(
-            clipBehavior: Clip.none,
             padding: EdgeInsets.fromLTRB(
               gutter,
               AppSpacing.s2,

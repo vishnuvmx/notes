@@ -81,6 +81,7 @@ class TackApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeProv.themeMode,
+        themeAnimationDuration: Duration.zero,
         builder: (context, child) {
           final media = MediaQuery.of(context);
           final clampedScaler = media.textScaler.clamp(

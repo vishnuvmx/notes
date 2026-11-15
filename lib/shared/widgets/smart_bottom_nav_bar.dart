@@ -42,44 +42,46 @@ class SmartBottomNavBar extends StatelessWidget {
 
     return ColoredBox(
       color: tokens.canvasPrimary,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            gutter,
-            AppSpacing.s2,
-            gutter,
-            AppSpacing.s3,
-          ),
-          child: SizedBox(
-            height: 58,
-            child: Row(
-              children: [
-                // 1. Icon-only Floating Pill Dock with gliding pill indicator
-                Expanded(
-                  child: SlidingPillTrack(
-                    height: 56,
-                    padding: const EdgeInsets.all(5),
-                    itemCount: navItems.length,
-                    selectedIndex: selectedSlot,
-                    duration: const Duration(milliseconds: 300),
-                    curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-                    trackColor: tokens.canvasSunken,
-                    indicatorColor: tokens.surfacePrimary,
-                    indicatorShadow: AppSpacing.elev1(tokens.isDark),
-                    trackShadow: AppSpacing.elev1(tokens.isDark),
-                    children: [
-                      for (final item in navItems)
-                        _buildNavItem(context, item, tokens),
-                    ],
+      child: RepaintBoundary(
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              AppSpacing.s2,
+              gutter,
+              AppSpacing.s3,
+            ),
+            child: SizedBox(
+              height: 58,
+              child: Row(
+                children: [
+                  // 1. Icon-only Floating Pill Dock with gliding pill indicator
+                  Expanded(
+                    child: SlidingPillTrack(
+                      height: 56,
+                      padding: const EdgeInsets.all(5),
+                      itemCount: navItems.length,
+                      selectedIndex: selectedSlot,
+                      duration: const Duration(milliseconds: 300),
+                      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                      trackColor: tokens.canvasSunken,
+                      indicatorColor: tokens.surfacePrimary,
+                      indicatorShadow: AppSpacing.elev1(tokens.isDark),
+                      trackShadow: AppSpacing.elev1(tokens.isDark),
+                      children: [
+                        for (final item in navItems)
+                          _buildNavItem(context, item, tokens),
+                      ],
+                    ),
                   ),
-                ),
 
-                const SizedBox(width: AppSpacing.s3),
+                  const SizedBox(width: AppSpacing.s3),
 
-                // 2. Detached Circular (+) Capture Button (56x56dp Ink Black)
-                _buildDetachedCaptureFab(context, tokens),
-              ],
+                  // 2. Detached Circular (+) Capture Button (56x56dp Ink Black)
+                  _buildDetachedCaptureFab(context, tokens),
+                ],
+              ),
             ),
           ),
         ),
@@ -115,43 +117,39 @@ class SmartBottomNavBar extends StatelessWidget {
               scale: isSelected ? 1.04 : 0.94,
               duration: iconAnimDuration,
               curve: iconAnimCurve,
-              child: AnimatedOpacity(
-                opacity: isSelected ? 1.0 : 0.52,
-                duration: iconAnimDuration,
-                curve: iconAnimCurve,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    TackIcon(
-                      item.icon,
-                      size: 21,
-                      color: fgColor,
-                      style: isSelected
-                          ? HeroIconStyle.solid
-                          : HeroIconStyle.outline,
-                    ),
-                    if (item.badge > 0)
-                      Positioned(
-                        top: -2,
-                        right: -4,
-                        child: AnimatedContainer(
-                          duration: iconAnimDuration,
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: tokens.accentPin,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? tokens.surfacePrimary
-                                  : tokens.canvasSunken,
-                              width: 1.2,
-                            ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  TackIcon(
+                    item.icon,
+                    size: 21,
+                    color: isSelected
+                        ? fgColor
+                        : fgColor.withValues(alpha: 0.52),
+                    style: isSelected
+                        ? HeroIconStyle.solid
+                        : HeroIconStyle.outline,
+                  ),
+                  if (item.badge > 0)
+                    Positioned(
+                      top: -2,
+                      right: -4,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: tokens.accentPin,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? tokens.surfacePrimary
+                                : tokens.canvasSunken,
+                            width: 1.2,
                           ),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
