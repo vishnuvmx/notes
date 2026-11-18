@@ -481,31 +481,24 @@ class FolderViewScreen extends StatelessWidget {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    void openFn() {
-                      if (onOpenItem != null) {
-                        onOpenItem!(item);
-                      } else {
-                        openWorkspaceItemScreen(context, item);
-                      }
-                    }
                     if (item is WhiteboardCanvasItem) {
                       return BoardGridCard(
                         board: item,
-                        onTap: openFn,
-                        onLongPress: () => CardPeekSheet.show(
+                        openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                        onPeek: (openDetail) => CardPeekSheet.show(
                           context: context,
                           item: item,
-                          onOpen: openFn,
+                          onOpen: openDetail,
                         ),
                       );
                     }
                     return NeoNoteCard(
                       item: item,
-                      onTap: openFn,
-                      onLongPress: () => CardPeekSheet.show(
+                      openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                      onPeek: (openDetail) => CardPeekSheet.show(
                         context: context,
                         item: item,
-                        onOpen: openFn,
+                        onOpen: openDetail,
                       ),
                     );
                   },

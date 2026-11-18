@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/services/pinned_notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -20,6 +20,7 @@ import '../../../shared/widgets/neo_note_card.dart';
 import '../../../shared/widgets/responsive_card_grid.dart';
 import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/sliding_pill_track.dart';
+import '../../../shared/widgets/tack_card_open_container.dart';
 import '../../../shared/widgets/tack_toast.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../notes/screens/note_editor_screen.dart';
@@ -309,22 +310,22 @@ class _TodayScreenState extends State<TodayScreen> {
                         return BoardGridCard(
                           key: ValueKey('today_pin_${item.id}'),
                           board: item,
-                          onTap: () => widget.onOpenItem(item),
-                          onLongPress: () => CardPeekSheet.show(
+                          openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                          onPeek: (openDetail) => CardPeekSheet.show(
                             context: context,
                             item: item,
-                            onOpen: () => widget.onOpenItem(item),
+                            onOpen: openDetail,
                           ),
                         );
                       }
                       return NeoNoteCard(
                         key: ValueKey('today_pin_${item.id}'),
                         item: item,
-                        onTap: () => widget.onOpenItem(item),
-                        onLongPress: () => CardPeekSheet.show(
+                        openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                        onPeek: (openDetail) => CardPeekSheet.show(
                           context: context,
                           item: item,
-                          onOpen: () => widget.onOpenItem(item),
+                          onOpen: openDetail,
                         ),
                       );
                     },
@@ -363,10 +364,7 @@ class _TodayScreenState extends State<TodayScreen> {
                               ],
                             ),
                             const SizedBox(height: AppSpacing.s3),
-                            _WorthRevisitingCard(
-                              note: revisitNote,
-                              onTap: () => widget.onOpenItem(revisitNote),
-                            ),
+                            _WorthRevisitingCard(note: revisitNote),
                           ],
                         )
                       : const SizedBox.shrink(),
@@ -406,134 +404,149 @@ class _TodaysDailyNoteCard extends StatelessWidget {
     final summary = hasNote ? existingDaily!.getSummary() : '';
     final dayNum = now.day.toString().padLeft(2, '0');
 
-    return Container(
-      decoration: ShapeDecoration(
-        color: tokens.surfacePrimary,
-        shadows: AppSpacing.elev1(tokens.isDark),
-        shape: const SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
-          smoothness: 0.60,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: const ValueKey('today_daily_note_card'),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.s4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Joi-Style Date Header Row (`09 •` + right date)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      dayNum,
-                      style: AppTypography.titleLg(
-                        color: tokens.textPrimary,
-                        fontSize: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: tokens.accentPin,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      dateLabel.toUpperCase(),
-                      style: AppTypography.mono(
-                        fontSize: 12,
-                        weight: FontWeight.w600,
-                        color: tokens.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: AppSpacing.s3),
-
-                // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.s3),
-                  decoration: BoxDecoration(
-                    color: softTint,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
+    Widget buildDailyBody(VoidCallback handleTap) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: const ValueKey('today_daily_note_card'),
+            onTap: handleTap,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Joi-Style Date Header Row (`09 •` + right date)
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 3.5,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: accentColor,
-                          borderRadius: AppSpacing.roundedPill,
+                      Text(
+                        dayNum,
+                        style: AppTypography.titleLg(
+                          color: tokens.textPrimary,
+                          fontSize: 28,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.s3),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Today's Daily Note",
-                              style: AppTypography.titleSm(
-                                color: tokens.textPrimary,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              hasNote &&
-                                      summary.isNotEmpty &&
-                                      summary != 'Empty note'
-                                  ? summary
-                                  : (carryForwardEnabled
-                                      ? 'Tap to start today’s note — open tasks carry forward automatically.'
-                                      : 'Tap to start today’s note.'),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodySm(
-                                color: accentColor.withValues(alpha: 0.85),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(width: 5),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: tokens.accentPin,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.s2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.14),
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          hasNote ? 'Open' : 'Start',
-                          style: AppTypography.caption(
-                            color: accentColor,
-                            weight: FontWeight.w700,
-                          ),
+                      const Spacer(),
+                      Text(
+                        dateLabel.toUpperCase(),
+                        style: AppTypography.mono(
+                          fontSize: 12,
+                          weight: FontWeight.w600,
+                          color: tokens.textTertiary,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: AppSpacing.s3),
+
+                  // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s3),
+                    decoration: BoxDecoration(
+                      color: softTint,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 3.5,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: AppSpacing.roundedPill,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s3),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Today's Daily Note",
+                                style: AppTypography.titleSm(
+                                  color: tokens.textPrimary,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                hasNote &&
+                                        summary.isNotEmpty &&
+                                        summary != 'Empty note'
+                                    ? summary
+                                    : (carryForwardEnabled
+                                        ? 'Tap to start today’s note — open tasks carry forward automatically.'
+                                        : 'Tap to start today’s note.'),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodySm(
+                                  color: accentColor.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.14),
+                            borderRadius: AppSpacing.roundedPill,
+                          ),
+                          child: Text(
+                            hasNote ? 'Open' : 'Start',
+                            style: AppTypography.caption(
+                              color: accentColor,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        );
+
+    const cardShape = SmoothRectangleBorder(
+      borderRadius: AppSpacing.roundedLg,
+      smoothness: 0.60,
+    );
+
+    if (existingDaily != null) {
+      return TackCardOpenContainer(
+        closedShape: cardShape,
+        openBuilder: (_) => NoteEditorScreen(item: existingDaily!),
+        closedBuilder: (_, openContainer) => buildDailyBody(() {
+          HapticFeedback.lightImpact();
+          openContainer();
+        }),
+      );
+    }
+
+    return Container(
+      decoration: ShapeDecoration(
+        color: tokens.surfacePrimary,
+        shadows: AppSpacing.elev1(tokens.isDark),
+        shape: cardShape,
       ),
+      clipBehavior: Clip.antiAlias,
+      child: buildDailyBody(onTap),
     );
   }
 }
@@ -612,31 +625,60 @@ class _SegmentedTasksCard extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.s4),
 
-          // 2. Smoothly Cross-Faded Active Tab Body
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 170),
-            reverseDuration: const Duration(milliseconds: 110),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: TackAnimatedTransition.switcherTransition,
-            child: KeyedSubtree(
-              key: ValueKey(activeTab),
-              child: activeTab == _TodayTaskTab.todo
-                  ? _buildGroupedTaskList(
-                      context,
-                      tokens,
-                      openTasks,
-                      emptyMessage:
-                          "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
-                      emptyActionLabel: "Open Today's Note",
-                      onEmptyAction: onOpenDailyNote,
-                    )
-                  : _buildGroupedTaskList(
-                      context,
-                      tokens,
-                      completedTasks,
-                      emptyMessage: 'No completed tasks yet today.',
+          // 2. Top-Anchored Directional Switcher + Smooth Size Interpolation
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            reverseDuration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.hardEdge,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              reverseDuration: const Duration(milliseconds: 160),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              ),
+              transitionBuilder: (child, animation) {
+                final isTodo = child.key == const ValueKey(_TodayTaskTab.todo);
+                final slide = Tween<Offset>(
+                  begin: Offset(isTodo ? -0.06 : 0.06, 0),
+                  end: Offset.zero,
+                ).animate(animation);
+                return RepaintBoundary(
+                  child: FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: slide,
+                      child: child,
                     ),
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey(activeTab),
+                child: activeTab == _TodayTaskTab.todo
+                    ? _buildGroupedTaskList(
+                        context,
+                        tokens,
+                        openTasks,
+                        emptyMessage:
+                            "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
+                        emptyActionLabel: "Open Today's Note",
+                        onEmptyAction: onOpenDailyNote,
+                      )
+                    : _buildGroupedTaskList(
+                        context,
+                        tokens,
+                        completedTasks,
+                        emptyMessage: 'No completed tasks yet today.',
+                      ),
+              ),
             ),
           ),
         ],
@@ -1053,11 +1095,9 @@ class _TaskRow extends StatelessWidget {
 
 class _WorthRevisitingCard extends StatelessWidget {
   final TextNote note;
-  final VoidCallback onTap;
 
   const _WorthRevisitingCard({
     required this.note,
-    required this.onTap,
   });
 
   @override
@@ -1067,20 +1107,19 @@ class _WorthRevisitingCard extends StatelessWidget {
     final softTint = palette.resolveSoftBackground(tokens.isDark);
     final accentColor = palette.resolveAccentColor(tokens.isDark);
 
-    return Container(
-      decoration: ShapeDecoration(
-        color: tokens.surfacePrimary,
-        shadows: AppSpacing.elev1(tokens.isDark),
-        shape: const SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedMd,
-          smoothness: 0.60,
-        ),
+    return TackCardOpenContainer(
+      closedShape: const SmoothRectangleBorder(
+        borderRadius: AppSpacing.roundedMd,
+        smoothness: 0.60,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
+      openBuilder: (_) => NoteEditorScreen(item: note),
+      closedBuilder: (_, openContainer) => Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            HapticFeedback.lightImpact();
+            openContainer();
+          },
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.s4),
             child: Column(
@@ -1205,26 +1244,33 @@ class _QuietEmptyBox extends StatelessWidget {
   }
 }
 
-/// Helper to navigate to the right screen for any [BaseWorkspaceItem].
+/// Builds the detail screen widget for any [BaseWorkspaceItem].
+Widget buildWorkspaceItemDetailScreen(
+  BaseWorkspaceItem item, {
+  bool startInEditMode = false,
+}) {
+  if (item is WhiteboardCanvasItem) {
+    return WhiteboardCanvasScreen(item: item);
+  }
+  return NoteEditorScreen(
+    item: item,
+    startInEditMode: startInEditMode,
+  );
+}
+
+/// Helper to navigate to the right screen for any [BaseWorkspaceItem] without fade-out lag.
 void openWorkspaceItemScreen(
   BuildContext context,
   BaseWorkspaceItem item, {
   bool startInEditMode = false,
 }) {
-  if (item is WhiteboardCanvasItem) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WhiteboardCanvasScreen(item: item),
-      ),
-    );
-  } else {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => NoteEditorScreen(
-          item: item,
-          startInEditMode: startInEditMode,
-        ),
-      ),
-    );
-  }
+  final detailScreen = buildWorkspaceItemDetailScreen(
+    item,
+    startInEditMode: startInEditMode,
+  );
+  Navigator.of(context).push(
+    startInEditMode
+        ? TackRoutes.slideUp(detailScreen)
+        : TackRoutes.sharedAxisHorizontal(detailScreen),
+  );
 }

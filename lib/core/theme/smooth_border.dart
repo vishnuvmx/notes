@@ -266,6 +266,54 @@ class SmoothRectangleBorder extends OutlinedBorder {
   }
 
   @override
+  ShapeBorder? lerpFrom(ShapeBorder? a, double t) {
+    if (a is SmoothRectangleBorder) {
+      return SmoothRectangleBorder(
+        side: BorderSide.lerp(a.side, side, t),
+        borderRadius: BorderRadius.lerp(a.borderRadius, borderRadius, t)!,
+        smoothness: uiLerpDouble(a.smoothness, smoothness, t),
+      );
+    }
+    if (a is RoundedRectangleBorder) {
+      return SmoothRectangleBorder(
+        side: BorderSide.lerp(a.side, side, t),
+        borderRadius: BorderRadius.lerp(
+          a.borderRadius.resolve(TextDirection.ltr),
+          borderRadius,
+          t,
+        )!,
+        smoothness: uiLerpDouble(0.0, smoothness, t),
+      );
+    }
+    return super.lerpFrom(a, t);
+  }
+
+  @override
+  ShapeBorder? lerpTo(ShapeBorder? b, double t) {
+    if (b is SmoothRectangleBorder) {
+      return SmoothRectangleBorder(
+        side: BorderSide.lerp(side, b.side, t),
+        borderRadius: BorderRadius.lerp(borderRadius, b.borderRadius, t)!,
+        smoothness: uiLerpDouble(smoothness, b.smoothness, t),
+      );
+    }
+    if (b is RoundedRectangleBorder) {
+      return SmoothRectangleBorder(
+        side: BorderSide.lerp(side, b.side, t),
+        borderRadius: BorderRadius.lerp(
+          borderRadius,
+          b.borderRadius.resolve(TextDirection.ltr),
+          t,
+        )!,
+        smoothness: uiLerpDouble(smoothness, 0.0, t),
+      );
+    }
+    return super.lerpTo(b, t);
+  }
+
+  static double uiLerpDouble(double a, double b, double t) => a + (b - a) * t;
+
+  @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other.runtimeType != runtimeType) return false;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,28 @@ import '../services/markdown_table_service.dart';
 import '../services/wiki_link_service.dart';
 import '../../tasks/services/open_tasks_service.dart';
 
+/// Controller allowing an enclosing screen (such as [NoteEditorScreen]) to
+/// scroll cleanly to any rendered Markdown heading inside [RichNoteContentView].
+class RichNoteNavigationController {
+  bool Function(int lineIndex)? _jumpHandler;
+
+  void _attach(bool Function(int lineIndex) handler) {
+    _jumpHandler = handler;
+  }
+
+  void _detach(bool Function(int lineIndex) handler) {
+    if (_jumpHandler == handler) {
+      _jumpHandler = null;
+    }
+  }
+
+  /// Unfolds any folded ancestor section if needed and scrolls smoothly so
+  /// [lineIndex] lands cleanly near the top of the viewport.
+  bool jumpToHeading(int lineIndex) {
+    return _jumpHandler?.call(lineIndex) ?? false;
+  }
+}
+
 /// Rich Interactive Content View for Tack Notes.
 /// Renders Headings (H1-H6 with section folding), Collapsible Toggle Blocks,
 /// Inline `[TOC]` Outline, Blockquotes/Callouts, Interactive Checklists,
@@ -36,6 +59,7 @@ class RichNoteContentView extends StatefulWidget {
   final ValueChanged<String>? onContentChanged;
   final ValueChanged<int>? onLineTap;
   final ValueChanged<int>? onHeadingJump;
+  final RichNoteNavigationController? navigationController;
   final bool isInteractive;
   final String? paletteId;
   final Iterable<BaseWorkspaceItem> workspaceItems;
@@ -48,6 +72,7 @@ class RichNoteContentView extends StatefulWidget {
     this.onContentChanged,
     this.onLineTap,
     this.onHeadingJump,
+    this.navigationController,
     this.isInteractive = true,
     this.paletteId,
     this.workspaceItems = const [],
@@ -62,7 +87,125 @@ class RichNoteContentView extends StatefulWidget {
 class _RichNoteContentViewState extends State<RichNoteContentView> {
   final Set<int> _foldedHeadingLines = <int>{};
   final Map<int, bool> _toggleOpenState = <int, bool>{};
+  final Map<int, GlobalKey> _headingKeys = <int, GlobalKey>{};
+  int? _highlightedHeadingLine;
+  Timer? _highlightTimer;
   _FootnoteCollection _footnoteCollection = const _FootnoteCollection.empty();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.navigationController?._attach(_jumpToHeadingLine);
+  }
+
+  @override
+  void didUpdateWidget(covariant RichNoteContentView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.navigationController != widget.navigationController) {
+      oldWidget.navigationController?._detach(_jumpToHeadingLine);
+      widget.navigationController?._attach(_jumpToHeadingLine);
+    }
+  }
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    widget.navigationController?._detach(_jumpToHeadingLine);
+    super.dispose();
+  }
+
+  GlobalKey _keyForHeading(int lineIndex) =>
+      _headingKeys.putIfAbsent(lineIndex, () => GlobalKey());
+
+  bool _unfoldCoveringSections(int targetLineIndex) {
+    if (_foldedHeadingLines.isEmpty) return false;
+    final lines = content.split('\n');
+    bool unfoldedAny = false;
+    final toRemove = <int>[];
+    for (final foldLine in _foldedHeadingLines) {
+      if (foldLine >= targetLineIndex || foldLine >= lines.length) continue;
+      final m = RegExp(r'^(#{1,4})\s+').firstMatch(lines[foldLine].trim());
+      if (m == null) continue;
+      final hLevel = m.group(1)!.length;
+      int sectionEnd = foldLine + 1;
+      bool inFence = false;
+      while (sectionEnd < lines.length) {
+        final st = lines[sectionEnd].trim();
+        if (st.startsWith('```')) {
+          inFence = !inFence;
+          sectionEnd++;
+          continue;
+        }
+        if (!inFence) {
+          final nextH = RegExp(r'^(#{1,6})\s+').firstMatch(st);
+          if (nextH != null && nextH.group(1)!.length <= hLevel) break;
+        }
+        sectionEnd++;
+      }
+      if (targetLineIndex < sectionEnd) {
+        toRemove.add(foldLine);
+      }
+    }
+    if (toRemove.isNotEmpty) {
+      setState(() => _foldedHeadingLines.removeAll(toRemove));
+      unfoldedAny = true;
+    }
+    return unfoldedAny;
+  }
+
+  bool _jumpToHeadingLine(int lineIndex) {
+    void scrollToTarget(BuildContext targetCtx) {
+      Scrollable.ensureVisible(
+        targetCtx,
+        alignment: 0.03,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+      _highlightTimer?.cancel();
+      setState(() => _highlightedHeadingLine = lineIndex);
+      _highlightTimer = Timer(const Duration(milliseconds: 650), () {
+        if (mounted) {
+          setState(() => _highlightedHeadingLine = null);
+        }
+      });
+    }
+
+    final unfolded = _unfoldCoveringSections(lineIndex);
+    if (unfolded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final ctx = _headingKeys[lineIndex]?.currentContext;
+        if (ctx != null) scrollToTarget(ctx);
+      });
+      return true;
+    }
+
+    final existingCtx = _headingKeys[lineIndex]?.currentContext;
+    if (existingCtx != null) {
+      scrollToTarget(existingCtx);
+      return true;
+    }
+    return false;
+  }
+
+  Widget _wrapHeadingTarget(Widget child, int lineIndex, bool isDark) {
+    final isHighlighted = _highlightedHeadingLine == lineIndex;
+    return AnimatedContainer(
+      key: _keyForHeading(lineIndex),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      padding: isHighlighted
+          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+          : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: isHighlighted
+            ? palette.resolveSoftBackground(isDark)
+            : Colors.transparent,
+        borderRadius: AppSpacing.roundedSm,
+      ),
+      child: child,
+    );
+  }
 
   String get content => widget.content;
   ValueChanged<String>? get onContentChanged => widget.onContentChanged;
@@ -117,6 +260,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     }
 
     final lines = content.split('\n');
+    _headingKeys.removeWhere((k, _) => k >= lines.length);
     final inheritedFootnotes = _FootnoteScope.maybeOf(context);
     final footnoteCollection = _extractFootnotes(
       lines,
@@ -143,7 +287,11 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           InlineTocCard(
             content: content,
             paletteId: paletteId,
-            onJumpToLine: widget.onHeadingJump ?? onLineTap,
+            onJumpToLine: (targetLine) {
+              if (!_jumpToHeadingLine(targetLine)) {
+                (widget.onHeadingJump ?? onLineTap)?.call(targetLine);
+              }
+            },
           ),
         );
         i++;
@@ -442,73 +590,85 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     required int foldedLineCount,
   }) {
     final headingChild = _wrapLineTap(
-      _buildLineWidget(context, line, lineIndex, isDark),
+      _buildLineWidget(
+        context,
+        line,
+        lineIndex,
+        isDark,
+        attachHeadingKey: false,
+      ),
       lineIndex,
     );
-    if (!hasFoldableBody) return headingChild;
+    if (!hasFoldableBody) {
+      return _wrapHeadingTarget(headingChild, lineIndex, isDark);
+    }
 
     final accent = palette.resolveAccentColor(isDark);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  if (isFolded) {
-                    _foldedHeadingLines.remove(lineIndex);
-                  } else {
-                    _foldedHeadingLines.add(lineIndex);
-                  }
-                });
-              },
-              child: Padding(
-                padding: const EdgeInsets.only(right: 6, top: 6, bottom: 4),
-                child: AnimatedRotation(
-                  turns: isFolded ? -0.25 : 0.0,
-                  duration: const Duration(milliseconds: 160),
-                  child: TackIcon(
-                    TackIcons.chevronDown,
-                    size: 16,
-                    color: isFolded
-                        ? accent
-                        : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(child: headingChild),
-            if (isFolded)
+    return _wrapHeadingTarget(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  setState(() => _foldedHeadingLines.remove(lineIndex));
+                  setState(() {
+                    if (isFolded) {
+                      _foldedHeadingLines.remove(lineIndex);
+                    } else {
+                      _foldedHeadingLines.add(lineIndex);
+                    }
+                  });
                 },
-                child: Container(
-                  margin: const EdgeInsets.only(left: 8, top: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: isDark ? 0.18 : 0.11),
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Text(
-                    '••• $foldedLineCount lines',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: accent,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 6, top: 6, bottom: 4),
+                  child: AnimatedRotation(
+                    turns: isFolded ? -0.25 : 0.0,
+                    duration: const Duration(milliseconds: 160),
+                    child: TackIcon(
+                      TackIcons.chevronDown,
+                      size: 16,
+                      color: isFolded
+                          ? accent
+                          : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
                     ),
                   ),
                 ),
               ),
-          ],
-        ),
-      ],
+              Expanded(child: headingChild),
+              if (isFolded)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _foldedHeadingLines.remove(lineIndex));
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(left: 8, top: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: isDark ? 0.18 : 0.11),
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    child: Text(
+                      '••• $foldedLineCount lines',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+      lineIndex,
+      isDark,
     );
   }
 
@@ -593,7 +753,13 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     );
   }
 
-  Widget _buildLineWidget(BuildContext context, String line, int lineIndex, bool isDark) {
+  Widget _buildLineWidget(
+    BuildContext context,
+    String line,
+    int lineIndex,
+    bool isDark, {
+    bool attachHeadingKey = true,
+  }) {
     final theme = Theme.of(context);
     final trimmed = line.trim();
 
@@ -653,7 +819,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           padding = const EdgeInsets.only(top: 6, bottom: 2);
           break;
       }
-      return Padding(
+      final headingWidget = Padding(
         padding: padding,
         child: _buildRichTextSpans(
           text,
@@ -663,6 +829,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           context: context,
         ),
       );
+      return attachHeadingKey
+          ? _wrapHeadingTarget(headingWidget, lineIndex, isDark)
+          : headingWidget;
     }
 
     // Interactive Checklist item ([ ] or [x] or [X]) with indentation support

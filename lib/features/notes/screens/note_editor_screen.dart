@@ -70,6 +70,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   final FocusNode _contentFocusNode = FocusNode();
   final TextEditingController _newTagController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final RichNoteNavigationController _richNoteNavController =
+      RichNoteNavigationController();
   double _savedScrollRatio = 0.0;
   double _savedScrollOffset = 0.0;
   late String _paletteId;
@@ -344,11 +346,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (lines.isEmpty) return;
     final clampedLine = lineIndex.clamp(0, lines.length - 1);
 
+    if (!_isEditingMode && _richNoteNavController.jumpToHeading(clampedLine)) {
+      return;
+    }
+
+    int offset = 0;
+    for (int i = 0; i < clampedLine; i++) {
+      offset += lines[i].length + 1;
+    }
+
     if (_isEditingMode) {
-      int offset = 0;
-      for (int i = 0; i < clampedLine; i++) {
-        offset += lines[i].length + 1;
-      }
       _contentController.selection = TextSelection.collapsed(
         offset: offset.clamp(0, text.length),
       );
@@ -356,7 +363,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     }
 
     if (_scrollController.hasClients) {
-      final ratio = lines.length <= 1 ? 0.0 : (clampedLine / lines.length).clamp(0.0, 1.0);
+      final ratio = text.isEmpty
+          ? 0.0
+          : (offset / text.length).clamp(0.0, 1.0);
       final target = ratio * _scrollController.position.maxScrollExtent;
       _scrollController.animateTo(
         target,
@@ -2340,6 +2349,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                     content: _contentController.text,
                                     paletteId: _paletteId,
                                     workspaceItems: workspace.rawItems,
+                                    navigationController: _richNoteNavController,
                                     onWikiLinkTap: _handleWikiLinkTap,
                                     onHeadingJump: _jumpToLineIndex,
                                     onLineTap: (lineIdx) {

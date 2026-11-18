@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -9,8 +10,10 @@ import 'package:notes/shared/data/mock_initial_data.dart';
 import 'package:notes/shared/data/workspace_repo_impl.dart';
 import 'package:notes/features/notes/services/frontmatter_service.dart';
 import 'package:notes/features/tasks/services/open_tasks_service.dart';
+import 'package:notes/features/notes/widgets/document_outline_sheet.dart';
 import 'package:notes/features/notes/widgets/mermaid/mermaid_diagram_parser.dart';
 import 'package:notes/features/notes/widgets/rich_note_content_view.dart';
+import 'package:notes/shared/widgets/tack_card_open_container.dart';
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/core/theme/tack_icons.dart';
@@ -1765,6 +1768,165 @@ Footer text.
         final preserved = await repoPreserved.getAllActiveItems();
         expect(preserved.single.title, 'My Custom Title');
         expect((preserved.single as TextNote).content, '# My own personal notes');
+      },
+    );
+
+    testWidgets(
+      '26. DocumentOutlineSheet opens near top and Inline [TOC] scrolls target heading cleanly to top of viewport',
+      (WidgetTester tester) async {
+        final fillerTop = List.generate(18, (i) => 'Intro paragraph line $i.\n').join('\n');
+        final fillerBottom = List.generate(28, (i) => 'Trailing paragraph line $i.\n').join('\n');
+        final longNote = TextNote(
+          id: 'toc_motion_note',
+          title: 'TOC Precision Test',
+          content:
+              '[TOC]\n\n'
+              '## Overview Section\n\n$fillerTop\n'
+              '## Target Heading Destination\n\n$fillerBottom',
+          createdAt: DateTime(2026, 11, 18),
+          updatedAt: DateTime(2026, 11, 18),
+          paletteId: 'amber',
+        );
+
+        final repo = _MockWorkspaceRepo();
+        await repo.saveItem(longNote);
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+              ChangeNotifierProvider.value(value: workspace),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: NoteEditorScreen(item: longNote),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Tap Inline [TOC] entry -> target heading scrolls cleanly near top (NOT bottom)
+        final tocEntry = find.descendant(
+          of: find.byType(InlineTocCard),
+          matching: find.text('Target Heading Destination'),
+        );
+        expect(tocEntry, findsOneWidget);
+        await tester.tap(tocEntry);
+        await tester.pumpAndSettle(const Duration(seconds: 1));
+
+        final targetInBody = find.byWidgetPredicate(
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().trim() == 'Target Heading Destination',
+        );
+        expect(targetInBody, findsOneWidget);
+        final landedY = tester.getTopLeft(targetInBody).dy;
+        expect(landedY, lessThan(220.0));
+        expect(landedY, greaterThan(40.0));
+
+        // 2. Open Document Outline button at top bar -> popover opens near top (not bottom)
+        await tester.tap(find.byTooltip('Document Outline'));
+        await tester.pumpAndSettle();
+
+        final outlineFinder = find.byType(DocumentOutlineSheet);
+        expect(outlineFinder, findsOneWidget);
+        expect(tester.getTopLeft(outlineFinder).dy, lessThan(180.0));
+
+        // Jump back up to Overview Section from Document Outline popover
+        await tester.tap(
+          find.descendant(
+            of: outlineFinder,
+            matching: find.text('Overview Section'),
+          ),
+        );
+        await tester.pumpAndSettle(const Duration(seconds: 1));
+
+        expect(find.byType(DocumentOutlineSheet), findsNothing);
+        final overviewInBody = find.byWidgetPredicate(
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().trim() == 'Overview Section',
+        );
+        expect(overviewInBody, findsOneWidget);
+        expect(tester.getTopLeft(overviewInBody).dy, lessThan(220.0));
+      },
+    );
+
+    testWidgets(
+      '27. Today To-Do <-> Completed switches smoothly with top-anchored size/slide and Cards expand into Detail via OpenContainer',
+      (WidgetTester tester) async {
+        final items = MockInitialData.getInitialItems();
+        final repo = _MockWorkspaceRepo();
+        for (final item in items) {
+          await repo.saveItem(item);
+        }
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+              ChangeNotifierProvider.value(value: workspace),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Verify Today To-Do <-> Completed switcher uses AnimatedSize (topCenter) + directional Slide
+        final taskAnimatedSize = find.descendant(
+          of: find.byType(TodayScreen),
+          matching: find.byWidgetPredicate(
+            (w) => w is AnimatedSize && w.alignment == Alignment.topCenter,
+          ),
+        );
+        expect(taskAnimatedSize, findsOneWidget);
+
+        await tester.tap(find.textContaining('Completed'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+
+        // Incoming Completed subtree slides horizontally toward 0 while top-aligned
+        final completedSlide = find.ancestor(
+          of: find.textContaining('Explore Home to switch'),
+          matching: find.byType(SlideTransition),
+        );
+        expect(completedSlide, findsWidgets);
+        final offset = tester.widget<SlideTransition>(completedSlide.first).position.value;
+        expect(offset.dx, greaterThan(0.0));
+        expect(offset.dy, equals(0.0));
+        await tester.pumpAndSettle();
+
+        // 2. Verify Pinned Grid uses TackCardOpenContainer / OpenContainer and expands cleanly into NoteEditorScreen
+        expect(find.byType(TackCardOpenContainer), findsWidgets);
+        expect(find.byType(OpenContainer<void>), findsWidgets);
+
+        final guideCard = find.descendant(
+          of: find.byType(TodayScreen),
+          matching: find.byWidgetPredicate(
+            (w) => w is NeoNoteCard && w.item.id == MockInitialData.welcomeNoteId,
+          ),
+        );
+        await tester.ensureVisible(guideCard);
+        await tester.pumpAndSettle();
+        await tester.tap(guideCard);
+        await tester.pumpAndSettle();
+
+        // Detail screen is open cleanly via Container Transform
+        expect(find.byType(NoteEditorScreen), findsOneWidget);
+        expect(find.text('Tack Complete Guide'), findsWidgets);
+
+        // Press Back -> collapses cleanly back into Home card without crashing or stalling
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        expect(find.byType(NoteEditorScreen), findsNothing);
+        expect(find.byType(HomeScreen), findsOneWidget);
       },
     );
   });

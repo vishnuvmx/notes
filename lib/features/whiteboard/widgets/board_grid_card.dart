@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../shared/widgets/tack_card_open_container.dart';
 import '../models/whiteboard_item.dart';
 
 /// Uniform Soft Monochrome Board Grid Card.
@@ -14,17 +15,25 @@ import '../models/whiteboard_item.dart';
 /// Matches `NeoNoteCard` geometry (`AppSpacing.cardAspectRatio`) and top header
 /// hierarchy (Title + `...` + Date subtitle), with an inset node-and-edge graph
 /// preview occupying the lower preview region.
+///
+/// When [openBuilder] is provided, tapping the card runs a Container Transform
+/// ([TackCardOpenContainer]) smoothly expanding into the board canvas and
+/// collapsing back cleanly on Back.
 class BoardGridCard extends StatefulWidget {
   final WhiteboardCanvasItem board;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final WidgetBuilder? openBuilder;
   final VoidCallback? onLongPress;
+  final void Function(VoidCallback openDetail)? onPeek;
 
   const BoardGridCard({
     super.key,
     required this.board,
-    required this.onTap,
+    this.onTap,
+    this.openBuilder,
     this.onLongPress,
-  });
+    this.onPeek,
+  }) : assert(onTap != null || openBuilder != null);
 
   @override
   State<BoardGridCard> createState() => _BoardGridCardState();
@@ -32,6 +41,128 @@ class BoardGridCard extends StatefulWidget {
 
 class _BoardGridCardState extends State<BoardGridCard> {
   bool _isPressed = false;
+
+  Widget _buildInnerSurface({
+    required TackTokens tokens,
+    required String displayTitle,
+    required Color bandColor,
+    required VoidCallback handleTap,
+  }) {
+    final VoidCallback? peekHandler = widget.onPeek != null
+        ? () => widget.onPeek!(handleTap)
+        : widget.onLongPress;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTapDown: (_) {
+          HapticFeedback.selectionClick();
+          setState(() => _isPressed = true);
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: () {
+          setState(() => _isPressed = false);
+          HapticFeedback.lightImpact();
+          handleTap();
+        },
+        onLongPress: peekHandler != null
+            ? () {
+                setState(() => _isPressed = false);
+                HapticFeedback.mediumImpact();
+                peekHandler();
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.s5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Top Header Row: Title + optional Pin + More (...)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleSm(
+                        color: tokens.textPrimary,
+                        fontSize: 15.5,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (widget.board.isFavorite) ...[
+                    const SizedBox(width: AppSpacing.s2),
+                    TackPinBadge(color: tokens.accentPin, size: 10),
+                  ],
+                  if (peekHandler != null) ...[
+                    const SizedBox(width: AppSpacing.s1),
+                    InkWell(
+                      borderRadius: AppSpacing.roundedPill,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        peekHandler();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.s1),
+                        child: TackIcon(
+                          TackIcons.more,
+                          size: 16,
+                          color: tokens.textTertiary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.s1),
+
+              // 2. Calm Date & Node Count Subtitle
+              Text(
+                '${DateFormatter.formatCardDate(widget.board.updatedAt)} · ${widget.board.nodes.length} ${widget.board.nodes.length == 1 ? 'node' : 'nodes'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(
+                  color: tokens.textTertiary,
+                  weight: FontWeight.w500,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.s3),
+
+              // 3. Lower Node Graph Preview Thumbnail
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: AppSpacing.roundedSm,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedSm,
+                      border: Border.all(
+                        color: tokens.borderSubtle.withValues(alpha: 0.7),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: CustomPaint(
+                      painter: _BoardMiniThumbnailPainter(
+                        nodes: widget.board.nodes,
+                        edges: widget.board.edges,
+                        tokens: tokens,
+                        accentBandColor: bandColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,139 +176,48 @@ class _BoardGridCardState extends State<BoardGridCard> {
                 ? 'Untitled Board'
                 : widget.board.title);
 
+    final cardShape = SmoothRectangleBorder(
+      borderRadius: AppSpacing.roundedMd,
+      smoothness: AppSpacing.defaultSmoothing,
+      side: BorderSide(
+        color: _isPressed
+            ? tokens.borderStrong
+            : tokens.borderSubtle.withValues(alpha: 0.7),
+        width: 1,
+      ),
+    );
+
     return AnimatedScale(
       scale: _isPressed ? 0.98 : 1.0,
       duration: AppSpacing.durationFast,
       curve: AppSpacing.curveStandard,
       child: AspectRatio(
         aspectRatio: AppSpacing.cardAspectRatio,
-        child: Container(
-          decoration: ShapeDecoration(
-            color: tokens.surfacePrimary,
-            shadows: AppSpacing.elev1(tokens.isDark),
-            shape: SmoothRectangleBorder(
-              borderRadius: AppSpacing.roundedMd,
-              smoothness: AppSpacing.defaultSmoothing,
-              side: BorderSide(
-                color: _isPressed
-                    ? tokens.borderStrong
-                    : tokens.borderSubtle.withValues(alpha: 0.7),
-                width: 1,
-              ),
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTapDown: (_) {
-                HapticFeedback.selectionClick();
-                setState(() => _isPressed = true);
-              },
-              onTapCancel: () => setState(() => _isPressed = false),
-              onTap: () {
-                setState(() => _isPressed = false);
-                HapticFeedback.lightImpact();
-                widget.onTap();
-              },
-              onLongPress: widget.onLongPress != null
-                  ? () {
-                      setState(() => _isPressed = false);
-                      HapticFeedback.mediumImpact();
-                      widget.onLongPress!();
-                    }
-                  : null,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.s5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 1. Top Header Row: Title + optional Pin + More (...)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            displayTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.titleSm(
-                              color: tokens.textPrimary,
-                              fontSize: 15.5,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (widget.board.isFavorite) ...[
-                          const SizedBox(width: AppSpacing.s2),
-                          TackPinBadge(color: tokens.accentPin, size: 10),
-                        ],
-                        if (widget.onLongPress != null) ...[
-                          const SizedBox(width: AppSpacing.s1),
-                          InkWell(
-                            borderRadius: AppSpacing.roundedPill,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              widget.onLongPress!();
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppSpacing.s1),
-                              child: TackIcon(
-                                TackIcons.more,
-                                size: 16,
-                                color: tokens.textTertiary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-
-                    const SizedBox(height: AppSpacing.s1),
-
-                    // 2. Calm Date & Node Count Subtitle
-                    Text(
-                      '${DateFormatter.formatCardDate(widget.board.updatedAt)} · ${widget.board.nodes.length} ${widget.board.nodes.length == 1 ? 'node' : 'nodes'}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption(
-                        color: tokens.textTertiary,
-                        weight: FontWeight.w500,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.s3),
-
-                    // 3. Lower Node Graph Preview Thumbnail
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: AppSpacing.roundedSm,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: tokens.canvasSunken,
-                            borderRadius: AppSpacing.roundedSm,
-                            border: Border.all(
-                              color: tokens.borderSubtle.withValues(alpha: 0.7),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: CustomPaint(
-                            painter: _BoardMiniThumbnailPainter(
-                              nodes: widget.board.nodes,
-                              edges: widget.board.edges,
-                              tokens: tokens,
-                              accentBandColor: bandColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+        child: widget.openBuilder != null
+            ? TackCardOpenContainer(
+                openBuilder: widget.openBuilder!,
+                closedShape: cardShape,
+                closedBuilder: (_, openContainer) => _buildInnerSurface(
+                  tokens: tokens,
+                  displayTitle: displayTitle,
+                  bandColor: bandColor,
+                  handleTap: openContainer,
+                ),
+              )
+            : Container(
+                decoration: ShapeDecoration(
+                  color: tokens.surfacePrimary,
+                  shadows: AppSpacing.elev1(tokens.isDark),
+                  shape: cardShape,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _buildInnerSurface(
+                  tokens: tokens,
+                  displayTitle: displayTitle,
+                  bandColor: bandColor,
+                  handleTap: widget.onTap!,
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }

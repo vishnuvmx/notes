@@ -7,9 +7,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../services/wiki_link_service.dart';
 import '../../../shared/widgets/app_search_field.dart';
-import '../../../shared/widgets/app_bottom_sheet.dart';
 
-/// Slide-up Document Outline (Table of Contents) sheet for [NoteEditorScreen]
+/// Top-anchored floating Document Outline (Table of Contents) popover for [NoteEditorScreen]
 /// plus [InlineTocCard] for `[TOC]` blocks inside [RichNoteContentView].
 class DocumentOutlineSheet extends StatefulWidget {
   final String noteTitle;
@@ -35,15 +34,79 @@ class DocumentOutlineSheet extends StatefulWidget {
     int? currentLineIndex,
     required ValueChanged<({int level, String title, int lineIndex})> onSelectHeading,
   }) {
-    return AppBottomSheet.show<void>(
+    final tokens = context.tokens;
+    final topInset = MediaQuery.paddingOf(context).top + AppSpacing.appBarHeight + 6;
+    return showGeneralDialog<void>(
       context: context,
-      builder: (_) => DocumentOutlineSheet(
-        noteTitle: noteTitle,
-        content: content,
-        paletteId: paletteId,
-        currentLineIndex: currentLineIndex,
-        onSelectHeading: onSelectHeading,
-      ),
+      barrierDismissible: true,
+      barrierLabel: 'Close document outline',
+      barrierColor: Colors.black.withValues(alpha: tokens.isDark ? 0.36 : 0.16),
+      transitionDuration: const Duration(milliseconds: 210),
+      pageBuilder: (dialogCtx, _, _) {
+        return SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                topInset,
+                AppSpacing.md,
+                AppSpacing.xl,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 360,
+                  maxHeight: 460,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    decoration: ShapeDecoration(
+                      color: tokens.surfacePrimary,
+                      shadows: AppSpacing.elev2(tokens.isDark),
+                      shape: SmoothRectangleBorder(
+                        borderRadius: AppSpacing.roundedLg,
+                        smoothness: AppSpacing.defaultSmoothing,
+                        side: BorderSide(color: tokens.borderSubtle, width: 1),
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: DocumentOutlineSheet(
+                      noteTitle: noteTitle,
+                      content: content,
+                      paletteId: paletteId,
+                      currentLineIndex: currentLineIndex,
+                      onSelectHeading: onSelectHeading,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (_, animation, _, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, -0.04),
+              end: Offset.zero,
+            ).animate(curved),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+              alignment: Alignment.topRight,
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -207,7 +270,9 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         Navigator.of(context).pop();
-                        widget.onSelectHeading(h);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          widget.onSelectHeading(h);
+                        });
                       },
                       borderRadius: AppSpacing.roundedSm,
                       child: Container(
@@ -347,25 +412,33 @@ class _InlineTocCardState extends State<InlineTocCard> {
                         ),
                       ),
                     ),
-                    TackIcon(
-                      _expanded ? TackIcons.chevronUp : TackIcons.chevronDown,
-                      size: 15,
-                      color: tokens.textSecondary,
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      child: TackIcon(
+                        TackIcons.chevronDown,
+                        size: 15,
+                        color: tokens.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
+          AnimatedCrossFade(
+            firstChild: Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: headings.map((h) {
                   final indent = ((h.level - minLevel).clamp(0, 4)) * 14.0;
                   return InkWell(
-                    onTap: () => widget.onJumpToLine?.call(h.lineIndex),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      widget.onJumpToLine?.call(h.lineIndex);
+                    },
                     borderRadius: AppSpacing.roundedXs,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
@@ -405,6 +478,15 @@ class _InlineTocCardState extends State<InlineTocCard> {
                 }).toList(),
               ),
             ),
+            secondChild: const SizedBox(width: double.infinity, height: 0),
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            sizeCurve: Curves.easeOutCubic,
+            firstCurve: Curves.easeOutCubic,
+            secondCurve: Curves.easeInCubic,
+            duration: const Duration(milliseconds: 200),
+          ),
         ],
       ),
     );

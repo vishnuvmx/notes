@@ -42,12 +42,6 @@ class TackRootNavigator extends StatefulWidget {
 class _TackRootNavigatorState extends State<TackRootNavigator> {
   late bool _showOnboarding = widget.initialShowOnboarding;
 
-  static Route<T> _buildRoute<T>(Widget page) {
-    return MaterialPageRoute<T>(
-      builder: (context) => page,
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -391,20 +385,17 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     BaseWorkspaceItem item, {
     bool startInEditMode = false,
   }) {
-    if (item is WhiteboardCanvasItem) {
-      Navigator.of(context).push(
-        _buildRoute(WhiteboardCanvasScreen(item: item)),
-      );
-    } else {
-      Navigator.of(context).push(
-        _buildRoute(
-          NoteEditorScreen(
+    final Widget detailScreen = item is WhiteboardCanvasItem
+        ? WhiteboardCanvasScreen(item: item)
+        : NoteEditorScreen(
             item: item,
             startInEditMode: startInEditMode,
-          ),
-        ),
-      );
-    }
+          );
+    Navigator.of(context).push(
+      startInEditMode
+          ? TackRoutes.slideUp(detailScreen)
+          : TackRoutes.sharedAxisHorizontal(detailScreen),
+    );
   }
 
   @override

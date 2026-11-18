@@ -33,5 +33,5 @@
 - `lib/core/theme/app_colors.dart`: `AppColors`, `TackColorPalette`
 - `lib/core/theme/app_spacing.dart`: `AppSpacing`
 - `lib/core/theme/app_theme.dart`: `AppTheme`, `TackAnimatedTransition`, `AppInputDecorations`
-- _... (83 more modules — query `recall where <name>`)_
+- _... (84 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->

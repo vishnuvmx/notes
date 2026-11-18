@@ -512,11 +512,11 @@ class _LibraryView extends StatelessWidget {
                   return NeoNoteCard(
                     key: ValueKey('lib_note_${note.id}'),
                     item: note,
-                    onTap: () => onOpenItem(note),
-                    onLongPress: () => CardPeekSheet.show(
+                    openBuilder: (_) => buildWorkspaceItemDetailScreen(note),
+                    onPeek: (openDetail) => CardPeekSheet.show(
                       context: context,
                       item: note,
-                      onOpen: () => onOpenItem(note),
+                      onOpen: openDetail,
                     ),
                   );
                 },
@@ -579,11 +579,11 @@ class _BoardsView extends StatelessWidget {
           return BoardGridCard(
             key: ValueKey('board_card_${board.id}'),
             board: board,
-            onTap: () => onOpenItem(board),
-            onLongPress: () => CardPeekSheet.show(
+            openBuilder: (_) => buildWorkspaceItemDetailScreen(board),
+            onPeek: (openDetail) => CardPeekSheet.show(
               context: context,
               item: board,
-              onOpen: () => onOpenItem(board),
+              onOpen: openDetail,
             ),
           );
         },
