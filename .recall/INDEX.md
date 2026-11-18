@@ -3,6 +3,8 @@
 <!-- recall:index:begin -->
 ## Decisions
 - [Locked Product & Navigation Rules](decisions/mem_001-locked-product-navigation-rules.md)
+- [Unified TackIcons on tabler_icons_plus via TackGlyph](decisions/mem_008-unified-tackicons-on-tabler-icons-plus-via-tackg.md)
+- [Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search](decisions/mem_009-home-hi-wassup-transparent-nav-bar-2-tab-tasks-d.md)
 
 ## Conventions
 - [Settings Copy & Privacy Legal Coverage](rules/mem_003-settings-copy-privacy-legal-coverage.md)

@@ -1,221 +1,382 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+
 import 'app_colors.dart';
 
 enum HeroIconStyle { outline, solid }
 
-/// Descriptor for Tack's custom 64x64 SVG icon packs in
-/// `icons/white-icons/` and `icons/dark-icons/`.
+/// Descriptor for Tack's unified Tabler icon glyphs (`tabler_icons_plus`).
 ///
-/// - Single-color SVGs (`isSingleColor: true`) can be safely color-tinted via
-///   `BlendMode.srcIn` when an explicit/semantic color is provided.
-/// - Two-tone / multi-color SVGs (`isSingleColor: false`) preserve their
-///   built-in dual-tone shading and switch between `white-icons/` and
-///   `dark-icons/` based on surface brightness or foreground luminance.
-class TackSvgIcon {
-  final String name;
-  final bool isSingleColor;
+/// - Renders crisp 2px rounded-stroke Tabler glyphs cleanly across Light & Dark modes.
+/// - Supports optional [solid] (`*Filled`) glyphs when [HeroIconStyle.solid] is passed
+///   for active navigation destinations, favorites, checkboxes, and pins.
+class TackGlyph {
+  final IconData outline;
+  final IconData? solid;
   final double opticalScale;
 
-  const TackSvgIcon(
-    this.name, {
-    this.isSingleColor = false,
-    this.opticalScale = 1.20,
+  const TackGlyph(
+    this.outline, {
+    this.solid,
+    this.opticalScale = 1.0,
   });
+
+  /// Resolve the active glyph for [style], falling back to [outline] when no
+  /// filled variant exists.
+  IconData resolve(HeroIconStyle style) =>
+      style == HeroIconStyle.solid ? (solid ?? outline) : outline;
 }
 
-/// Central Iconography for Tack powered by custom light/dark SVG packs and
-/// Lucide fallback icons for shapes without a custom SVG.
+/// Central Iconography for Tack powered by Tabler Icons (`tabler_icons_plus`).
 ///
 /// Always render icons through `TackIcon(...)` rather than `Icon(...)`.
 class TackIcons {
   TackIcons._();
 
-  // Primary SVG icons
-  static const TackSvgIcon homeSvg = TackSvgIcon('home');
-  static const TackSvgIcon notesSvg = TackSvgIcon('notes');
-  static const TackSvgIcon whiteboardSvg = TackSvgIcon('whiteboard');
-  static const TackSvgIcon clipboardSvg = TackSvgIcon('clipboard');
-  static const TackSvgIcon plusSvg = TackSvgIcon('plus', isSingleColor: true);
-  static const TackSvgIcon selectSvg = TackSvgIcon('select');
-  static const TackSvgIcon handSvg = TackSvgIcon('hand', isSingleColor: true);
-  static const TackSvgIcon connectorSvg = TackSvgIcon('connector');
-  static const TackSvgIcon textSvg = TackSvgIcon('text', isSingleColor: true);
-  static const TackSvgIcon imageSvg = TackSvgIcon('image');
-  static const TackSvgIcon drawSvg = TackSvgIcon('draw');
-  static const TackSvgIcon editSvg = TackSvgIcon('edit');
-  static const TackSvgIcon eyeSvg = TackSvgIcon('eye', isSingleColor: true);
-  static const TackSvgIcon undoSvg = TackSvgIcon('undo', isSingleColor: true);
-  static const TackSvgIcon redoSvg = TackSvgIcon('redo', isSingleColor: true);
-  static const TackSvgIcon searchSvg = TackSvgIcon('search', isSingleColor: true);
-  static const TackSvgIcon copySvg = TackSvgIcon('copy');
-  static const TackSvgIcon pasteSvg = TackSvgIcon('paste');
+  // Primary Workspace & Canvas Aliases
+  static const TackGlyph homeSvg = TackGlyph(
+    TablerIcons.home,
+    solid: TablerIcons.homeFilled,
+  );
+  static const TackGlyph notesSvg = TackGlyph(TablerIcons.notes);
+  static const TackGlyph whiteboardSvg = TackGlyph(
+    TablerIcons.presentation,
+    solid: TablerIcons.presentationFilled,
+  );
+  static const TackGlyph clipboardSvg = TackGlyph(
+    TablerIcons.clipboard,
+    solid: TablerIcons.clipboardFilled,
+  );
+  static const TackGlyph plusSvg = TackGlyph(TablerIcons.plus);
+  static const TackGlyph selectSvg = TackGlyph(
+    TablerIcons.pointer,
+    solid: TablerIcons.pointerFilled,
+  );
+  static const TackGlyph handSvg = TackGlyph(TablerIcons.handStop);
+  static const TackGlyph connectorSvg = TackGlyph(TablerIcons.vectorBezier2);
+  static const TackGlyph textSvg = TackGlyph(TablerIcons.typography);
+  static const TackGlyph imageSvg = TackGlyph(
+    TablerIcons.photo,
+    solid: TablerIcons.photoFilled,
+  );
+  static const TackGlyph drawSvg = TackGlyph(
+    TablerIcons.pencil,
+    solid: TablerIcons.pencilFilled,
+  );
+  static const TackGlyph editSvg = TackGlyph(
+    TablerIcons.edit,
+    solid: TablerIcons.editFilled,
+  );
+  static const TackGlyph eyeSvg = TackGlyph(
+    TablerIcons.eye,
+    solid: TablerIcons.eyeFilled,
+  );
+  static const TackGlyph undoSvg = TackGlyph(TablerIcons.arrowBackUp);
+  static const TackGlyph redoSvg = TackGlyph(TablerIcons.arrowForwardUp);
+  static const TackGlyph searchSvg = TackGlyph(
+    TablerIcons.search,
+    solid: TablerIcons.searchFilled,
+  );
+  static const TackGlyph copySvg = TackGlyph(
+    TablerIcons.copy,
+    solid: TablerIcons.copyFilled,
+  );
+  static const TackGlyph pasteSvg = TackGlyph(
+    TablerIcons.clipboardCheck,
+    solid: TablerIcons.clipboardCheckFilled,
+  );
 
   // Navigation & Primary Tabs
-  static const TackSvgIcon today = TackSvgIcon('today');
-  static const TackSvgIcon library = TackSvgIcon('library');
-  static const TackSvgIcon inbox = TackSvgIcon('inbox');
-  static const TackSvgIcon boards = TackSvgIcon('boards');
-  static const TackSvgIcon home = TackSvgIcon('home');
-  static const TackSvgIcon notes = TackSvgIcon('notes');
-  static const TackSvgIcon sticky = TackSvgIcon('sticky_notes');
-  static const TackSvgIcon whiteboard = TackSvgIcon('whiteboard');
-  static const TackSvgIcon clipboard = TackSvgIcon('clipboard');
-  static const TackSvgIcon plus = TackSvgIcon('plus', isSingleColor: true);
+  static const TackGlyph today = TackGlyph(
+    TablerIcons.calendarEvent,
+    solid: TablerIcons.calendarEventFilled,
+  );
+  static const TackGlyph library = TackGlyph(
+    TablerIcons.library,
+    solid: TablerIcons.libraryFilled,
+  );
+  static const TackGlyph inbox = TackGlyph(TablerIcons.inbox);
+  static const TackGlyph boards = TackGlyph(
+    TablerIcons.presentation,
+    solid: TablerIcons.presentationFilled,
+  );
+  static const TackGlyph home = homeSvg;
+  static const TackGlyph notes = notesSvg;
+  static const TackGlyph sticky = TackGlyph(TablerIcons.note);
+  static const TackGlyph whiteboard = whiteboardSvg;
+  static const TackGlyph clipboard = clipboardSvg;
+  static const TackGlyph plus = plusSvg;
 
   // App Bar & Common Actions
-  static const TackSvgIcon menu = TackSvgIcon('menu', isSingleColor: true);
-  static const TackSvgIcon search = TackSvgIcon('search', isSingleColor: true);
-  static const TackSvgIcon close = TackSvgIcon('close', isSingleColor: true);
-  static const TackSvgIcon check = TackSvgIcon('check', isSingleColor: true);
-  static const TackSvgIcon checkCircle =
-      TackSvgIcon('check_circle', isSingleColor: true);
-  static const TackSvgIcon back = TackSvgIcon('back');
-  static const TackSvgIcon more = TackSvgIcon('more', isSingleColor: true);
-  static const TackSvgIcon share = TackSvgIcon('share', isSingleColor: true);
-  static const TackSvgIcon copy = TackSvgIcon('copy');
-  static const TackSvgIcon paste = TackSvgIcon('paste');
-  static const TackSvgIcon exportData =
-      TackSvgIcon('export', isSingleColor: true);
-  static const TackSvgIcon importData =
-      TackSvgIcon('import', isSingleColor: true);
-  static const TackSvgIcon undo = TackSvgIcon('undo', isSingleColor: true);
-  static const TackSvgIcon redo = TackSvgIcon('redo', isSingleColor: true);
-  static const TackSvgIcon palette = TackSvgIcon('palette');
-  static const TackSvgIcon clock = TackSvgIcon('clock', isSingleColor: true);
-  static const TackSvgIcon sort = TackSvgIcon('sort');
-  static const TackSvgIcon saving = TackSvgIcon('loading');
-  static const IconData command = LucideIcons.command;
+  static const TackGlyph menu = TackGlyph(
+    TablerIcons.menu2,
+    solid: TablerIcons.menu2Filled,
+  );
+  static const TackGlyph search = searchSvg;
+  static const TackGlyph close = TackGlyph(
+    TablerIcons.x,
+    solid: TablerIcons.xFilled,
+  );
+  static const TackGlyph check = TackGlyph(TablerIcons.check);
+  static const TackGlyph checkCircle = TackGlyph(
+    TablerIcons.circleCheck,
+    solid: TablerIcons.circleCheckFilled,
+  );
+  static const TackGlyph back = TackGlyph(TablerIcons.arrowLeft);
+  static const TackGlyph more = TackGlyph(
+    TablerIcons.dots,
+    solid: TablerIcons.dotsFilled,
+  );
+  static const TackGlyph share = TackGlyph(TablerIcons.share);
+  static const TackGlyph copy = copySvg;
+  static const TackGlyph paste = pasteSvg;
+  static const TackGlyph exportData = TackGlyph(TablerIcons.fileExport);
+  static const TackGlyph importData = TackGlyph(TablerIcons.fileImport);
+  static const TackGlyph undo = undoSvg;
+  static const TackGlyph redo = redoSvg;
+  static const TackGlyph palette = TackGlyph(
+    TablerIcons.palette,
+    solid: TablerIcons.paletteFilled,
+  );
+  static const TackGlyph clock = TackGlyph(
+    TablerIcons.clock,
+    solid: TablerIcons.clockFilled,
+  );
+  static const TackGlyph sort = TackGlyph(TablerIcons.arrowsSort);
+  static const TackGlyph saving = TackGlyph(TablerIcons.loader2);
+  static const TackGlyph command = TackGlyph(TablerIcons.command);
 
   // Todo / Tasks
-  static const TackSvgIcon task = TackSvgIcon('task', isSingleColor: true);
-  static const TackSvgIcon taskOpen =
-      TackSvgIcon('task_open', isSingleColor: true);
-  static const TackSvgIcon todayTasks = TackSvgIcon('today_tasks');
+  static const TackGlyph task = TackGlyph(
+    TablerIcons.squareCheck,
+    solid: TablerIcons.squareCheckFilled,
+  );
+  static const TackGlyph taskOpen = TackGlyph(TablerIcons.square);
+  static const TackGlyph todayTasks = TackGlyph(
+    TablerIcons.listCheck,
+    solid: TablerIcons.listCheckFilled,
+  );
 
   // Folders & Views
-  static const TackSvgIcon folder = TackSvgIcon('folder');
-  static const TackSvgIcon folderPlus = TackSvgIcon('folder_plus');
-  static const TackSvgIcon folderTree = TackSvgIcon('folder_tree');
-  static const TackSvgIcon graph = TackSvgIcon('graph');
-  static const TackSvgIcon gridView = TackSvgIcon('grid_view');
-  static const TackSvgIcon listView = TackSvgIcon('list_view');
+  static const TackGlyph folder = TackGlyph(
+    TablerIcons.folder,
+    solid: TablerIcons.folderFilled,
+  );
+  static const TackGlyph folderPlus = TackGlyph(TablerIcons.folderPlus);
+  static const TackGlyph folderTree = TackGlyph(TablerIcons.listTree);
+  static const TackGlyph graph = TackGlyph(TablerIcons.topologyStar3);
+  static const TackGlyph gridView = TackGlyph(
+    TablerIcons.layoutGrid,
+    solid: TablerIcons.layoutGridFilled,
+  );
+  static const TackGlyph listView = TackGlyph(
+    TablerIcons.list,
+    solid: TablerIcons.listFilled,
+  );
 
   // Secondary / Drawer / Settings
-  static const TackSvgIcon star = TackSvgIcon('star', isSingleColor: true);
-  static const TackSvgIcon archive = TackSvgIcon('archive');
-  static const TackSvgIcon trash = TackSvgIcon('delete', isSingleColor: true);
-  static const TackSvgIcon settings =
-      TackSvgIcon('settings', isSingleColor: true);
-  static const IconData sun = LucideIcons.sun;
-  static const IconData moon = LucideIcons.moon;
-  static const TackSvgIcon user = TackSvgIcon('user', isSingleColor: true);
-  static const TackSvgIcon notification = TackSvgIcon('notification');
+  static const TackGlyph star = TackGlyph(
+    TablerIcons.star,
+    solid: TablerIcons.starFilled,
+  );
+  static const TackGlyph archive = TackGlyph(
+    TablerIcons.archive,
+    solid: TablerIcons.archiveFilled,
+  );
+  static const TackGlyph trash = TackGlyph(
+    TablerIcons.trash,
+    solid: TablerIcons.trashFilled,
+  );
+  static const TackGlyph settings = TackGlyph(
+    TablerIcons.settings,
+    solid: TablerIcons.settingsFilled,
+  );
+  static const TackGlyph sun = TackGlyph(
+    TablerIcons.sun,
+    solid: TablerIcons.sunFilled,
+  );
+  static const TackGlyph moon = TackGlyph(
+    TablerIcons.moon,
+    solid: TablerIcons.moonFilled,
+  );
+  static const TackGlyph user = TackGlyph(
+    TablerIcons.user,
+    solid: TablerIcons.userFilled,
+  );
+  static const TackGlyph notification = TackGlyph(
+    TablerIcons.bell,
+    solid: TablerIcons.bellFilled,
+  );
 
   // Editor & Formatting
-  static const TackSvgIcon chevronDown =
-      TackSvgIcon('chevron_down', isSingleColor: true);
-  static const TackSvgIcon chevronUp =
-      TackSvgIcon('chevron_up', isSingleColor: true);
-  static const IconData chevronLeft = LucideIcons.chevronLeft;
-  static const TackSvgIcon chevronRight =
-      TackSvgIcon('chevron_right', isSingleColor: true);
-  static const TackSvgIcon edit = TackSvgIcon('edit');
-  static const TackSvgIcon reader = TackSvgIcon('eye', isSingleColor: true);
-  static const TackSvgIcon tag = TackSvgIcon('tag', isSingleColor: true);
-  static const TackSvgIcon eye = TackSvgIcon('eye', isSingleColor: true);
-  static const TackSvgIcon eyeOff = TackSvgIcon('eye_off');
-  static const IconData imageOff = LucideIcons.imageOff;
-  static const IconData externalLink = LucideIcons.externalLink;
-  static const TackSvgIcon play = TackSvgIcon('play', isSingleColor: true);
-  static const TackSvgIcon bold =
-      TackSvgIcon('bold', isSingleColor: true, opticalScale: 1.28);
-  static const TackSvgIcon italic =
-      TackSvgIcon('italic', isSingleColor: true, opticalScale: 1.28);
-  static const TackSvgIcon underline = TackSvgIcon('underline');
-  static const TackSvgIcon strikethrough = TackSvgIcon('strikethrough');
-  static const TackSvgIcon code = TackSvgIcon('code', isSingleColor: true);
-  static const TackSvgIcon quote = TackSvgIcon('quote', isSingleColor: true);
-  static const TackSvgIcon bulletList = TackSvgIcon('bullet_list');
-  static const TackSvgIcon numberedList = TackSvgIcon('numbered_list');
-  static const TackSvgIcon heading1 = TackSvgIcon('heading_1');
-  static const TackSvgIcon heading2 = TackSvgIcon('heading_2');
-  static const TackSvgIcon heading3 = TackSvgIcon('heading_3');
-  static const TackSvgIcon table = TackSvgIcon('table');
-  static const TackSvgIcon alignLeft =
-      TackSvgIcon('align_left', isSingleColor: true);
-  static const TackSvgIcon alignCenter =
-      TackSvgIcon('align_center', isSingleColor: true);
-  static const TackSvgIcon alignRight =
-      TackSvgIcon('align_right', isSingleColor: true);
+  static const TackGlyph chevronDown = TackGlyph(
+    TablerIcons.chevronDown,
+    solid: TablerIcons.chevronDownFilled,
+  );
+  static const TackGlyph chevronUp = TackGlyph(TablerIcons.chevronUp);
+  static const TackGlyph chevronLeft = TackGlyph(TablerIcons.chevronLeft);
+  static const TackGlyph chevronRight = TackGlyph(
+    TablerIcons.chevronRight,
+    solid: TablerIcons.chevronRightFilled,
+  );
+  static const TackGlyph edit = editSvg;
+  static const TackGlyph reader = eyeSvg;
+  static const TackGlyph tag = TackGlyph(
+    TablerIcons.tag,
+    solid: TablerIcons.tagFilled,
+  );
+  static const TackGlyph eye = eyeSvg;
+  static const TackGlyph eyeOff = TackGlyph(TablerIcons.eyeOff);
+  static const TackGlyph imageOff = TackGlyph(TablerIcons.photoOff);
+  static const TackGlyph externalLink = TackGlyph(
+    TablerIcons.externalLink,
+    solid: TablerIcons.externalLinkFilled,
+  );
+  static const TackGlyph play = TackGlyph(
+    TablerIcons.playerPlay,
+    solid: TablerIcons.playerPlayFilled,
+  );
+  static const TackGlyph bold = TackGlyph(TablerIcons.bold);
+  static const TackGlyph italic = TackGlyph(TablerIcons.italic);
+  static const TackGlyph underline = TackGlyph(TablerIcons.underline);
+  static const TackGlyph strikethrough = TackGlyph(TablerIcons.strikethrough);
+  static const TackGlyph code = TackGlyph(TablerIcons.code);
+  static const TackGlyph quote = TackGlyph(TablerIcons.blockquote);
+  static const TackGlyph bulletList = TackGlyph(TablerIcons.list);
+  static const TackGlyph numberedList = TackGlyph(TablerIcons.listNumbers);
+  static const TackGlyph heading1 = TackGlyph(TablerIcons.h1);
+  static const TackGlyph heading2 = TackGlyph(TablerIcons.h2);
+  static const TackGlyph heading3 = TackGlyph(TablerIcons.h3);
+  static const TackGlyph table = TackGlyph(
+    TablerIcons.table,
+    solid: TablerIcons.tableFilled,
+  );
+  static const TackGlyph alignLeft = TackGlyph(TablerIcons.alignLeft);
+  static const TackGlyph alignCenter = TackGlyph(TablerIcons.alignCenter);
+  static const TackGlyph alignRight = TackGlyph(TablerIcons.alignRight);
 
   // Whiteboard & Canvas Tools
-  static const IconData square = LucideIcons.square;
-  static const IconData diamond = LucideIcons.diamond;
-  static const TackSvgIcon flow = TackSvgIcon('flow');
-  static const TackSvgIcon cursor =
-      TackSvgIcon('cursor', isSingleColor: true, opticalScale: 1.12);
-  static const TackSvgIcon hand = TackSvgIcon('hand', isSingleColor: true);
-  static const TackSvgIcon move = TackSvgIcon('move', isSingleColor: true);
-  static const TackSvgIcon photo = TackSvgIcon('image');
-  static const TackSvgIcon camera = TackSvgIcon('camera');
-  static const TackSvgIcon minus = TackSvgIcon('minus', isSingleColor: true);
-  static const TackSvgIcon pencil = TackSvgIcon('draw');
-  static const TackSvgIcon link = TackSvgIcon('link');
-  static const TackSvgIcon pin = TackSvgIcon('pin');
-  static const TackSvgIcon stickyNote = TackSvgIcon('sticky_note');
-  static const TackSvgIcon map = TackSvgIcon('map');
-  static const IconData scan = LucideIcons.scan;
-  static const TackSvgIcon maximize =
-      TackSvgIcon('expand', isSingleColor: true);
-  static const TackSvgIcon collapse = TackSvgIcon('collapse');
-  static const IconData arrowLeftRight = LucideIcons.arrowLeftRight;
-  static const IconData bolt = LucideIcons.zap;
-  static const TackSvgIcon sparkles = TackSvgIcon('sparkles');
-  static const IconData briefcase = LucideIcons.briefcase;
-  static const TackSvgIcon calendar = TackSvgIcon('calendar');
-  static const TackSvgIcon lock = TackSvgIcon('lock', opticalScale: 1.06);
+  static const TackGlyph square = TackGlyph(
+    TablerIcons.square,
+    solid: TablerIcons.squareFilled,
+  );
+  static const TackGlyph diamond = TackGlyph(
+    TablerIcons.diamond,
+    solid: TablerIcons.diamondFilled,
+  );
+  static const TackGlyph flow = TackGlyph(TablerIcons.gitBranch);
+  static const TackGlyph cursor = selectSvg;
+  static const TackGlyph hand = handSvg;
+  static const TackGlyph move = TackGlyph(TablerIcons.arrowsMove);
+  static const TackGlyph photo = imageSvg;
+  static const TackGlyph camera = TackGlyph(
+    TablerIcons.camera,
+    solid: TablerIcons.cameraFilled,
+  );
+  static const TackGlyph minus = TackGlyph(TablerIcons.minus);
+  static const TackGlyph pencil = drawSvg;
+  static const TackGlyph link = TackGlyph(
+    TablerIcons.link,
+    solid: TablerIcons.linkFilled,
+  );
+  static const TackGlyph pin = TackGlyph(
+    TablerIcons.pin,
+    solid: TablerIcons.pinFilled,
+  );
+  static const TackGlyph stickyNote = TackGlyph(TablerIcons.note);
+  static const TackGlyph map = TackGlyph(TablerIcons.map);
+  static const TackGlyph scan = TackGlyph(TablerIcons.scan);
+  static const TackGlyph maximize = TackGlyph(TablerIcons.maximize);
+  static const TackGlyph collapse = TackGlyph(TablerIcons.minimize);
+  static const TackGlyph arrowLeftRight =
+      TackGlyph(TablerIcons.arrowsLeftRight);
+  static const TackGlyph bolt = TackGlyph(
+    TablerIcons.bolt,
+    solid: TablerIcons.boltFilled,
+  );
+  static const TackGlyph sparkles = TackGlyph(
+    TablerIcons.sparkles,
+    solid: TablerIcons.sparklesFilled,
+  );
+  static const TackGlyph briefcase = TackGlyph(
+    TablerIcons.briefcase,
+    solid: TablerIcons.briefcaseFilled,
+  );
+  static const TackGlyph calendar = TackGlyph(
+    TablerIcons.calendar,
+    solid: TablerIcons.calendarFilled,
+  );
+  static const TackGlyph lock = TackGlyph(
+    TablerIcons.lock,
+    solid: TablerIcons.lockFilled,
+  );
 
   // Status & Feedback
-  static const TackSvgIcon info = TackSvgIcon('info', isSingleColor: true);
-  static const TackSvgIcon warning = TackSvgIcon('warning', isSingleColor: true);
-  static const TackSvgIcon error = TackSvgIcon('error', isSingleColor: true);
-  static const TackSvgIcon success = TackSvgIcon('success', isSingleColor: true);
-  static const TackSvgIcon flag =
-      TackSvgIcon('flag', isSingleColor: true, opticalScale: 1.08);
-  static const TackSvgIcon refresh =
-      TackSvgIcon('refresh', isSingleColor: true, opticalScale: 1.0);
-  static const TackSvgIcon save = TackSvgIcon('save');
-  static const TackSvgIcon shield = TackSvgIcon('shield');
-  static const TackSvgIcon lightbulb = TackSvgIcon('lightbulb');
-  static const TackSvgIcon workflow = TackSvgIcon('workflow');
-  static const TackSvgIcon layers = TackSvgIcon('layers');
-  static const TackSvgIcon arrowUp = TackSvgIcon('arrow_up');
-  static const TackSvgIcon arrowDown = TackSvgIcon('arrow_down');
-  static const TackSvgIcon arrowLeft = TackSvgIcon('arrow_left');
-  static const TackSvgIcon arrowRight = TackSvgIcon('arrow_right');
+  static const TackGlyph info = TackGlyph(
+    TablerIcons.infoCircle,
+    solid: TablerIcons.infoCircleFilled,
+  );
+  static const TackGlyph warning = TackGlyph(
+    TablerIcons.alertTriangle,
+    solid: TablerIcons.alertTriangleFilled,
+  );
+  static const TackGlyph error = TackGlyph(
+    TablerIcons.alertCircle,
+    solid: TablerIcons.alertCircleFilled,
+  );
+  static const TackGlyph success = checkCircle;
+  static const TackGlyph flag = TackGlyph(
+    TablerIcons.flag,
+    solid: TablerIcons.flagFilled,
+  );
+  static const TackGlyph refresh = TackGlyph(TablerIcons.refresh);
+  static const TackGlyph save = TackGlyph(
+    TablerIcons.deviceFloppy,
+    solid: TablerIcons.deviceFloppyFilled,
+  );
+  static const TackGlyph shield = TackGlyph(
+    TablerIcons.shield,
+    solid: TablerIcons.shieldFilled,
+  );
+  static const TackGlyph lightbulb = TackGlyph(
+    TablerIcons.bulb,
+    solid: TablerIcons.bulbFilled,
+  );
+  static const TackGlyph workflow = TackGlyph(
+    TablerIcons.sitemap,
+    solid: TablerIcons.sitemapFilled,
+  );
+  static const TackGlyph layers = TackGlyph(
+    TablerIcons.stack2,
+    solid: TablerIcons.stack2Filled,
+  );
+  static const TackGlyph arrowUp = TackGlyph(TablerIcons.arrowUp);
+  static const TackGlyph arrowDown = TackGlyph(TablerIcons.arrowDown);
+  static const TackGlyph arrowLeft = TackGlyph(TablerIcons.arrowLeft);
+  static const TackGlyph arrowRight = TackGlyph(TablerIcons.arrowRight);
 
-  // Additional custom SVG icons from dark-icons / white-icons packs
-  static const TackSvgIcon add = TackSvgIcon('add', isSingleColor: true);
-  static const TackSvgIcon alert = TackSvgIcon('alert', isSingleColor: true);
-  static const TackSvgIcon crop = TackSvgIcon('crop', isSingleColor: true);
-  static const TackSvgIcon expandNavigation =
-      TackSvgIcon('expand_navigation', isSingleColor: true);
-  static const TackSvgIcon grid = TackSvgIcon('grid');
-  static const TackSvgIcon imageTool = TackSvgIcon('image_tool');
-  static const TackSvgIcon nestedList = TackSvgIcon('nested_list');
-  static const TackSvgIcon paragraph =
-      TackSvgIcon('paragraph', isSingleColor: true);
-  static const TackSvgIcon smile = TackSvgIcon('smile', isSingleColor: true);
-  static const TackSvgIcon textTool =
-      TackSvgIcon('text_tool', isSingleColor: true);
-  static const TackSvgIcon visibility =
-      TackSvgIcon('visibility', isSingleColor: true);
+  // Editor & Canvas Extras
+  static const TackGlyph add = plusSvg;
+  static const TackGlyph alert = warning;
+  static const TackGlyph crop = TackGlyph(TablerIcons.crop);
+  static const TackGlyph expandNavigation = TackGlyph(
+    TablerIcons.layoutSidebarLeftExpand,
+    solid: TablerIcons.layoutSidebarLeftExpandFilled,
+  );
+  static const TackGlyph grid = TackGlyph(TablerIcons.gridDots);
+  static const TackGlyph imageTool = TackGlyph(TablerIcons.photoPlus);
+  static const TackGlyph nestedList = TackGlyph(TablerIcons.listTree);
+  static const TackGlyph paragraph = TackGlyph(TablerIcons.pilcrow);
+  static const TackGlyph smile = TackGlyph(
+    TablerIcons.moodSmile,
+    solid: TablerIcons.moodSmileFilled,
+  );
+  static const TackGlyph textTool = textSvg;
+  static const TackGlyph visibility = eyeSvg;
 }
 
-/// Unified icon widget supporting custom SVG packs (`TackSvgIcon`), legacy
-/// asset paths (`String`), and Lucide `IconData` fallbacks.
+/// Unified icon widget supporting [TackGlyph] pairs (outline/solid) and
+/// raw [IconData] values.
 class TackIcon extends StatelessWidget {
   final dynamic icon;
   final double size;
@@ -239,75 +400,49 @@ class TackIcon extends StatelessWidget {
         themeIconColor ??
         (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
 
-    if (icon is TackSvgIcon) {
-      final svgIcon = icon as TackSvgIcon;
-      final Widget svgWidget;
-      if (svgIcon.isSingleColor) {
-        final useTint = color != null || themeIconColor != null;
-        final folder = useTint
-            ? 'dark-icons'
-            : (isDark ? 'white-icons' : 'dark-icons');
-        svgWidget = SvgPicture.asset(
-          'icons/$folder/${svgIcon.name}.svg',
+    if (icon is TackGlyph) {
+      final glyphSpec = icon as TackGlyph;
+      final resolvedStyle = style == HeroIconStyle.solid
+          ? HeroIconStyle.solid
+          : HeroIconStyle.outline;
+      final glyph = glyphSpec.resolve(resolvedStyle);
+      final iconWidget = Icon(
+        glyph,
+        size: size,
+        color: effectiveColor,
+      );
+
+      if (glyphSpec.opticalScale == 1.0) {
+        return SizedBox(
           width: size,
           height: size,
-          colorFilter: useTint
-              ? ColorFilter.mode(effectiveColor, BlendMode.srcIn)
-              : null,
-        );
-      } else {
-        // Multi-color / two-tone SVGs must not receive a BlendMode.srcIn color
-        // filter, as it flattens their palette accents. Only explicit light
-        // (> 0.65 luminance) or dark (< 0.12 luminance) ink overrides force
-        // white-icons vs dark-icons; mid-tone accent colors follow theme mode.
-        final targetColor = color ?? themeIconColor;
-        final bool useWhiteVariant;
-        if (targetColor != null) {
-          final lum = targetColor.computeLuminance();
-          useWhiteVariant = lum > 0.65 ? true : (lum < 0.12 ? false : isDark);
-        } else {
-          useWhiteVariant = isDark;
-        }
-        final folder = useWhiteVariant ? 'white-icons' : 'dark-icons';
-        svgWidget = SvgPicture.asset(
-          'icons/$folder/${svgIcon.name}.svg',
-          width: size,
-          height: size,
+          child: Center(child: iconWidget),
         );
       }
 
-      // Normalize the 64x64 SVG viewBox transparent margin while keeping a
-      // strict `size x size` layout footprint so icons fill their slots cleanly
-      // without overflowing tight containers or shifting surrounding layouts.
       return SizedBox(
         width: size,
         height: size,
         child: Center(
-          child: svgIcon.opticalScale == 1.0
-              ? svgWidget
-              : Transform.scale(
-                  scale: svgIcon.opticalScale,
-                  child: svgWidget,
-                ),
+          child: Transform.scale(
+            scale: glyphSpec.opticalScale,
+            child: iconWidget,
+          ),
         ),
       );
     }
 
-    if (icon is String) {
-      final effectiveSvgSize = size * 1.5;
-      return SvgPicture.asset(
-        icon as String,
-        width: effectiveSvgSize,
-        height: effectiveSvgSize,
-        colorFilter: ColorFilter.mode(effectiveColor, BlendMode.srcIn),
-      );
-    }
-
     if (icon is IconData) {
-      return Icon(
-        icon as IconData,
-        size: size,
-        color: effectiveColor,
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Center(
+          child: Icon(
+            icon as IconData,
+            size: size,
+            color: effectiveColor,
+          ),
+        ),
       );
     }
 
@@ -353,6 +488,7 @@ class TackPinBadge extends StatelessWidget {
       TackIcons.pin,
       size: size,
       color: resolvedColor,
+      style: HeroIconStyle.solid,
     );
   }
 }

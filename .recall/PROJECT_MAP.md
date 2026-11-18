@@ -34,7 +34,7 @@ When modifying UI components, reuse tokens from:
 - **L217**: `toggleSnapToGridForTesting` (method)
 - **L219**: `toggleMinimapForTesting` (method)
 
-### `lib/features/notes/widgets/rich_note_content_view.dart` (3,548 lines)
+### `lib/features/notes/widgets/rich_note_content_view.dart` (3,552 lines)
 - **L33**: `RichNoteContentView` (class)
 - **L58**: `createState` (method)
 - **L61**: `_RichNoteContentViewState` (class)
@@ -88,24 +88,6 @@ When modifying UI components, reuse tokens from:
 - **L557**: `subgraphChainKey` (method)
 - **L709**: `depthOf` (method)
 
-### `lib/features/tasks/screens/today_screen.dart` (1,779 lines)
-- **L38**: `TodayScreen` (class)
-- **L47**: `createState` (method)
-- **L50**: `_TodayScreenState` (class)
-- **L79**: `build` (method)
-- **L398**: `_WeekStripCard` (class)
-- **L420**: `build` (method)
-- **L531**: `_TodaysDailyNoteCard` (class)
-- **L547**: `build` (method)
-- **L689**: `_SegmentedTasksAndInboxCard` (class)
-- **L723**: `build` (method)
-- **L1022**: `_buildInboxSection` (method)
-- **L1038**: `_InboxTriageCard` (class)
-- **L1049**: `_pickNoteToAppend` (method)
-- **L1141**: `build` (method)
-- **L1334**: `_TriageButton` (class)
-- **L1350**: `build` (method)
-
 ### `lib/features/notes/widgets/mermaid/mermaid_diagram_parser.dart` (1,498 lines)
 - **L31**: `MermaidNode` (class)
 - **L60**: `MermaidSubgraph` (class)
@@ -141,6 +123,22 @@ When modifying UI components, reuse tokens from:
 - **L602**: `build` (method)
 - **L804**: `_rowsHeight` (method)
 - **L812**: `_formatShortDate` (method)
+
+### `lib/features/tasks/screens/today_screen.dart` (1,231 lines)
+- **L36**: `TodayScreen` (class)
+- **L45**: `createState` (method)
+- **L48**: `_TodayScreenState` (class)
+- **L77**: `build` (method)
+- **L384**: `_TodaysDailyNoteCard` (class)
+- **L400**: `build` (method)
+- **L542**: `_SegmentedTasksCard` (class)
+- **L572**: `build` (method)
+- **L851**: `_TaskRow` (class)
+- **L865**: `build` (method)
+- **L1054**: `_WorthRevisitingCard` (class)
+- **L1064**: `build` (method)
+- **L1164**: `_QuietEmptyBox` (class)
+- **L1176**: `build` (method)
 
 ### `lib/features/settings/screens/settings_screen.dart` (1,185 lines)
 - **L34**: `ProfileSettingsScreen` (class)
@@ -222,7 +220,7 @@ When modifying UI components, reuse tokens from:
 - **L394**: `createNotificationChannels` (function)
 - **L433**: `showQuickCaptureNotification` (function)
 
-### `lib/features/home/screens/home_screen.dart` (826 lines)
+### `lib/features/home/screens/home_screen.dart` (827 lines)
 - **L33**: `HomeScreen` (class)
 - **L50**: `createState` (method)
 - **L53**: `_HomeScreenState` (class)
@@ -233,12 +231,12 @@ When modifying UI components, reuse tokens from:
 - **L109**: `_subtitleForTab` (method)
 - **L122**: `_showSortSheet` (method)
 - **L205**: `build` (method)
-- **L338**: `_stackIndexForTab` (method)
-- **L354**: `_LibraryView` (class)
-- **L363**: `_showFolderSheet` (method)
-- **L371**: `build` (method)
-- **L383**: `resetAllFilters` (method)
-- **L389**: `emptyTitle` (method)
+- **L337**: `_stackIndexForTab` (method)
+- **L353**: `_LibraryView` (class)
+- **L362**: `_showFolderSheet` (method)
+- **L370**: `build` (method)
+- **L382**: `resetAllFilters` (method)
+- **L388**: `emptyTitle` (method)
 
 ### `lib/features/notes/widgets/slash_command_sheet.dart` (773 lines)
 - **L14**: `SlashCommandItem` (class)
@@ -272,7 +270,7 @@ When modifying UI components, reuse tokens from:
 - **L403**: `OpenTasksService` (class)
 - **L531**: `formatDueToken` (method)
 
-### `lib/features/about/screens/about_tack_screen.dart` (749 lines)
+### `lib/features/about/screens/about_tack_screen.dart` (742 lines)
 - **L12**: `AboutTackScreen` (class)
 - **L16**: `createState` (method)
 - **L19**: `_AboutTackScreenState` (class)
@@ -284,27 +282,12 @@ When modifying UI components, reuse tokens from:
 - **L316**: `_buildStageCard` (method)
 - **L409**: `_buildPrivacyLegalTab` (method)
 - **L521**: `_buildOpenSourceTab` (method)
-- **L652**: `_buildPackageCard` (method)
-- **L718**: `_JourneyStage` (class)
-- **L734**: `_OssPackage` (class)
+- **L645**: `_buildPackageCard` (method)
+- **L711**: `_JourneyStage` (class)
+- **L727**: `_OssPackage` (class)
 
 ### `lib/features/notes/services/note_export_service.dart` (738 lines)
 - **L17**: `NoteExportService` (class)
-
-### `lib/features/search/screens/search_command_screen.dart` (729 lines)
-- **L26**: `SearchCommandScreen` (class)
-- **L35**: `createState` (method)
-- **L38**: `_SearchCommandScreenState` (class)
-- **L43**: `dispose` (method)
-- **L48**: `_buildCommands` (method)
-- **L150**: `build` (method)
-- **L530**: `_CommandEntry` (class)
-- **L546**: `_GroupHeader` (class)
-- **L552**: `build` (method)
-- **L564**: `_CommandRow` (class)
-- **L570**: `build` (method)
-- **L638**: `_SearchResultItemRow` (class)
-- **L650**: `build` (method)
 
 ### `lib/features/notes/widgets/frontmatter_properties_bar.dart` (728 lines)
 - **L21**: `FrontmatterPropertiesBar` (class)
@@ -334,6 +317,23 @@ When modifying UI components, reuse tokens from:
 - **L167**: `_buildSpec` (method)
 - **L695**: `_isFollowedByCallParen` (method)
 - **L708**: `_isPascalCase` (method)
+
+### `lib/features/search/screens/search_command_screen.dart` (709 lines)
+- **L23**: `SearchCommandScreen` (class)
+- **L32**: `createState` (method)
+- **L35**: `_SearchCommandScreenState` (class)
+- **L40**: `dispose` (method)
+- **L45**: `_buildCommands` (method)
+- **L130**: `build` (method)
+- **L490**: `_SearchGroupCard` (class)
+- **L496**: `build` (method)
+- **L516**: `_CommandEntry` (class)
+- **L530**: `_GroupHeader` (class)
+- **L536**: `build` (method)
+- **L551**: `_CommandRow` (class)
+- **L557**: `build` (method)
+- **L614**: `_SearchResultItemRow` (class)
+- **L626**: `build` (method)
 
 ### `lib/shared/widgets/create_item_sheet.dart` (673 lines)
 - **L24**: `CreateItemSheet` (class)
@@ -413,17 +413,17 @@ When modifying UI components, reuse tokens from:
 | `android/app/src/` | 0 | - |
 | `android/gradle/` | 0 | - |
 | `android/gradle/wrapper/` | 2 | .jar, .properties |
+| `assets/` | 0 | - |
+| `assets/images/` | 0 | - |
+| `assets/images/onboarding/` | 1 | .jpg |
 | `docs/` | 0 | - |
 | `docs/design/` | 11 | .md |
+| `docs/design/onboarding-references/` | 7 | .jpg, .png, .md |
 | `icons/` | 18 | .svg |
 | `icons/dark-icons/` | 112 | .svg |
 | `icons/white-icons/` | 112 | .svg |
 | `lib/` | 2 | .dart, .md |
-| `lib/core/` | 0 | - |
-| `lib/core/constants/` | 1 | .dart |
-| `lib/core/routing/` | 1 | .dart |
-| `lib/core/services/` | 3 | .dart |
-| _... (23 more subdirectories)_ | - | _(use targeted live search)_ |
+| _... (27 more subdirectories)_ | - | _(use targeted live search)_ |
 
 ## Directory Tree (Top Levels)
 ```text
@@ -442,8 +442,12 @@ When modifying UI components, reuse tokens from:
 |   |-- gradlew.bat
 |   |-- local.properties
 |   \-- ... (2 more files)
+|-- assets/
+|   \-- images/
+|       \-- onboarding/
 |-- docs/
 |   \-- design/
+|       |-- onboarding-references/
 |-- icons/
 |   |-- dark-icons/
 |   |-- white-icons/

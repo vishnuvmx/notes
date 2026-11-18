@@ -18,7 +18,6 @@ import '../../../shared/providers/workspace_provider.dart';
 import '../../whiteboard/widgets/board_grid_card.dart';
 import '../../../shared/widgets/neo_note_card.dart';
 import '../../../shared/widgets/responsive_card_grid.dart';
-import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/sliding_pill_track.dart';
 import '../../../shared/widgets/tack_toast.dart';
@@ -26,15 +25,14 @@ import '../../../shared/widgets/z_order_column.dart';
 import '../../notes/screens/note_editor_screen.dart';
 import '../../whiteboard/screens/whiteboard_canvas_screen.dart';
 
-enum _TodayTaskTab { todo, completed, inbox }
+enum _TodayTaskTab { todo, completed }
 
-/// The **Today** screen redesigned in Soft Monochrome (`docs/design/11-reference-ui-style.md`, Screenshots 1, 2, 3):
-/// 1. **Horizontal Week Strip Card** (`Mon .. Sun` with active day squircle + coral dot)
-/// 2. **Today's Daily Note Card** (Joi date header `10 •` + Regent-style soft tinted inner block with 3.5dp bar)
-/// 3. **DailyLoop Task & Inbox Card** with Black-Pill Segmented Control (`To do` · `Completed` · `Inbox`),
-///    collapsible note group headers (`▾`), square checkboxes, and stacked Inbox triage deck
-/// 4. **Pinned** items grid (Notes & Boards)
-/// 5. **Worth Revisiting** resurfacing note card
+/// The **Today** screen redesigned in Soft Monochrome (`docs/design/11-reference-ui-style.md`):
+/// 1. **Today's Daily Note Card** (Joi date header + soft tinted inner block)
+/// 2. **Segmented Tasks Card** with Black-Pill Segmented Control (`To do` · `Completed`),
+///    collapsible note group headers, and square checkboxes
+/// 3. **Pinned** items grid (Notes & Boards)
+/// 4. **Worth Revisiting** resurfacing note card
 class TodayScreen extends StatefulWidget {
   final void Function(BaseWorkspaceItem item, {bool startInEditMode}) onOpenItem;
 
@@ -93,7 +91,6 @@ class _TodayScreenState extends State<TodayScreen> {
         .where((n) => !n.isTrash && n.title == expectedDailyTitle)
         .firstOrNull;
 
-    final inbox = workspace.inboxItems;
     final allTasks = OpenTasksService.extractTasks(
       workspace.allActiveItems,
       includeCompleted: true,
@@ -105,6 +102,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
     return SafeArea(
       top: false,
+      bottom: false,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
@@ -124,17 +122,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   child: ZOrderColumn(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 1. Horizontal Week Strip Card (Screenshot 2)
-                      _WeekStripCard(
-                        now: now,
-                        hasDailyNote: existingDaily != null,
-                        onTapToday: () =>
-                            _openDailyNote(workspace, existingDaily),
-                      ),
-
-                      const SizedBox(height: AppSpacing.s5),
-
-                      // 2. Today's Daily Note Hero Card (Screenshot 1 & 3)
+                      // 1. Today's Daily Note Hero Card
                       _TodaysDailyNoteCard(
                         now: now,
                         existingDaily: existingDaily,
@@ -146,8 +134,8 @@ class _TodayScreenState extends State<TodayScreen> {
 
                       const SizedBox(height: AppSpacing.s5),
 
-                      // 3. DailyLoop Segmented Tasks & Inbox Triage Card (Screenshot 2)
-                      _SegmentedTasksAndInboxCard(
+                      // 2. Segmented Tasks Card (To do · Completed)
+                      _SegmentedTasksCard(
                         activeTab: _activeTab,
                         onSelectTab: (tab) {
                           HapticFeedback.selectionClick();
@@ -158,7 +146,6 @@ class _TodayScreenState extends State<TodayScreen> {
                         },
                         openTasks: openTasks,
                         completedTasks: completedTasks,
-                        inboxItems: inbox,
                         showAllTasks: _showAllTasks,
                         onToggleShowAll: () => setState(
                           () => _showAllTasks = !_showAllTasks,
@@ -265,7 +252,6 @@ class _TodayScreenState extends State<TodayScreen> {
                         },
                         onOpenDailyNote: () =>
                             _openDailyNote(workspace, existingDaily),
-                        onOpenInboxItem: (item) => widget.onOpenItem(item),
                       ),
 
                       // 4. Pinned Section Header
@@ -389,139 +375,6 @@ class _TodayScreenState extends State<TodayScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 7-day Horizontal Week Strip Card matching Screenshot 2 (*DailyLoop*).
-class _WeekStripCard extends StatelessWidget {
-  final DateTime now;
-  final bool hasDailyNote;
-  final VoidCallback onTapToday;
-
-  const _WeekStripCard({
-    required this.now,
-    required this.hasDailyNote,
-    required this.onTapToday,
-  });
-
-  static const List<String> _dayLabels = [
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-    'Sun',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    // Monday = 1 .. Sunday = 7
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s3,
-        vertical: AppSpacing.s3,
-      ),
-      decoration: ShapeDecoration(
-        color: tokens.surfacePrimary,
-        shadows: AppSpacing.elev1(tokens.isDark),
-        shape: const SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
-          smoothness: 0.60,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: List.generate(7, (i) {
-          final dayDate = monday.add(Duration(days: i));
-          final isToday = dayDate.year == now.year &&
-              dayDate.month == now.month &&
-              dayDate.day == now.day;
-          final isPast = dayDate.isBefore(
-            DateTime(now.year, now.month, now.day),
-          );
-
-          return Expanded(
-            child: Semantics(
-              button: isToday,
-              label: isToday
-                  ? "Open today's note (${_dayLabels[i]} ${dayDate.day})"
-                  : '${_dayLabels[i]} ${dayDate.day}',
-              child: GestureDetector(
-                onTap: isToday ? onTapToday : null,
-                behavior: HitTestBehavior.opaque,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppSpacing.minTouchTarget,
-                  ),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: ShapeDecoration(
-                      color: isToday ? tokens.canvasSunken : Colors.transparent,
-                      shape: const SmoothRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(14)),
-                        smoothness: 0.60,
-                      ),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _dayLabels[i],
-                            style: AppTypography.caption(
-                              color: isToday
-                                  ? tokens.textSecondary
-                                  : (isPast
-                                      ? tokens.textTertiary.withValues(
-                                          alpha: 0.7,
-                                        )
-                                      : tokens.textTertiary),
-                              weight:
-                                  isToday ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${dayDate.day}',
-                            style: AppTypography.titleSm(
-                              color: isToday
-                                  ? tokens.textPrimary
-                                  : (isPast
-                                      ? tokens.textTertiary
-                                      : tokens.textSecondary),
-                              fontSize: 16,
-                              weight:
-                                  isToday ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: isToday && hasDailyNote
-                                  ? tokens.accentPin
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
       ),
     );
   }
@@ -685,13 +538,12 @@ class _TodaysDailyNoteCard extends StatelessWidget {
   }
 }
 
-/// DailyLoop-Style Segmented Tasks & Inbox Card (`To do` · `Completed` · `Inbox`, Screenshot 2).
-class _SegmentedTasksAndInboxCard extends StatelessWidget {
+/// Segmented Tasks Card (`To do` · `Completed`).
+class _SegmentedTasksCard extends StatelessWidget {
   final _TodayTaskTab activeTab;
   final ValueChanged<_TodayTaskTab> onSelectTab;
   final List<DerivedTaskItem> openTasks;
   final List<DerivedTaskItem> completedTasks;
-  final List<BaseWorkspaceItem> inboxItems;
   final bool showAllTasks;
   final VoidCallback onToggleShowAll;
   final Set<String> collapsedGroups;
@@ -700,14 +552,12 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
   final ValueChanged<DerivedTaskItem> onEditReminder;
   final ValueChanged<String> onOpenSourceNote;
   final VoidCallback onOpenDailyNote;
-  final ValueChanged<BaseWorkspaceItem> onOpenInboxItem;
 
-  const _SegmentedTasksAndInboxCard({
+  const _SegmentedTasksCard({
     required this.activeTab,
     required this.onSelectTab,
     required this.openTasks,
     required this.completedTasks,
-    required this.inboxItems,
     required this.showAllTasks,
     required this.onToggleShowAll,
     required this.collapsedGroups,
@@ -716,7 +566,6 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     required this.onEditReminder,
     required this.onOpenSourceNote,
     required this.onOpenDailyNote,
-    required this.onOpenInboxItem,
   });
 
   @override
@@ -737,9 +586,9 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed` · `Inbox`)
+          // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed`)
           SlidingPillTrack(
-            itemCount: 3,
+            itemCount: 2,
             selectedIndex: activeTab.index,
             trackColor: tokens.canvasSunken,
             indicatorColor: tokens.actionPrimary,
@@ -747,7 +596,7 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
               _buildSegmentPill(
                 tokens: tokens,
                 tab: _TodayTaskTab.todo,
-                icon: TackIcons.sparkles,
+                icon: TackIcons.taskOpen,
                 label: 'To do',
                 count: openTasks.length,
               ),
@@ -757,14 +606,6 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
                 icon: TackIcons.check,
                 label: 'Completed',
                 count: completedTasks.length,
-              ),
-              _buildSegmentPill(
-                tokens: tokens,
-                tab: _TodayTaskTab.inbox,
-                icon: TackIcons.inbox,
-                label: 'Inbox',
-                count: inboxItems.length,
-                highlightDot: inboxItems.isNotEmpty,
               ),
             ],
           ),
@@ -790,14 +631,12 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
                       emptyActionLabel: "Open Today's Note",
                       onEmptyAction: onOpenDailyNote,
                     )
-                  : (activeTab == _TodayTaskTab.completed
-                      ? _buildGroupedTaskList(
-                          context,
-                          tokens,
-                          completedTasks,
-                          emptyMessage: 'No completed tasks yet today.',
-                        )
-                      : _buildInboxSection(context, tokens)),
+                  : _buildGroupedTaskList(
+                      context,
+                      tokens,
+                      completedTasks,
+                      emptyMessage: 'No completed tasks yet today.',
+                    ),
             ),
           ),
         ],
@@ -811,7 +650,6 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
     required dynamic icon,
     required String label,
     required int count,
-    bool highlightDot = false,
   }) {
     final isSelected = activeTab == tab;
     final fg = isSelected ? tokens.actionPrimaryFg : tokens.textSecondary;
@@ -835,8 +673,8 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TackIcon(icon, size: 13, color: fg),
-                const SizedBox(width: 5),
+                TackIcon(icon, size: 14, color: fg),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     count > 0 ? '$label ($count)' : label,
@@ -848,17 +686,6 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (highlightDot && !isSelected) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: tokens.accentPin,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1016,381 +843,6 @@ class _SegmentedTasksAndInboxCard extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildInboxSection(BuildContext context, TackTokens tokens) {
-    if (inboxItems.isEmpty) {
-      return const _QuietEmptyBox(
-        message:
-            'Your Inbox is clear. Tap (+) below to save quick thoughts to Inbox.',
-      );
-    }
-    return _InboxTriageCard(
-      item: inboxItems.first,
-      remainingCount: inboxItems.length,
-      onOpen: () => onOpenInboxItem(inboxItems.first),
-    );
-  }
-}
-
-/// Stacked Deck Inbox Triage Card (`Keep as note` · `Add to note` · `Make task` · `Trash`).
-class _InboxTriageCard extends StatelessWidget {
-  final BaseWorkspaceItem item;
-  final int remainingCount;
-  final VoidCallback onOpen;
-
-  const _InboxTriageCard({
-    required this.item,
-    required this.remainingCount,
-    required this.onOpen,
-  });
-
-  Future<void> _pickNoteToAppend(BuildContext context) async {
-    final workspace = context.read<WorkspaceProvider>();
-    final notes = workspace.libraryNotes;
-    if (notes.isEmpty) {
-      await workspace.keepInboxItemAsNote(item.id);
-      return;
-    }
-
-    final chosen = await AppBottomSheet.show<TextNote>(
-      context: context,
-      builder: (sheetCtx) {
-        final tokens = sheetCtx.tokens;
-        return Padding(
-          padding: AppSpacing.modalSheetPadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Append capture to note',
-                style: AppTypography.title(color: tokens.textPrimary),
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 320),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: notes.length,
-                  separatorBuilder: (_, _) =>
-                      Divider(height: 1, color: tokens.borderSubtle),
-                  itemBuilder: (_, i) {
-                    final n = notes[i];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: TackIcon(
-                        TackIcons.notes,
-                        size: 18,
-                        color: tokens.textSecondary,
-                      ),
-                      title: Text(
-                        n.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body(
-                          color: tokens.textPrimary,
-                          weight: FontWeight.w500,
-                        ),
-                      ),
-                      subtitle: Text(
-                        n.getSummary(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.caption(
-                          color: tokens.textTertiary,
-                        ),
-                      ),
-                      onTap: () => Navigator.of(sheetCtx).pop(n),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (chosen != null && context.mounted) {
-      try {
-        await workspace.appendInboxItemToNote(item.id, chosen.id);
-        if (context.mounted) {
-          TackToast.show(
-            context,
-            message: 'Appended to "${chosen.title}"',
-            icon: TackIcons.check,
-            iconColor: context.tokens.success,
-          );
-        }
-      } catch (_) {
-        if (context.mounted) {
-          TackToast.show(
-            context,
-            message: 'Could not append capture',
-            icon: TackIcons.close,
-            iconColor: context.tokens.danger,
-          );
-        }
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final workspace = context.read<WorkspaceProvider>();
-    final palette = AppColors.getPaletteById(item.paletteId);
-    final accentColor = palette.resolveAccentColor(tokens.isDark);
-    final softTint = palette.resolveSoftBackground(tokens.isDark);
-    final summary = item.getSummary();
-
-    return Column(
-      children: [
-        // Stacked deck header peek (matching Screenshot 2 left stacked overview card)
-        if (remainingCount > 1)
-          Container(
-            height: 7,
-            margin: const EdgeInsets.symmetric(horizontal: 18),
-            decoration: BoxDecoration(
-              color: tokens.canvasSunken,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-            ),
-          ),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.s4),
-          decoration: BoxDecoration(
-            color: softTint,
-            borderRadius: AppSpacing.roundedMd,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              InkWell(
-                onTap: onOpen,
-                borderRadius: AppSpacing.roundedSm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: accentColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.s2),
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.titleSm(
-                              color: tokens.textPrimary,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '$remainingCount in stack',
-                          style: AppTypography.mono(
-                            fontSize: 12,
-                            color: accentColor,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (summary.isNotEmpty &&
-                        summary.toLowerCase() != item.title.toLowerCase()) ...[
-                      const SizedBox(height: AppSpacing.s2),
-                      Text(
-                        summary,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySm(
-                          color: tokens.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              Wrap(
-                spacing: AppSpacing.s2,
-                runSpacing: AppSpacing.s2,
-                children: [
-                  _TriageButton(
-                    icon: TackIcons.check,
-                    label: 'Keep as note',
-                    isPrimary: true,
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      try {
-                        await workspace.keepInboxItemAsNote(item.id);
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: 'Saved to Library',
-                            icon: TackIcons.check,
-                            iconColor: tokens.success,
-                          );
-                        }
-                      } catch (_) {
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: 'Could not save note',
-                            icon: TackIcons.close,
-                            iconColor: tokens.danger,
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  _TriageButton(
-                    icon: TackIcons.plus,
-                    label: 'Add to note',
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      _pickNoteToAppend(context);
-                    },
-                  ),
-                  _TriageButton(
-                    icon: TackIcons.task,
-                    label: 'Make task',
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      try {
-                        await workspace.convertInboxItemToTodayTask(item.id);
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: "Added to Today's Note",
-                            icon: TackIcons.check,
-                            iconColor: tokens.success,
-                          );
-                        }
-                      } catch (_) {
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: 'Could not create task',
-                            icon: TackIcons.close,
-                            iconColor: tokens.danger,
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  _TriageButton(
-                    icon: TackIcons.trash,
-                    label: 'Trash',
-                    isDestructive: true,
-                    onTap: () async {
-                      HapticFeedback.mediumImpact();
-                      final id = item.id;
-                      try {
-                        await workspace.moveToTrash(id);
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: 'Moved capture to Trash',
-                            icon: TackIcons.trash,
-                            iconColor: tokens.danger,
-                            duration: const Duration(seconds: 4),
-                            actionLabel: 'Undo',
-                            onAction: () => workspace.restoreFromTrash(id),
-                          );
-                        }
-                      } catch (_) {
-                        if (context.mounted) {
-                          TackToast.show(
-                            context,
-                            message: 'Could not move to Trash',
-                            icon: TackIcons.close,
-                            iconColor: tokens.danger,
-                          );
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TriageButton extends StatelessWidget {
-  final dynamic icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isPrimary;
-  final bool isDestructive;
-
-  const _TriageButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isPrimary = false,
-    this.isDestructive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final bg = isPrimary ? tokens.actionPrimary : tokens.surfacePrimary;
-    final fg = isPrimary
-        ? tokens.actionPrimaryFg
-        : (isDestructive ? tokens.danger : tokens.textPrimary);
-
-    return Semantics(
-      button: true,
-      label: label,
-      child: Material(
-        color: bg,
-        borderRadius: AppSpacing.roundedPill,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppSpacing.roundedPill,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.minTouchTarget,
-              minWidth: AppSpacing.minTouchTarget,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s3,
-                vertical: AppSpacing.s2,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TackIcon(icon, size: 14, color: fg),
-                  const SizedBox(width: 5),
-                  Text(
-                    label,
-                    style: AppTypography.caption(
-                      color: fg,
-                      weight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

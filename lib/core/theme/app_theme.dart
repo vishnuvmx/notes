@@ -30,6 +30,7 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.lightActionPrimary,
       scaffoldBackgroundColor: AppColors.lightCanvas,
+      iconTheme: const IconThemeData(color: AppColors.lightTextPrimary),
       colorScheme: const ColorScheme.light(
         primary: AppColors.lightActionPrimary,
         onPrimary: AppColors.lightCanvas,
@@ -199,6 +200,7 @@ class AppTheme {
       brightness: Brightness.dark,
       primaryColor: AppColors.darkActionPrimary,
       scaffoldBackgroundColor: AppColors.darkCanvas,
+      iconTheme: const IconThemeData(color: AppColors.darkTextPrimary),
       colorScheme: const ColorScheme.dark(
         primary: AppColors.darkActionPrimary,
         onPrimary: AppColors.darkCanvas,

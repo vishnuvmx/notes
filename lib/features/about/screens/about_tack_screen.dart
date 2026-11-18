@@ -542,18 +542,11 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         role: 'Typography engine delivering DM Sans, Newsreader, and JetBrains Mono.',
       ),
       const _OssPackage(
-        name: 'lucide_icons_flutter',
-        author: 'Lucide Team',
-        version: '^4.0.3',
-        license: 'ISC',
-        role: 'Minimalist, rounded-cap iconography across workspace controls.',
-      ),
-      const _OssPackage(
-        name: 'flutter_svg',
-        author: 'Dan Field & Community',
-        version: '^2.3.0',
+        name: 'tabler_icons_plus',
+        author: 'Tabler & Paweł Kuna',
+        version: '^3.52.0',
         license: 'MIT',
-        role: 'Scalable vector graphics rendering for app icons and brand assets.',
+        role: 'Unified 2px rounded-stroke and filled iconography across workspace controls.',
       ),
       const _OssPackage(
         name: 'flutter_math_fork',

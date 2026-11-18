@@ -40,48 +40,45 @@ class SmartBottomNavBar extends StatelessWidget {
         .indexWhere((item) => item.index == currentIndex)
         .clamp(0, navItems.length - 1);
 
-    return ColoredBox(
-      color: tokens.canvasPrimary,
-      child: RepaintBoundary(
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              AppSpacing.s2,
-              gutter,
-              AppSpacing.s3,
-            ),
-            child: SizedBox(
-              height: 60,
-              child: Row(
-                children: [
-                  // 1. Icon-only Floating Pill Dock with gliding pill indicator
-                  Expanded(
-                    child: SlidingPillTrack(
-                      height: 58,
-                      padding: const EdgeInsets.all(5),
-                      itemCount: navItems.length,
-                      selectedIndex: selectedSlot,
-                      duration: const Duration(milliseconds: 300),
-                      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-                      trackColor: tokens.canvasSunken,
-                      indicatorColor: tokens.surfacePrimary,
-                      indicatorShadow: AppSpacing.elev1(tokens.isDark),
-                      trackShadow: AppSpacing.elev1(tokens.isDark),
-                      children: [
-                        for (final item in navItems)
-                          _buildNavItem(context, item, tokens),
-                      ],
-                    ),
+    return RepaintBoundary(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            gutter,
+            AppSpacing.s2,
+            gutter,
+            AppSpacing.s3,
+          ),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              children: [
+                // 1. Icon-only Floating Pill Dock with gliding pill indicator
+                Expanded(
+                  child: SlidingPillTrack(
+                    height: 58,
+                    padding: const EdgeInsets.all(5),
+                    itemCount: navItems.length,
+                    selectedIndex: selectedSlot,
+                    duration: const Duration(milliseconds: 300),
+                    curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                    trackColor: tokens.canvasSunken,
+                    indicatorColor: tokens.surfacePrimary,
+                    indicatorShadow: AppSpacing.elev1(tokens.isDark),
+                    trackShadow: AppSpacing.elev1(tokens.isDark),
+                    children: [
+                      for (final item in navItems)
+                        _buildNavItem(context, item, tokens),
+                    ],
                   ),
+                ),
 
-                  const SizedBox(width: AppSpacing.s3),
+                const SizedBox(width: AppSpacing.s3),
 
-                  // 2. Detached Circular (+) Capture Button (56x56dp Ink Black)
-                  _buildDetachedCaptureFab(context, tokens),
-                ],
-              ),
+                // 2. Detached Circular (+) Capture Button (56x56dp Ink Black)
+                _buildDetachedCaptureFab(context, tokens),
+              ],
             ),
           ),
         ),

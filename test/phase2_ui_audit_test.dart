@@ -20,7 +20,10 @@ import 'package:notes/shared/widgets/z_order_column.dart';
 import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
 import 'package:notes/shared/widgets/sliding_pill_track.dart';
 import 'package:notes/features/home/screens/home_screen.dart';
+import 'package:notes/features/search/screens/search_command_screen.dart';
+import 'package:notes/features/tasks/screens/today_screen.dart';
 import 'package:notes/features/notes/screens/note_editor_screen.dart';
+import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:notes/features/settings/screens/settings_screen.dart';
 import 'package:notes/features/about/screens/about_tack_screen.dart';
 import 'package:notes/features/graph/screens/knowledge_graph_screen.dart';
@@ -1327,6 +1330,112 @@ Footer text.
           ),
           findsNothing,
         );
+      },
+    );
+
+    testWidgets(
+      '22. Home header, To-Do/Completed icons, transparent bottom nav, and decluttered Search screen match refinements',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        await repo.saveItem(
+          TextNote(
+            id: 'note-1',
+            title: 'Weekly Focus',
+            content: '# Focus\nShip dark mode & search polish.\n- [ ] Test layout',
+            folderName: 'All Notes',
+            paletteId: 'amber',
+            createdAt: DateTime(2026, 11, 18),
+            updatedAt: DateTime(2026, 11, 18),
+          ),
+        );
+        final workspaceProvider = WorkspaceProvider(repo);
+        final themeProvider = ThemeProvider();
+        await workspaceProvider.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: workspaceProvider),
+              ChangeNotifierProvider.value(value: themeProvider),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header shows "Hi Wassup!" with no subtagline
+        expect(find.text('Hi Wassup!'), findsOneWidget);
+        expect(find.text("Let's make progress today!"), findsNothing);
+
+        // Mon..Sun week strip and Inbox tab are removed on TodayScreen
+        expect(find.text('Mon'), findsNothing);
+        expect(find.text('Sun'), findsNothing);
+        expect(find.text('Inbox'), findsNothing);
+        expect(find.text('Today (1)'), findsNothing);
+
+        // Two-tab segmented control uses unfilled square for To do and check for Completed
+        final taskPillTrack = tester.widget<SlidingPillTrack>(
+          find.descendant(
+            of: find.byType(TodayScreen),
+            matching: find.byType(SlidingPillTrack),
+          ),
+        );
+        expect(taskPillTrack.itemCount, 2);
+        expect(
+          find.descendant(
+            of: find.byType(TodayScreen),
+            matching: find.byWidgetPredicate(
+              (w) => w is TackIcon && w.icon == TackIcons.taskOpen,
+            ),
+          ),
+          findsWidgets,
+        );
+        expect(TackIcons.taskOpen.outline, TablerIcons.square);
+        expect(TackIcons.check.outline, TablerIcons.check);
+        expect(
+          find.descendant(
+            of: find.byType(TodayScreen),
+            matching: find.byWidgetPredicate(
+              (w) => w is TackIcon && w.icon == TackIcons.check,
+            ),
+          ),
+          findsOneWidget,
+        );
+
+        // Bottom nav renders transparently with extendBody enabled (no cut-off strip)
+        final homeScaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+        expect(homeScaffold.extendBody, isTrue);
+        expect(
+          tester.widget<SmartBottomNavBar>(find.byType(SmartBottomNavBar)),
+          isNotNull,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(SmartBottomNavBar),
+            matching: find.byType(ColoredBox),
+          ),
+          findsNothing,
+        );
+
+        // Search tab is calm, concise, and free of command taglines/subtitles
+        await tester.tap(find.byKey(const ValueKey('nav_item_4')));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SearchCommandScreen), findsOneWidget);
+        expect(
+          find.text('Jump to today’s note with carried-forward tasks'),
+          findsNothing,
+        );
+        expect(
+          find.text('Start a visual flowchart & spec board'),
+          findsNothing,
+        );
+        expect(find.text('Recent'), findsOneWidget);
+        expect(find.text('Weekly Focus'), findsOneWidget);
+        expect(find.text('Ship dark mode & search polish.'), findsNothing);
       },
     );
   });

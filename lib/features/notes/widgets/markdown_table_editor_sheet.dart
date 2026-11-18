@@ -196,7 +196,7 @@ class _MarkdownTableEditorSheetState extends State<MarkdownTableEditorSheet> {
     });
   }
 
-  TackSvgIcon _alignIcon(TableColumnAlign align) {
+  TackGlyph _alignIcon(TableColumnAlign align) {
     switch (align) {
       case TableColumnAlign.left:
         return TackIcons.alignLeft;

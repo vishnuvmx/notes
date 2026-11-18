@@ -16,10 +16,13 @@
 - **[bugfix] Cross-Screen UX & Search Filter Invariants**: Library filter bar scrolls with CustomScrollView and clips within viewport; TodayScreen groups tasks by noteId (separating identically ti... _(mem_005)_
 - **[convention] Verified Test & Kotlin Build Commands**: Verify Flutter widget/unit tests with flutter test (59 passing tests covering card_grid_layout_test.dart, latex_math_test.dart, phase2_ui... _(mem_006)_
 - **[bugfix] Composited fade-out transitions via TackAnimatedTransition**: In Flutter CurvedAnimation, reverse evaluation calls activeCurve.transform(parent.value) directly as t drops from 1.0 to 0.0 (not 1 - cur... _(mem_007)_
+- **[decision] Unified TackIcons on tabler_icons_plus via TackGlyph**: Migrated TackIcons and TackIcon in lib/core/theme/tack_icons.dart from mixed custom SVG packs + LucideIcons to tabler_icons_plus (^3.52.0... _(mem_008)_
+- **[decision] Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search**: Refined Home, TodayScreen, SmartBottomNavBar, and SearchCommandScreen: HomeScreen header shows 'Hi Wassup!' with no subtagline and Scaffo... _(mem_009)_
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
 - `lib/core/routing/app_router.dart`: `TackRootNavigator`
+- `lib/core/services/onboarding_service.dart`: `OnboardingService`
 - `lib/core/services/pinned_notification_service.dart`: `PinnedNotificationService`
 - `lib/core/services/process_text_service.dart`: `IncomingTextData`, `ProcessTextService`
 - `lib/core/services/task_reminder_service.dart`: `TaskReminderPayload`, `TaskReminderService`
@@ -28,7 +31,7 @@
 - `lib/core/theme/app_theme.dart`: `AppTheme`, `TackAnimatedTransition`, `AppInputDecorations`
 - `lib/core/theme/app_typography.dart`: `AppTypography`
 - `lib/core/theme/smooth_border.dart`: `SmoothRectangleBorder`
-- `lib/core/theme/tack_icons.dart`: `TackSvgIcon`, `TackIcons`, `TackIcon`, `TackPinBadge`
+- `lib/core/theme/tack_icons.dart`: `TackGlyph`, `TackIcons`, `TackIcon`, `TackPinBadge`
 - `lib/core/theme/theme_provider.dart`: `ThemeProvider`
 - `lib/core/utils/date_formatter.dart`: `DateFormatter`
 - `lib/core/utils/url_launcher_helper.dart`: `UrlLauncherHelper`
@@ -37,11 +40,5 @@
 - `lib/features/folders/screens/folder_view_screen.dart`: `FolderViewScreen`
 - `lib/features/graph/screens/knowledge_graph_screen.dart`: `KnowledgeGraphScreen`
 - `lib/features/home/screens/home_screen.dart`: `HomeScreen`
-- `lib/features/notes/models/text_note.dart`: `TextNote`
-- `lib/features/notes/screens/note_editor_screen.dart`: `NoteEditorScreen`
-- `lib/features/notes/services/block_transform_service.dart`: `BlockTransformService`
-- `lib/features/notes/services/frontmatter_service.dart`: `ParsedNoteFrontmatter`, `FrontmatterService`
-- `lib/features/notes/services/latex_math_service.dart`: `ParsedInlineMath`, `ParsedBlockMath`, `LatexMathService`
-- `lib/features/notes/services/markdown_table_service.dart`: `EditableMarkdownTable`, `MarkdownTableService`
-- _... (64 more modules — query `recall where <name>`)_
+- _... (70 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->

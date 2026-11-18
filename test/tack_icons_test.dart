@@ -1,51 +1,48 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:notes/core/theme/app_colors.dart';
 import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/core/theme/tack_icons.dart';
 import 'package:notes/features/notes/services/wiki_link_service.dart';
 import 'package:notes/features/notes/widgets/editor_formatting_toolbar.dart';
 import 'package:notes/features/notes/widgets/slash_command_sheet.dart';
+import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 void main() {
-  const colorizedIcons = <TackSvgIcon>[
-    TackIcons.palette,
-    TackIcons.stickyNote,
-    TackIcons.sticky,
+  const filledCapableIcons = <TackGlyph>[
+    TackIcons.home,
+    TackIcons.today,
+    TackIcons.library,
+    TackIcons.boards,
+    TackIcons.clipboard,
+    TackIcons.star,
     TackIcons.pin,
-    TackIcons.sparkles,
-    TackIcons.lightbulb,
     TackIcons.notification,
     TackIcons.folder,
-    TackIcons.folderPlus,
-    TackIcons.folderTree,
     TackIcons.photo,
-    TackIcons.imageTool,
-    TackIcons.camera,
-    TackIcons.whiteboard,
-    TackIcons.flow,
-    TackIcons.workflow,
-    TackIcons.graph,
-    TackIcons.notes,
-    TackIcons.clipboard,
-    TackIcons.todayTasks,
+    TackIcons.sparkles,
+    TackIcons.lightbulb,
+    TackIcons.shield,
+    TackIcons.lock,
   ];
 
-  const sampleIcons = <TackSvgIcon>[
-    TackIcons.home,
+  const sampleIcons = <TackGlyph>[
     TackIcons.plus,
     TackIcons.search,
     TackIcons.user,
     TackIcons.bold,
     TackIcons.italic,
+    TackIcons.underline,
+    TackIcons.strikethrough,
+    TackIcons.code,
+    TackIcons.heading1,
+    TackIcons.heading2,
+    TackIcons.heading3,
     TackIcons.refresh,
-    TackIcons.lock,
     TackIcons.flag,
     TackIcons.cursor,
-    TackIcons.add,
-    TackIcons.alert,
+    TackIcons.hand,
+    TackIcons.move,
     TackIcons.crop,
     TackIcons.expandNavigation,
     TackIcons.grid,
@@ -54,49 +51,55 @@ void main() {
     TackIcons.smile,
     TackIcons.textTool,
     TackIcons.visibility,
-    ...colorizedIcons,
+    TackIcons.workflow,
+    TackIcons.graph,
+    TackIcons.notes,
+    TackIcons.sticky,
+    TackIcons.todayTasks,
+    TackIcons.command,
+    TackIcons.sun,
+    TackIcons.moon,
+    TackIcons.chevronLeft,
+    TackIcons.imageOff,
+    TackIcons.externalLink,
+    TackIcons.square,
+    TackIcons.diamond,
+    TackIcons.scan,
+    TackIcons.arrowLeftRight,
+    TackIcons.bolt,
+    TackIcons.briefcase,
+    ...filledCapableIcons,
   ];
 
-  group('TackIcons SVG Pack & Optical Sizing', () {
-    test('all referenced dark and white SVG assets exist on disk', () {
+  group('TackIcons Tabler Pack & Optical Sizing', () {
+    test('all sampled TackIcons use Tabler font families with non-zero codepoints', () {
+      const validFamilies = <String>{'tabler-icons', 'tabler-icons-filled'};
       for (final icon in sampleIcons) {
-        final darkFile = File('icons/dark-icons/${icon.name}.svg');
-        final whiteFile = File('icons/white-icons/${icon.name}.svg');
-        expect(
-          darkFile.existsSync(),
-          isTrue,
-          reason: 'Missing dark SVG asset: ${darkFile.path}',
-        );
-        expect(
-          whiteFile.existsSync(),
-          isTrue,
-          reason: 'Missing white SVG asset: ${whiteFile.path}',
-        );
+        expect(icon.outline.codePoint, isPositive);
+        expect(icon.outline.fontPackage, 'tabler_icons_plus');
+        expect(validFamilies.contains(icon.outline.fontFamily), isTrue);
       }
 
-      // Ensure every dark-icons/*.svg has a matching white-icons/*.svg.
-      final darkFiles = Directory('icons/dark-icons')
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.svg'))
-          .toList();
-      expect(darkFiles, isNotEmpty);
-      for (final darkFile in darkFiles) {
-        final name = darkFile.uri.pathSegments.last;
-        expect(
-          File('icons/white-icons/$name').existsSync(),
-          isTrue,
-          reason: 'Missing paired white SVG for $name',
-        );
+      // Filled-capable icons expose a distinct solid glyph in the filled family.
+      for (final icon in filledCapableIcons) {
+        expect(icon.solid, isNotNull);
+        expect(icon.solid, isNot(equals(icon.outline)));
+        expect(icon.solid!.fontPackage, 'tabler_icons_plus');
+        expect(icon.solid!.fontFamily, 'tabler-icons-filled');
       }
+
+      // Stroke-only glyphs like check/plus safely fall back to outline when solid is requested.
+      expect(TackIcons.check.resolve(HeroIconStyle.solid), TablerIcons.check);
+      expect(TackIcons.plus.resolve(HeroIconStyle.solid), TablerIcons.plus);
     });
 
     testWidgets(
-      'TackIcon keeps strict size x size layout box with opticalScale in light & dark mode',
+      'TackIcon keeps strict size x size layout box in light & dark mode',
       (tester) async {
         for (final brightness in [Brightness.light, Brightness.dark]) {
-          final theme =
-              brightness == Brightness.dark ? AppTheme.darkTheme : AppTheme.lightTheme;
+          final theme = brightness == Brightness.dark
+              ? AppTheme.darkTheme
+              : AppTheme.lightTheme;
           await tester.pumpWidget(
             MaterialApp(
               theme: theme,
@@ -105,8 +108,7 @@ void main() {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final icon in sampleIcons)
-                      TackIcon(icon, size: 20),
+                    for (final icon in sampleIcons) TackIcon(icon, size: 20),
                   ],
                 ),
               ),
@@ -115,7 +117,7 @@ void main() {
           await tester.pump();
 
           expect(tester.takeException(), isNull);
-          expect(find.byType(SvgPicture), findsNWidgets(sampleIcons.length));
+          expect(find.byType(Icon), findsNWidgets(sampleIcons.length));
 
           final firstBox = tester.getSize(find.byType(TackIcon).first);
           expect(firstBox, const Size(20, 20));
@@ -124,10 +126,36 @@ void main() {
     );
 
     testWidgets(
-      'SlashCommandsCatalog and EditorFormattingToolbar render TackIcon SVGs without overflow',
+      'TackIcon switches between Tabler outline and filled glyphs via HeroIconStyle',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: Row(
+                children: [
+                  TackIcon(TackIcons.star, style: HeroIconStyle.outline),
+                  TackIcon(TackIcons.star, style: HeroIconStyle.solid),
+                  TackIcon(TackIcons.check, style: HeroIconStyle.solid),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
+        expect(icons.length, 3);
+        expect(icons[0].icon, TablerIcons.star);
+        expect(icons[1].icon, TablerIcons.starFilled);
+        expect(icons[2].icon, TablerIcons.check);
+      },
+    );
+
+    testWidgets(
+      'SlashCommandsCatalog and EditorFormattingToolbar render Tabler TackIcons without overflow',
       (tester) async {
         expect(
-          SlashCommandsCatalog.all.every((item) => item.icon is TackSvgIcon),
+          SlashCommandsCatalog.all.every((item) => item.icon is TackGlyph),
           isTrue,
         );
 
@@ -159,25 +187,16 @@ void main() {
     );
 
     testWidgets(
-      'Colorized TackIcons keep multi-color palette un-flattened across light, dark, and accent tints',
+      'TackIcon applies explicit colors and theme defaults cleanly across light and dark modes',
       (tester) async {
-        for (final icon in colorizedIcons) {
-          expect(
-            icon.isSingleColor,
-            isFalse,
-            reason: '${icon.name} must stay multi-color (isSingleColor: false)',
-          );
-        }
-
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.darkTheme,
-            home: Scaffold(
+            home: const Scaffold(
               body: Row(
-                children: const [
-                  TackIcon(TackIcons.graph, color: Color(0xFF1BA5BA)),
-                  TackIcon(TackIcons.notes, color: Color(0xFF191A23)),
-                  TackIcon(TackIcons.sparkles, color: Colors.white),
+                children: [
+                  TackIcon(TackIcons.graph, color: AppColors.pastelCyanLight),
+                  TackIcon(TackIcons.notes),
                 ],
               ),
             ),
@@ -185,47 +204,10 @@ void main() {
         );
         await tester.pump();
 
-        expect(tester.takeException(), isNull);
-        final svgs = tester.widgetList<SvgPicture>(find.byType(SvgPicture)).toList();
-        expect(svgs.length, 3);
-        // Mid-tone accent in dark mode follows theme -> white-icons;
-        // explicit dark ink -> dark-icons; explicit white ink -> white-icons.
-        expect((svgs[0].bytesLoader as SvgAssetLoader).assetName, 'icons/white-icons/graph.svg');
-        expect((svgs[1].bytesLoader as SvgAssetLoader).assetName, 'icons/dark-icons/notes.svg');
-        expect((svgs[2].bytesLoader as SvgAssetLoader).assetName, 'icons/white-icons/sparkles.svg');
-        for (final svg in svgs) {
-          expect(svg.colorFilter, isNull);
-        }
+        final darkIcons = tester.widgetList<Icon>(find.byType(Icon)).toList();
+        expect(darkIcons[0].color, AppColors.pastelCyanLight);
+        expect(darkIcons[1].color, AppColors.darkTextPrimary);
       },
     );
-
-    test('dark-icons SVGs avoid harsh pitch-black and heavy near-black body fills', () {
-      const heavyColorizedNames = <String>[
-        'notes',
-        'clipboard',
-        'today_tasks',
-        'camera',
-        'palette',
-        'image',
-        'image_tool',
-      ];
-      for (final name in heavyColorizedNames) {
-        final content = File('icons/dark-icons/$name.svg').readAsStringSync();
-        expect(content, isNot(contains('#191A23')), reason: '$name still uses #191A23');
-        expect(content, isNot(contains('#1E293B')), reason: '$name still uses #1E293B');
-        expect(content, isNot(contains('fill="black"')), reason: '$name still uses black');
-      }
-      final allDark = Directory('icons/dark-icons')
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.svg'));
-      for (final file in allDark) {
-        expect(
-          file.readAsStringSync(),
-          isNot(contains('fill="black"')),
-          reason: '${file.path} should soften raw fill="black"',
-        );
-      }
-    });
   });
 }

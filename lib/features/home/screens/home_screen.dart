@@ -94,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _titleForTab(int tabIndex) {
     switch (tabIndex) {
       case 0:
-        return 'Today';
+        return 'Hi Wassup!';
       case 1:
         return 'Library';
       case 3:
@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 4:
         return 'Search';
       default:
-        return 'Today';
+        return 'Hi Wassup!';
     }
   }
 
@@ -217,11 +217,11 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
+        extendBody: true,
         backgroundColor: tokens.canvasPrimary,
         appBar: AppHeaderBar(
           title: _titleForTab(activeTab),
           subtitle: _subtitleForTab(activeTab, workspace),
-          tagline: activeTab == 0 ? "Let's make progress today!" : null,
           trailingAction: (activeTab == 1 || activeTab == 3)
               ? IconButton(
                   key: const ValueKey('header_sort_button'),
@@ -325,7 +325,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
         bottomNavigationBar: SmartBottomNavBar(
           currentIndex: activeTab,
-          inboxCount: workspace.inboxItems.length,
           onTap: _handleBottomNavTap,
           onFabTap: () => _openCaptureSheet(
             defaultType: activeTab == 3 ? ItemType.whiteboard : ItemType.note,
@@ -406,6 +405,7 @@ class _LibraryView extends StatelessWidget {
 
     return SafeArea(
       top: false,
+      bottom: false,
       child: CustomScrollView(
         key: const ValueKey('library_custom_scroll'),
         physics: const BouncingScrollPhysics(
@@ -560,6 +560,7 @@ class _BoardsView extends StatelessWidget {
 
     return SafeArea(
       top: false,
+      bottom: false,
       child: ResponsiveCardGrid(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),

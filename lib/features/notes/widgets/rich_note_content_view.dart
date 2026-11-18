@@ -912,7 +912,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       final bodyText = bodyLines.join('\n').trim();
 
       Color alertColor;
-      TackSvgIcon alertIcon;
+      TackGlyph alertIcon;
       switch (alertType) {
         case 'TIP':
           alertColor = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
@@ -1513,7 +1513,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          TackIcon(
             TackIcons.imageOff,
             size: 24,
             color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
@@ -2512,17 +2512,17 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         cleanUrl,
         height: 28,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Icon(TackIcons.imageOff, size: 20),
+        errorBuilder: (_, _, _) => const TackIcon(TackIcons.imageOff, size: 20),
       );
     } else if (!kIsWeb) {
       final file = File(cleanUrl);
       if (file.existsSync()) {
         inlineImg = Image.file(file, height: 28, fit: BoxFit.cover);
       } else {
-        inlineImg = Icon(TackIcons.imageOff, size: 20);
+        inlineImg = const TackIcon(TackIcons.imageOff, size: 20);
       }
     } else {
-      inlineImg = Icon(TackIcons.imageOff, size: 20);
+      inlineImg = const TackIcon(TackIcons.imageOff, size: 20);
     }
 
     return WidgetSpan(
@@ -3342,7 +3342,7 @@ class _ImageLightboxViewer extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
           );
         },
-        errorBuilder: (_, _, _) => Icon(
+        errorBuilder: (_, _, _) => const TackIcon(
           TackIcons.imageOff,
           size: 48,
           color: Colors.white54,
@@ -3353,14 +3353,14 @@ class _ImageLightboxViewer extends StatelessWidget {
       if (file.existsSync()) {
         imageWidget = Image.file(file, fit: BoxFit.contain);
       } else {
-        imageWidget = Icon(
+        imageWidget = const TackIcon(
           TackIcons.imageOff,
           size: 48,
           color: Colors.white54,
         );
       }
     } else {
-      imageWidget = Icon(
+      imageWidget = const TackIcon(
         TackIcons.imageOff,
         size: 48,
         color: Colors.white54,
@@ -3416,7 +3416,11 @@ class _ImageLightboxViewer extends StatelessWidget {
                     const Spacer(),
                   if (isNetwork)
                     IconButton(
-                      icon: Icon(TackIcons.externalLink, color: Colors.white, size: 22),
+                      icon: const TackIcon(
+                        TackIcons.externalLink,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                       tooltip: 'Open in browser',
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.black45,
@@ -3502,7 +3506,7 @@ class _ParsedDefinitionList {
 }
 
 class _TaskMetaBadge extends StatelessWidget {
-  final TackSvgIcon icon;
+  final TackGlyph icon;
   final String label;
   final Color color;
   final bool isDark;

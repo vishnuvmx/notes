@@ -40,11 +40,10 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   image: ^4.9.2
-  lucide_icons_flutter: ^4.0.3
   vector_math: ^2.1.4
-  flutter_svg: ^2.3.0
   url_launcher: ^6.3.2
   flutter_math_fork: ^0.7.4
+  tabler_icons_plus: ^3.52.0
 
 dev_dependencies:
   flutter_test:
@@ -79,9 +78,7 @@ flutter:
   # Assets section
   assets:
     - icon.png
-    - icons/
-    - icons/white-icons/
-    - icons/dark-icons/
+    - assets/images/onboarding/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
