@@ -196,6 +196,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
               splashBorderRadius: AppSpacing.roundedPill,
+              labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
               indicator: BoxDecoration(
                 color: tokens.actionPrimary,
                 borderRadius: AppSpacing.roundedPill,
@@ -211,9 +212,27 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                 weight: FontWeight.w500,
               ),
               tabs: const [
-                Tab(text: 'Architecture'),
-                Tab(text: 'Privacy & Legal'),
-                Tab(text: 'Open Source'),
+                Tab(
+                  height: AppSpacing.minTouchTarget,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Architecture'),
+                  ),
+                ),
+                Tab(
+                  height: AppSpacing.minTouchTarget,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Privacy & Legal'),
+                  ),
+                ),
+                Tab(
+                  height: AppSpacing.minTouchTarget,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Open Source'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -613,28 +632,26 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       children: [
         ...packages.map((pkg) => _buildPackageCard(pkg, tokens)),
         const SizedBox(height: AppSpacing.s2),
-        SizedBox(
-          height: AppSpacing.minTouchTarget,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: tokens.borderSubtle),
-              shape: const RoundedRectangleBorder(
-                borderRadius: AppSpacing.roundedPill,
-              ),
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+            side: BorderSide(color: tokens.borderSubtle),
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppSpacing.roundedPill,
             ),
-            onPressed: () {
-              showLicensePage(
-                context: context,
-                applicationName: 'Tack',
-                applicationVersion: 'v2.0.0',
-              );
-            },
-            child: Text(
-              'View Full License Notices',
-              style: AppTypography.label(
-                color: tokens.textPrimary,
-                weight: FontWeight.w600,
-              ),
+          ),
+          onPressed: () {
+            showLicensePage(
+              context: context,
+              applicationName: 'Tack',
+              applicationVersion: 'v2.0.0',
+            );
+          },
+          child: Text(
+            'View Full License Notices',
+            style: AppTypography.label(
+              color: tokens.textPrimary,
+              weight: FontWeight.w600,
             ),
           ),
         ),

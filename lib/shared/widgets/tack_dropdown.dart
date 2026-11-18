@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
 
@@ -62,10 +63,9 @@ class TackDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final effectiveBorderColor = borderColor ??
-        (isDark ? AppColors.darkBorder : const Color(0xFF191A23));
-    final effectiveRadius = borderRadius ?? BorderRadius.circular(14);
+    final tokens = context.tokens;
+    final effectiveBorderColor = borderColor ?? tokens.borderStrong;
+    final effectiveRadius = borderRadius ?? AppSpacing.roundedSm;
 
     // Resolve current selected item
     final selectedItem = items.where((i) => i.value == value).firstOrNull;
@@ -81,23 +81,25 @@ class TackDropdown<T> extends StatelessWidget {
       child: PopupMenuButton<T>(
         initialValue: value,
         tooltip: tooltip ?? displayLabel,
+        position: PopupMenuPosition.under,
+        offset: const Offset(0, AppSpacing.s1),
+        elevation: 8,
+        borderRadius: effectiveRadius,
+        shadowColor: Colors.black.withValues(alpha: tokens.isDark ? 0.45 : 0.12),
+        shape: AppSpacing.smoothMd(
+          side: BorderSide(color: effectiveBorderColor, width: 1.2),
+        ),
+        color: tokens.surfacePrimary,
+        surfaceTintColor: Colors.transparent,
         onSelected: (val) {
           HapticFeedback.selectionClick();
           onSelected(val);
         },
-        offset: const Offset(0, 42),
-        elevation: 8,
-        shadowColor: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: effectiveBorderColor, width: 1.5),
-        ),
-        color: isDark ? AppColors.darkSurface : Colors.white,
         itemBuilder: (context) => items.map((item) {
           final isSelected = item.value == value;
           return PopupMenuItem<T>(
             value: item.value,
-            height: 42,
+            height: AppSpacing.minTouchTarget,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
@@ -106,20 +108,19 @@ class TackDropdown<T> extends StatelessWidget {
                     item.icon!,
                     size: iconSize,
                     color: item.iconColor ??
-                        (isSelected
-                            ? AppColors.accentAmber
-                            : (isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23))),
+                        (isSelected ? tokens.actionPrimary : tokens.textSecondary),
                   ),
                   const SizedBox(width: 8),
                 ],
                 Expanded(
                   child: Text(
                     item.label,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.label(
                       fontSize: fontSize,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
+                      weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: tokens.textPrimary,
                     ),
                   ),
                 ),
@@ -128,64 +129,73 @@ class TackDropdown<T> extends StatelessWidget {
                   TackIcon(
                     TackIcons.check,
                     size: 14,
-                    color: isDark ? AppColors.pastelLimeLight : const Color(0xFF191A23),
+                    color: tokens.actionPrimary,
                   ),
                 ],
               ],
             ),
           );
         }).toList(),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: backgroundColor ??
-                (isDark ? AppColors.darkSurface : const Color(0xFFF1F3F7)),
-            borderRadius: effectiveRadius,
-            border: Border.all(color: effectiveBorderColor, width: 1.4),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: AppSpacing.minTouchTarget,
+            minHeight: AppSpacing.minTouchTarget,
           ),
-          child: Row(
-            mainAxisSize: isExpanded ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment:
-                isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
-            children: [
-              Flexible(
-                fit: isExpanded ? FlexFit.tight : FlexFit.loose,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (effectiveLeadingIcon != null) ...[
-                      TackIcon(
-                        effectiveLeadingIcon,
-                        size: iconSize,
-                        color: effectiveLeadingIconColor ??
-                            (isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23)),
-                      ),
-                      if (displayLabel.isNotEmpty) const SizedBox(width: 6),
-                    ],
-                    if (displayLabel.isNotEmpty)
-                      Flexible(
-                        child: Text(
-                          displayLabel,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: isDark ? AppColors.darkTextPrimary : const Color(0xFF191A23),
-                          ),
-                        ),
-                      ),
-                  ],
+          child: Center(
+            widthFactor: isExpanded ? null : 1,
+            heightFactor: 1,
+            child: Container(
+              padding: padding,
+              decoration: ShapeDecoration(
+                color: backgroundColor ?? tokens.canvasSunken,
+                shape: AppSpacing.smoothBorder(
+                  effectiveRadius,
+                  side: BorderSide(color: effectiveBorderColor, width: 1.2),
                 ),
               ),
-              const SizedBox(width: 4),
-              TackIcon(
-                TackIcons.chevronDown,
-                size: chevronSize,
-                color: isDark ? AppColors.darkTextSecondary : const Color(0xFF191A23),
+              child: Row(
+                mainAxisSize: isExpanded ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisAlignment:
+                    isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+                children: [
+                  Flexible(
+                    fit: isExpanded ? FlexFit.tight : FlexFit.loose,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (effectiveLeadingIcon != null) ...[
+                          TackIcon(
+                            effectiveLeadingIcon,
+                            size: iconSize,
+                            color: effectiveLeadingIconColor ?? tokens.textSecondary,
+                          ),
+                          if (displayLabel.isNotEmpty) const SizedBox(width: 6),
+                        ],
+                        if (displayLabel.isNotEmpty)
+                          Flexible(
+                            child: Text(
+                              displayLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.label(
+                                fontSize: fontSize,
+                                weight: FontWeight.w700,
+                                color: tokens.textPrimary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  TackIcon(
+                    TackIcons.chevronDown,
+                    size: chevronSize,
+                    color: tokens.textSecondary,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

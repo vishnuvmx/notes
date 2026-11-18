@@ -230,13 +230,13 @@ class AppTypography {
     required Color color,
     double fontSize = 12,
   }) =>
-      caption(color: color);
+      caption(color: color, fontSize: fontSize);
 
   static TextStyle cardSnippetStyle({
     required Color color,
     double fontSize = 14,
   }) =>
-      bodySm(color: color);
+      bodySm(color: color, fontSize: fontSize);
 
   static TextStyle scriptIndexStyle({required Color color, double fontSize = 24}) =>
       display(color: color, fontSize: fontSize);

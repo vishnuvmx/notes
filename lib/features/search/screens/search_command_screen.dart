@@ -236,8 +236,11 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(
-                                  0,
                                   AppSpacing.minTouchTarget,
+                                  AppSpacing.minTouchTarget,
+                                ),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AppSpacing.roundedPill,
                                 ),
                               ),
                               onPressed: () async {
@@ -265,7 +268,11 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                                   }
                                 }
                               },
-                              child: Text('Create note "$q"'),
+                              child: Text(
+                                'Create note "$q"',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.s2),
                             TextButton(
@@ -340,28 +347,25 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                             if (i > 0)
                               Divider(
                                 height: 1,
-                                indent: 48,
+                                indent: 72,
                                 color: tokens.borderSubtle,
                               ),
                             ListTile(
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.s2,
+                                horizontal: AppSpacing.s3,
                                 vertical: AppSpacing.s1,
                               ),
-                              leading: Semantics(
-                                button: true,
-                                label: 'Complete ${matchingTasks[i].text}',
-                                child: IconButton(
-                                  tooltip: 'Complete task',
-                                  constraints: const BoxConstraints(
-                                    minWidth: AppSpacing.minTouchTarget,
-                                    minHeight: AppSpacing.minTouchTarget,
-                                  ),
-                                  icon: TackIcon(
-                                    TackIcons.taskOpen,
-                                    size: 19,
-                                    color: tokens.textSecondary,
-                                  ),
+                              leading: IconButton(
+                                tooltip: 'Complete ${matchingTasks[i].text}',
+                                constraints: const BoxConstraints(
+                                  minWidth: AppSpacing.minTouchTarget,
+                                  minHeight: AppSpacing.minTouchTarget,
+                                ),
+                                icon: TackIcon(
+                                  TackIcons.taskOpen,
+                                  size: 19,
+                                  color: tokens.textSecondary,
+                                ),
                                   onPressed: () async {
                                     HapticFeedback.selectionClick();
                                     final task = matchingTasks[i];
@@ -397,7 +401,6 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                                     }
                                   },
                                 ),
-                              ),
                               title: Text(
                                 matchingTasks[i].text,
                                 maxLines: 1,
@@ -625,7 +628,7 @@ class _SearchResultItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(item.paletteId);
-    final bandColor = palette.resolveCardColor(tokens.isDark);
+    final bandColor = palette.resolveAccentColor(tokens.isDark);
     final isIdle = query.isEmpty;
     final snippet = isIdle ? '' : item.extractMatchSnippet(query).trim();
 

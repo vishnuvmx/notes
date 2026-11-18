@@ -36,9 +36,9 @@ class SmartBottomNavBar extends StatelessWidget {
       (icon: TackIcons.search, label: 'Search', index: 4, badge: 0),
     ];
 
-    final selectedSlot = navItems
-        .indexWhere((item) => item.index == currentIndex)
-        .clamp(0, navItems.length - 1);
+    final matchedSlot = navItems.indexWhere((item) => item.index == currentIndex);
+    final selectedSlot = matchedSlot >= 0 ? matchedSlot : 0;
+    final hasValidSelection = matchedSlot >= 0;
 
     return RepaintBoundary(
       child: SafeArea(
@@ -61,11 +61,15 @@ class SmartBottomNavBar extends StatelessWidget {
                     padding: const EdgeInsets.all(5),
                     itemCount: navItems.length,
                     selectedIndex: selectedSlot,
-                    duration: const Duration(milliseconds: 300),
-                    curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                    duration: AppSpacing.normalAnim,
+                    curve: AppSpacing.smoothCurve,
                     trackColor: tokens.canvasSunken,
-                    indicatorColor: tokens.surfacePrimary,
-                    indicatorShadow: AppSpacing.elev1(tokens.isDark),
+                    indicatorColor: hasValidSelection
+                        ? tokens.surfacePrimary
+                        : Colors.transparent,
+                    indicatorShadow: hasValidSelection
+                        ? AppSpacing.elev1(tokens.isDark)
+                        : null,
                     trackShadow: AppSpacing.elev1(tokens.isDark),
                     children: [
                       for (final item in navItems)
@@ -92,61 +96,85 @@ class SmartBottomNavBar extends StatelessWidget {
     TackTokens tokens,
   ) {
     final isSelected = currentIndex == item.index;
-    final fgColor = isSelected ? tokens.textPrimary : tokens.textSecondary;
-    const iconAnimDuration = Duration(milliseconds: 240);
-    const iconAnimCurve = Curves.easeOutCubic;
+    final fgColor = isSelected
+        ? tokens.textPrimary
+        : tokens.textSecondary.withValues(alpha: 0.62);
+    const iconAnimDuration = AppSpacing.normalAnim;
+    const iconAnimCurve = AppSpacing.smoothCurve;
+    final semanticLabel = item.badge > 0
+        ? '${item.label}, ${item.badge} items'
+        : item.label;
 
     return Semantics(
       button: true,
       selected: isSelected,
-      label: item.label,
+      label: semanticLabel,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap(item.index);
+      },
+      excludeSemantics: true,
       child: Tooltip(
         message: item.label,
-        child: GestureDetector(
-          key: ValueKey('nav_item_${item.index}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap(item.index);
-          },
-          child: Center(
-            child: AnimatedScale(
-              scale: isSelected ? 1.04 : 0.94,
-              duration: iconAnimDuration,
-              curve: iconAnimCurve,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  TackIcon(
-                    item.icon,
-                    size: 21,
-                    color: isSelected
-                        ? fgColor
-                        : fgColor.withValues(alpha: 0.52),
-                    style: isSelected
-                        ? HeroIconStyle.solid
-                        : HeroIconStyle.outline,
-                  ),
-                  if (item.badge > 0)
-                    Positioned(
-                      top: -2,
-                      right: -4,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: tokens.accentPin,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected
-                                ? tokens.surfacePrimary
-                                : tokens.canvasSunken,
-                            width: 1.2,
-                          ),
+        child: Material(
+          type: MaterialType.transparency,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: ValueKey('nav_item_${item.index}'),
+            customBorder: const StadiumBorder(),
+            splashColor: tokens.textPrimary.withValues(alpha: 0.08),
+            highlightColor: tokens.textPrimary.withValues(alpha: 0.05),
+            hoverColor: tokens.textPrimary.withValues(alpha: 0.04),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap(item.index);
+            },
+            child: Center(
+              child: AnimatedScale(
+                scale: isSelected ? 1.04 : 0.94,
+                duration: iconAnimDuration,
+                curve: iconAnimCurve,
+                child: TweenAnimationBuilder<Color?>(
+                  tween: ColorTween(begin: fgColor, end: fgColor),
+                  duration: iconAnimDuration,
+                  curve: iconAnimCurve,
+                  builder: (_, animatedFg, _) {
+                    final iconFg = animatedFg ?? fgColor;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        TackIcon(
+                          item.icon,
+                          size: 21,
+                          color: iconFg,
+                          style: isSelected
+                              ? HeroIconStyle.solid
+                              : HeroIconStyle.outline,
                         ),
-                      ),
-                    ),
-                ],
+                        if (item.badge > 0)
+                          Positioned(
+                            top: -2,
+                            right: -4,
+                            child: Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                color: tokens.accentPin,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? tokens.surfacePrimary
+                                      : tokens.canvasSunken,
+                                  width: 1.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -156,32 +184,37 @@ class SmartBottomNavBar extends StatelessWidget {
   }
 
   Widget _buildDetachedCaptureFab(BuildContext context, TackTokens tokens) {
-    return Semantics(
-      button: true,
-      label: 'Capture thought, note, or board',
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: tokens.actionPrimary,
-          shape: BoxShape.circle,
-          boxShadow: AppSpacing.elev2(tokens.isDark),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            key: const ValueKey('nav_capture_fab'),
-            customBorder: const CircleBorder(),
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              onFabTap();
-            },
-            child: Center(
-              child: TackIcon(
-                TackIcons.plus,
-                size: 24,
-                color: tokens.actionPrimaryFg,
+    return Tooltip(
+      message: 'Capture thought, note, or board',
+      child: Semantics(
+        button: true,
+        label: 'Capture thought, note, or board',
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: tokens.actionPrimary,
+            shape: BoxShape.circle,
+            boxShadow: AppSpacing.elev2(tokens.isDark),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: const ValueKey('nav_capture_fab'),
+              customBorder: const CircleBorder(),
+              splashColor: tokens.actionPrimaryFg.withValues(alpha: 0.16),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                onFabTap();
+              },
+              child: Center(
+                child: TackIcon(
+                  TackIcons.plus,
+                  size: 24,
+                  color: tokens.actionPrimaryFg,
+                ),
               ),
             ),
           ),

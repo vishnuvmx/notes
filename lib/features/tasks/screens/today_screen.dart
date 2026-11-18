@@ -449,54 +449,55 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.s3),
 
                   // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
-                  Container(
+                  Ink(
                     padding: const EdgeInsets.all(AppSpacing.s3),
                     decoration: BoxDecoration(
                       color: softTint,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 3.5,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: accentColor,
-                            borderRadius: AppSpacing.roundedPill,
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            width: 3.5,
+                            decoration: BoxDecoration(
+                              color: accentColor,
+                              borderRadius: AppSpacing.roundedPill,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.s3),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Today's Daily Note",
-                                style: AppTypography.titleSm(
-                                  color: tokens.textPrimary,
-                                  fontSize: 16,
+                          const SizedBox(width: AppSpacing.s3),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Today's Daily Note",
+                                  style: AppTypography.titleSm(
+                                    color: tokens.textPrimary,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                hasNote &&
-                                        summary.isNotEmpty &&
-                                        summary != 'Empty note'
-                                    ? summary
-                                    : (carryForwardEnabled
-                                        ? 'Tap to start today’s note — open tasks carry forward automatically.'
-                                        : 'Tap to start today’s note.'),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodySm(
-                                  color: accentColor.withValues(alpha: 0.85),
+                                const SizedBox(height: 2),
+                                Text(
+                                  hasNote &&
+                                          summary.isNotEmpty &&
+                                          summary != 'Empty note'
+                                      ? summary
+                                      : (carryForwardEnabled
+                                          ? 'Tap to start today’s note — open tasks carry forward automatically.'
+                                          : 'Tap to start today’s note.'),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySm(
+                                    color: accentColor.withValues(alpha: 0.85),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.s2),
+                          const SizedBox(width: AppSpacing.s2),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -516,6 +517,7 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ],
               ),
@@ -585,18 +587,23 @@ class _SegmentedTasksCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
+    final cardShape = const SmoothRectangleBorder(
+      borderRadius: AppSpacing.roundedLg,
+      smoothness: 0.60,
+    );
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
         shadows: AppSpacing.elev1(tokens.isDark),
-        shape: const SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
-          smoothness: 0.60,
-        ),
+        shape: cardShape,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+      child: Material(
+        type: MaterialType.transparency,
+        shape: cardShape,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed`)
@@ -683,6 +690,8 @@ class _SegmentedTasksCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
+    ),
     );
   }
 
@@ -696,10 +705,17 @@ class _SegmentedTasksCard extends StatelessWidget {
     final isSelected = activeTab == tab;
     final fg = isSelected ? tokens.actionPrimaryFg : tokens.textSecondary;
 
+    final style = AppTypography.caption(
+      color: fg,
+      weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+    );
+
     return Semantics(
       button: true,
       selected: isSelected,
       label: '$label, $count items',
+      onTap: () => onSelectTab(tab),
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: () => onSelectTab(tab),
         behavior: HitTestBehavior.opaque,
@@ -712,23 +728,30 @@ class _SegmentedTasksCard extends StatelessWidget {
               vertical: AppSpacing.s2,
               horizontal: AppSpacing.s1,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TackIcon(icon, size: 14, color: fg),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    count > 0 ? '$label ($count)' : label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(
-                      color: fg,
-                      weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              style: style,
+              child: Builder(
+                builder: (ctx) {
+                  final animatedFg =
+                      DefaultTextStyle.of(ctx).style.color ?? fg;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TackIcon(icon, size: 14, color: animatedFg),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          count > 0 ? '$label ($count)' : label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -800,66 +823,72 @@ class _SegmentedTasksCard extends StatelessWidget {
           ),
         ],
         for (final entry in grouped.entries) ...[
-          InkWell(
-            onTap: () => onToggleGroup(entry.key),
-            borderRadius: AppSpacing.roundedSm,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: AppSpacing.minTouchTarget,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.s1,
-                  horizontal: 2,
-                ),
-                child: Row(
-                  children: [
-                    TackIcon(
-                      collapsedGroups.contains(entry.key)
-                          ? TackIcons.chevronRight
-                          : TackIcons.chevronDown,
-                      size: 14,
-                      color: tokens.textSecondary,
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => onToggleGroup(entry.key),
+                  borderRadius: AppSpacing.roundedSm,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: AppSpacing.minTouchTarget,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        entry.value.first.noteTitle.trim().isEmpty
-                            ? 'Untitled'
-                            : entry.value.first.noteTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.titleSm(
-                          color: tokens.textPrimary,
-                          fontSize: 15,
-                        ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.s1,
+                        horizontal: 2,
+                      ),
+                      child: Row(
+                        children: [
+                          TackIcon(
+                            collapsedGroups.contains(entry.key)
+                                ? TackIcons.chevronRight
+                                : TackIcons.chevronDown,
+                            size: 14,
+                            color: tokens.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              entry.value.first.noteTitle.trim().isEmpty
+                                  ? 'Untitled'
+                                  : entry.value.first.noteTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.titleSm(
+                                color: tokens.textPrimary,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.s2),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(
-                          AppSpacing.minTouchTarget,
-                          AppSpacing.minTouchTarget,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.s2,
-                        ),
-                      ),
-                      onPressed: () =>
-                          onOpenSourceNote(entry.value.first.noteId),
-                      child: Text(
-                        'Open note',
-                        style: AppTypography.caption(
-                          color: tokens.textSecondary,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.s2),
+              TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(
+                    AppSpacing.minTouchTarget,
+                    AppSpacing.minTouchTarget,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s2,
+                  ),
+                ),
+                onPressed: () =>
+                    onOpenSourceNote(entry.value.first.noteId),
+                child: Text(
+                  'Open note',
+                  style: AppTypography.caption(
+                    color: tokens.textSecondary,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
           if (!collapsedGroups.contains(entry.key))
             for (final task in entry.value)
@@ -927,25 +956,29 @@ class _TaskRow extends StatelessWidget {
       dueBg = tokens.canvasSunken;
     }
 
-    return Semantics(
-      toggled: task.isDone,
-      label: task.text,
-      child: InkWell(
-        onTap: onToggle,
-        onLongPress: onEditReminder,
-        borderRadius: AppSpacing.roundedSm,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.s2,
-              horizontal: AppSpacing.s1,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Semantics(
+            toggled: task.isDone,
+            label: task.text,
+            child: InkWell(
+              onTap: onToggle,
+              onLongPress: onEditReminder,
+              borderRadius: AppSpacing.roundedSm,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.s2,
+                    horizontal: AppSpacing.s1,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                 // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
                 Container(
                   width: 20,
@@ -1069,26 +1102,29 @@ class _TaskRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (onEditReminder != null)
-                  IconButton(
-                    onPressed: onEditReminder,
-                    tooltip: 'Set reminder',
-                    constraints: const BoxConstraints(
-                      minWidth: AppSpacing.minTouchTarget,
-                      minHeight: AppSpacing.minTouchTarget,
-                    ),
-                    padding: EdgeInsets.zero,
-                    icon: TackIcon(
-                      TackIcons.notification,
-                      size: 16,
-                      color: dueLabel != null ? dueFg : tokens.textTertiary,
-                    ),
-                  ),
               ],
             ),
           ),
         ),
       ),
+    ),
+    ),
+        if (onEditReminder != null)
+          IconButton(
+            onPressed: onEditReminder,
+            tooltip: 'Set reminder',
+            constraints: const BoxConstraints(
+              minWidth: AppSpacing.minTouchTarget,
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            padding: EdgeInsets.zero,
+            icon: TackIcon(
+              TackIcons.notification,
+              size: 16,
+              color: dueLabel != null ? dueFg : tokens.textTertiary,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1127,47 +1163,58 @@ class _WorthRevisitingCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'WORTH REVISITING',
-                      style: AppTypography.caption(
-                        fontSize: 12,
-                        weight: FontWeight.w600,
-                        color: tokens.textTertiary,
-                      ).copyWith(letterSpacing: 0.4),
+                    Flexible(
+                      child: Text(
+                        'WORTH REVISITING',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          fontSize: 12,
+                          weight: FontWeight.w600,
+                          color: tokens.textTertiary,
+                        ).copyWith(letterSpacing: 0.4),
+                      ),
                     ),
-                    const Spacer(),
-                    Text(
-                      DateFormatter.formatTimestamp(note.updatedAt)
-                          .toUpperCase(),
-                      style: AppTypography.caption(
-                        fontSize: 12,
-                        color: tokens.textTertiary,
+                    const SizedBox(width: AppSpacing.s2),
+                    Expanded(
+                      child: Text(
+                        DateFormatter.formatTimestamp(note.updatedAt)
+                            .toUpperCase(),
+                        maxLines: 1,
+                        textAlign: TextAlign.right,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          fontSize: 12,
+                          color: tokens.textTertiary,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.s2),
-                Container(
+                Ink(
                   padding: const EdgeInsets.all(AppSpacing.s3),
                   decoration: BoxDecoration(
                     color: softTint,
                     borderRadius: AppSpacing.roundedSm,
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 3.5,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: accentColor,
-                          borderRadius: AppSpacing.roundedPill,
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          width: 3.5,
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: AppSpacing.roundedPill,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.s3),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                        const SizedBox(width: AppSpacing.s3),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
                             Text(
                               note.title,
                               maxLines: 1,
@@ -1185,10 +1232,11 @@ class _WorthRevisitingCard extends StatelessWidget {
                                 color: tokens.textSecondary,
                               ),
                             ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

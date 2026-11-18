@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 
 /// Shared page-route transition factories tailored to Tack's navigation hierarchy.
@@ -42,7 +43,7 @@ class TackRoutes {
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         return _SecondaryAxisMotion(
           secondaryAnimation: secondaryAnimation,
-          endScale: 0.965,
+          endOffset: const Offset(0, -0.025),
           child: TackAnimatedTransition(
             animation: animation,
             slideBegin: const Offset(0, 0.12),
@@ -70,9 +71,9 @@ class TackRoutes {
       builder: (_, child) {
         final t = Curves.easeOutCubic.transform(animation.value);
         final radius = BorderRadius.lerp(
-          BorderRadius.circular(14),
+          BorderRadius.circular(AppSpacing.radiusMd),
           BorderRadius.zero,
-          flightDirection == HeroFlightDirection.push ? t : 1.0 - t,
+          t,
         );
         return ClipRRect(
           borderRadius: radius ?? BorderRadius.zero,
@@ -88,13 +89,11 @@ class TackRoutes {
 class _SecondaryAxisMotion extends StatefulWidget {
   final Animation<double> secondaryAnimation;
   final Offset endOffset;
-  final double endScale;
   final Widget child;
 
   const _SecondaryAxisMotion({
     required this.secondaryAnimation,
     this.endOffset = Offset.zero,
-    this.endScale = 1.0,
     required this.child,
   });
 
@@ -105,7 +104,6 @@ class _SecondaryAxisMotion extends StatefulWidget {
 class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
   late CurvedAnimation _curved;
   Animation<Offset>? _offsetAnim;
-  Animation<double>? _scaleAnim;
 
   @override
   void initState() {
@@ -117,8 +115,7 @@ class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
   void didUpdateWidget(covariant _SecondaryAxisMotion oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.secondaryAnimation != widget.secondaryAnimation ||
-        oldWidget.endOffset != widget.endOffset ||
-        oldWidget.endScale != widget.endScale) {
+        oldWidget.endOffset != widget.endOffset) {
       _curved.dispose();
       _initCurve();
     }
@@ -136,12 +133,6 @@ class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
             begin: Offset.zero,
             end: widget.endOffset,
           ).animate(_curved);
-    _scaleAnim = widget.endScale == 1.0
-        ? null
-        : Tween<double>(
-            begin: 1.0,
-            end: widget.endScale,
-          ).animate(_curved);
   }
 
   @override
@@ -152,19 +143,12 @@ class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
 
   @override
   Widget build(BuildContext context) {
-    Widget current = widget.child;
     if (_offsetAnim != null) {
-      current = SlideTransition(
+      return SlideTransition(
         position: _offsetAnim!,
-        child: current,
+        child: widget.child,
       );
     }
-    if (_scaleAnim != null) {
-      current = ScaleTransition(
-        scale: _scaleAnim!,
-        child: current,
-      );
-    }
-    return current;
+    return widget.child;
   }
 }

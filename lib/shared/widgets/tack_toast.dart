@@ -3,6 +3,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
+import 'tactile_ink_target.dart';
 
 /// Ergonomic, tactile toast notification adhering to Tack's modern design system.
 /// Features pill-shaped surface, subtle diffused shadows, DM Sans typography, and Lucide icons.
@@ -81,35 +82,34 @@ class TackToast {
                   ),
                 ),
                 if (actionLabel != null && onAction != null) ...[
-                  const SizedBox(width: AppSpacing.s3),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: AppSpacing.roundedPill,
-                      onTap: () {
-                        messenger.hideCurrentSnackBar();
-                        onAction();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.s3,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.pastelAmberLight.withValues(alpha: 0.22)
-                              : tokens.actionPrimary,
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          actionLabel,
-                          style: AppTypography.caption(
-                            color: isDark
-                                ? AppColors.pastelAmberLight
-                                : tokens.actionPrimaryFg,
-                            weight: FontWeight.w700,
-                          ),
-                        ),
+                  const SizedBox(width: AppSpacing.s2),
+                  TactileInkTarget(
+                    semanticsLabel: actionLabel,
+                    borderRadius: AppSpacing.roundedPill,
+                    color: isDark
+                        ? AppColors.pastelAmberLight.withValues(alpha: 0.22)
+                        : tokens.actionPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s3,
+                      vertical: 6,
+                    ),
+                    splashColor: (isDark
+                            ? AppColors.pastelAmberLight
+                            : tokens.actionPrimaryFg)
+                        .withValues(alpha: 0.16),
+                    onTap: () {
+                      messenger.hideCurrentSnackBar();
+                      onAction();
+                    },
+                    child: Text(
+                      actionLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: isDark
+                            ? AppColors.pastelAmberLight
+                            : tokens.actionPrimaryFg,
+                        weight: FontWeight.w700,
                       ),
                     ),
                   ),

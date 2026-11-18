@@ -114,7 +114,10 @@ class EmptyStateWidget extends StatelessWidget {
                     ),
                     label: Text(actionLabel!),
                     style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      minimumSize: const Size(
+                        AppSpacing.minTouchTarget,
+                        AppSpacing.minTouchTarget,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.s5,
                       ),
@@ -130,7 +133,10 @@ class EmptyStateWidget extends StatelessWidget {
                   ElevatedButton(
                     onPressed: onAction,
                     style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      minimumSize: const Size(
+                        AppSpacing.minTouchTarget,
+                        AppSpacing.minTouchTarget,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.s5,
                       ),
@@ -150,7 +156,10 @@ class EmptyStateWidget extends StatelessWidget {
                 TextButton(
                   onPressed: onSecondaryAction,
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                    minimumSize: const Size(
+                      AppSpacing.minTouchTarget,
+                      AppSpacing.minTouchTarget,
+                    ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.s4,
                     ),

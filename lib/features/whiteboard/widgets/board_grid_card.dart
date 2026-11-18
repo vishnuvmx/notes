@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../shared/widgets/tack_card_open_container.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../models/whiteboard_item.dart';
 
 /// Uniform Soft Monochrome Board Grid Card.
@@ -46,6 +47,7 @@ class _BoardGridCardState extends State<BoardGridCard> {
     required TackTokens tokens,
     required String displayTitle,
     required Color bandColor,
+    required ShapeBorder cardShape,
     required VoidCallback handleTap,
   }) {
     final VoidCallback? peekHandler = widget.onPeek != null
@@ -55,6 +57,7 @@ class _BoardGridCardState extends State<BoardGridCard> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        customBorder: cardShape,
         onTapDown: (_) {
           HapticFeedback.selectionClick();
           setState(() => _isPressed = true);
@@ -73,7 +76,12 @@ class _BoardGridCardState extends State<BoardGridCard> {
               }
             : null,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s5),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s5,
+            AppSpacing.s3,
+            AppSpacing.s3,
+            AppSpacing.s5,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -82,31 +90,37 @@ class _BoardGridCardState extends State<BoardGridCard> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(
-                      displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleSm(
-                        color: tokens.textPrimary,
-                        fontSize: 15.5,
-                        weight: FontWeight.w600,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.s2),
+                      child: Text(
+                        displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          fontSize: 15.5,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                   if (widget.board.isFavorite) ...[
                     const SizedBox(width: AppSpacing.s2),
-                    TackPinBadge(color: tokens.accentPin, size: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.s2),
+                      child: TackPinBadge(color: tokens.accentPin, size: 10),
+                    ),
                   ],
                   if (peekHandler != null) ...[
-                    const SizedBox(width: AppSpacing.s1),
-                    InkWell(
-                      borderRadius: AppSpacing.roundedPill,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        peekHandler();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.s1),
+                    Tooltip(
+                      message: 'Board actions',
+                      child: TactileInkTarget(
+                        semanticsLabel: 'Board actions',
+                        useCircleShape: true,
+                        width: 28,
+                        height: 28,
+                        triggerHaptics: true,
+                        onTap: peekHandler,
                         child: TackIcon(
                           TackIcons.more,
                           size: 16,
@@ -201,6 +215,7 @@ class _BoardGridCardState extends State<BoardGridCard> {
                   tokens: tokens,
                   displayTitle: displayTitle,
                   bandColor: bandColor,
+                  cardShape: cardShape,
                   handleTap: openContainer,
                 ),
               )
@@ -215,6 +230,7 @@ class _BoardGridCardState extends State<BoardGridCard> {
                   tokens: tokens,
                   displayTitle: displayTitle,
                   bandColor: bandColor,
+                  cardShape: cardShape,
                   handleTap: widget.onTap!,
                 ),
               ),
@@ -394,6 +410,7 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
   bool shouldRepaint(covariant _BoardMiniThumbnailPainter oldDelegate) {
     return oldDelegate.nodes != nodes ||
         oldDelegate.edges != edges ||
-        oldDelegate.tokens != tokens;
+        oldDelegate.tokens != tokens ||
+        oldDelegate.accentBandColor != accentBandColor;
   }
 }

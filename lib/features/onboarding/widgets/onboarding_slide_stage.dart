@@ -59,7 +59,7 @@ class OnboardingSlideStage extends StatelessWidget {
             if (tokens.isDark)
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.14),
+                  color: AppSpacing.scrim.withValues(alpha: 0.24),
                 ),
               ),
             if (slide.showFloatingTileDock)

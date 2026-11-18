@@ -36,6 +36,8 @@ class TactileInkTarget extends StatelessWidget {
   final Duration duration;
   final Curve curve;
   final bool triggerHaptics;
+  final String? semanticsLabel;
+  final bool? isSelected;
   final Widget child;
 
   const TactileInkTarget({
@@ -60,13 +62,24 @@ class TactileInkTarget extends StatelessWidget {
     this.duration = AppSpacing.durationFast,
     this.curve = Curves.easeOutCubic,
     this.triggerHaptics = false,
+    this.semanticsLabel,
+    this.isSelected,
   });
 
   @override
   Widget build(BuildContext context) {
+    final BorderSide borderSide =
+        (border is Border && (border as Border).isUniform)
+            ? (border as Border).top
+            : BorderSide.none;
+
     final ShapeBorder shape = useCircleShape
         ? const CircleBorder()
-        : RoundedRectangleBorder(borderRadius: borderRadius);
+        : AppSpacing.smoothBorder(borderRadius);
+
+    final ShapeBorder decorationShape = useCircleShape
+        ? CircleBorder(side: borderSide)
+        : AppSpacing.smoothBorder(borderRadius, side: borderSide);
 
     void handleTap() {
       if (onTap == null) return;
@@ -99,19 +112,11 @@ class TactileInkTarget extends StatelessWidget {
       curve: curve,
       width: width,
       height: height,
-      decoration: useCircleShape
-          ? BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              border: border,
-              boxShadow: boxShadow,
-            )
-          : BoxDecoration(
-              borderRadius: borderRadius,
-              color: color,
-              border: border,
-              boxShadow: boxShadow,
-            ),
+      decoration: ShapeDecoration(
+        shape: decorationShape,
+        color: color,
+        shadows: boxShadow ?? const [],
+      ),
       child: Material(
         type: MaterialType.transparency,
         shape: shape,
@@ -129,7 +134,7 @@ class TactileInkTarget extends StatelessWidget {
       ),
     );
 
-    return GestureDetector(
+    final Widget hitBox = GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.opaque,
       onTap: onTap != null ? handleTap : null,
@@ -145,6 +150,17 @@ class TactileInkTarget extends StatelessWidget {
           child: visualControl,
         ),
       ),
+    );
+
+    return Semantics(
+      button: true,
+      enabled: onTap != null || onLongPress != null,
+      selected: isSelected,
+      label: semanticsLabel,
+      onTap: onTap != null ? handleTap : null,
+      onLongPress: onLongPress,
+      excludeSemantics: semanticsLabel != null,
+      child: hitBox,
     );
   }
 }
@@ -224,50 +240,53 @@ class TactileFilterPill extends StatelessWidget {
           weight: isSelected ? FontWeight.w600 : FontWeight.w500,
         );
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: semanticsLabel ?? label,
-      child: TactileInkTarget(
-        onTap: onTap,
-        triggerHaptics: triggerHaptics,
-        borderRadius: borderRadius,
-        minWidth: minWidth,
-        minHeight: minHeight,
-        height: height,
-        padding: padding,
-        color: bg,
-        border: borderWidth <= 0
-            ? null
-            : Border.all(color: borderColor, width: borderWidth),
-        boxShadow: boxShadow,
-        textStyle: baseStyle.copyWith(color: fg),
-        splashColor: fg.withValues(alpha: 0.14),
-        highlightColor: fg.withValues(alpha: 0.08),
-        hoverColor: fg.withValues(alpha: 0.06),
-        child: Builder(
-          builder: (ctx) {
-            final animatedFg = DefaultTextStyle.of(ctx).style.color ?? fg;
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (leadingWidget != null) ...[
-                  leadingWidget!,
-                  const SizedBox(width: 6),
-                ] else if (icon != null) ...[
-                  TackIcon(icon, size: 14, color: animatedFg),
-                  const SizedBox(width: 6),
-                ],
-                Text(label),
-                if (showChevron) ...[
-                  const SizedBox(width: 4),
-                  TackIcon(TackIcons.chevronDown, size: 13, color: animatedFg),
-                ],
+    return TactileInkTarget(
+      semanticsLabel: semanticsLabel ?? label,
+      isSelected: isSelected,
+      onTap: onTap,
+      triggerHaptics: triggerHaptics,
+      borderRadius: borderRadius,
+      minWidth: minWidth,
+      minHeight: minHeight,
+      height: height,
+      padding: padding,
+      color: bg,
+      border: borderWidth <= 0
+          ? null
+          : Border.all(color: borderColor, width: borderWidth),
+      boxShadow: boxShadow,
+      textStyle: baseStyle.copyWith(color: fg),
+      splashColor: fg.withValues(alpha: 0.14),
+      highlightColor: fg.withValues(alpha: 0.08),
+      hoverColor: fg.withValues(alpha: 0.06),
+      child: Builder(
+        builder: (ctx) {
+          final animatedFg = DefaultTextStyle.of(ctx).style.color ?? fg;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (leadingWidget != null) ...[
+                leadingWidget!,
+                const SizedBox(width: 6),
+              ] else if (icon != null) ...[
+                TackIcon(icon, size: 14, color: animatedFg),
+                const SizedBox(width: 6),
               ],
-            );
-          },
-        ),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (showChevron) ...[
+                const SizedBox(width: 4),
+                TackIcon(TackIcons.chevronDown, size: 13, color: animatedFg),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

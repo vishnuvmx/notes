@@ -135,6 +135,7 @@ class AppFloatingDialog {
                                 child: OutlinedButton(
                                   style: OutlinedButton.styleFrom(
                                     minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
                                     side: BorderSide(color: tokens.borderSubtle),
                                     shape: const RoundedRectangleBorder(
                                       borderRadius: AppSpacing.roundedPill,
@@ -146,7 +147,8 @@ class AppFloatingDialog {
                                   },
                                   child: Text(
                                     cancelLabel,
-                                    maxLines: 1,
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.label(
                                       color: tokens.textPrimary,
@@ -160,6 +162,7 @@ class AppFloatingDialog {
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
                                     backgroundColor: isDestructive
                                         ? tokens.danger
                                         : tokens.actionPrimary,
@@ -177,7 +180,8 @@ class AppFloatingDialog {
                                   },
                                   child: Text(
                                     confirmLabel,
-                                    maxLines: 1,
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.label(
                                       color: isDestructive
@@ -368,6 +372,14 @@ class _FloatingPromptDialogBodyState extends State<_FloatingPromptDialogBody> {
                               borderRadius: AppSpacing.roundedSm,
                               borderSide: BorderSide.none,
                             ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: AppSpacing.roundedSm,
+                              borderSide: BorderSide(color: tokens.borderFocus, width: 1.2),
+                            ),
                           ),
                           onSubmitted: (_) => _submit(),
                         ),
@@ -378,6 +390,7 @@ class _FloatingPromptDialogBodyState extends State<_FloatingPromptDialogBody> {
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
                                   side: BorderSide(color: tokens.borderSubtle),
                                   shape: const RoundedRectangleBorder(
                                     borderRadius: AppSpacing.roundedPill,
@@ -389,7 +402,8 @@ class _FloatingPromptDialogBodyState extends State<_FloatingPromptDialogBody> {
                                 },
                                 child: Text(
                                   widget.cancelLabel,
-                                  maxLines: 1,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.label(
                                     color: tokens.textPrimary,
@@ -403,6 +417,7 @@ class _FloatingPromptDialogBodyState extends State<_FloatingPromptDialogBody> {
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
                                   backgroundColor: tokens.actionPrimary,
                                   foregroundColor: tokens.actionPrimaryFg,
                                   elevation: 0,
@@ -413,7 +428,8 @@ class _FloatingPromptDialogBodyState extends State<_FloatingPromptDialogBody> {
                                 onPressed: _submit,
                                 child: Text(
                                   widget.confirmLabel,
-                                  maxLines: 1,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.label(
                                     color: tokens.actionPrimaryFg,

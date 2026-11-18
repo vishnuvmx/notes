@@ -106,7 +106,7 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
           // 1. Regent-style 3-line Content Peek Card
           Container(
             padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: BoxDecoration(
+            decoration: AppSpacing.smoothDecoration(
               color: softFill,
               borderRadius: AppSpacing.roundedMd,
             ),
@@ -118,7 +118,7 @@ class _CardPeekSheetState extends State<CardPeekSheet> {
                     width: AppSpacing.cardColorBandWidth,
                     decoration: BoxDecoration(
                       color: bandColor,
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: AppSpacing.roundedXs,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s3),

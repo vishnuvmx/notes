@@ -325,7 +325,10 @@ class _OnboardingSlidePage extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compactHeight = constraints.maxHeight < 460;
+        final scale = MediaQuery.textScalerOf(context).scale(1.0);
+        final compactHeight = constraints.maxHeight < 460 ||
+            constraints.maxWidth < 350 ||
+            scale > 1.15;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -338,8 +341,6 @@ class _OnboardingSlidePage extends StatelessWidget {
             ),
             Text(
               slide.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: AppTypography.titleLg(
                 color: tokens.textPrimary,
                 fontSize: compactHeight ? 24 : 28,
@@ -369,8 +370,6 @@ class _OnboardingSlidePage extends StatelessWidget {
                     ),
                 ],
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         );
@@ -394,16 +393,19 @@ class _PagerDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
     return Semantics(
       button: true,
       selected: isActive,
       label: 'Go to slide ${index + 1}',
+      onTap: onTap,
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: 16,
+          constraints: BoxConstraints(
+            minWidth: screenWidth >= 380 ? AppSpacing.minTouchTarget : 32,
             minHeight: AppSpacing.minTouchTarget,
           ),
           child: Padding(

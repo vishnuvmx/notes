@@ -160,19 +160,15 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.12),
         surfaceTintColor: Colors.transparent,
         position: PopupMenuPosition.under,
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedMd,
-          side: BorderSide(color: AppColors.lightBorderSubtle, width: 1),
+        shape: AppSpacing.smoothMd(
+          side: const BorderSide(color: AppColors.lightBorderSubtle, width: 1),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.lightActionPrimary,
         contentTextStyle: AppTypography.bodySm(color: AppColors.lightCanvas),
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedSm,
-          side: BorderSide.none,
-        ),
+        shape: AppSpacing.smoothSm(),
         elevation: 4,
         actionTextColor: AppColors.pastelAmberLight,
       ),
@@ -330,21 +326,17 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.45),
         surfaceTintColor: Colors.transparent,
         position: PopupMenuPosition.under,
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedMd,
-          side: BorderSide(color: AppColors.darkBorderSubtle, width: 1),
+        shape: AppSpacing.smoothMd(
+          side: const BorderSide(color: AppColors.darkBorderSubtle, width: 1),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.darkActionPrimary,
         contentTextStyle: AppTypography.bodySm(color: AppColors.darkCanvas),
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppSpacing.roundedSm,
-          side: BorderSide.none,
-        ),
+        shape: AppSpacing.smoothSm(),
         elevation: 4,
-        actionTextColor: AppColors.darkAccentPin,
+        actionTextColor: AppColors.lightAccentPinText,
       ),
     );
   }

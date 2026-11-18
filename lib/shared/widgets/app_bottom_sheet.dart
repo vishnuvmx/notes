@@ -26,8 +26,6 @@ class AppBottomSheet {
     Color? backgroundColor,
     Color? barrierColor,
   }) {
-    final tokens = context.tokens;
-    final sheetBg = backgroundColor ?? tokens.surfaceElevated;
     final scrim = barrierColor ?? AppSpacing.modalScrim;
 
     return showModalBottomSheet<T>(
@@ -40,6 +38,7 @@ class AppBottomSheet {
       barrierColor: scrim,
       builder: (modalContext) {
         final modalTokens = modalContext.tokens;
+        final sheetBg = backgroundColor ?? modalTokens.surfaceElevated;
         final viewInsets = MediaQuery.viewInsetsOf(modalContext);
         final viewPadding = MediaQuery.viewPaddingOf(modalContext);
         final screenHeight = MediaQuery.sizeOf(modalContext).height;

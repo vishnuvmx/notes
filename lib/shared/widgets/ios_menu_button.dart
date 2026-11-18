@@ -60,28 +60,30 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
 
-    final defaultIconColor = widget.iconColor ??
-        (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
+    final defaultIconColor = widget.iconColor ?? tokens.textPrimary;
 
     return PopupMenuButton<T>(
       tooltip: widget.tooltip,
       position: PopupMenuPosition.under,
       offset: const Offset(0, 6),
       elevation: 16,
+      borderRadius: AppSpacing.roundedPill,
       shadowColor: Colors.black.withValues(alpha: isDark ? 0.55 : 0.14),
-      color: isDark ? AppColors.darkSurface : Colors.white,
+      color: tokens.surfacePrimary,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+      shape: AppSpacing.smoothMd(
         side: BorderSide(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          color: tokens.borderSubtle,
           width: 1.2,
         ),
       ),
       constraints: const BoxConstraints(minWidth: 195, maxWidth: 240),
+      onOpened: () {
+        HapticFeedback.selectionClick();
+      },
       onSelected: (val) {
         HapticFeedback.selectionClick();
         widget.onSelected(val);
@@ -94,7 +96,7 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
           entries.add(
             PopupMenuItem<T>(
               value: item.value,
-              height: 44,
+              height: AppSpacing.minTouchTarget,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -107,10 +109,8 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
                       style: AppTypography.bodySm(
                         weight: FontWeight.w500,
                         color: item.isDestructive
-                            ? AppColors.error
-                            : (isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.lightTextPrimary),
+                            ? tokens.stateDanger
+                            : tokens.textPrimary,
                       ),
                     ),
                   ),
@@ -120,9 +120,8 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
                     size: 18,
                     style: item.iconStyle,
                     color: item.isDestructive
-                        ? AppColors.error
-                        : (item.iconColor ??
-                            (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                        ? tokens.stateDanger
+                        : (item.iconColor ?? tokens.textSecondary),
                   ),
                 ],
               ),
@@ -140,37 +139,45 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
         }
         return entries;
       },
-      child: Listener(
-        onPointerDown: (_) {
-          HapticFeedback.selectionClick();
-          setState(() => _isPressed = true);
-        },
-        onPointerUp: (_) {
-          if (mounted) setState(() => _isPressed = false);
-        },
-        onPointerCancel: (_) {
-          if (mounted) setState(() => _isPressed = false);
-        },
-        child: AnimatedScale(
-          scale: _isPressed ? 0.88 : 1.0,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOutCubic,
-          child: Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              color: widget.buttonBackgroundColor?.withValues(
-                    alpha: _isPressed ? 0.18 : 0.11,
-                  ) ??
-                  (isDark ? Colors.white : Colors.black)
-                      .withValues(alpha: _isPressed ? 0.10 : 0.04),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: TackIcon(
-              widget.icon,
-              size: widget.size * 0.55,
-              color: defaultIconColor,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: AppSpacing.minTouchTarget,
+          minHeight: AppSpacing.minTouchTarget,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: Listener(
+            onPointerDown: (_) => setState(() => _isPressed = true),
+            onPointerUp: (_) {
+              if (mounted) setState(() => _isPressed = false);
+            },
+            onPointerCancel: (_) {
+              if (mounted) setState(() => _isPressed = false);
+            },
+            child: AnimatedScale(
+              scale: _isPressed ? 0.88 : 1.0,
+              duration: AppSpacing.pressAnim,
+              curve: AppSpacing.smoothCurve,
+              child: Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  color: widget.buttonBackgroundColor?.withValues(
+                        alpha: _isPressed ? 0.18 : 0.11,
+                      ) ??
+                      tokens.textPrimary.withValues(
+                        alpha: _isPressed ? 0.10 : 0.04,
+                      ),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: TackIcon(
+                  widget.icon,
+                  size: widget.size * 0.55,
+                  color: defaultIconColor,
+                ),
+              ),
             ),
           ),
         ),

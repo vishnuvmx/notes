@@ -140,79 +140,80 @@ class _AppSearchFieldState extends State<AppSearchField> {
 
     final bgColor = _isFocused ? tokens.surfacePrimary : tokens.canvasSunken;
     final borderColor = _isFocused ? tokens.borderFocus : tokens.borderSubtle;
+    final fieldShape = SmoothRectangleBorder(
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+      smoothness: AppSpacing.defaultSmoothing,
+      side: BorderSide(
+        color: borderColor,
+        width: _isFocused ? 1.5 : 1.0,
+      ),
+    );
 
-    return Container(
+    return AnimatedContainer(
+      duration: AppSpacing.durationFast,
+      curve: AppSpacing.curveStandard,
       margin: widget.margin,
-      height: widget.height,
+      constraints: BoxConstraints(minHeight: widget.height),
       decoration: ShapeDecoration(
         color: bgColor,
-        shape: SmoothRectangleBorder(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          smoothness: AppSpacing.defaultSmoothing,
-          side: BorderSide(
-            color: borderColor,
-            width: _isFocused ? 1.5 : 1.0,
-          ),
-        ),
+        shape: fieldShape,
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: AppSpacing.s3),
-          widget.leading ??
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
-                child: TackIcon(
-                  TackIcons.search,
-                  size: 18,
-                  color: _isFocused ? tokens.textPrimary : tokens.textTertiary,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: fieldShape,
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            const SizedBox(width: AppSpacing.s3),
+            widget.leading ??
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
+                  child: TackIcon(
+                    TackIcons.search,
+                    size: 18,
+                    color: _isFocused ? tokens.textPrimary : tokens.textTertiary,
+                  ),
                 ),
-              ),
-          const SizedBox(width: AppSpacing.s2),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              autofocus: widget.autofocus,
-              textInputAction: TextInputAction.search,
-              onTapOutside: (_) => _focusNode.unfocus(),
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmitted,
-              style: AppTypography.bodySm(
-                color: tokens.textPrimary,
-                weight: FontWeight.w500,
-              ),
-              cursorColor: tokens.textPrimary,
-              decoration: AppInputDecorations.bareWithHint(
-                widget.hintText,
-                hintStyle: AppTypography.bodySm(color: tokens.textTertiary),
+            const SizedBox(width: AppSpacing.s2),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                autofocus: widget.autofocus,
+                textInputAction: TextInputAction.search,
+                onTapOutside: (_) => _focusNode.unfocus(),
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmitted,
+                style: AppTypography.bodySm(
+                  color: tokens.textPrimary,
+                  weight: FontWeight.w500,
+                ),
+                cursorColor: tokens.textPrimary,
+                decoration: AppInputDecorations.bareWithHint(
+                  widget.hintText,
+                  hintStyle: AppTypography.bodySm(color: tokens.textTertiary),
+                ),
               ),
             ),
-          ),
-          if (_hasText)
-            Semantics(
-              label: 'Clear search text',
-              button: true,
-              child: SizedBox(
-                width: AppSpacing.minTouchTarget,
-                height: AppSpacing.minTouchTarget,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: AppSpacing.minTouchTarget,
-                    minHeight: AppSpacing.minTouchTarget,
-                  ),
-                  icon: TackIcon(
-                    TackIcons.close,
-                    size: 16,
-                    color: tokens.textTertiary,
-                  ),
-                  onPressed: _handleClear,
+            if (_hasText)
+              IconButton(
+                tooltip: 'Clear search text',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
                 ),
-              ),
-            )
-          else
-            const SizedBox(width: AppSpacing.s3),
-        ],
+                icon: TackIcon(
+                  TackIcons.close,
+                  size: 16,
+                  color: tokens.textTertiary,
+                ),
+                onPressed: _handleClear,
+              )
+            else
+              const SizedBox(width: AppSpacing.s3),
+          ],
+        ),
       ),
     );
   }

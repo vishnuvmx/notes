@@ -9,6 +9,7 @@ import '../../core/utils/date_formatter.dart';
 import '../models/base_item.dart';
 import '../../features/notes/models/text_note.dart';
 import 'tack_card_open_container.dart';
+import 'tactile_ink_target.dart';
 
 /// Uniform Soft Monochrome Note Grid Card.
 ///
@@ -55,6 +56,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     required String? customTag,
     required Color softTint,
     required Color accentColor,
+    required ShapeBorder cardShape,
     required VoidCallback handleTap,
   }) {
     final VoidCallback? peekHandler = widget.onPeek != null
@@ -64,6 +66,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        customBorder: cardShape,
         onTapDown: (_) {
           HapticFeedback.selectionClick();
           setState(() => _isPressed = true);
@@ -82,7 +85,12 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
               }
             : null,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s5),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s5,
+            AppSpacing.s3,
+            AppSpacing.s3,
+            AppSpacing.s5,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -91,31 +99,37 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(
-                      displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleSm(
-                        color: tokens.textPrimary,
-                        fontSize: 15.5,
-                        weight: FontWeight.w600,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.s2),
+                      child: Text(
+                        displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          fontSize: 15.5,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                   if (widget.item.isFavorite) ...[
                     const SizedBox(width: AppSpacing.s2),
-                    TackPinBadge(color: tokens.accentPin, size: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.s2),
+                      child: TackPinBadge(color: tokens.accentPin, size: 10),
+                    ),
                   ],
                   if (peekHandler != null) ...[
-                    const SizedBox(width: AppSpacing.s1),
-                    InkWell(
-                      borderRadius: AppSpacing.roundedPill,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        peekHandler();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.s1),
+                    Tooltip(
+                      message: 'Item options',
+                      child: TactileInkTarget(
+                        semanticsLabel: 'Item options',
+                        useCircleShape: true,
+                        width: 28,
+                        height: 28,
+                        triggerHaptics: true,
+                        onTap: peekHandler,
                         child: TackIcon(
                           TackIcons.more,
                           size: 16,
@@ -222,6 +236,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                   customTag: customTag,
                   softTint: softTint,
                   accentColor: accentColor,
+                  cardShape: cardShape,
                   handleTap: openContainer,
                 ),
               )
@@ -238,6 +253,7 @@ class _NeoNoteCardState extends State<NeoNoteCard> {
                   customTag: customTag,
                   softTint: softTint,
                   accentColor: accentColor,
+                  cardShape: cardShape,
                   handleTap: widget.onTap!,
                 ),
               ),

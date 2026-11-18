@@ -104,10 +104,10 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
 
   @override
   Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return RepaintBoundary(
       child: Container(
         height: widget.height,
-        clipBehavior: Clip.antiAlias,
         padding: widget.padding,
         decoration: BoxDecoration(
           color: widget.trackColor,
@@ -119,12 +119,21 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
           children: [
             Positioned.fill(
               child: Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: FractionallySizedBox(
                   widthFactor: 1 / widget.itemCount,
                   heightFactor: 1,
-                  child: SlideTransition(
-                    position: _slideAnimation,
+                  child: AnimatedBuilder(
+                    animation: _slideAnimation,
+                    builder: (context, child) {
+                      final dx = isRtl
+                          ? -_slideAnimation.value.dx
+                          : _slideAnimation.value.dx;
+                      return SlideTransition(
+                        position: AlwaysStoppedAnimation<Offset>(Offset(dx, 0)),
+                        child: child,
+                      );
+                    },
                     child: RepaintBoundary(
                       child: DecoratedBox(
                         decoration: BoxDecoration(

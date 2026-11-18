@@ -472,42 +472,31 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             if (widget.focusItemId != null)
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.s1),
-                child: Semantics(
-                  button: true,
-                  selected: _isLocalMode,
-                  label: _isLocalMode
+                child: TactileFilterPill(
+                  label: _isLocalMode ? '1-Hop' : 'Global',
+                  semanticsLabel: _isLocalMode
                       ? 'Showing 1-hop local graph'
                       : 'Showing global graph',
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.minTouchTarget,
-                    ),
-                    child: Center(
-                      child: ActionChip(
-                        label: Text(_isLocalMode ? '1-Hop' : 'Global'),
-                        labelStyle: AppTypography.caption(
-                          color: _isLocalMode
-                              ? tokens.actionPrimaryFg
-                              : tokens.textPrimary,
-                          weight: FontWeight.w700,
-                        ),
-                        backgroundColor: _isLocalMode
-                            ? tokens.actionPrimary
-                            : tokens.canvasSunken,
-                        side: BorderSide(color: tokens.borderSubtle),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            _isLocalMode = !_isLocalMode;
-                            _lastGraphSignature = '';
-                          });
-                        },
-                      ),
-                    ),
+                  isSelected: _isLocalMode,
+                  unselectedColor: tokens.canvasSunken,
+                  unselectedFg: tokens.textPrimary,
+                  selectedBorderColor: tokens.actionPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s3,
+                    vertical: AppSpacing.s1 + 4,
                   ),
+                  textStyle: AppTypography.caption(
+                    color: _isLocalMode
+                        ? tokens.actionPrimaryFg
+                        : tokens.textPrimary,
+                    weight: FontWeight.w700,
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _isLocalMode = !_isLocalMode;
+                      _lastGraphSignature = '';
+                    });
+                  },
                 ),
               ),
             IconButton(
@@ -549,7 +538,12 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             else if (_nodes.isEmpty)
               Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.s7),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.s7,
+                    _isSearching ? 120 : 72,
+                    AppSpacing.s7,
+                    AppSpacing.s7,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Column(
@@ -776,19 +770,28 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.s2),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                minimumSize: const Size(
-                                  AppSpacing.minTouchTarget,
-                                  AppSpacing.minTouchTarget,
-                                ),
-                                tapTargetSize: MaterialTapTargetSize.padded,
+                            TactileInkTarget(
+                              semanticsLabel: 'Clear graph search',
+                              borderRadius: AppSpacing.roundedPill,
+                              height: 32,
+                              minWidth: AppSpacing.minTouchTarget,
+                              minHeight: AppSpacing.minTouchTarget,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.s3,
                               ),
-                              onPressed: () {
+                              color: tokens.canvasSunken,
+                              triggerHaptics: true,
+                              onTap: () {
                                 _searchController.clear();
                                 setState(() => _query = '');
                               },
-                              child: const Text('Clear'),
+                              child: Text(
+                                'Clear',
+                                style: AppTypography.caption(
+                                  color: tokens.textPrimary,
+                                  weight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -804,7 +807,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
               Positioned(
                 left: AppSpacing.s4,
                 right: AppSpacing.s4,
-                bottom: AppSpacing.s4 + MediaQuery.paddingOf(context).bottom,
+                bottom: AppSpacing.s4,
                 child: SafeArea(
                   top: false,
                   child: Center(
@@ -993,10 +996,11 @@ class _KnowledgeGraphPainter extends CustomPainter {
               : tokens.textSecondary;
           break;
         case _GraphEdgeKind.specBoard:
-          edgeColor = AppColors.accentCyan;
+          edgeColor = AppColors.getPaletteById('cyan').resolveAccentColor(isDark);
           break;
         case _GraphEdgeKind.hierarchy:
-          edgeColor = AppColors.pastelLavenderLight;
+          edgeColor =
+              AppColors.getPaletteById('lavender').resolveAccentColor(isDark);
           break;
         case _GraphEdgeKind.tag:
           edgeColor = tokens.textTertiary;

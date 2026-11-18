@@ -157,6 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   selected: current == opt.mode,
                   label: opt.label,
                   child: InkWell(
+                    excludeFromSemantics: true,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       workspace.setSortMode(opt.mode);
@@ -225,38 +226,22 @@ class _HomeScreenState extends State<HomeScreen> {
           title: _titleForTab(activeTab),
           subtitle: _subtitleForTab(activeTab, workspace),
           trailingAction: (activeTab == 1 || activeTab == 3)
-              ? IconButton(
-                  key: const ValueKey('header_sort_button'),
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    _showSortSheet(context, workspace);
-                  },
-                  tooltip: 'Sort',
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(
-                      AppSpacing.minTouchTarget,
-                      AppSpacing.minTouchTarget,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                  icon: Container(
+              ? Tooltip(
+                  message: 'Sort',
+                  child: TactileInkTarget(
+                    key: const ValueKey('header_sort_button'),
+                    semanticsLabel: 'Sort',
                     width: 38,
                     height: 38,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: ShapeDecoration(
-                      color: tokens.surfacePrimary,
-                      shadows: AppSpacing.elev1(tokens.isDark),
-                      shape: const SmoothRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        smoothness: 0.60,
-                      ),
-                    ),
-                    child: Center(
-                      child: TackIcon(
-                        TackIcons.sort,
-                        size: 18,
-                        color: tokens.textPrimary,
-                      ),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm + 2),
+                    color: tokens.surfacePrimary,
+                    boxShadow: AppSpacing.elev1(tokens.isDark),
+                    triggerHaptics: true,
+                    onTap: () => _showSortSheet(context, workspace),
+                    child: TackIcon(
+                      TackIcons.sort,
+                      size: 18,
+                      color: tokens.textPrimary,
                     ),
                   ),
                 )
@@ -417,15 +402,16 @@ class _LibraryView extends StatelessWidget {
           // returns cleanly when scrolling back to the top.
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 56,
+              height: 62,
               child: ListView(
                 key: const ValueKey('library_filter_bar'),
+                clipBehavior: Clip.none,
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.fromLTRB(
                   gutter,
                   AppSpacing.s1,
                   gutter,
-                  AppSpacing.s1,
+                  AppSpacing.s2,
                 ),
                 children: [
                   // Folder selector chip
@@ -440,11 +426,23 @@ class _LibraryView extends StatelessWidget {
 
                   // Pinned filter chip
                   _LibraryFilterChip(
-                    leadingWidget: TackPinBadge(
-                      color: workspace.pinnedFilterOnly
-                          ? tokens.actionPrimaryFg
-                          : tokens.accentPin,
-                      size: 8,
+                    leadingWidget: TweenAnimationBuilder<Color?>(
+                      tween: ColorTween(
+                        begin: workspace.pinnedFilterOnly
+                            ? tokens.actionPrimaryFg
+                            : tokens.accentPin,
+                        end: workspace.pinnedFilterOnly
+                            ? tokens.actionPrimaryFg
+                            : tokens.accentPin,
+                      ),
+                      duration: AppSpacing.durationFast,
+                      curve: AppSpacing.curveStandard,
+                      builder: (_, animatedColor, _) => TackIcon(
+                        TackIcons.pin,
+                        size: 13,
+                        style: HeroIconStyle.solid,
+                        color: animatedColor ?? tokens.accentPin,
+                      ),
                     ),
                     label: 'Pinned',
                     isSelected: workspace.pinnedFilterOnly,
@@ -653,12 +651,7 @@ class _FolderPickerSheetState extends State<_FolderPickerSheet> {
     final folders = widget.workspace.folders;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s5,
-        AppSpacing.s4,
-        AppSpacing.s5,
-        AppSpacing.s5,
-      ),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -773,7 +766,7 @@ class _LibraryFilterChip extends StatelessWidget {
       leadingWidget: leadingWidget,
       showChevron: showChevron,
       height: 36,
-      minWidth: 0,
+      minWidth: AppSpacing.minTouchTarget,
       minHeight: AppSpacing.minTouchTarget,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
       unselectedFg: tokens.textPrimary,

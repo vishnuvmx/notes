@@ -465,9 +465,8 @@ class TackPinBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final resolvedColor =
-        color ?? (isDark ? AppColors.darkTextPrimary : AppColors.lightAccentPin);
+    final tokens = context.tokens;
+    final resolvedColor = color ?? tokens.accentPin;
 
     if (!showIcon) {
       return Container(
@@ -477,7 +476,7 @@ class TackPinBadge extends StatelessWidget {
           color: resolvedColor,
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: tokens.surfacePrimary.withValues(alpha: 0.8),
             width: 1.5,
           ),
         ),

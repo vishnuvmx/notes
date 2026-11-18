@@ -526,6 +526,6 @@ When modifying UI components, reuse tokens from:
 |-- analysis_options.yaml
 |-- AUDIT.md
 |-- CONTRIBUTING.md
-\-- ... (6 more files)
+\-- ... (7 more files)
 ```
 <!-- recall:project-map:end -->

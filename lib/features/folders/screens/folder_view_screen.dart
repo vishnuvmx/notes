@@ -164,12 +164,7 @@ class FolderViewScreen extends StatelessWidget {
         final tokens = ctx.tokens;
         final summary = item.getSummary().trim();
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s5,
-            AppSpacing.s4,
-            AppSpacing.s5,
-            AppSpacing.s5,
-          ),
+          padding: AppSpacing.modalSheetPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -210,6 +205,9 @@ class FolderViewScreen extends StatelessWidget {
                       ),
                       foregroundColor: tokens.danger,
                       side: BorderSide(color: tokens.danger.withValues(alpha: 0.45)),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppSpacing.roundedPill,
+                      ),
                     ),
                     child: const Text(
                       'Delete forever',
@@ -225,6 +223,9 @@ class FolderViewScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(
                         AppSpacing.minTouchTarget,
+                      ),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppSpacing.roundedPill,
                       ),
                     ),
                     child: const Text(
@@ -359,15 +360,14 @@ class FolderViewScreen extends StatelessWidget {
                           final palette = AppColors.getPaletteById(
                             item.paletteId,
                           );
-                          final bandColor = palette.resolveCardColor(
+                          final bandColor = palette.resolveBandColor(
                             tokens.isDark,
                           );
 
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: tokens.surfacePrimary,
-                              borderRadius: AppSpacing.roundedMd,
-                              border: Border.all(
+                          return Material(
+                            color: tokens.surfacePrimary,
+                            shape: AppSpacing.smoothMd(
+                              side: BorderSide(
                                 color: tokens.borderSubtle,
                                 width: 1,
                               ),

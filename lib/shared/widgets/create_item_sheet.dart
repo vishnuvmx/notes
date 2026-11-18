@@ -275,12 +275,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final bandColor = palette.resolveCardColor(tokens.isDark);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s6,
-        AppSpacing.s5,
-        AppSpacing.s6,
-        AppSpacing.s6,
-      ),
+      padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -289,11 +284,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           Row(
             children: [
               Container(
-                width: 8,
+                width: AppSpacing.cardColorBandWidth + 2,
                 height: 18,
                 decoration: BoxDecoration(
                   color: bandColor,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: AppSpacing.roundedXs,
                 ),
               ),
               const SizedBox(width: AppSpacing.s2),
@@ -332,8 +327,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                 button: true,
                 label: 'Notes and boards file to $_selectedFolder. Tap to clear.',
                 child: TactileInkTarget(
+                  semanticsLabel:
+                      'Notes and boards file to $_selectedFolder. Tap to clear.',
                   borderRadius: AppSpacing.roundedPill,
-                  minWidth: 0,
                   triggerHaptics: true,
                   color: tokens.canvasSunken,
                   border: Border.all(color: tokens.borderSubtle),
@@ -408,106 +404,55 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
           ),
 
           // Expandable Template & Color Band drawer
-          if (_showTemplatesAndColor) ...[
-            const SizedBox(height: AppSpacing.s4),
-            Text(
-              'Color band',
-              style: AppTypography.label(color: tokens.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.s1),
-            ColorSwatchPicker(
-              selectedPaletteId: _selectedPaletteId,
-              onPaletteSelected: (id) => setState(() => _selectedPaletteId = id),
-            ),
-            const SizedBox(height: AppSpacing.s3),
-            Text(
-              'Templates',
-              style: AppTypography.label(color: tokens.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.s2),
-            SizedBox(
-              height: 92,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _templates.length,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s2),
-                itemBuilder: (ctx, idx) {
-                  final tpl = _templates[idx];
-                  final selected = tpl.id == _selectedTemplateId;
-                  return Semantics(
-                    button: true,
-                    selected: selected,
-                    label: '${tpl.name}. ${tpl.subtitle}',
-                    child: InkWell(
-                      onTap: _isSubmitting
-                          ? null
-                          : () {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _selectedTemplateId = tpl.id;
-                                _selectedPaletteId =
-                                    AppColors.normalizePaletteId(tpl.paletteId);
-                              });
-                            },
-                      borderRadius: AppSpacing.roundedSm,
-                      child: Container(
-                        width: 152,
-                        padding: const EdgeInsets.all(AppSpacing.s3),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? tokens.canvasSunken
-                              : tokens.surfacePrimary,
-                          borderRadius: AppSpacing.roundedSm,
-                          border: Border.all(
-                            color: selected
-                                ? tokens.borderFocus
-                                : tokens.borderSubtle,
-                            width: selected ? 1.5 : 1.0,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  tpl.iconEmoji,
-                                  style: AppTypography.bodySm(
-                                    color: tokens.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.s1),
-                                Expanded(
-                                  child: Text(
-                                    tpl.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.label(
-                                      color: tokens.textPrimary,
-                                      weight: FontWeight.w600,
-                                    ),
-                                  ),
+          AnimatedSize(
+            duration: AppSpacing.durationFast,
+            curve: AppSpacing.curveStandard,
+            alignment: Alignment.topCenter,
+            child: !_showTemplatesAndColor
+                ? const SizedBox.shrink()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: AppSpacing.s4),
+                      Text(
+                        'Color band',
+                        style: AppTypography.label(color: tokens.textSecondary),
+                      ),
+                      const SizedBox(height: AppSpacing.s1),
+                      ColorSwatchPicker(
+                        selectedPaletteId: _selectedPaletteId,
+                        onPaletteSelected: (id) =>
+                            setState(() => _selectedPaletteId = id),
+                      ),
+                      const SizedBox(height: AppSpacing.s3),
+                      Text(
+                        'Templates',
+                        style: AppTypography.label(color: tokens.textSecondary),
+                      ),
+                      const SizedBox(height: AppSpacing.s2),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (int idx = 0;
+                                  idx < _templates.length;
+                                  idx++) ...[
+                                if (idx > 0)
+                                  const SizedBox(width: AppSpacing.s2),
+                                _buildTemplateCard(
+                                  tpl: _templates[idx],
+                                  tokens: tokens,
                                 ),
                               ],
-                            ),
-                            Text(
-                              tpl.subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption(
-                                color: tokens.textTertiary,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+                    ],
+                  ),
+          ),
 
           const SizedBox(height: AppSpacing.s4),
 
@@ -521,11 +466,16 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                     minimumSize: const Size.fromHeight(
                       AppSpacing.minTouchTarget,
                     ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s3,
+                      vertical: AppSpacing.s2,
+                    ),
                   ),
                   onPressed: _isSubmitting ? null : _handleOpenAsNote,
                   child: const Text(
                     'Open as note',
-                    maxLines: 1,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -537,6 +487,10 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(
                       AppSpacing.minTouchTarget,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s3,
+                      vertical: AppSpacing.s2,
                     ),
                   ),
                   onPressed: _isSubmitting
@@ -557,7 +511,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                           _captureController.text.trim().isEmpty
                               ? 'New blank note'
                               : 'Save to Inbox',
-                          maxLines: 1,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
                         ),
                 ),
@@ -588,16 +543,113 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               _QuietCaptureOption(
                 icon: TackIcons.boards,
                 label: 'New board',
-                onTap: _isSubmitting ? () {} : _handleNewBoard,
+                onTap: _isSubmitting ? null : _handleNewBoard,
               ),
               _QuietCaptureOption(
                 icon: TackIcons.clipboard,
                 label: 'Paste clipboard',
-                onTap: _isSubmitting ? () {} : _handlePasteClipboard,
+                onTap: _isSubmitting ? null : _handlePasteClipboard,
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTemplateCard({
+    required NoteTemplate tpl,
+    required TackTokens tokens,
+  }) {
+    final selected = tpl.id == _selectedTemplateId;
+    final cardShape = AppSpacing.smoothSm(
+      side: BorderSide(
+        color: selected ? tokens.borderFocus : tokens.borderSubtle,
+        width: selected ? 1.5 : 1.0,
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${tpl.name}. ${tpl.subtitle}',
+      onTap: _isSubmitting
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _selectedTemplateId = tpl.id;
+                _selectedPaletteId =
+                    AppColors.normalizePaletteId(tpl.paletteId);
+              });
+            },
+      excludeSemantics: true,
+      child: AnimatedContainer(
+        duration: AppSpacing.durationFast,
+        curve: AppSpacing.curveStandard,
+        width: 152,
+        constraints: const BoxConstraints(minHeight: 84),
+        decoration: ShapeDecoration(
+          color: selected ? tokens.canvasSunken : tokens.surfacePrimary,
+          shape: cardShape,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          shape: cardShape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            customBorder: cardShape,
+            onTap: _isSubmitting
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _selectedTemplateId = tpl.id;
+                      _selectedPaletteId =
+                          AppColors.normalizePaletteId(tpl.paletteId);
+                    });
+                  },
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        tpl.iconEmoji,
+                        style: AppTypography.bodySm(
+                          color: tokens.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s1),
+                      Expanded(
+                        child: Text(
+                          tpl.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.label(
+                            color: tokens.textPrimary,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.s2),
+                  Text(
+                    tpl.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: tokens.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -606,7 +658,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 class _QuietCaptureOption extends StatelessWidget {
   final dynamic icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool isActive;
 
   const _QuietCaptureOption({
@@ -623,6 +675,7 @@ class _QuietCaptureOption extends StatelessWidget {
 
     return Semantics(
       button: true,
+      enabled: onTap != null,
       selected: isActive,
       label: label,
       child: InkWell(
@@ -640,13 +693,15 @@ class _QuietCaptureOption extends StatelessWidget {
               children: [
                 TackIcon(icon, size: 16, color: fg),
                 const SizedBox(width: AppSpacing.s2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.label(
-                    color: fg,
-                    weight: isActive ? FontWeight.w600 : FontWeight.w500,
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.label(
+                      color: fg,
+                      weight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

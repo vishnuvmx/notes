@@ -213,7 +213,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
 
                   // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
                   SingleChildScrollView(
-                    clipBehavior: Clip.none,
+                    clipBehavior: Clip.hardEdge,
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: _ReleaseCategory.values.map((cat) {
@@ -263,58 +263,61 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: AppSpacing.s2,
-            runSpacing: AppSpacing.s2,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s3,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: tokens.actionPrimary,
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-                child: Text(
-                  'v2.0.0  •  MAJOR UPDATE',
-                  style: AppTypography.caption(
-                    color: tokens.actionPrimaryFg,
-                    weight: FontWeight.w700,
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              spacing: AppSpacing.s2,
+              runSpacing: AppSpacing.s2,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s3,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.actionPrimary,
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: Text(
+                    'v2.0.0  •  MAJOR UPDATE',
+                    style: AppTypography.caption(
+                      color: tokens.actionPrimaryFg,
+                      weight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s3,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: tokens.canvasSunken,
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TackIcon(
-                      TackIcons.lock,
-                      size: 12,
-                      color: tokens.textSecondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '100% Local-First',
-                      style: AppTypography.caption(
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s3,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.canvasSunken,
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(
+                        TackIcons.lock,
+                        size: 12,
                         color: tokens.textSecondary,
-                        weight: FontWeight.w600,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '100% Local-First',
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.s4),
           Text(
@@ -404,7 +407,6 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
                     style: AppTypography.caption(
-                      fontSize: 11.5,
                       weight: FontWeight.w600,
                       color: tokens.textTertiary,
                     ),

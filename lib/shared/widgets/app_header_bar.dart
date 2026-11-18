@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
+import 'tactile_ink_target.dart';
 
 /// Soft Monochrome Header App Bar for Tack's 4 main views (`Today`, `Library`, `Boards`, `Search`).
 /// Styled after `docs/design/11-reference-ui-style.md` (Screenshot 2 & 3):
@@ -38,6 +38,10 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final hasTagline = tagline != null && tagline!.isNotEmpty;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final barHeight = hasTagline
+        ? (78 * textScale.clamp(1.0, 1.35))
+        : (AppSpacing.appBarHeight * textScale.clamp(1.0, 1.25));
 
     return AppBar(
       primary: primary,
@@ -45,7 +49,7 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       backgroundColor: tokens.canvasPrimary,
       automaticallyImplyLeading: false,
-      toolbarHeight: hasTagline ? 78 : AppSpacing.appBarHeight,
+      toolbarHeight: barHeight,
       titleSpacing: AppSpacing.s5,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,21 +67,25 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               if (subtitle != null && subtitle!.isNotEmpty) ...[
                 const SizedBox(width: AppSpacing.s2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.surfacePrimary,
-                    borderRadius: AppSpacing.roundedPill,
-                    boxShadow: AppSpacing.elev1(tokens.isDark),
-                  ),
-                  child: Text(
-                    subtitle!,
-                    style: AppTypography.caption(
-                      color: tokens.textSecondary,
-                      weight: FontWeight.w600,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.surfacePrimary,
+                      borderRadius: AppSpacing.roundedPill,
+                      boxShadow: AppSpacing.elev1(tokens.isDark),
+                    ),
+                    child: Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textSecondary,
+                        weight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -100,42 +108,22 @@ class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         ?trailingAction,
-        Semantics(
-          button: true,
-          label: 'Profile & Settings',
-          child: IconButton(
+        Tooltip(
+          message: 'Profile & Settings',
+          child: TactileInkTarget(
             key: const ValueKey('header_you_button'),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              onOpenProfileSettings();
-            },
-            tooltip: 'Profile & Settings',
-            style: IconButton.styleFrom(
-              minimumSize: const Size(
-                AppSpacing.minTouchTarget,
-                AppSpacing.minTouchTarget,
-              ),
-              padding: EdgeInsets.zero,
-            ),
-            icon: Container(
-              width: 38,
-              height: 38,
-              clipBehavior: Clip.antiAlias,
-              decoration: ShapeDecoration(
-                color: tokens.surfacePrimary,
-                shadows: AppSpacing.elev1(tokens.isDark),
-                shape: const SmoothRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                  smoothness: 0.60,
-                ),
-              ),
-              child: Center(
-                child: TackIcon(
-                  TackIcons.user,
-                  size: 18,
-                  color: tokens.textPrimary,
-                ),
-              ),
+            semanticsLabel: 'Profile & Settings',
+            width: 38,
+            height: 38,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm + 2),
+            color: tokens.surfacePrimary,
+            boxShadow: AppSpacing.elev1(tokens.isDark),
+            triggerHaptics: true,
+            onTap: onOpenProfileSettings,
+            child: TackIcon(
+              TackIcons.user,
+              size: 18,
+              color: tokens.textPrimary,
             ),
           ),
         ),

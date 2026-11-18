@@ -433,6 +433,9 @@ class _TaskReminderSheetState extends State<TaskReminderSheet> {
                     minimumSize: const Size.fromHeight(
                       AppSpacing.minTouchTarget,
                     ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s3,
+                    ),
                     side: BorderSide(color: tokens.borderSubtle),
                     shape: const RoundedRectangleBorder(
                       borderRadius: AppSpacing.roundedPill,

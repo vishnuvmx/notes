@@ -230,44 +230,55 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
       ),
       body: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(
-              AppSpacing.s5,
-              AppSpacing.s1,
-              AppSpacing.s5,
-              AppSpacing.s2,
-            ),
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedPill,
-            ),
-            child: TabBar(
-              controller: _tabController,
-              onTap: (_) => HapticFeedback.selectionClick(),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              splashFactory: NoSplash.splashFactory,
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
-              splashBorderRadius: AppSpacing.roundedPill,
-              indicator: BoxDecoration(
-                color: tokens.actionPrimary,
-                borderRadius: AppSpacing.roundedPill,
+          SafeArea(
+            top: false,
+            bottom: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.readMaxWidth,
+                ),
+                child: Container(
+                  margin: EdgeInsets.fromLTRB(
+                    AppSpacing.screenGutter(MediaQuery.sizeOf(context).width),
+                    AppSpacing.s1,
+                    AppSpacing.screenGutter(MediaQuery.sizeOf(context).width),
+                    AppSpacing.s2,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.s2),
+                  decoration: BoxDecoration(
+                    color: tokens.canvasSunken,
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    onTap: (_) => HapticFeedback.selectionClick(),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    splashFactory: NoSplash.splashFactory,
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
+                    splashBorderRadius: AppSpacing.roundedPill,
+                    indicator: BoxDecoration(
+                      color: tokens.actionPrimary,
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    labelColor: tokens.actionPrimaryFg,
+                    unselectedLabelColor: tokens.textSecondary,
+                    labelStyle: AppTypography.label(
+                      color: tokens.actionPrimaryFg,
+                      weight: FontWeight.w700,
+                    ),
+                    unselectedLabelStyle: AppTypography.label(
+                      color: tokens.textSecondary,
+                      weight: FontWeight.w500,
+                    ),
+                    tabs: const [
+                      Tab(text: 'Preferences'),
+                      Tab(text: "What's New"),
+                    ],
+                  ),
+                ),
               ),
-              labelColor: tokens.actionPrimaryFg,
-              unselectedLabelColor: tokens.textSecondary,
-              labelStyle: AppTypography.label(
-                color: tokens.actionPrimaryFg,
-                weight: FontWeight.w700,
-              ),
-              unselectedLabelStyle: AppTypography.label(
-                color: tokens.textSecondary,
-                weight: FontWeight.w500,
-              ),
-              tabs: const [
-                Tab(text: 'Preferences'),
-                Tab(text: "What's New"),
-              ],
             ),
           ),
           Expanded(
@@ -392,10 +403,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                                   IconButton(
                                     tooltip: 'Edit workspace name',
                                     onPressed: _editProfileName,
-                                    constraints: const BoxConstraints(
-                                      minWidth: AppSpacing.minTouchTarget,
-                                      minHeight: AppSpacing.minTouchTarget,
-                                    ),
                                     style: IconButton.styleFrom(
                                       backgroundColor: tokens.canvasSunken,
                                       minimumSize: const Size(36, 36),
@@ -874,10 +881,20 @@ class _ThemeSegmentedControl extends StatelessWidget {
       indicatorColor: tokens.actionPrimary,
       children: modes.map((entry) {
         final isSelected = themeProv.themeMode == entry.$1;
+        final fg = isSelected ? tokens.actionPrimaryFg : tokens.textSecondary;
+        final labelStyle = AppTypography.label(
+          color: fg,
+          weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        );
         return Semantics(
           button: true,
           selected: isSelected,
           label: '${entry.$2} theme',
+          onTap: () {
+            HapticFeedback.selectionClick();
+            themeProv.setThemeMode(entry.$1);
+          },
+          excludeSemantics: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -888,31 +905,34 @@ class _ThemeSegmentedControl extends StatelessWidget {
               constraints: const BoxConstraints(
                 minHeight: AppSpacing.minTouchTarget,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TackIcon(
-                    entry.$3,
-                    size: 16,
-                    color: isSelected
-                        ? tokens.actionPrimaryFg
-                        : tokens.textSecondary,
-                  ),
-                  const SizedBox(width: AppSpacing.s2),
-                  Flexible(
-                    child: Text(
-                      entry.$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.label(
-                        color: isSelected
-                            ? tokens.actionPrimaryFg
-                            : tokens.textSecondary,
-                        weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                style: labelStyle,
+                child: Builder(
+                  builder: (ctx) {
+                    final animatedFg =
+                        DefaultTextStyle.of(ctx).style.color ?? fg;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TackIcon(
+                          entry.$3,
+                          size: 16,
+                          color: animatedFg,
+                        ),
+                        const SizedBox(width: AppSpacing.s2),
+                        Flexible(
+                          child: Text(
+                            entry.$2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -1054,9 +1074,11 @@ class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
               child: Container(
                 decoration: ShapeDecoration(
                   color: tokens.surfacePrimary,
-                  shape: SmoothRectangleBorder(
-                    borderRadius: AppSpacing.roundedModal,
-                    smoothness: AppSpacing.defaultSmoothing,
+                  shape: AppSpacing.smoothModal(),
+                  shadows: AppSpacing.elevModal(isDark),
+                ),
+                foregroundDecoration: ShapeDecoration(
+                  shape: AppSpacing.smoothModal(
                     side: BorderSide(
                       color: tokens.borderSubtle.withValues(
                         alpha: isDark ? 0.35 : 0.6,
@@ -1064,11 +1086,10 @@ class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
                       width: 0.8,
                     ),
                   ),
-                  shadows: AppSpacing.elevModal(isDark),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Material(
-                  color: tokens.surfacePrimary,
+                  type: MaterialType.transparency,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.s6),
                     child: Column(
