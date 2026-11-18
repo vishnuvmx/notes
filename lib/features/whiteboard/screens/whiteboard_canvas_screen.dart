@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -1348,7 +1349,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
       if (existing != null && (existing is TextNote || existing is StickyNote)) {
         _saveCanvasState();
         await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => NoteEditorScreen(item: existing)),
+          TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: existing)),
         );
         if (mounted) setState(() {});
         return;
@@ -1390,7 +1391,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
 
     if (!mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: created)),
+      TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: created)),
     );
     if (mounted) setState(() {});
   }

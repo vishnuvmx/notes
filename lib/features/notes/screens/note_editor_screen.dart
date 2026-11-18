@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
@@ -633,7 +634,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     );
     if (!mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: child)),
+      TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: child)),
     );
     if (mounted) setState(() {});
   }
@@ -1636,8 +1637,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       if (!mounted) return;
       if (resolved is WhiteboardCanvasItem) {
         await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => WhiteboardCanvasScreen(
+          TackRoutes.sharedAxisHorizontal(
+            WhiteboardCanvasScreen(
               item: resolved,
               initialFocusNodeId: link.anchor,
             ),
@@ -1645,8 +1646,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         );
       } else {
         await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => NoteEditorScreen(
+          TackRoutes.sharedAxisHorizontal(
+            NoteEditorScreen(
               item: resolved,
               initialHeadingAnchor: link.anchor,
             ),
@@ -1666,7 +1667,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     );
     if (!mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoteEditorScreen(item: created)),
+      TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: created)),
     );
     if (mounted) setState(() {});
   }
@@ -1833,8 +1834,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 } else if (val == 'local_graph') {
                   _flushSave();
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => KnowledgeGraphScreen(focusItemId: widget.item.id),
+                    TackRoutes.slideUp(
+                      KnowledgeGraphScreen(focusItemId: widget.item.id),
                     ),
                   );
                 } else if (val == 'move_folder') {
@@ -2371,8 +2372,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         final target = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
                         if (target is WhiteboardCanvasItem) {
                           await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => WhiteboardCanvasScreen(
+                            TackRoutes.sharedAxisHorizontal(
+                              WhiteboardCanvasScreen(
                                 item: target,
                                 initialFocusNodeId: entry.canvasNodeId,
                               ),
@@ -2380,8 +2381,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                           );
                         } else {
                           await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => NoteEditorScreen(item: target),
+                            TackRoutes.sharedAxisHorizontal(
+                              NoteEditorScreen(item: target),
                             ),
                           );
                         }
@@ -2517,8 +2518,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 onTap: () async {
                   _flushSave();
                   await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => NoteEditorScreen(item: ancestor),
+                    TackRoutes.sharedAxisHorizontal(
+                      NoteEditorScreen(item: ancestor),
                     ),
                   );
                   if (mounted) setState(() {});
@@ -2679,8 +2680,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               onTap: () async {
                 _flushSave();
                 await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => NoteEditorScreen(item: child),
+                  TackRoutes.sharedAxisHorizontal(
+                    NoteEditorScreen(item: child),
                   ),
                 );
                 if (mounted) setState(() {});

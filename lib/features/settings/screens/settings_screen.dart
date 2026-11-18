@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../shared/models/item_serializer.dart';
 import '../../../shared/widgets/tack_toast.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -575,8 +576,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             onTap: () {
               HapticFeedback.selectionClick();
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const FolderViewScreen(
+                TackRoutes.sharedAxisHorizontal(
+                  const FolderViewScreen(
                     folderType: FolderType.trash,
                   ),
                 ),
@@ -753,10 +754,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 ),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (routeCtx) => OnboardingScreen(
-                        isReplay: true,
-                        onCompleted: () => Navigator.of(routeCtx).pop(),
+                    TackRoutes.slideUp(
+                      Builder(
+                        builder: (routeCtx) => OnboardingScreen(
+                          isReplay: true,
+                          onCompleted: () => Navigator.of(routeCtx).pop(),
+                        ),
                       ),
                     ),
                   );
@@ -783,7 +786,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
                 ),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AboutTackScreen()),
+                    TackRoutes.sharedAxisHorizontal(const AboutTackScreen()),
                   );
                 },
               ),

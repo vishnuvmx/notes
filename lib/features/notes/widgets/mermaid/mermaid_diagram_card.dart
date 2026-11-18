@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/routing/tack_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -59,9 +60,7 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
     try {
       final whiteboardItem = _convertToWhiteboardItem();
       Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => WhiteboardCanvasScreen(item: whiteboardItem),
-        ),
+        TackRoutes.slideUp(WhiteboardCanvasScreen(item: whiteboardItem)),
       );
     } catch (e, stack) {
       debugPrint('Error opening diagram in whiteboard: $e\n$stack');

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -376,11 +377,11 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     HapticFeedback.mediumImpact();
     if (item is WhiteboardCanvasItem) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => WhiteboardCanvasScreen(item: item)),
+        TackRoutes.sharedAxisHorizontal(WhiteboardCanvasScreen(item: item)),
       );
     } else {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => NoteEditorScreen(item: item)),
+        TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: item)),
       );
     }
   }

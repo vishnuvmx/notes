@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
@@ -289,7 +290,12 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       if (imgMatch != null) {
         final alt = imgMatch.group(1) ?? '';
         final url = imgMatch.group(2) ?? '';
-        widgets.add(_wrapLineTap(_buildImageBlock(context, alt, url, isDark), i));
+        widgets.add(
+          _wrapLineTap(
+            _buildImageBlock(context, alt, url, isDark, lineIndex: i),
+            i,
+          ),
+        );
         i++;
         continue;
       }
@@ -1389,8 +1395,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     );
   }
 
-  Widget _buildImageBlock(BuildContext context, String alt, String url, bool isDark) {
+  Widget _buildImageBlock(
+    BuildContext context,
+    String alt,
+    String url,
+    bool isDark, {
+    required int lineIndex,
+  }) {
     final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
+    final heroTag = 'note_img_block_${lineIndex}_$cleanUrl';
     Widget imgWidget;
     if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
       imgWidget = Image.network(
@@ -1438,7 +1451,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              _openImageLightbox(context, cleanUrl, alt);
+              _openImageLightbox(context, cleanUrl, alt, heroTag: heroTag);
             },
             child: Container(
               decoration: BoxDecoration(
@@ -1461,7 +1474,11 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 children: [
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 360, minWidth: 100),
-                    child: imgWidget,
+                    child: Hero(
+                      tag: heroTag,
+                      flightShuttleBuilder: TackRoutes.heroImageShuttle,
+                      child: imgWidget,
+                    ),
                   ),
                   Container(
                     margin: const EdgeInsets.all(8),
@@ -3302,20 +3319,29 @@ class _CopyCodeButtonState extends State<_CopyCodeButton> {
   }
 }
 
-void _openImageLightbox(BuildContext context, String url, String alt) {
+void _openImageLightbox(
+  BuildContext context,
+  String url,
+  String alt, {
+  String? heroTag,
+}) {
   Navigator.of(context).push(
     PageRouteBuilder(
       opaque: false,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.92),
-      transitionDuration: const Duration(milliseconds: 180),
-      reverseTransitionDuration: const Duration(milliseconds: 140),
+      transitionDuration: const Duration(milliseconds: 220),
+      reverseTransitionDuration: const Duration(milliseconds: 160),
       transitionsBuilder: (_, animation, _, child) => TackAnimatedTransition(
         animation: animation,
         fadeReverseCurve: Curves.easeInCubic,
         child: child,
       ),
-      pageBuilder: (ctx, _, _) => _ImageLightboxViewer(url: url, alt: alt),
+      pageBuilder: (ctx, _, _) => _ImageLightboxViewer(
+        url: url,
+        alt: alt,
+        heroTag: heroTag,
+      ),
     ),
   );
 }
@@ -3323,8 +3349,13 @@ void _openImageLightbox(BuildContext context, String url, String alt) {
 class _ImageLightboxViewer extends StatelessWidget {
   final String url;
   final String alt;
+  final String? heroTag;
 
-  const _ImageLightboxViewer({required this.url, required this.alt});
+  const _ImageLightboxViewer({
+    required this.url,
+    required this.alt,
+    this.heroTag,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3378,7 +3409,13 @@ class _ImageLightboxViewer extends StatelessWidget {
                 minScale: 0.5,
                 maxScale: 4.5,
                 boundaryMargin: const EdgeInsets.all(60),
-                child: imageWidget,
+                child: heroTag != null
+                    ? Hero(
+                        tag: heroTag!,
+                        flightShuttleBuilder: TackRoutes.heroImageShuttle,
+                        child: imageWidget,
+                      )
+                    : imageWidget,
               ),
             ),
 

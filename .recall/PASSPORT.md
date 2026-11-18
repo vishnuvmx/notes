@@ -19,10 +19,12 @@
 - **[decision] Unified TackIcons on tabler_icons_plus via TackGlyph**: Migrated TackIcons and TackIcon in lib/core/theme/tack_icons.dart from mixed custom SVG packs + LucideIcons to tabler_icons_plus (^3.52.0... _(mem_008)_
 - **[decision] Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search**: Refined Home, TodayScreen, SmartBottomNavBar, and SearchCommandScreen: HomeScreen header shows 'Hi Wassup!' with no subtagline and Scaffo... _(mem_009)_
 - **[decision] First-run 4-slide OnboardingScreen & custom illustrations**: Added 4-slide first-run OnboardingScreen (lib/features/onboarding/) backed by OnboardingService (prefKey: 'has_completed_onboarding'), cu... _(mem_010)_
+- **[decision] Contextual page transitions via TackRoutes and image Hero flights**: Implemented TackRoutes in lib/core/routing/tack_routes.dart (exported via app_router.dart): sharedAxisHorizontal for drill-down links (su... _(mem_011)_
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
 - `lib/core/routing/app_router.dart`: `TackRootNavigator`
+- `lib/core/routing/tack_routes.dart`: `TackRoutes`
 - `lib/core/services/onboarding_service.dart`: `OnboardingService`
 - `lib/core/services/pinned_notification_service.dart`: `PinnedNotificationService`
 - `lib/core/services/process_text_service.dart`: `IncomingTextData`, `ProcessTextService`
@@ -33,10 +35,5 @@
 - `lib/core/theme/app_typography.dart`: `AppTypography`
 - `lib/core/theme/smooth_border.dart`: `SmoothRectangleBorder`
 - `lib/core/theme/tack_icons.dart`: `TackGlyph`, `TackIcons`, `TackIcon`, `TackPinBadge`
-- `lib/core/theme/theme_provider.dart`: `ThemeProvider`
-- `lib/core/utils/date_formatter.dart`: `DateFormatter`
-- `lib/core/utils/url_launcher_helper.dart`: `UrlLauncherHelper`
-- `lib/features/about/screens/about_tack_screen.dart`: `AboutTackScreen`
-- `lib/features/about/widgets/release_notes_tab.dart`: `ReleaseNotesTab`
-- _... (75 more modules — query `recall where <name>`)_
+- _... (80 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->

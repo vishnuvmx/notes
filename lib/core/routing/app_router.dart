@@ -10,6 +10,9 @@ import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 import '../theme/tack_icons.dart';
+import 'tack_routes.dart';
+
+export 'tack_routes.dart';
 import '../../features/folders/screens/folder_view_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/notes/models/text_note.dart';
@@ -430,7 +433,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
                 ),
       onOpenFavorites: () {
         Navigator.of(context).push(
-          _buildRoute(
+          TackRoutes.sharedAxisHorizontal(
             FolderViewScreen(
               folderType: FolderType.favorites,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -440,7 +443,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenArchive: () {
         Navigator.of(context).push(
-          _buildRoute(
+          TackRoutes.sharedAxisHorizontal(
             FolderViewScreen(
               folderType: FolderType.archive,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -450,7 +453,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenTrash: () {
         Navigator.of(context).push(
-          _buildRoute(
+          TackRoutes.sharedAxisHorizontal(
             FolderViewScreen(
               folderType: FolderType.trash,
               onOpenItem: (item) => _openItemDetail(context, item),
@@ -460,7 +463,7 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
       },
       onOpenSettings: () {
         Navigator.of(context).push(
-          _buildRoute(const SettingsScreen()),
+          TackRoutes.slideUp(const SettingsScreen()),
         );
       },
     ),

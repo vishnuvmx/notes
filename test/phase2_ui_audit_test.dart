@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:notes/core/routing/tack_routes.dart';
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/core/theme/tack_icons.dart';
@@ -1436,6 +1437,110 @@ Footer text.
         expect(find.text('Recent'), findsOneWidget);
         expect(find.text('Weekly Focus'), findsOneWidget);
         expect(find.text('Ship dark mode & search polish.'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '23. TackRoutes.sharedAxisHorizontal & slideUp animate primary + secondary routes cleanly',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).push(
+                          TackRoutes.sharedAxisHorizontal<void>(
+                            Scaffold(
+                              body: Builder(
+                                builder: (innerCtx) => ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(innerCtx).push(
+                                      TackRoutes.sharedAxisHorizontal<void>(
+                                        const Scaffold(
+                                          body: Text('Axis Child 2'),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Push Deeper'),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Push Axis'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).push(
+                          TackRoutes.slideUp<void>(
+                            const Scaffold(body: Text('Slide Up Modal')),
+                          ),
+                        );
+                      },
+                      child: const Text('Push SlideUp'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // 1. Test Shared Axis Horizontal primary + secondary animation
+        await tester.tap(find.text('Push Axis'));
+        await tester.pumpAndSettle();
+        expect(find.text('Push Deeper'), findsOneWidget);
+
+        await tester.tap(find.text('Push Deeper'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+
+        expect(find.text('Axis Child 2'), findsOneWidget);
+        final deeperTransitions = tester.widgetList<SlideTransition>(
+          find.ancestor(
+            of: find.text('Push Deeper'),
+            matching: find.byType(SlideTransition),
+          ),
+        );
+        expect(
+          deeperTransitions.any((s) => s.position.value.dx < 0.0),
+          isTrue,
+          reason: 'Underlying route should nudge smoothly left via secondaryAnimation',
+        );
+
+        await tester.pumpAndSettle();
+        Navigator.of(tester.element(find.text('Axis Child 2'))).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+        final poppedFade = find.ancestor(
+          of: find.text('Axis Child 2'),
+          matching: find.byType(FadeTransition),
+        );
+        expect(
+          tester.widget<FadeTransition>(poppedFade).opacity.value,
+          lessThan(0.55),
+        );
+        await tester.pumpAndSettle();
+        Navigator.of(tester.element(find.text('Push Deeper'))).pop();
+        await tester.pumpAndSettle();
+
+        // 2. Test SlideUp transition
+        await tester.tap(find.text('Push SlideUp'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 90));
+        expect(find.text('Slide Up Modal'), findsOneWidget);
+        final modalSlide = find.ancestor(
+          of: find.text('Slide Up Modal'),
+          matching: find.byType(SlideTransition),
+        );
+        expect(tester.widget<SlideTransition>(modalSlide).position.value.dy, greaterThan(0.0));
+        await tester.pumpAndSettle();
       },
     );
   });

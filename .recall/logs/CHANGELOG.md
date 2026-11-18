@@ -12,3 +12,4 @@ Local log of memory operations. Git history is authoritative when available.
 - 2026-11-18 remember mem_008 "Unified TackIcons on tabler_icons_plus via TackGlyph"
 - 2026-11-18 remember mem_009 "Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search"
 - 2026-11-18 remember mem_010 "First-run 4-slide OnboardingScreen & custom illustrations"
+- 2026-11-18 remember mem_011 "Contextual page transitions via TackRoutes and image Hero flights"

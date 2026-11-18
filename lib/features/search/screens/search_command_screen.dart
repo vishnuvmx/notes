@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -103,8 +104,8 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         keywords: 'trash deleted restore empty',
         onExecute: () {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const FolderViewScreen(
+            TackRoutes.sharedAxisHorizontal(
+              const FolderViewScreen(
                 folderType: FolderType.trash,
               ),
             ),
@@ -117,9 +118,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         keywords: 'settings backup export import restore json',
         onExecute: () {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const SettingsScreen(),
-            ),
+            TackRoutes.slideUp(const SettingsScreen()),
           );
         },
       ),

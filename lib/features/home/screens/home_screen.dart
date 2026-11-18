@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -261,9 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : null,
           onOpenProfileSettings: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const ProfileSettingsScreen(),
-              ),
+              TackRoutes.slideUp(const ProfileSettingsScreen()),
             );
           },
         ),
