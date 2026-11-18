@@ -127,3 +127,22 @@
 - **Summary**: [gemini-4-hydrogen-xhigh] Chat: "This is something annother ai model suggested to do out of.. can you check which screen..." — Here is how those transition patterns map onto **Tack's actual screens and routes**, includi...
 - **Model**: gemini-4-hydrogen-xhigh
 - **Modified**: lib/core/routing/app_router.dart, lib/features/settings/screens/settings_screen.dart, lib/main.dart, assets/images/onboarding/slide3_connected_ideas.jpg, assets/images/onboarding/slide4_local_sanctuary.jpg, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, test/onboarding_screen_test.dart
+
+### [2026-11-18 07:12:21] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Wherever suits best, do hem" — Implemented Tack's custom route and Hero transitions in a centralized helper without adding ...
+- **Model**: gemini-4-hydrogen-xhigh
+
+### [2026-11-18 07:26:47] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After each any everything.. make a clear note and board like default one. A note that c..." — Created a complete, showcase-ready default **Note** and **Board** pair so new and upgrading ...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-18 07:27:17] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After that flutter build apk split per abi" — Started `flutter build apk --split-per-abi` (running Gradle `assembleRelease`). Waiting for ...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-18 07:28:55] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After that flutter build apk split per abi" — Split-per-ABI release APKs built cleanly via `flutter build apk --split-per-abi` (exit code ...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart

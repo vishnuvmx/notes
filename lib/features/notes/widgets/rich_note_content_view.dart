@@ -1404,43 +1404,27 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
   }) {
     final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
     final heroTag = 'note_img_block_${lineIndex}_$cleanUrl';
-    Widget imgWidget;
-    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-      imgWidget = Image.network(
-        cleanUrl,
-        fit: BoxFit.contain,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            height: 180,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E2028) : const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.2),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) => _buildImageError(alt, isDark),
-      );
-    } else if (!kIsWeb) {
-      final file = File(cleanUrl);
-      if (file.existsSync()) {
-        imgWidget = Image.file(
-          file,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => _buildImageError(alt, isDark),
+    final imgWidget = _buildResolvedMarkdownImage(
+      cleanUrl,
+      fit: BoxFit.contain,
+      fallback: _buildImageError(alt, isDark),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          height: 180,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E2028) : const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2.2),
+          ),
         );
-      } else {
-        imgWidget = _buildImageError(alt, isDark);
-      }
-    } else {
-      imgWidget = _buildImageError(alt, isDark);
-    }
+      },
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -2520,27 +2504,12 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final alt = matched.substring(2, midIndex);
     final url = matched.substring(midIndex + 2, matched.length - 1).trim();
     final cleanUrl = url.replaceFirst(RegExp(r'^file://'), '');
-    final isNet =
-        cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
-
-    Widget inlineImg;
-    if (isNet) {
-      inlineImg = Image.network(
-        cleanUrl,
-        height: 28,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const TackIcon(TackIcons.imageOff, size: 20),
-      );
-    } else if (!kIsWeb) {
-      final file = File(cleanUrl);
-      if (file.existsSync()) {
-        inlineImg = Image.file(file, height: 28, fit: BoxFit.cover);
-      } else {
-        inlineImg = const TackIcon(TackIcons.imageOff, size: 20);
-      }
-    } else {
-      inlineImg = const TackIcon(TackIcons.imageOff, size: 20);
-    }
+    final inlineImg = _buildResolvedMarkdownImage(
+      cleanUrl,
+      height: 28,
+      fit: BoxFit.cover,
+      fallback: const TackIcon(TackIcons.imageOff, size: 20),
+    );
 
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
@@ -3346,6 +3315,49 @@ void _openImageLightbox(
   );
 }
 
+/// Resolves network URLs, bundled Flutter assets (`assets/...` or `asset:...`),
+/// and local filesystem image paths into a single widget with uniform error fallback.
+Widget _buildResolvedMarkdownImage(
+  String cleanUrl, {
+  BoxFit fit = BoxFit.contain,
+  double? height,
+  required Widget fallback,
+  ImageLoadingBuilder? loadingBuilder,
+}) {
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return Image.network(
+      cleanUrl,
+      height: height,
+      fit: fit,
+      loadingBuilder: loadingBuilder,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+  final String? assetPath = cleanUrl.startsWith('assets/')
+      ? cleanUrl
+      : (cleanUrl.startsWith('asset:') ? cleanUrl.substring(6).trim() : null);
+  if (assetPath != null && assetPath.isNotEmpty) {
+    return Image.asset(
+      assetPath,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+  if (!kIsWeb) {
+    final file = File(cleanUrl);
+    if (file.existsSync()) {
+      return Image.file(
+        file,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+  }
+  return fallback;
+}
+
 class _ImageLightboxViewer extends StatelessWidget {
   final String url;
   final String alt;
@@ -3361,42 +3373,21 @@ class _ImageLightboxViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
     final isNetwork = cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
-
-    Widget imageWidget;
-    if (isNetwork) {
-      imageWidget = Image.network(
-        cleanUrl,
-        fit: BoxFit.contain,
-        loadingBuilder: (_, child, progress) {
-          if (progress == null) return child;
-          return const Center(
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-          );
-        },
-        errorBuilder: (_, _, _) => const TackIcon(
-          TackIcons.imageOff,
-          size: 48,
-          color: Colors.white54,
-        ),
-      );
-    } else if (!kIsWeb) {
-      final file = File(cleanUrl);
-      if (file.existsSync()) {
-        imageWidget = Image.file(file, fit: BoxFit.contain);
-      } else {
-        imageWidget = const TackIcon(
-          TackIcons.imageOff,
-          size: 48,
-          color: Colors.white54,
+    final imageWidget = _buildResolvedMarkdownImage(
+      cleanUrl,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return const Center(
+          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
         );
-      }
-    } else {
-      imageWidget = const TackIcon(
+      },
+      fallback: const TackIcon(
         TackIcons.imageOff,
         size: 48,
         color: Colors.white54,
-      );
-    }
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,

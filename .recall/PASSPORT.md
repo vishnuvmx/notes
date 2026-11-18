@@ -20,6 +20,7 @@
 - **[decision] Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search**: Refined Home, TodayScreen, SmartBottomNavBar, and SearchCommandScreen: HomeScreen header shows 'Hi Wassup!' with no subtagline and Scaffo... _(mem_009)_
 - **[decision] First-run 4-slide OnboardingScreen & custom illustrations**: Added 4-slide first-run OnboardingScreen (lib/features/onboarding/) backed by OnboardingService (prefKey: 'has_completed_onboarding'), cu... _(mem_010)_
 - **[decision] Contextual page transitions via TackRoutes and image Hero flights**: Implemented TackRoutes in lib/core/routing/tack_routes.dart (exported via app_router.dart): sharedAxisHorizontal for drill-down links (su... _(mem_011)_
+- **[decision] Starter showcase note/board & bundled asset image support**: Bundled Flutter assets (assets/... or asset:...) are supported uniformly in RichNoteContentView (_buildResolvedMarkdownImage), NoteExport... _(mem_012)_
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
@@ -32,8 +33,5 @@
 - `lib/core/theme/app_colors.dart`: `AppColors`, `TackColorPalette`
 - `lib/core/theme/app_spacing.dart`: `AppSpacing`
 - `lib/core/theme/app_theme.dart`: `AppTheme`, `TackAnimatedTransition`, `AppInputDecorations`
-- `lib/core/theme/app_typography.dart`: `AppTypography`
-- `lib/core/theme/smooth_border.dart`: `SmoothRectangleBorder`
-- `lib/core/theme/tack_icons.dart`: `TackGlyph`, `TackIcons`, `TackIcon`, `TackPinBadge`
-- _... (80 more modules — query `recall where <name>`)_
+- _... (83 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->

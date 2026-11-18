@@ -1,8 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:notes/core/routing/tack_routes.dart';
+import 'package:notes/shared/data/mock_initial_data.dart';
+import 'package:notes/shared/data/workspace_repo_impl.dart';
+import 'package:notes/features/notes/services/frontmatter_service.dart';
+import 'package:notes/features/tasks/services/open_tasks_service.dart';
+import 'package:notes/features/notes/widgets/mermaid/mermaid_diagram_parser.dart';
+import 'package:notes/features/notes/widgets/rich_note_content_view.dart';
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/core/theme/tack_icons.dart';
@@ -1541,6 +1549,222 @@ Footer text.
         );
         expect(tester.widget<SlideTransition>(modalSlide).position.value.dy, greaterThan(0.0));
         await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      '24. Starter showcase note & board render full capabilities, asset images, and zero node overlap',
+      (WidgetTester tester) async {
+        final items = MockInitialData.getInitialItems();
+        expect(items.length, 2);
+
+        final note = items[0] as TextNote;
+        final board = items[1] as WhiteboardCanvasItem;
+
+        // 1. Validate Note capabilities (frontmatter, tasks, mermaid, embeds, bundled images)
+        final fm = FrontmatterService.parse(note.content);
+        expect(fm.status, 'Approved');
+        expect(fm.priority, 'High');
+        expect(fm.aliases, containsAll(['How Tack Works', 'Starter Guide']));
+
+        final openTasks = OpenTasksService.extractTasks([note]);
+        expect(openTasks.length, 3);
+        expect(openTasks.any((t) => t.recurrence == TaskRecurrence.daily), isTrue);
+        expect(openTasks.every((t) => !t.isOverdue()), isTrue);
+
+        final mermaidMatch = RegExp(
+          r'```mermaid\n([\s\S]*?)```',
+        ).firstMatch(note.content);
+        expect(mermaidMatch, isNotNull);
+        final parsedMermaid = MermaidDiagramParser.parse(mermaidMatch!.group(1)!);
+        expect(parsedMermaid.isValid, isTrue);
+        expect(parsedMermaid.nodes.length, 5);
+
+        // 2. Validate Board flowchart shapes, bundled image node, non-overlap & cluster bounds
+        expect(board.title, 'Capture to Clarity');
+        final types = board.nodes.map((n) => n.shapeType).toSet();
+        expect(
+          types,
+          containsAll([
+            CanvasNodeType.textOnly,
+            CanvasNodeType.startEnd,
+            CanvasNodeType.inputOutput,
+            CanvasNodeType.decision,
+            CanvasNodeType.process,
+            CanvasNodeType.connector,
+            CanvasNodeType.sticky,
+            CanvasNodeType.specCard,
+            CanvasNodeType.image,
+          ]),
+        );
+
+        final imageNode = board.nodes.firstWhere(
+          (n) => n.shapeType == CanvasNodeType.image,
+        );
+        expect(imageNode.imagePath, 'assets/images/onboarding/slide3_connected_ideas.jpg');
+
+        final specNode = board.nodes.firstWhere(
+          (n) => n.shapeType == CanvasNodeType.specCard,
+        );
+        expect(specNode.linkedNoteId, note.id);
+
+        // Every pair of board nodes must have non-overlapping rectangles
+        for (int a = 0; a < board.nodes.length; a++) {
+          final ra = Rect.fromLTWH(
+            board.nodes[a].x,
+            board.nodes[a].y,
+            board.nodes[a].width,
+            board.nodes[a].height,
+          );
+          for (int b = a + 1; b < board.nodes.length; b++) {
+            final rb = Rect.fromLTWH(
+              board.nodes[b].x,
+              board.nodes[b].y,
+              board.nodes[b].width,
+              board.nodes[b].height,
+            );
+            expect(
+              ra.overlaps(rb),
+              isFalse,
+              reason: '${board.nodes[a].id} overlaps ${board.nodes[b].id}',
+            );
+          }
+        }
+
+        // All board nodes sit within initial camera cluster framing
+        final cluster = WhiteboardCanvasScreen.computeDensestClusterBounds(
+          board.nodes,
+          edges: board.edges,
+        )!;
+        for (final node in board.nodes) {
+          expect(cluster.contains(node.center), isTrue, reason: '${node.id} outside cluster');
+        }
+
+        // 3. Render starter Note view with live WorkspaceProvider and asset images
+        final repo = _MockWorkspaceRepo();
+        await repo.saveItem(note);
+        await repo.saveItem(board);
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+              ChangeNotifierProvider.value(value: workspace),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: Scaffold(
+                body: SingleChildScrollView(
+                  child: RichNoteContentView(
+                    content: note.content,
+                    paletteId: note.paletteId,
+                    workspaceItems: workspace.rawItems,
+                    onContentChanged: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Edit Table'), findsOneWidget);
+        expect(find.text('Capture to Clarity'), findsWidgets);
+        // 2 block asset images + 1 inline asset thumbnail
+        final noteImages = tester.widgetList<Image>(find.byType(Image));
+        expect(noteImages.length, 3);
+        for (final img in noteImages) {
+          expect(img.image, isA<AssetImage>());
+        }
+
+        // 4. Render starter Board screen with bundled asset node & linked SpecCard
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+              ChangeNotifierProvider.value(value: workspace),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: WhiteboardCanvasScreen(item: board),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tack Complete Guide'), findsWidgets);
+        expect(find.text('Open ↗'), findsOneWidget);
+        final boardImages = tester.widgetList<Image>(find.byType(Image));
+        expect(
+          boardImages.any((img) => img.image is AssetImage),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      '25. LocalStorageWorkspaceRepository upgrades untouched v1 starter items cleanly without overwriting user edits',
+      () async {
+        // Case A: Untouched legacy v1 starter items upgrade to v2
+        final now = DateTime.now();
+        final oldNote = TextNote(
+          id: MockInitialData.welcomeNoteId,
+          title: 'How Tack Works',
+          content: '# Tack in 30 seconds\n\nLegacy content',
+          createdAt: now,
+          updatedAt: now,
+          paletteId: 'amber',
+        );
+        final oldBoard = WhiteboardCanvasItem(
+          id: MockInitialData.starterBoardId,
+          title: 'Capture to Clarity (Board)',
+          createdAt: now,
+          updatedAt: now,
+          paletteId: 'cyan',
+          nodes: List.generate(
+            5,
+            (idx) => CanvasNode(
+              id: idx == 0 ? 'n_idea' : 'n_$idx',
+              text: 'Node $idx',
+              shapeType: CanvasNodeType.process,
+              x: 3000,
+              y: 3000,
+            ),
+          ),
+        );
+
+        SharedPreferences.setMockInitialValues({
+          'tack_workspace_items_v2':
+              jsonEncode([oldNote.toJson(), oldBoard.toJson()]),
+        });
+
+        final repoUpgrade = LocalStorageWorkspaceRepository();
+        final upgraded = await repoUpgrade.getAllActiveItems();
+        final upgradedNote = upgraded.whereType<TextNote>().first;
+        final upgradedBoard = upgraded.whereType<WhiteboardCanvasItem>().first;
+        expect(upgradedNote.title, 'Tack Complete Guide');
+        expect(
+          upgradedNote.content.contains('assets/images/onboarding/slide1_tactile_grid.jpg'),
+          isTrue,
+        );
+        expect(upgradedBoard.title, 'Capture to Clarity');
+        expect(upgradedBoard.nodes.length, 11);
+
+        // Case B: User-customized starter note is NEVER overwritten
+        final editedNote = oldNote.copyWith(
+          title: 'My Custom Title',
+          content: '# My own personal notes',
+        );
+        SharedPreferences.setMockInitialValues({
+          'tack_workspace_items_v2': jsonEncode([editedNote.toJson()]),
+        });
+
+        final repoPreserved = LocalStorageWorkspaceRepository();
+        final preserved = await repoPreserved.getAllActiveItems();
+        expect(preserved.single.title, 'My Custom Title');
+        expect((preserved.single as TextNote).content, '# My own personal notes');
       },
     );
   });

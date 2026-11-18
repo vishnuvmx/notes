@@ -221,6 +221,16 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
   @visibleForTesting
   void toggleZenModeForTesting() => setState(() => _isZenMode = !_isZenMode);
 
+  static String? _resolveNodeAssetPath(String rawPath) {
+    final clean = rawPath.trim().replaceFirst(RegExp(r'^file://'), '');
+    if (clean.startsWith('assets/')) return clean;
+    if (clean.startsWith('asset:')) {
+      final sub = clean.substring(6).trim();
+      return sub.isNotEmpty ? sub : null;
+    }
+    return null;
+  }
+
   int _uniqueIdCounter = 0;
   String _generateUniqueId(String prefix) {
     _uniqueIdCounter++;
@@ -2104,15 +2114,24 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
     final loadedImages = <String, ui.Image>{};
     for (final node in _nodes) {
       if (node.shapeType == CanvasNodeType.image && node.imagePath != null && node.imagePath!.isNotEmpty) {
-        final file = File(node.imagePath!);
-        if (await file.exists()) {
-          try {
-            final bytes = await file.readAsBytes();
+        try {
+          Uint8List? bytes;
+          final assetPath = _resolveNodeAssetPath(node.imagePath!);
+          if (assetPath != null) {
+            final byteData = await rootBundle.load(assetPath);
+            bytes = byteData.buffer.asUint8List();
+          } else {
+            final file = File(node.imagePath!);
+            if (await file.exists()) {
+              bytes = await file.readAsBytes();
+            }
+          }
+          if (bytes != null) {
             final codec = await ui.instantiateImageCodec(bytes);
             final frame = await codec.getNextFrame();
             loadedImages[node.id] = frame.image;
-          } catch (_) {}
-        }
+          }
+        } catch (_) {}
       }
     }
 
@@ -4845,12 +4864,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         break;
 
       case CanvasNodeType.image:
-        Widget imgWidget;
-        if (node.imagePath != null && node.imagePath!.isNotEmpty) {
-          imgWidget = Image.file(
-            File(node.imagePath!),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
+        final rawImagePath = node.imagePath?.trim();
+        Widget imgFallback() => Container(
               color: fillColor,
               child: Center(
                 child: Column(
@@ -4862,8 +4877,23 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
                   ],
                 ),
               ),
-            ),
-          );
+            );
+        Widget imgWidget;
+        if (rawImagePath != null && rawImagePath.isNotEmpty) {
+          final assetPath = _resolveNodeAssetPath(rawImagePath);
+          if (assetPath != null) {
+            imgWidget = Image.asset(
+              assetPath,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => imgFallback(),
+            );
+          } else {
+            imgWidget = Image.file(
+              File(rawImagePath),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => imgFallback(),
+            );
+          }
         } else {
           imgWidget = Container(
             color: fillColor,

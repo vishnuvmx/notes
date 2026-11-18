@@ -343,9 +343,23 @@ class NoteExportService {
 
           if (imgPath.isNotEmpty) {
             try {
-              final file = File(imgPath);
-              if (file.existsSync()) {
-                final bytes = file.readAsBytesSync();
+              final cleanImgPath = imgPath.trim().replaceFirst(RegExp(r'^file://'), '');
+              Uint8List? bytes;
+              final String? assetPath = cleanImgPath.startsWith('assets/')
+                  ? cleanImgPath
+                  : (cleanImgPath.startsWith('asset:')
+                      ? cleanImgPath.substring(6).trim()
+                      : null);
+              if (assetPath != null && assetPath.isNotEmpty) {
+                final byteData = await rootBundle.load(assetPath);
+                bytes = byteData.buffer.asUint8List();
+              } else {
+                final file = File(cleanImgPath);
+                if (file.existsSync()) {
+                  bytes = file.readAsBytesSync();
+                }
+              }
+              if (bytes != null) {
                 imgWidget = pw.ClipRRect(
                   horizontalRadius: 6,
                   verticalRadius: 6,

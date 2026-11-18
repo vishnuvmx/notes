@@ -7,6 +7,7 @@
 - [Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search](decisions/mem_009-home-hi-wassup-transparent-nav-bar-2-tab-tasks-d.md)
 - [First-run 4-slide OnboardingScreen & custom illustrations](decisions/mem_010-first-run-4-slide-onboardingscreen-custom-illust.md)
 - [Contextual page transitions via TackRoutes and image Hero flights](decisions/mem_011-contextual-page-transitions-via-tackroutes-and-i.md)
+- [Starter showcase note/board & bundled asset image support](decisions/mem_012-starter-showcase-note-board-bundled-asset-image.md)
 
 ## Conventions
 - [Settings Copy & Privacy Legal Coverage](rules/mem_003-settings-copy-privacy-legal-coverage.md)

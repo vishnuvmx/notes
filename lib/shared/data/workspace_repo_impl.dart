@@ -14,6 +14,7 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
   static const String _storageKey = 'tack_workspace_items_v2';
   static const String _lastGoodStorageKey = 'tack_workspace_items_v2_last_good';
   static const String _corruptBackupStorageKey = 'tack_workspace_items_v2_corrupt_backup';
+  static const String _starterShowcaseSeededKey = 'tack_starter_showcase_v2_seeded';
 
   List<BaseWorkspaceItem> _items = [];
   bool _initialized = false;
@@ -56,10 +57,26 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
           await _persistToDisk();
         }
       }
+      if (!(prefs.getBool(_starterShowcaseSeededKey) ?? false)) {
+        final now = DateTime.now();
+        bool upgraded = false;
+        for (int i = 0; i < _items.length; i++) {
+          final replacement = MockInitialData.tryUpgradeLegacyStarter(_items[i], now);
+          if (replacement != null) {
+            _items[i] = replacement;
+            upgraded = true;
+          }
+        }
+        if (upgraded) {
+          await _persistToDisk();
+        }
+        await prefs.setBool(_starterShowcaseSeededKey, true);
+      }
     } else {
       // First launch: seed with clean starter items and persist
       _items = MockInitialData.getInitialItems();
       await _persistToDisk();
+      await prefs.setBool(_starterShowcaseSeededKey, true);
     }
     _initialized = true;
   }
