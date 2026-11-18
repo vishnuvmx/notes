@@ -264,8 +264,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         paletteId: 'coral',
         icon: TackIcons.palette,
         description:
-            'Crafted a calm neutral-canvas aesthetic with ink primary buttons, editorial Newsreader '
-            'serif accents, DM Sans UI hierarchy, and tinted sub-cards.',
+            'Crafted a calm neutral-canvas aesthetic with ink primary buttons, unified '
+            'DM Sans UI hierarchy, JetBrains Mono code previews, and tinted sub-cards.',
       ),
       _JourneyStage(
         phase: 'Stage 4',
@@ -338,11 +338,11 @@ class _AboutTackScreenState extends State<AboutTackScreen>
             children: [
               Text(
                 stage.phase.toUpperCase(),
-                style: AppTypography.mono(
+                style: AppTypography.caption(
                   fontSize: 12,
                   weight: FontWeight.w600,
                   color: tokens.textTertiary,
-                ),
+                ).copyWith(letterSpacing: 0.4),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -539,7 +539,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         author: 'Material Design & Google',
         version: '^9.0.0',
         license: 'Apache-2.0 / OFL',
-        role: 'Typography engine delivering DM Sans, Newsreader, and JetBrains Mono.',
+        role: 'Typography engine delivering DM Sans for UI and JetBrains Mono for code previews.',
       ),
       const _OssPackage(
         name: 'tabler_icons_plus',

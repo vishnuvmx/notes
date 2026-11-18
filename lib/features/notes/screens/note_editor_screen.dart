@@ -949,6 +949,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   void _showAlertTemplatePicker() {
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final paletteAccent = AppColors.getPaletteById(_paletteId).resolveAccentColor(isDark);
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => SingleChildScrollView(
@@ -978,7 +981,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             const SizedBox(height: AppSpacing.sm),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.info, size: 22, color: Color(0xFF0284C7)),
+              leading: TackIcon(TackIcons.info, size: 22, color: paletteAccent),
               title: const Text('Note Alert'),
               subtitle: const Text('> [!NOTE] Informational notice'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -989,7 +992,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.lightbulb, size: 22, color: Color(0xFF059669)),
+              leading: TackIcon(TackIcons.lightbulb, size: 22, color: tokens.stateSuccess),
               title: const Text('Tip Alert'),
               subtitle: const Text('> [!TIP] Helpful recommendation'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -1000,7 +1003,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.star, size: 22, color: Color(0xFF7C3AED)),
+              leading: TackIcon(TackIcons.star, size: 22, color: paletteAccent),
               title: const Text('Important Alert'),
               subtitle: const Text('> [!IMPORTANT] Crucial requirement'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -1011,7 +1014,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.warning, size: 22, color: Color(0xFFD97706)),
+              leading: TackIcon(TackIcons.warning, size: 22, color: tokens.stateWarning),
               title: const Text('Warning Alert'),
               subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -1022,7 +1025,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.shield, size: 22, color: Color(0xFFDC2626)),
+              leading: TackIcon(TackIcons.shield, size: 22, color: tokens.stateDanger),
               title: const Text('Caution Alert'),
               subtitle: const Text('> [!CAUTION] High-risk action notice'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
@@ -1095,7 +1098,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             const SizedBox(height: AppSpacing.sm),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.photo, size: 22, color: AppColors.accentCyan),
+              leading: TackIcon(
+                TackIcons.photo,
+                size: 22,
+                color: AppColors.getPaletteById(_paletteId)
+                    .resolveAccentColor(context.tokens.isDark),
+              ),
               title: const Text('Choose from Gallery'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
@@ -1105,7 +1113,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.camera, size: 22, color: AppColors.accentOrange),
+              leading: TackIcon(
+                TackIcons.camera,
+                size: 22,
+                color: AppColors.getPaletteById(_paletteId)
+                    .resolveAccentColor(context.tokens.isDark),
+              ),
               title: const Text('Take Photo'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
@@ -1115,7 +1128,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: const TackIcon(TackIcons.link, size: 22, color: AppColors.accentAmber),
+              leading: TackIcon(
+                TackIcons.link,
+                size: 22,
+                color: AppColors.getPaletteById(_paletteId)
+                    .resolveAccentColor(context.tokens.isDark),
+              ),
               title: const Text('Insert Image URL'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
@@ -1170,6 +1188,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     _contentController.paletteId = id;
                   });
                   _saveNote();
+                  _flushSave();
                   Navigator.of(context).pop();
                 },
               ),
@@ -1715,7 +1734,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final palette = AppColors.getPaletteById(_paletteId);
 
     final tokens = context.tokens;
-    final backgroundColor = tokens.canvasPrimary;
+    final accent = palette.resolveAccentColor(isDark);
+    final backgroundColor = palette.resolveNoteCanvas(isDark);
 
     final content = _contentController.text;
     final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
@@ -1791,7 +1811,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           centerTitle: false,
           titleSpacing: AppSpacing.md,
           title: IconButton(
-            icon: const TackIcon(TackIcons.back, size: 22),
+            icon: TackIcon(TackIcons.back, size: 22, color: accent),
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             onPressed: _handleBackPress,
@@ -1803,7 +1823,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               icon: TackIcon(
                 TackIcons.nestedList,
                 size: 20,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                color: accent,
               ),
               tooltip: 'Document Outline',
               onPressed: () {
@@ -1817,7 +1837,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             icon: TackIcon(
               _isEditingMode ? TackIcons.eyeSvg : TackIcons.editSvg,
               size: 20,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              color: accent,
             ),
             tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Note',
             onPressed: () {
@@ -1832,7 +1852,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             child: IosThreeDotMenu<String>(
               size: AppSpacing.minTouchTarget,
               icon: TackIcons.more,
-              iconColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              iconColor: accent,
+              buttonBackgroundColor: accent,
               onSelected: (val) async {
                 if (val == 'palette') {
                   HapticFeedback.lightImpact();
@@ -1903,13 +1924,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
                   icon: TackIcons.star,
                   iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                  iconColor: AppColors.accentAmber,
+                  iconColor: accent,
                 ),
-                const IosMenuItem(
+                IosMenuItem(
                   value: 'local_graph',
                   title: 'Local Graph',
                   icon: TackIcons.graph,
-                  iconColor: AppColors.accentCyan,
+                  iconColor: accent,
                 ),
                 const IosMenuItem(
                   value: 'move_folder',
@@ -2054,8 +2075,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: palette.resolveSoftBackground(isDark),
+                              color: palette.resolveChipFill(isDark),
                               borderRadius: AppSpacing.roundedPill,
+                              border: Border.all(
+                                color: palette.resolveChipBorder(isDark),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -2063,13 +2087,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                 TackIcon(
                                   TackIcons.folder,
                                   size: 12,
-                                  color: palette.resolveAccentColor(isDark),
+                                  color: accent,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _folderName!,
                                   style: AppTypography.caption(
-                                    color: palette.resolveAccentColor(isDark),
+                                    color: accent,
                                     weight: FontWeight.w600,
                                   ),
                                 ),
@@ -2158,22 +2182,29 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     // Dynamic Tag Chips Bar
                     Wrap(
                       spacing: 6,
-                      runSpacing: 4,
+                      runSpacing: 6,
                       children: [
                         ..._tags.map(
                           (tag) => Chip(
                             label: Text('#$tag'),
                             labelStyle: AppTypography.caption(
-                              color: tokens.textPrimary,
-                              weight: FontWeight.w600,
+                              color: accent,
+                              weight: FontWeight.w700,
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
                             materialTapTargetSize: MaterialTapTargetSize.padded,
-                            shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
-                            backgroundColor: tokens.canvasSunken,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppSpacing.roundedPill,
+                              side: BorderSide(
+                                color: palette.resolveChipBorder(isDark),
+                              ),
+                            ),
+                            backgroundColor: palette.resolveChipFill(isDark),
                             deleteButtonTooltipMessage: 'Remove #$tag',
                             onDeleted: _isEditingMode ? () => _removeTag(tag) : null,
-                            deleteIcon: _isEditingMode ? const TackIcon(TackIcons.close, size: 14) : null,
+                            deleteIcon: _isEditingMode
+                                ? TackIcon(TackIcons.close, size: 14, color: accent)
+                                : null,
                           ),
                         ),
                         if (_isEditingMode)
@@ -2182,19 +2213,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                               constraints: const BoxConstraints(minHeight: 38),
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                color: tokens.canvasSunken,
+                                color: palette.resolveChipFill(isDark),
                                 borderRadius: AppSpacing.roundedPill,
-                                border: Border.all(color: AppColors.accentAmber, width: 1.4),
+                                border: Border.all(color: accent, width: 1.4),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
+                                  Text(
                                     '#',
-                                    style: TextStyle(
+                                    style: AppTypography.caption(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.accentAmber,
+                                      weight: FontWeight.w700,
+                                      color: accent,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -2221,14 +2252,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                     child: InkWell(
                                       borderRadius: AppSpacing.roundedPill,
                                       onTap: _submitNewTag,
-                                      child: const SizedBox(
+                                      child: SizedBox(
                                         width: 32,
                                         height: 32,
                                         child: Center(
                                           child: TackIcon(
                                             TackIcons.check,
                                             size: 15,
-                                            color: AppColors.accentAmber,
+                                            color: accent,
                                           ),
                                         ),
                                       ),
@@ -2249,7 +2280,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                                           child: TackIcon(
                                             TackIcons.close,
                                             size: 14,
-                                            color: tokens.textSecondary,
+                                            color: accent,
                                           ),
                                         ),
                                       ),
@@ -2260,14 +2291,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             )
                           else
                             ActionChip(
-                              avatar: const TackIcon(TackIcons.plus, size: 14),
+                              avatar: TackIcon(TackIcons.plus, size: 14, color: accent),
                               label: const Text('Add Tag'),
                               labelStyle: AppTypography.caption(
-                                color: tokens.textPrimary,
-                                weight: FontWeight.w600,
+                                color: accent,
+                                weight: FontWeight.w700,
                               ),
+                              backgroundColor: palette.resolveChipFill(isDark),
                               materialTapTargetSize: MaterialTapTargetSize.padded,
-                              shape: const RoundedRectangleBorder(borderRadius: AppSpacing.roundedPill),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppSpacing.roundedPill,
+                                side: BorderSide(
+                                  color: palette.resolveChipBorder(isDark),
+                                ),
+                              ),
                               onPressed: () => setState(() => _isAddingTag = true),
                             ),
                       ],
@@ -2377,6 +2414,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     NoteBacklinksSection(
                       linked: backlinks.linked,
                       unlinked: backlinks.unlinked,
+                      paletteId: _paletteId,
                       onOpenEntry: (entry) async {
                         _flushSave();
                         final target = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
@@ -2414,6 +2452,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   trigger: activeWikiTrigger,
                   workspaceItems: workspace.rawItems,
                   currentItemId: widget.item.id,
+                  paletteId: _paletteId,
                   onSelectCompletion: (token) => _completeWikiTrigger(activeWikiTrigger, token),
                   onDismiss: () {
                     setState(() => _dismissedWikiTriggerOffset = activeWikiTrigger.triggerStart);
@@ -2435,7 +2474,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                     MermaidTemplateSheet.show(context, onSelectTemplate: _insertAtCursor);
                   },
                 ),
-              EditorFormattingToolbar(onFormatAction: _applyFormatting),
+              EditorFormattingToolbar(
+                onFormatAction: _applyFormatting,
+                paletteId: _paletteId,
+              ),
               const SizedBox(height: 4),
             ],
 
@@ -2444,10 +2486,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: tokens.surfacePrimary,
+                color: palette.resolveNoteFooterBg(isDark),
                 border: Border(
                   top: BorderSide(
-                    color: tokens.borderSubtle.withValues(alpha: 0.6),
+                    color: palette.resolveChipBorder(isDark).withValues(alpha: 0.7),
                     width: 1,
                   ),
                 ),
@@ -2476,10 +2518,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     required bool isDark,
     required TackColorPalette palette,
   }) {
-    final tokens = context.tokens;
-    final pillBg = tokens.canvasSunken;
-    final borderColor = tokens.borderSubtle;
-    final muted = tokens.textSecondary;
+    final pillBg = palette.resolveChipFill(isDark);
+    final borderColor = palette.resolveChipBorder(isDark);
+    final muted = palette.resolveAccentColor(isDark);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -2548,7 +2589,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                           ? '${ancestor.iconEmoji} ${ancestor.title}'
                           : ancestor.title,
                       style: AppTypography.caption(
-                        color: tokens.textPrimary,
+                        color: muted,
                         weight: FontWeight.w700,
                       ),
                     ),
@@ -2636,9 +2677,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: tokens.surfacePrimary,
+        color: tokens.surfacePrimary.withValues(alpha: isDark ? 0.90 : 0.88),
         borderRadius: AppSpacing.roundedMd,
-        border: Border.all(color: tokens.borderSubtle),
+        border: Border.all(color: palette.resolveChipBorder(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

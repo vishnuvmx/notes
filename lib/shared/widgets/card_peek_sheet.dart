@@ -15,6 +15,7 @@ import '../providers/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';
 import 'permission_rationale_dialog.dart';
+import 'tactile_ink_target.dart';
 import 'tack_toast.dart';
 
 /// Card Long-Press Peek & Action Sheet (`05-information-architecture.md` §5, `07-design-system.md` §7).
@@ -474,47 +475,23 @@ class _FolderOptionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Semantics(
-      button: true,
-      selected: isSelected,
+    final fg = isSelected ? tokens.actionPrimaryFg : tokens.textPrimary;
+    return TactileFilterPill(
       label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppSpacing.roundedSm,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-            minWidth: AppSpacing.minTouchTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s3,
-                vertical: AppSpacing.s2,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected ? tokens.actionPrimary : tokens.canvasPrimary,
-                borderRadius: AppSpacing.roundedSm,
-                border: Border.all(
-                  color: isSelected
-                      ? tokens.actionPrimary
-                      : tokens.borderSubtle,
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                label,
-                style: AppTypography.label(
-                  color: isSelected
-                      ? tokens.actionPrimaryFg
-                      : tokens.textPrimary,
-                  weight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        ),
+      isSelected: isSelected,
+      onTap: onTap,
+      triggerHaptics: false,
+      borderRadius: AppSpacing.roundedSm,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s3,
+        vertical: AppSpacing.s2,
+      ),
+      unselectedColor: tokens.canvasPrimary,
+      unselectedFg: tokens.textPrimary,
+      selectedBorderColor: tokens.actionPrimary,
+      textStyle: AppTypography.label(
+        color: fg,
+        weight: isSelected ? FontWeight.w600 : FontWeight.w500,
       ),
     );
   }

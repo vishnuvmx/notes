@@ -4,10 +4,9 @@ import 'app_colors.dart';
 
 /// Central typography tokens for Tack — Direction A ("Paper & Pin") Design System.
 ///
-/// Follows docs/design/07-design-system.md §3:
-/// - UI: DM Sans (400/500/600/700)
-/// - Read-mode Display Title: Newsreader (editorial serif, 32/38sp, w600, -1% tracking)
-/// - Metadata & Code: JetBrains Mono (13/20sp, w400)
+/// Follows unified typography rules:
+/// - All UI, display titles, headings, and prose: DM Sans (400/500/600/700/800)
+/// - Programming & code snippet previews only: JetBrains Mono (13/20sp, w400)
 /// - 12sp is the minimum font size floor across the application.
 class AppTypography {
   AppTypography._();
@@ -16,51 +15,50 @@ class AppTypography {
   static String get fontFamily =>
       GoogleFonts.dmSans().fontFamily ?? 'DM Sans';
 
-  /// Editorial serif font family for Read-mode display titles
-  static String get serifFontFamily =>
-      GoogleFonts.newsreader().fontFamily ?? 'Georgia';
+  /// Unified display font alias backed by DM Sans
+  static String get serifFontFamily => fontFamily;
 
-  /// Monospace font family for code, IDs, and metadata
+  /// Monospace font family strictly for programming & code snippet previews
   static String get monoFontFamily =>
       GoogleFonts.jetBrainsMono().fontFamily ?? 'monospace';
 
-  static String get displayFontFamily => serifFontFamily;
+  static String get displayFontFamily => fontFamily;
 
   static double ls(double fontSize, [double percent = -0.015]) =>
       fontSize * percent;
 
   // ================= Named Token Builders (07-design-system.md §3) =================
 
-  /// `display` — Serif 32/38sp, w600, -1% tracking (Read-mode note title)
+  /// `display` — DM Sans 32/38sp, w700, -2% tracking (Read-mode note title)
   static TextStyle display({
     Color? color,
     double fontSize = 32,
     FontWeight? weight,
-    FontWeight fontWeight = FontWeight.w600,
+    FontWeight fontWeight = FontWeight.w700,
     FontStyle fontStyle = FontStyle.normal,
   }) {
-    return GoogleFonts.newsreader(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       height: 38 / 32,
       fontWeight: weight ?? fontWeight,
       fontStyle: fontStyle,
-      letterSpacing: -(fontSize * 0.01),
+      letterSpacing: -(fontSize * 0.02),
       color: color,
     );
   }
 
-  /// `serifItalic` — Editorial italic serif subtitle ("Let's make progress today!", Screenshot 2)
+  /// `serifItalic` — Italic DM Sans subtitle helper for secondary display accents
   static TextStyle serifItalic({
     Color? color,
     double fontSize = 16,
     FontWeight fontWeight = FontWeight.w400,
   }) {
-    return GoogleFonts.newsreader(
+    return GoogleFonts.dmSans(
       fontSize: fontSize,
       height: 22 / 16,
       fontWeight: fontWeight,
       fontStyle: FontStyle.italic,
-      letterSpacing: -0.1,
+      letterSpacing: -0.2,
       color: color,
     );
   }
@@ -146,11 +144,12 @@ class AppTypography {
   /// `body-sm` — DM Sans 14/20sp, w400, 0 tracking (Secondary text, card summaries)
   static TextStyle bodySm({
     Color? color,
+    double fontSize = 14,
     FontWeight? weight,
     FontWeight fontWeight = FontWeight.w400,
   }) {
     return GoogleFonts.dmSans(
-      fontSize: 14,
+      fontSize: fontSize,
       height: 20 / 14,
       fontWeight: weight ?? fontWeight,
       letterSpacing: 0,
@@ -161,14 +160,15 @@ class AppTypography {
   /// `label` — DM Sans 13/16sp, w500, +0.1% tracking (Chips, buttons, tabs)
   static TextStyle label({
     Color? color,
+    double fontSize = 13,
     FontWeight? weight,
     FontWeight fontWeight = FontWeight.w500,
   }) {
     return GoogleFonts.dmSans(
-      fontSize: 13,
+      fontSize: fontSize,
       height: 16 / 13,
       fontWeight: weight ?? fontWeight,
-      letterSpacing: 13 * 0.001,
+      letterSpacing: fontSize * 0.001,
       color: color,
     );
   }
@@ -176,19 +176,20 @@ class AppTypography {
   /// `caption` — DM Sans 12/16sp, w400, +0.2% tracking (Timestamps, counts; 12sp floor)
   static TextStyle caption({
     Color? color,
+    double fontSize = 12,
     FontWeight? weight,
     FontWeight fontWeight = FontWeight.w400,
   }) {
     return GoogleFonts.dmSans(
-      fontSize: 12,
+      fontSize: fontSize,
       height: 16 / 12,
       fontWeight: weight ?? fontWeight,
-      letterSpacing: 12 * 0.002,
+      letterSpacing: fontSize * 0.002,
       color: color,
     );
   }
 
-  /// `mono` — JetBrains Mono 13/20sp, w400, 0 tracking (Code, IDs, metadata)
+  /// `mono` — JetBrains Mono 13/20sp, w400, 0 tracking (Programming & code snippet previews only)
   static TextStyle mono({
     Color? color,
     double fontSize = 13,

@@ -348,19 +348,40 @@ class TackColorPalette {
       isDarkMode ? darkColor.withValues(alpha: 0.35) : softBackground;
   Color resolveTextColor(bool isDarkMode) =>
       isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+  /// Darker palette variant in light/color mode (`indexColor`), luminous pastel in dark mode (`lightColor`).
   Color resolveAccentColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+
+  /// Soft note canvas background derived cleanly from the palette.
+  Color resolveNoteCanvas(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.44), AppColors.darkCanvas)
+      : softBackground;
+
+  /// Bottom bar tint that sits flush on [resolveNoteCanvas].
+  Color resolveNoteFooterBg(bool isDarkMode) => isDarkMode
+      ? Color.alphaBlend(darkColor.withValues(alpha: 0.56), AppColors.darkSurface)
+      : Color.alphaBlend(lightColor.withValues(alpha: 0.14), softBackground);
+
+  /// Subtle pill/chip fill & border tinted by the active palette's darker accent.
+  Color resolveChipFill(bool isDarkMode) =>
+      resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.18 : 0.11);
+
+  Color resolveChipBorder(bool isDarkMode) =>
+      resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.36 : 0.24);
 
   /// WCAG AA compliant (>= 4.5:1) accent color for bullets and ordered lists.
   Color resolveBulletColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
   Color resolveNumberPrefix(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
 
-  Color resolveTableHeaderBg(bool isDarkMode) => isDarkMode
-      ? AppColors.darkSunken
-      : AppColors.lightSunken;
+  Color resolveTableHeaderBg(bool isDarkMode) => Color.alphaBlend(
+        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.16 : 0.10),
+        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+      );
 
-  Color resolveTableBorder(bool isDarkMode) => isDarkMode
-      ? AppColors.darkBorderStrong
-      : AppColors.lightBorderStrong;
+  Color resolveTableBorder(bool isDarkMode) => Color.alphaBlend(
+        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.30 : 0.22),
+        isDarkMode ? AppColors.darkBorderSubtle : AppColors.lightBorderSubtle,
+      );
 
   Color resolveCodeBlockBg(bool isDarkMode) => isDarkMode
       ? AppColors.darkSunken
@@ -373,18 +394,19 @@ class TackColorPalette {
   Color resolveCodeAccent(bool isDarkMode) =>
       isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
-  Color resolveInlineCodeBg(bool isDarkMode) => isDarkMode
-      ? AppColors.darkSunken
-      : AppColors.lightSunken;
+  Color resolveInlineCodeBg(bool isDarkMode) => Color.alphaBlend(
+        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.18 : 0.11),
+        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+      );
 
-  Color resolveInlineCodeText(bool isDarkMode) =>
-      isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+  Color resolveInlineCodeText(bool isDarkMode) => resolveAccentColor(isDarkMode);
 
   Color resolveQuoteBar(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
 
-  Color resolveQuoteBg(bool isDarkMode) => isDarkMode
-      ? AppColors.darkSunken
-      : AppColors.lightSunken;
+  Color resolveQuoteBg(bool isDarkMode) => Color.alphaBlend(
+        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.14 : 0.08),
+        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+      );
 }
 
 /// ThemeExtension carrying all semantic tokens for Tack (docs/design/07-design-system.md §9).

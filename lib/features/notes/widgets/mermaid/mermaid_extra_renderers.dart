@@ -224,7 +224,7 @@ class MermaidErWidget extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontFamily: 'monospace',
+                                fontFamily: AppTypography.fontFamily,
                                 fontSize: 9.5,
                                 color: mutedText,
                               ),
@@ -260,7 +260,7 @@ class MermaidErWidget extends StatelessWidget {
       child: Text(
         keyType,
         style: TextStyle(
-          fontFamily: 'monospace',
+          fontFamily: AppTypography.fontFamily,
           fontSize: 8.5,
           fontWeight: FontWeight.w800,
           color: badgeColor,
@@ -759,7 +759,7 @@ class MermaidGanttWidget extends StatelessWidget {
                                     child: Text(
                                       _formatShortDate(minStart.add(Duration(days: d))),
                                       style: TextStyle(
-                                        fontFamily: 'monospace',
+                                        fontFamily: AppTypography.fontFamily,
                                         fontSize: 9.5,
                                         fontWeight: FontWeight.w600,
                                         color: textMuted,
@@ -901,8 +901,8 @@ class MermaidGanttWidget extends StatelessWidget {
                         '${durationDays}d',
                         maxLines: 1,
                         overflow: TextOverflow.clip,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,

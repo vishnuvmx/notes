@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../services/frontmatter_service.dart';
@@ -31,20 +30,6 @@ class FrontmatterPropertiesBar extends StatelessWidget {
     required this.isEditingMode,
     required this.onContentChanged,
   });
-
-  Color _statusColor(String status, bool isDark) {
-    final s = status.trim().toLowerCase();
-    if (s.contains('approv') || s.contains('done') || s.contains('ship')) {
-      return isDark ? AppColors.pastelLimeLight : const Color(0xFF4D7C0F);
-    }
-    if (s.contains('review') || s.contains('progress') || s.contains('wip')) {
-      return isDark ? AppColors.pastelAmberLight : const Color(0xFFB45309);
-    }
-    if (s.contains('block') || s.contains('urgent') || s.contains('drop')) {
-      return isDark ? AppColors.pastelCoralLight : const Color(0xFFB91C1C);
-    }
-    return isDark ? AppColors.pastelCyanLight : const Color(0xFF0E7490);
-  }
 
   void _cycleOrPickStatus(BuildContext context, String? currentStatus) {
     HapticFeedback.selectionClick();
@@ -99,7 +84,12 @@ class FrontmatterPropertiesBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final palette = AppColors.getPaletteById(paletteId);
+    final accent = palette.resolveAccentColor(isDark);
+    final chipFill = palette.resolveChipFill(isDark);
+    final chipBorder = palette.resolveChipBorder(isDark);
     final parsed = FrontmatterService.parse(rawContent);
 
     if (!parsed.hasProperties) {
@@ -117,13 +107,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkSurfaceAlt.withValues(alpha: 0.7)
-                  : Colors.white.withValues(alpha: 0.75),
+              color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
               borderRadius: AppSpacing.roundedPill,
-              border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-              ),
+              border: Border.all(color: chipBorder),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -131,13 +117,13 @@ class FrontmatterPropertiesBar extends StatelessWidget {
                 TackIcon(
                   TackIcons.settings,
                   size: 13,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  color: accent,
                 ),
                 const SizedBox(width: 5),
                 Text(
                   '+ Properties',
                   style: AppTypography.caption(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    color: accent,
                     weight: FontWeight.w600,
                   ),
                 ),
@@ -154,18 +140,17 @@ class FrontmatterPropertiesBar extends StatelessWidget {
       final v = entry.value;
 
       if (k == 'status') {
-        final c = _statusColor(v, isDark);
         chips.add(
           _PropertyPill(
             iconWidget: Container(
               width: 7,
               height: 7,
-              decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
             ),
             label: v,
-            backgroundColor: c.withValues(alpha: isDark ? 0.18 : 0.12),
-            borderColor: c.withValues(alpha: 0.45),
-            textColor: c,
+            backgroundColor: chipFill,
+            borderColor: chipBorder,
+            textColor: accent,
             onTap: () => _cycleOrPickStatus(context, v),
           ),
         );
@@ -174,7 +159,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
           _PropertyPill(
             icon: TackIcons.flag,
             label: v,
-            isDark: isDark,
+            backgroundColor: chipFill,
+            borderColor: chipBorder,
+            textColor: accent,
             onTap: () => _cyclePriority(v),
           ),
         );
@@ -183,7 +170,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
           _PropertyPill(
             icon: TackIcons.calendar,
             label: v,
-            isDark: isDark,
+            backgroundColor: chipFill,
+            borderColor: chipBorder,
+            textColor: accent,
             onTap: () => _pickTargetDate(context, v),
           ),
         );
@@ -193,7 +182,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
           _PropertyPill(
             icon: checked ? TackIcons.checkCircle : TackIcons.taskOpen,
             label: k.replaceAll('_', ' '),
-            isDark: isDark,
+            backgroundColor: chipFill,
+            borderColor: chipBorder,
+            textColor: accent,
             onTap: () {
               HapticFeedback.selectionClick();
               onContentChanged(
@@ -210,7 +201,9 @@ class FrontmatterPropertiesBar extends StatelessWidget {
         chips.add(
           _PropertyPill(
             label: '${k.replaceAll('_', ' ')}: $v',
-            isDark: isDark,
+            backgroundColor: chipFill,
+            borderColor: chipBorder,
+            textColor: accent,
             onTap: () => FrontmatterEditorSheet.show(
               context,
               rawContent: rawContent,
@@ -226,8 +219,10 @@ class FrontmatterPropertiesBar extends StatelessWidget {
       _PropertyPill(
         icon: TackIcons.edit,
         label: 'Edit',
-        isDark: isDark,
         subtle: true,
+        backgroundColor: accent.withValues(alpha: isDark ? 0.10 : 0.06),
+        borderColor: chipBorder,
+        textColor: accent,
         onTap: () => FrontmatterEditorSheet.show(
           context,
           rawContent: rawContent,
@@ -252,7 +247,6 @@ class _PropertyPill extends StatelessWidget {
   final dynamic icon;
   final Widget? iconWidget;
   final String label;
-  final bool isDark;
   final bool subtle;
   final Color? backgroundColor;
   final Color? borderColor;
@@ -263,7 +257,6 @@ class _PropertyPill extends StatelessWidget {
     this.icon,
     this.iconWidget,
     required this.label,
-    this.isDark = false,
     this.subtle = false,
     this.backgroundColor,
     this.borderColor,
@@ -273,22 +266,19 @@ class _PropertyPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final fg = textColor ??
-        (subtle
-            ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-            : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary));
+        (subtle ? tokens.textTertiary : tokens.textPrimary);
     return InkWell(
       onTap: onTap,
       borderRadius: AppSpacing.roundedPill,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: backgroundColor ??
-              (isDark ? AppColors.darkSurfaceAlt : Colors.white.withValues(alpha: 0.9)),
+          color: backgroundColor ?? tokens.surfacePrimary.withValues(alpha: 0.9),
           borderRadius: AppSpacing.roundedPill,
           border: Border.all(
-            color: borderColor ??
-                (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            color: borderColor ?? tokens.borderSubtle,
           ),
         ),
         child: Row(

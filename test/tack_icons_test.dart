@@ -155,7 +155,7 @@ void main() {
       'SlashCommandsCatalog and EditorFormattingToolbar render Tabler TackIcons without overflow',
       (tester) async {
         expect(
-          SlashCommandsCatalog.all.every((item) => item.icon is TackGlyph),
+          SlashCommandsCatalog.all.every((item) => item.icon.outline.codePoint != 0),
           isTrue,
         );
 

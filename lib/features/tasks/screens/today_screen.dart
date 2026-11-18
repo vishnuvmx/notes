@@ -437,11 +437,11 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         dateLabel.toUpperCase(),
-                        style: AppTypography.mono(
+                        style: AppTypography.caption(
                           fontSize: 12,
                           weight: FontWeight.w600,
                           color: tokens.textTertiary,
-                        ),
+                        ).copyWith(letterSpacing: 0.4),
                       ),
                     ],
                   ),
@@ -1129,17 +1129,17 @@ class _WorthRevisitingCard extends StatelessWidget {
                   children: [
                     Text(
                       'WORTH REVISITING',
-                      style: AppTypography.mono(
+                      style: AppTypography.caption(
                         fontSize: 12,
                         weight: FontWeight.w600,
                         color: tokens.textTertiary,
-                      ),
+                      ).copyWith(letterSpacing: 0.4),
                     ),
                     const Spacer(),
                     Text(
                       DateFormatter.formatTimestamp(note.updatedAt)
                           .toUpperCase(),
-                      style: AppTypography.mono(
+                      style: AppTypography.caption(
                         fontSize: 12,
                         color: tokens.textTertiary,
                       ),

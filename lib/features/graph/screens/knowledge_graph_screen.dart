@@ -14,6 +14,7 @@ import '../../whiteboard/models/whiteboard_item.dart';
 import '../../notes/services/wiki_link_service.dart';
 import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/app_search_field.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../notes/screens/note_editor_screen.dart';
 import '../../whiteboard/screens/whiteboard_canvas_screen.dart';
 
@@ -828,49 +829,21 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     required TackTokens tokens,
     required VoidCallback onTap,
   }) {
-    return Semantics(
-      button: true,
-      selected: active,
+    final fg = active ? tokens.actionPrimaryFg : tokens.textPrimary;
+    return TactileFilterPill(
       label: label,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: AppSpacing.roundedPill,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-            minWidth: AppSpacing.minTouchTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s3,
-                vertical: AppSpacing.s2,
-              ),
-              decoration: BoxDecoration(
-                color: active
-                    ? tokens.actionPrimary
-                    : tokens.surfacePrimary.withValues(alpha: 0.94),
-                borderRadius: AppSpacing.roundedPill,
-                border: Border.all(
-                  color: active ? tokens.actionPrimary : tokens.borderSubtle,
-                  width: 1.2,
-                ),
-              ),
-              child: Text(
-                label,
-                style: AppTypography.label(
-                  color: active ? tokens.actionPrimaryFg : tokens.textPrimary,
-                  weight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
+      isSelected: active,
+      onTap: onTap,
+      unselectedColor: tokens.surfacePrimary.withValues(alpha: 0.94),
+      unselectedFg: tokens.textPrimary,
+      selectedBorderColor: tokens.actionPrimary,
+      unselectedBorderColor: tokens.borderSubtle,
+      borderWidth: 1.2,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s3,
+        vertical: AppSpacing.s2,
       ),
+      textStyle: AppTypography.label(color: fg, weight: FontWeight.w700),
     );
   }
 

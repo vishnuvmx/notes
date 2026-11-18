@@ -66,7 +66,7 @@ class DocumentOutlineSheet extends StatefulWidget {
                       color: tokens.surfacePrimary,
                       shadows: AppSpacing.elev2(tokens.isDark),
                       shape: SmoothRectangleBorder(
-                        borderRadius: AppSpacing.roundedLg,
+                        borderRadius: AppSpacing.roundedMd,
                         smoothness: AppSpacing.defaultSmoothing,
                         side: BorderSide(color: tokens.borderSubtle, width: 1),
                       ),
@@ -277,17 +277,15 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                       borderRadius: AppSpacing.roundedSm,
                       child: Container(
                         constraints: const BoxConstraints(
-                          minHeight: AppSpacing.minTouchTarget,
+                          minHeight: 40,
                         ),
                         margin: const EdgeInsets.symmetric(vertical: 2),
-                        padding: EdgeInsets.fromLTRB(10 + indent, 10, 10, 10),
+                        padding: EdgeInsets.fromLTRB(10 + indent, 8, 10, 8),
                         decoration: BoxDecoration(
                           color: isCurrent
-                              ? accent.withValues(
-                                  alpha: tokens.isDark ? 0.18 : 0.11,
-                                )
+                              ? palette.resolveChipFill(tokens.isDark)
                               : Colors.transparent,
-                          borderRadius: AppSpacing.roundedSm,
+                          borderRadius: AppSpacing.roundedXs,
                         ),
                         child: Row(
                           children: [
@@ -297,15 +295,13 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: tokens.canvasSunken,
-                                borderRadius: BorderRadius.circular(5),
+                                color: palette.resolveChipFill(tokens.isDark),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 'H${h.level}',
                                 style: AppTypography.caption(
-                                  color: isCurrent
-                                      ? accent
-                                      : tokens.textSecondary,
+                                  color: accent,
                                   weight: FontWeight.w700,
                                 ),
                               ),
@@ -378,116 +374,143 @@ class _InlineTocCardState extends State<InlineTocCard> {
     final minLevel = headings.map((h) => h.level).reduce((a, b) => a < b ? a : b);
 
     final tokens = context.tokens;
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: tokens.surfacePrimary.withValues(alpha: isDark ? 0.85 : 0.92),
-        borderRadius: AppSpacing.roundedMd,
-        border: Border.all(
-          color: tokens.borderSubtle,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: AppSpacing.roundedMd,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: AppSpacing.minTouchTarget,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    TackIcon(TackIcons.nestedList, size: 16, color: accent),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Text(
-                        'Table of Contents',
-                        style: AppTypography.caption(
-                          color: tokens.textPrimary,
-                          weight: FontWeight.w800,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          color: accent.withValues(alpha: isDark ? 0.09 : 0.045),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 2.5, color: accent),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: () => setState(() => _expanded = !_expanded),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(4),
+                          bottomRight: Radius.circular(4),
                         ),
-                      ),
-                    ),
-                    AnimatedRotation(
-                      turns: _expanded ? 0.5 : 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOutCubic,
-                      child: TackIcon(
-                        TackIcons.chevronDown,
-                        size: 15,
-                        color: tokens.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: headings.map((h) {
-                  final indent = ((h.level - minLevel).clamp(0, 4)) * 14.0;
-                  return InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      widget.onJumpToLine?.call(h.lineIndex);
-                    },
-                    borderRadius: AppSpacing.roundedXs,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minHeight: AppSpacing.minTouchTarget,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(indent, 8, 8, 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.7),
-                                shape: BoxShape.circle,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 10, 7),
+                          child: Row(
+                            children: [
+                              TackIcon(
+                                TackIcons.nestedList,
+                                size: 14,
+                                color: accent,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                h.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodySm(
-                                  color: tokens.textPrimary,
-                                  weight: h.level <= 2
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  'CONTENTS',
+                                  style: AppTypography.caption(
+                                    fontSize: 11.5,
+                                    color: accent,
+                                    weight: FontWeight.w700,
+                                  ).copyWith(letterSpacing: 0.7),
                                 ),
                               ),
-                            ),
-                          ],
+                              AnimatedRotation(
+                                turns: _expanded ? 0.5 : 0.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOutCubic,
+                                child: TackIcon(
+                                  TackIcons.chevronDown,
+                                  size: 14,
+                                  color: accent.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
+                      if (_expanded)
+                        Container(
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(horizontal: 12),
+                          color: accent.withValues(alpha: isDark ? 0.16 : 0.12),
+                        ),
+                      AnimatedCrossFade(
+                        firstChild: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 5, 10, 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: headings.map((h) {
+                              final depth = (h.level - minLevel).clamp(0, 3);
+                              final indent = depth * 12.0;
+                              final isTopLevel = depth == 0;
+                              return InkWell(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  widget.onJumpToLine?.call(h.lineIndex);
+                                },
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    indent,
+                                    5,
+                                    4,
+                                    5,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: isTopLevel ? 7 : 4,
+                                        height: isTopLevel ? 1.8 : 1.4,
+                                        decoration: BoxDecoration(
+                                          color: isTopLevel
+                                              ? accent
+                                              : accent.withValues(alpha: 0.55),
+                                          borderRadius:
+                                              BorderRadius.circular(1),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          h.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTypography.bodySm(
+                                            fontSize: isTopLevel ? 13.5 : 13,
+                                            color: isTopLevel
+                                                ? tokens.textPrimary
+                                                : tokens.textSecondary,
+                                            weight: isTopLevel
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        secondChild:
+                            const SizedBox(width: double.infinity, height: 0),
+                        crossFadeState: _expanded
+                            ? CrossFadeState.showFirst
+                            : CrossFadeState.showSecond,
+                        sizeCurve: Curves.easeOutCubic,
+                        firstCurve: Curves.easeOutCubic,
+                        secondCurve: Curves.easeInCubic,
+                        duration: const Duration(milliseconds: 200),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            secondChild: const SizedBox(width: double.infinity, height: 0),
-            crossFadeState: _expanded
-                ? CrossFadeState.showFirst
-                : CrossFadeState.showSecond,
-            sizeCurve: Curves.easeOutCubic,
-            firstCurve: Curves.easeOutCubic,
-            secondCurve: Curves.easeInCubic,
-            duration: const Duration(milliseconds: 200),
           ),
-        ],
+        ),
       ),
     );
   }

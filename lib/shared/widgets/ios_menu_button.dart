@@ -37,6 +37,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
   final double size;
   final dynamic icon;
   final Color? iconColor;
+  final Color? buttonBackgroundColor;
   final String tooltip;
 
   const IosThreeDotMenu({
@@ -46,6 +47,7 @@ class IosThreeDotMenu<T> extends StatefulWidget {
     this.size = 36,
     this.icon = TackIcons.more,
     this.iconColor,
+    this.buttonBackgroundColor,
     this.tooltip = 'More options',
   });
 
@@ -157,8 +159,11 @@ class _IosThreeDotMenuState<T> extends State<IosThreeDotMenu<T>> {
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black)
-                  .withValues(alpha: _isPressed ? 0.10 : 0.04),
+              color: widget.buttonBackgroundColor?.withValues(
+                    alpha: _isPressed ? 0.18 : 0.11,
+                  ) ??
+                  (isDark ? Colors.white : Colors.black)
+                      .withValues(alpha: _isPressed ? 0.10 : 0.04),
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,

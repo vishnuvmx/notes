@@ -389,12 +389,10 @@ class _MermaidDiagramCardState extends State<MermaidDiagramCard> {
         scrollDirection: Axis.horizontal,
         child: SelectableText(
           widget.rawCode,
-          style: TextStyle(
-            fontFamily: 'monospace',
+          style: AppTypography.mono(
             fontSize: 12.0,
-            height: 1.45,
             color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-          ),
+          ).copyWith(height: 1.45),
         ),
       ),
     );
@@ -1573,7 +1571,7 @@ class MermaidPieWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              fontFamily: 'monospace',
+              fontFamily: AppTypography.fontFamily,
               color: isDark ? Colors.white : color.withValues(alpha: 0.9),
             ),
           ),

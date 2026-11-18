@@ -5,10 +5,20 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../shared/widgets/app_bottom_sheet.dart';
+import '../../../shared/widgets/app_search_field.dart';
+import '../../../shared/widgets/sliding_pill_track.dart';
 import '../services/block_transform_service.dart';
 import '../services/wiki_link_service.dart';
-import '../../../shared/widgets/app_search_field.dart';
-import '../../../shared/widgets/app_bottom_sheet.dart';
+
+enum SlashCommandGroup {
+  writing('WRITING'),
+  structure('STRUCTURE & MEDIA'),
+  workspace('WORKSPACE');
+
+  final String header;
+  const SlashCommandGroup(this.header);
+}
 
 /// Definition of a `/` Slash Block Command.
 class SlashCommandItem {
@@ -16,8 +26,8 @@ class SlashCommandItem {
   final String command; // e.g. 'spec', 'h1', 'todo'
   final String label;
   final String subtitle;
-  final dynamic icon;
-  final Color accentColor;
+  final TackGlyph icon;
+  final SlashCommandGroup group;
   final String? markdownSnippet;
 
   const SlashCommandItem({
@@ -26,7 +36,7 @@ class SlashCommandItem {
     required this.label,
     required this.subtitle,
     required this.icon,
-    required this.accentColor,
+    required this.group,
     this.markdownSnippet,
   });
 }
@@ -35,30 +45,31 @@ class SlashCommandsCatalog {
   SlashCommandsCatalog._();
 
   static const List<SlashCommandItem> all = [
+    // Writing
     SlashCommandItem(
       id: 'todo',
       command: 'todo',
-      label: 'To-Do List',
-      subtitle: 'Interactive task checkbox',
-      icon: TackIcons.checkCircle,
-      accentColor: Color(0xFF10B981),
+      label: 'To-Do',
+      subtitle: 'Interactive checklist item',
+      icon: TackIcons.taskOpen,
+      group: SlashCommandGroup.writing,
       markdownSnippet: '- [ ] ',
     ),
     SlashCommandItem(
       id: 'due_task',
       command: 'due',
-      label: 'Due / Recurring Task',
-      subtitle: 'Checklist task with @due reminder & repeat rule',
+      label: 'Scheduled Task',
+      subtitle: 'Task with @due reminder & repeat',
       icon: TackIcons.notification,
-      accentColor: AppColors.lightAccentPin,
+      group: SlashCommandGroup.writing,
     ),
     SlashCommandItem(
       id: 'h1',
       command: 'h1',
       label: 'Heading 1',
-      subtitle: 'Big section heading',
+      subtitle: 'Large section title',
       icon: TackIcons.heading1,
-      accentColor: Color(0xFFFF8F6B),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '# ',
     ),
     SlashCommandItem(
@@ -67,7 +78,7 @@ class SlashCommandsCatalog {
       label: 'Heading 2',
       subtitle: 'Medium section heading',
       icon: TackIcons.heading2,
-      accentColor: Color(0xFFF5B842),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '## ',
     ),
     SlashCommandItem(
@@ -76,127 +87,131 @@ class SlashCommandsCatalog {
       label: 'Heading 3',
       subtitle: 'Compact sub-heading',
       icon: TackIcons.heading3,
-      accentColor: Color(0xFF9D84D6),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '### ',
-    ),
-    SlashCommandItem(
-      id: 'spec',
-      command: 'spec',
-      label: 'Spec Brief',
-      subtitle: 'Structured PRD outline with goals & requirements',
-      icon: TackIcons.notes,
-      accentColor: Color(0xFF1BA5BA),
-      markdownSnippet:
-          '## Overview\nWrite the core problem & goal here.\n\n'
-          '## Requirements\n- [ ] Core flow requirement\n- [ ] Edge cases & states\n\n'
-          '> [!IMPORTANT]\n> Key design or technical constraint.\n',
-    ),
-    SlashCommandItem(
-      id: 'link',
-      command: 'link',
-      label: 'Link Note [[',
-      subtitle: 'Connect another note or board',
-      icon: TackIcons.link,
-      accentColor: Color(0xFF0284C7),
-      markdownSnippet: '[[',
-    ),
-    SlashCommandItem(
-      id: 'board',
-      command: 'board',
-      label: 'Embed Whiteboard',
-      subtitle: 'Live canvas preview inside note',
-      icon: TackIcons.workflow,
-      accentColor: Color(0xFF7C3AED),
     ),
     SlashCommandItem(
       id: 'bullet',
       command: 'bullet',
       label: 'Bullet List',
-      subtitle: 'Simple bulleted items',
+      subtitle: 'Bulleted list item',
       icon: TackIcons.bulletList,
-      accentColor: Color(0xFFF59E0B),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '- ',
     ),
     SlashCommandItem(
       id: 'numbered',
       command: 'num',
       label: 'Numbered List',
-      subtitle: 'Ordered sequence 1, 2, 3...',
+      subtitle: 'Ordered list step',
       icon: TackIcons.numberedList,
-      accentColor: Color(0xFFF59E0B),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '1. ',
     ),
     SlashCommandItem(
       id: 'toggle',
       command: 'toggle',
-      label: 'Toggle List',
-      subtitle: 'Collapsible disclosure section',
+      label: 'Toggle Section',
+      subtitle: 'Collapsible >▸ block',
       icon: TackIcons.chevronRight,
-      accentColor: Color(0xFF14B8A6),
+      group: SlashCommandGroup.writing,
       markdownSnippet: '>▸ Toggle heading\n> Hidden details...\n',
     ),
+
+    // Structure & Media
     SlashCommandItem(
-      id: 'toc',
-      command: 'toc',
-      label: 'Table of Contents',
-      subtitle: 'Auto-synced [TOC] outline block',
-      icon: TackIcons.nestedList,
-      accentColor: Color(0xFF0EA5E9),
-      markdownSnippet: '[TOC]\n',
-    ),
-    SlashCommandItem(
-      id: 'callout',
-      command: 'callout',
-      label: 'Callout Box',
-      subtitle: 'Highlighted [!NOTE] box',
-      icon: TackIcons.info,
-      accentColor: Color(0xFF0284C7),
-      markdownSnippet: '> [!NOTE]\n> ',
-    ),
-    SlashCommandItem(
-      id: 'code',
-      command: 'code',
-      label: 'Code Block',
-      subtitle: 'Syntax-highlighted code snippet',
-      icon: TackIcons.code,
-      accentColor: Color(0xFF6366F1),
-      markdownSnippet: '```dart\n\n```',
+      id: 'spec',
+      command: 'spec',
+      label: 'Spec Brief',
+      subtitle: 'PRD scaffold with checklist & callout',
+      icon: TackIcons.notes,
+      group: SlashCommandGroup.structure,
+      markdownSnippet:
+          '## Overview\nWrite the core problem & goal here.\n\n'
+          '## Requirements\n- [ ] Core flow requirement\n- [ ] Edge cases & states\n\n'
+          '> [!IMPORTANT]\n> Key design or technical constraint.\n',
     ),
     SlashCommandItem(
       id: 'table',
       command: 'table',
       label: 'Table',
-      subtitle: '3-column Markdown table',
+      subtitle: '3-column editable Markdown table',
       icon: TackIcons.table,
-      accentColor: Color(0xFFEC4899),
+      group: SlashCommandGroup.structure,
       markdownSnippet:
           '| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Item | Detail | Status |\n',
     ),
     SlashCommandItem(
       id: 'diagram',
       command: 'diagram',
-      label: 'Flowchart Diagram',
-      subtitle: 'Native Mermaid diagram block',
+      label: 'Flowchart',
+      subtitle: 'Mermaid diagram card',
       icon: TackIcons.flow,
-      accentColor: Color(0xFF14B8A6),
+      group: SlashCommandGroup.structure,
+    ),
+    SlashCommandItem(
+      id: 'callout',
+      command: 'callout',
+      label: 'Callout',
+      subtitle: 'Highlighted [!NOTE] box',
+      icon: TackIcons.info,
+      group: SlashCommandGroup.structure,
+      markdownSnippet: '> [!NOTE]\n> ',
+    ),
+    SlashCommandItem(
+      id: 'code',
+      command: 'code',
+      label: 'Code Block',
+      subtitle: 'Fenced snippet with copy button',
+      icon: TackIcons.code,
+      group: SlashCommandGroup.structure,
+      markdownSnippet: '```dart\n\n```',
     ),
     SlashCommandItem(
       id: 'quote',
       command: 'quote',
-      label: 'Quote',
-      subtitle: 'Indented blockquote',
+      label: 'Blockquote',
+      subtitle: 'Indented pull quote',
       icon: TackIcons.quote,
-      accentColor: Color(0xFF8B5CF6),
+      group: SlashCommandGroup.structure,
       markdownSnippet: '> ',
     ),
     SlashCommandItem(
       id: 'divider',
       command: 'divider',
       label: 'Divider',
-      subtitle: 'Visual section separator (---)',
+      subtitle: 'Horizontal rule (---)',
       icon: TackIcons.minus,
-      accentColor: Color(0xFF64748B),
+      group: SlashCommandGroup.structure,
       markdownSnippet: '---\n',
+    ),
+
+    // Workspace
+    SlashCommandItem(
+      id: 'toc',
+      command: 'toc',
+      label: 'Table of Contents',
+      subtitle: 'Auto-synced [TOC] jump card',
+      icon: TackIcons.nestedList,
+      group: SlashCommandGroup.workspace,
+      markdownSnippet: '[TOC]\n',
+    ),
+    SlashCommandItem(
+      id: 'link',
+      command: 'link',
+      label: 'Link Note',
+      subtitle: 'WikiLink [[...]] reference',
+      icon: TackIcons.link,
+      group: SlashCommandGroup.workspace,
+      markdownSnippet: '[[',
+    ),
+    SlashCommandItem(
+      id: 'board',
+      command: 'board',
+      label: 'Embed Board',
+      subtitle: 'Live canvas preview inside note',
+      icon: TackIcons.workflow,
+      group: SlashCommandGroup.workspace,
     ),
   ];
 
@@ -226,7 +241,7 @@ class SlashCommandInlineBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final matches = SlashCommandsCatalog.filter(trigger.query);
     if (matches.isEmpty) return const SizedBox.shrink();
 
@@ -235,12 +250,10 @@ class SlashCommandInlineBar extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: tokens.surfaceElevated,
         borderRadius: AppSpacing.roundedPill,
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-        ),
-        boxShadow: AppSpacing.floatingControlShadow,
+        border: Border.all(color: tokens.borderSubtle),
+        boxShadow: AppSpacing.elev2(tokens.isDark),
       ),
       child: Row(
         children: [
@@ -248,18 +261,19 @@ class SlashCommandInlineBar extends StatelessWidget {
             onTap: onOpenFullSheet,
             borderRadius: AppSpacing.roundedPill,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.accentAmber.withValues(alpha: 0.18),
+                color: tokens.accentPin.withValues(
+                  alpha: tokens.isDark ? 0.18 : 0.12,
+                ),
                 borderRadius: AppSpacing.roundedPill,
               ),
               child: Text(
                 '/${trigger.query}',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
+                style: AppTypography.caption(
                   fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? AppColors.pastelAmberLight : const Color(0xFF191A23),
+                  weight: FontWeight.w700,
+                  color: tokens.accentPinText,
                 ),
               ),
             ),
@@ -274,7 +288,7 @@ class SlashCommandInlineBar extends StatelessWidget {
                 final cmd = matches[index];
                 return Center(
                   child: Material(
-                    color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF3F5F8),
+                    color: tokens.canvasSunken,
                     borderRadius: AppSpacing.roundedPill,
                     child: InkWell(
                       onTap: () {
@@ -283,20 +297,24 @@ class SlashCommandInlineBar extends StatelessWidget {
                       },
                       borderRadius: AppSpacing.roundedPill,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 6,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            TackIcon(cmd.icon, size: 15, color: cmd.accentColor),
+                            TackIcon(
+                              cmd.icon,
+                              size: 14,
+                              color: tokens.textPrimary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               cmd.label,
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              style: AppTypography.caption(
+                                color: tokens.textPrimary,
+                                weight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -314,7 +332,8 @@ class SlashCommandInlineBar extends StatelessWidget {
   }
 }
 
-/// Unified Bottom Sheet for Slash (`/`) Insert Blocks + "Turn Into" & Line Moves.
+/// Unified Paper & Pin bottom sheet for inserting blocks (`/`) and transforming
+/// or reordering the current line.
 class SlashAndBlockActionsSheet extends StatefulWidget {
   final BlockKind currentBlockKind;
   final ValueChanged<SlashCommandItem> onInsertCommand;
@@ -362,7 +381,8 @@ class SlashAndBlockActionsSheet extends StatefulWidget {
   }
 
   @override
-  State<SlashAndBlockActionsSheet> createState() => _SlashAndBlockActionsSheetState();
+  State<SlashAndBlockActionsSheet> createState() =>
+      _SlashAndBlockActionsSheetState();
 }
 
 class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
@@ -383,8 +403,9 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final filteredCommands = SlashCommandsCatalog.filter(_searchController.text);
+    final tokens = context.tokens;
+    final query = _searchController.text;
+    final filteredCommands = SlashCommandsCatalog.filter(query);
 
     return Padding(
       padding: AppSpacing.modalSheetPadding,
@@ -392,31 +413,267 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Quick Mobile Line Actions Row (Move Up, Move Down, Duplicate)
-            Row(
+          // 1. Editorial Header Row + Close
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _showTurnInto ? 'Transform block' : 'Insert block',
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    weight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (_showTurnInto) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s2 + 2,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.canvasSunken,
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: Text(
+                    widget.currentBlockKind.label,
+                    style: AppTypography.caption(
+                      color: tokens.textSecondary,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s1),
+              ],
+              IconButton(
+                tooltip: 'Close',
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                icon: TackIcon(
+                  TackIcons.close,
+                  size: 18,
+                  color: tokens.textSecondary,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.s2),
+
+          // 2. Gliding Black-Pill Switcher (`Insert` · `Transform`)
+          SlidingPillTrack(
+            itemCount: 2,
+            selectedIndex: _showTurnInto ? 1 : 0,
+            trackColor: tokens.canvasSunken,
+            indicatorColor: tokens.actionPrimary,
+            children: [
+              _ModeSegmentPill(
+                icon: TackIcons.plus,
+                label: 'Insert',
+                selected: !_showTurnInto,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _showTurnInto = false);
+                },
+              ),
+              _ModeSegmentPill(
+                icon: TackIcons.arrowLeftRight,
+                label: 'Transform',
+                selected: _showTurnInto,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _showTurnInto = true);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.s4),
+
+          // 3. Smooth Mode Content
+          Flexible(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              reverseDuration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.hardEdge,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                reverseDuration: const Duration(milliseconds: 140),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                layoutBuilder: (currentChild, previousChildren) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    ?currentChild,
+                  ],
+                ),
+                transitionBuilder: (child, animation) {
+                  final isInsert = child.key == const ValueKey('sheet_insert');
+                  final slide = Tween<Offset>(
+                    begin: Offset(isInsert ? -0.05 : 0.05, 0),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return RepaintBoundary(
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slide,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+                child: !_showTurnInto
+                    ? _buildInsertTab(tokens, query, filteredCommands)
+                    : _buildTransformTab(tokens),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsertTab(
+    TackTokens tokens,
+    String query,
+    List<SlashCommandItem> filteredCommands,
+  ) {
+    final isFiltering = query.trim().isNotEmpty;
+
+    return Column(
+      key: const ValueKey('sheet_insert'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSearchField(
+          controller: _searchController,
+          hintText: 'Filter blocks or /command…',
+          onChanged: (_) => setState(() {}),
+          onClear: () => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.s3),
+        Flexible(
+          child: filteredCommands.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.s6,
+                      horizontal: AppSpacing.s4,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TackIcon(
+                          TackIcons.search,
+                          size: 24,
+                          color: tokens.textTertiary,
+                        ),
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(
+                          'No blocks match "${query.trim()}"',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s2),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(
+                              0,
+                              AppSpacing.minTouchTarget,
+                            ),
+                          ),
+                          onPressed: () =>
+                              setState(() => _searchController.clear()),
+                          child: const Text('Clear search'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: isFiltering
+                      ? [
+                          _GroupedCommandListCard(
+                            commands: filteredCommands,
+                            onSelect: _selectInsertCommand,
+                          ),
+                        ]
+                      : [
+                          for (final group in SlashCommandGroup.values) ...[
+                            _SectionCaption(group.header),
+                            const SizedBox(height: AppSpacing.s2),
+                            _GroupedCommandListCard(
+                              commands: filteredCommands
+                                  .where((c) => c.group == group)
+                                  .toList(),
+                              onSelect: _selectInsertCommand,
+                            ),
+                            const SizedBox(height: AppSpacing.s4),
+                          ],
+                        ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _selectInsertCommand(SlashCommandItem cmd) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).pop();
+    widget.onInsertCommand(cmd);
+  }
+
+  Widget _buildTransformTab(TackTokens tokens) {
+    return ListView(
+      key: const ValueKey('sheet_transform'),
+      shrinkWrap: true,
+      physics: const BouncingScrollPhysics(),
+      children: [
+        // Line reorder / duplicate bar
+        Container(
+          decoration: ShapeDecoration(
+            color: tokens.canvasSunken.withValues(alpha: 0.7),
+            shape: SmoothRectangleBorder(
+              borderRadius: AppSpacing.roundedMd,
+              smoothness: AppSpacing.defaultSmoothing,
+              side: BorderSide(color: tokens.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: IntrinsicHeight(
+            child: Row(
               children: [
-                _buildQuickActionPill(
-                  isDark: isDark,
+                _ReorderSegmentButton(
                   icon: TackIcons.arrowUp,
-                  label: 'Move Up',
+                  label: 'Move up',
                   onTap: () {
                     HapticFeedback.selectionClick();
                     widget.onMoveUp();
                   },
                 ),
-                const SizedBox(width: 8),
-                _buildQuickActionPill(
-                  isDark: isDark,
+                VerticalDivider(width: 1, thickness: 1, color: tokens.borderSubtle),
+                _ReorderSegmentButton(
                   icon: TackIcons.arrowDown,
-                  label: 'Move Down',
+                  label: 'Move down',
                   onTap: () {
                     HapticFeedback.selectionClick();
                     widget.onMoveDown();
                   },
                 ),
-                const SizedBox(width: 8),
-                _buildQuickActionPill(
-                  isDark: isDark,
+                VerticalDivider(width: 1, thickness: 1, color: tokens.borderSubtle),
+                _ReorderSegmentButton(
                   icon: TackIcons.add,
                   label: 'Duplicate',
                   onTap: () {
@@ -427,320 +684,45 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Mode Switcher: Slash Insert (/) vs Turn Block Into (⇄)
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-                borderRadius: AppSpacing.roundedSm,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildModeTab(
-                      label: '/ Insert Block',
-                      selected: !_showTurnInto,
-                      isDark: isDark,
-                      onTap: () => setState(() => _showTurnInto = false),
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildModeTab(
-                      label: 'Turn Line Into',
-                      selected: _showTurnInto,
-                      isDark: isDark,
-                      onTap: () => setState(() => _showTurnInto = true),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (!_showTurnInto) ...[
-              // Filter Search Input
-              AppSearchField(
-                controller: _searchController,
-                hintText: 'Filter blocks (e.g. spec, board, todo, table)...',
-                onChanged: (_) => setState(() {}),
-                onClear: () => setState(() {}),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: filteredCommands.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.s6,
-                            horizontal: AppSpacing.s4,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TackIcon(
-                                TackIcons.search,
-                                size: 28,
-                                color: isDark
-                                    ? AppColors.darkTextMuted
-                                    : AppColors.lightTextMuted,
-                              ),
-                              const SizedBox(height: AppSpacing.s2),
-                              Text(
-                                'No blocks match "${_searchController.text.trim()}"',
-                                textAlign: TextAlign.center,
-                                style: AppTypography.body(
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.lightTextSecondary,
-                                  weight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.s3),
-                              SizedBox(
-                                height: AppSpacing.minTouchTarget,
-                                child: TextButton.icon(
-                                  onPressed: () =>
-                                      setState(() => _searchController.clear()),
-                                  icon: const TackIcon(TackIcons.close, size: 16),
-                                  label: const Text('Clear search'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: filteredCommands.length,
-                        itemBuilder: (context, index) {
-                          final cmd = filteredCommands[index];
-                          return ListTile(
-                            minTileHeight: AppSpacing.minTouchTarget,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppSpacing.roundedSm,
-                            ),
-                            leading: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: cmd.accentColor.withValues(
-                                  alpha: isDark ? 0.2 : 0.12,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: TackIcon(
-                                  cmd.icon,
-                                  size: 19,
-                                  color: cmd.accentColor,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              cmd.label,
-                              style: AppTypography.body(
-                                weight: FontWeight.w700,
-                              ),
-                            ),
-                            subtitle: Text(
-                              cmd.subtitle,
-                              style: AppTypography.caption(
-                                color: isDark
-                                    ? AppColors.darkTextMuted
-                                    : AppColors.lightTextMuted,
-                              ),
-                            ),
-                            trailing: Text(
-                              '/${cmd.command}',
-                              style: AppTypography.caption(
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.lightTextSecondary,
-                                weight: FontWeight.w700,
-                              ),
-                            ),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.of(context).pop();
-                              widget.onInsertCommand(cmd);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ] else ...[
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    for (final kind in BlockKind.values)
-                      ListTile(
-                        minTileHeight: AppSpacing.minTouchTarget,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSpacing.roundedSm,
-                        ),
-                        selected: kind == widget.currentBlockKind,
-                        leading: TackIcon(
-                          _iconForBlockKind(kind),
-                          size: 19,
-                          color: kind == widget.currentBlockKind
-                              ? AppColors.accentAmber
-                              : (isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.lightTextSecondary),
-                        ),
-                        title: Text(
-                          kind.label,
-                          style: AppTypography.body(
-                            weight: kind == widget.currentBlockKind
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          kind.subtitle,
-                          style: AppTypography.caption(
-                            color: isDark
-                                ? AppColors.darkTextMuted
-                                : AppColors.lightTextMuted,
-                          ),
-                        ),
-                        trailing: kind == widget.currentBlockKind
-                            ? const TackIcon(
-                                TackIcons.checkCircle,
-                                size: 17,
-                                color: AppColors.accentAmber,
-                              )
-                            : null,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.of(context).pop();
-                          widget.onTurnInto(kind);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-  }
-
-  Widget _buildQuickActionPill({
-    required bool isDark,
-    required dynamic icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        label: label,
-        child: Material(
-          color: isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt,
-          borderRadius: AppSpacing.roundedSm,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: AppSpacing.roundedSm,
-            child: SizedBox(
-              height: AppSpacing.minTouchTarget,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TackIcon(icon, size: 16, color: textColor),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption(
-                        color: textColor,
-                        weight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
-      ),
-    );
-  }
 
-  Widget _buildModeTab({
-    required String label,
-    required bool selected,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    final activeText =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final mutedText =
-        isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(9),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap();
+        const SizedBox(height: AppSpacing.s4),
+        const _SectionCaption('CONVERT LINE TO'),
+        const SizedBox(height: AppSpacing.s2),
+
+        // Compact 2-column grid of block conversion options
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final tileWidth = (constraints.maxWidth - AppSpacing.s2) / 2;
+            return Wrap(
+              spacing: AppSpacing.s2,
+              runSpacing: AppSpacing.s2,
+              children: [
+                for (final kind in BlockKind.values)
+                  SizedBox(
+                    width: tileWidth,
+                    child: _TransformBlockTile(
+                      kind: kind,
+                      icon: _iconForBlockKind(kind),
+                      isSelected: kind == widget.currentBlockKind,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.of(context).pop();
+                        widget.onTurnInto(kind);
+                      },
+                    ),
+                  ),
+              ],
+            );
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.minTouchTarget,
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-            decoration: BoxDecoration(
-              color: selected
-                  ? (isDark ? AppColors.darkCard : AppColors.lightCard)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(9),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: isDark ? 0.25 : 0.06,
-                        ),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.caption(
-                  color: selected ? activeText : mutedText,
-                  weight: selected ? FontWeight.w800 : FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.s2),
+      ],
     );
   }
 
-  dynamic _iconForBlockKind(BlockKind kind) {
+  TackGlyph _iconForBlockKind(BlockKind kind) {
     switch (kind) {
       case BlockKind.paragraph:
         return TackIcons.paragraph;
@@ -751,7 +733,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
       case BlockKind.h3:
         return TackIcons.heading3;
       case BlockKind.todo:
-        return TackIcons.checkCircle;
+        return TackIcons.taskOpen;
       case BlockKind.bullet:
         return TackIcons.bulletList;
       case BlockKind.numbered:
@@ -770,3 +752,355 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
   }
 }
 
+class _ModeSegmentPill extends StatelessWidget {
+  final TackGlyph icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ModeSegmentPill({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final fg = selected ? tokens.actionPrimaryFg : tokens.textSecondary;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.s2,
+              horizontal: AppSpacing.s2,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TackIcon(icon, size: 14, color: fg),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: fg,
+                      weight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCaption extends StatelessWidget {
+  final String text;
+
+  const _SectionCaption(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        text,
+        style: AppTypography.caption(
+          fontSize: 11,
+          weight: FontWeight.w700,
+          color: tokens.textTertiary,
+        ).copyWith(letterSpacing: 0.4),
+      ),
+    );
+  }
+}
+
+class _GroupedCommandListCard extends StatelessWidget {
+  final List<SlashCommandItem> commands;
+  final ValueChanged<SlashCommandItem> onSelect;
+
+  const _GroupedCommandListCard({
+    required this.commands,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    if (commands.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: ShapeDecoration(
+        color: tokens.canvasSunken.withValues(alpha: 0.55),
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedMd,
+          smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (int i = 0; i < commands.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  indent: 52,
+                  color: tokens.borderSubtle,
+                ),
+              _CommandOptionRow(
+                command: commands[i],
+                onTap: () => onSelect(commands[i]),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandOptionRow extends StatelessWidget {
+  final SlashCommandItem command;
+  final VoidCallback onTap;
+
+  const _CommandOptionRow({
+    required this.command,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: AppSpacing.minTouchTarget,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s3,
+            vertical: AppSpacing.s2 + 2,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: tokens.surfacePrimary,
+                  borderRadius: AppSpacing.roundedXs,
+                  border: Border.all(color: tokens.borderSubtle, width: 0.9),
+                ),
+                child: Center(
+                  child: TackIcon(
+                    command.icon,
+                    size: 16,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s3),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      command.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm(
+                        color: tokens.textPrimary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      command.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: tokens.surfacePrimary,
+                  borderRadius: AppSpacing.roundedXs,
+                  border: Border.all(color: tokens.borderSubtle, width: 0.8),
+                ),
+                child: Text(
+                  '/${command.command}',
+                  style: AppTypography.caption(
+                    fontSize: 11,
+                    weight: FontWeight.w600,
+                    color: tokens.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReorderSegmentButton extends StatelessWidget {
+  final TackGlyph icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ReorderSegmentButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TackIcon(icon, size: 15, color: tokens.textPrimary),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textPrimary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TransformBlockTile extends StatelessWidget {
+  final BlockKind kind;
+  final TackGlyph icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TransformBlockTile({
+    required this.kind,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final bgColor = isSelected
+        ? tokens.accentPin.withValues(alpha: tokens.isDark ? 0.16 : 0.10)
+        : tokens.canvasSunken.withValues(alpha: 0.55);
+    final borderColor = isSelected ? tokens.accentPin : tokens.borderSubtle;
+    final fgColor = isSelected ? tokens.accentPinText : tokens.textPrimary;
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: kind.label,
+      child: Material(
+        color: bgColor,
+        shape: SmoothRectangleBorder(
+          borderRadius: AppSpacing.roundedSm,
+          smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(
+            color: borderColor,
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s3,
+                vertical: AppSpacing.s2,
+              ),
+              child: Row(
+                children: [
+                  TackIcon(icon, size: 16, color: fgColor),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(
+                    child: Text(
+                      kind.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm(
+                        color: fgColor,
+                        weight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    TackIcon(
+                      TackIcons.check,
+                      size: 14,
+                      color: tokens.accentPin,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

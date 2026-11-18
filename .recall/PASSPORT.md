@@ -21,6 +21,7 @@
 - **[decision] First-run 4-slide OnboardingScreen & custom illustrations**: Added 4-slide first-run OnboardingScreen (lib/features/onboarding/) backed by OnboardingService (prefKey: 'has_completed_onboarding'), cu... _(mem_010)_
 - **[decision] Contextual page transitions via TackRoutes and image Hero flights**: Implemented TackRoutes in lib/core/routing/tack_routes.dart (exported via app_router.dart): sharedAxisHorizontal for drill-down links (su... _(mem_011)_
 - **[decision] Starter showcase note/board & bundled asset image support**: Bundled Flutter assets (assets/... or asset:...) are supported uniformly in RichNoteContentView (_buildResolvedMarkdownImage), NoteExport... _(mem_012)_
+- **[decision] Container Transform, TOC jump precision, and To-Do switcher polish**: Container Transform (package:animations OpenContainer via TackCardOpenContainer) wraps NeoNoteCard, BoardGridCard, _WorthRevisitingCard, ... _(mem_013)_
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
@@ -31,7 +32,5 @@
 - `lib/core/services/process_text_service.dart`: `IncomingTextData`, `ProcessTextService`
 - `lib/core/services/task_reminder_service.dart`: `TaskReminderPayload`, `TaskReminderService`
 - `lib/core/theme/app_colors.dart`: `AppColors`, `TackColorPalette`
-- `lib/core/theme/app_spacing.dart`: `AppSpacing`
-- `lib/core/theme/app_theme.dart`: `AppTheme`, `TackAnimatedTransition`, `AppInputDecorations`
-- _... (84 more modules — query `recall where <name>`)_
+- _... (87 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->

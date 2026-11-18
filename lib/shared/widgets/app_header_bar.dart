@@ -9,7 +9,7 @@ import '../../core/theme/tack_icons.dart';
 /// Soft Monochrome Header App Bar for Tack's 4 main views (`Today`, `Library`, `Boards`, `Search`).
 /// Styled after `docs/design/11-reference-ui-style.md` (Screenshot 2 & 3):
 /// - Bold title + optional count pill on the left
-/// - Optional editorial italic serif tagline below the title (e.g. "Let's make progress today!")
+/// - Optional italic DM Sans tagline below the title (e.g. "Let's make progress today!")
 /// - Soft white squircle icon buttons on the right with diffused elevation
 class AppHeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;

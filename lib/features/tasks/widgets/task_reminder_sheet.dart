@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/permission_rationale_dialog.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../services/open_tasks_service.dart';
 
 /// Result returned from [TaskReminderSheet].
@@ -508,45 +509,19 @@ class _ReminderChoiceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Semantics(
-      button: true,
-      selected: isSelected,
+    final fg = isSelected ? tokens.actionPrimaryFg : tokens.textPrimary;
+    return TactileFilterPill(
       label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppSpacing.roundedPill,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-            minWidth: AppSpacing.minTouchTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            child: AnimatedContainer(
-              duration: AppSpacing.durationFast,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s4,
-                vertical: AppSpacing.s2 + 2,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected ? tokens.actionPrimary : tokens.canvasSunken,
-                borderRadius: AppSpacing.roundedPill,
-                border: Border.all(
-                  color: isSelected ? tokens.actionPrimary : tokens.borderSubtle,
-                  width: 0.9,
-                ),
-              ),
-              child: Text(
-                label,
-                style: AppTypography.caption(
-                  color:
-                      isSelected ? tokens.actionPrimaryFg : tokens.textPrimary,
-                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        ),
+      isSelected: isSelected,
+      onTap: onTap,
+      triggerHaptics: false,
+      unselectedColor: tokens.canvasSunken,
+      unselectedFg: tokens.textPrimary,
+      selectedBorderColor: tokens.actionPrimary,
+      borderWidth: 0.9,
+      textStyle: AppTypography.caption(
+        color: fg,
+        weight: isSelected ? FontWeight.w700 : FontWeight.w500,
       ),
     );
   }

@@ -6,13 +6,18 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:notes/core/routing/tack_routes.dart';
+import 'package:notes/core/theme/app_colors.dart';
+import 'package:notes/core/theme/app_typography.dart';
+import 'package:notes/features/notes/widgets/whiteboard_embed_card.dart';
 import 'package:notes/shared/data/mock_initial_data.dart';
 import 'package:notes/shared/data/workspace_repo_impl.dart';
+import 'package:notes/features/notes/services/block_transform_service.dart';
 import 'package:notes/features/notes/services/frontmatter_service.dart';
 import 'package:notes/features/tasks/services/open_tasks_service.dart';
 import 'package:notes/features/notes/widgets/document_outline_sheet.dart';
 import 'package:notes/features/notes/widgets/mermaid/mermaid_diagram_parser.dart';
 import 'package:notes/features/notes/widgets/rich_note_content_view.dart';
+import 'package:notes/features/notes/widgets/slash_command_sheet.dart';
 import 'package:notes/shared/widgets/tack_card_open_container.dart';
 import 'package:notes/core/theme/app_spacing.dart';
 import 'package:notes/core/theme/app_theme.dart';
@@ -31,6 +36,8 @@ import 'package:notes/shared/widgets/app_search_field.dart';
 import 'package:notes/shared/widgets/z_order_column.dart';
 import 'package:notes/shared/widgets/smart_bottom_nav_bar.dart';
 import 'package:notes/shared/widgets/sliding_pill_track.dart';
+import 'package:notes/shared/widgets/tactile_ink_target.dart';
+import 'package:notes/features/about/widgets/release_notes_tab.dart';
 import 'package:notes/features/home/screens/home_screen.dart';
 import 'package:notes/features/search/screens/search_command_screen.dart';
 import 'package:notes/features/tasks/screens/today_screen.dart';
@@ -1819,6 +1826,7 @@ Footer text.
         final targetInBody = find.byWidgetPredicate(
           (w) =>
               w is RichText &&
+              w.maxLines == null &&
               w.text.toPlainText().trim() == 'Target Heading Destination',
         );
         expect(targetInBody, findsOneWidget);
@@ -1847,6 +1855,7 @@ Footer text.
         final overviewInBody = find.byWidgetPredicate(
           (w) =>
               w is RichText &&
+              w.maxLines == null &&
               w.text.toPlainText().trim() == 'Overview Section',
         );
         expect(overviewInBody, findsOneWidget);
@@ -1927,6 +1936,334 @@ Footer text.
         await tester.pumpAndSettle();
         expect(find.byType(NoteEditorScreen), findsNothing);
         expect(find.byType(HomeScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '28. SlashAndBlockActionsSheet uses SlidingPillTrack, grouped Paper command cards, and 2-column Transform tiles cleanly',
+      (WidgetTester tester) async {
+        SlashCommandItem? insertedCmd;
+        BlockKind? turnedIntoKind;
+        bool movedUp = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      SlashAndBlockActionsSheet.show(
+                        ctx,
+                        currentBlockKind: BlockKind.paragraph,
+                        onInsertCommand: (cmd) => insertedCmd = cmd,
+                        onTurnInto: (kind) => turnedIntoKind = kind,
+                        onMoveUp: () => movedUp = true,
+                        onMoveDown: () {},
+                        onDuplicateBlock: () {},
+                      );
+                    },
+                    child: const Text('Open Insert & Transform'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Open Insert & Transform'));
+        await tester.pumpAndSettle();
+
+        // Uses SlidingPillTrack (Insert · Transform) and grouped Insert sections
+        expect(
+          find.descendant(
+            of: find.byType(SlashAndBlockActionsSheet),
+            matching: find.byType(SlidingPillTrack),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Insert block'), findsOneWidget);
+        expect(find.text('WRITING'), findsOneWidget);
+        expect(find.text('/todo'), findsOneWidget);
+
+        // Switch to Transform tab -> shows current block badge, Move actions, and BlockKind grid
+        await tester.tap(find.text('Transform'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Transform block'), findsOneWidget);
+        expect(find.text('Paragraph'), findsWidgets);
+        expect(find.text('Move up'), findsOneWidget);
+        expect(find.text('CONVERT LINE TO'), findsOneWidget);
+
+        await tester.tap(find.text('Move up'));
+        expect(movedUp, isTrue);
+
+        await tester.tap(find.text('Heading 1'));
+        await tester.pumpAndSettle();
+        expect(turnedIntoKind, BlockKind.h1);
+
+        // Re-open on Insert and verify command selection
+        await tester.tap(find.text('Open Insert & Transform'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('To-Do'));
+        await tester.pumpAndSettle();
+        expect(insertedCmd?.id, 'todo');
+      },
+    );
+
+    testWidgets(
+      '29. Unified DM Sans typography & clean editorial left-ruled InlineTocCard',
+      (WidgetTester tester) async {
+        expect(AppTypography.displayFontFamily, equals(AppTypography.fontFamily));
+        expect(AppTypography.serifFontFamily, equals(AppTypography.fontFamily));
+        expect(AppTypography.display().fontFamily, startsWith('DMSans'));
+        expect(AppTypography.serifItalic().fontFamily, startsWith('DMSans'));
+        expect(AppTypography.titleLg().fontFamily, startsWith('DMSans'));
+        expect(AppTypography.bodySm().fontFamily, startsWith('DMSans'));
+        expect(AppTypography.caption().fontFamily, startsWith('DMSans'));
+        expect(AppTypography.display().fontFamily, isNot(contains('Newsreader')));
+        expect(
+          AppTypography.mono().fontFamily,
+          startsWith('JetBrainsMono'),
+        );
+
+        final lavender = AppColors.getPaletteById('lavender');
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: InlineTocCard(
+                  paletteId: 'lavender',
+                  content: '# Main Title\n## Sub Section\n',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('CONTENTS'), findsOneWidget);
+        expect(find.text('Main Title'), findsOneWidget);
+        expect(find.text('Sub Section'), findsOneWidget);
+
+        // Verify left accent bar uses Lavender darker variant (no puffy 16dp rounded card)
+        final clip = tester.widget<ClipRRect>(
+          find.descendant(
+            of: find.byType(InlineTocCard),
+            matching: find.byType(ClipRRect),
+          ),
+        );
+        expect(clip.borderRadius, BorderRadius.circular(4));
+
+        final leftRuleFinder = find.descendant(
+          of: find.byType(InlineTocCard),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Container &&
+                w.color == lavender.resolveAccentColor(false) &&
+                w.constraints?.maxWidth == 2.5,
+          ),
+        );
+        expect(leftRuleFinder, findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '30. Note palette switching updates canvas, tags, frontmatter pills, TOC, and embed cards with darker variant',
+      (WidgetTester tester) async {
+        final peach = AppColors.getPaletteById('peach');
+        final lavender = AppColors.getPaletteById('lavender');
+
+        final board = WhiteboardCanvasItem(
+          id: 'board-target',
+          title: 'Capture to Clarity',
+          paletteId: 'cyan',
+          createdAt: DateTime(2026, 11, 18),
+          updatedAt: DateTime(2026, 11, 18),
+          nodes: [
+            CanvasNode(
+              id: 'n1',
+              x: 0,
+              y: 0,
+              width: 140,
+              height: 60,
+              text: 'Spark',
+              shapeType: CanvasNodeType.process,
+              paletteId: 'cyan',
+            ),
+          ],
+          edges: const [],
+        );
+        final note = TextNote(
+          id: 'note-palette-test',
+          title: 'Palette Showcase',
+          paletteId: 'peach',
+          tags: const ['guide'],
+          createdAt: DateTime(2026, 11, 18),
+          updatedAt: DateTime(2026, 11, 18),
+          content:
+              '---\nstatus: Approved\npriority: Low\n---\n'
+              '[TOC]\n'
+              '# Section One\n'
+              'Link to [[Capture to Clarity]]\n'
+              '![[Capture to Clarity]]\n',
+        );
+
+        final repo = _MockWorkspaceRepo();
+        await repo.saveItem(board);
+        await repo.saveItem(note);
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => ThemeProvider()),
+              ChangeNotifierProvider.value(value: workspace),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: NoteEditorScreen(item: note),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Assert initial Peach canvas & darker-variant tags/frontmatter/embed
+        var scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.backgroundColor, equals(peach.resolveNoteCanvas(false)));
+
+        var guideChip = tester.widget<Chip>(find.widgetWithText(Chip, '#guide'));
+        expect(guideChip.labelStyle?.color, equals(peach.resolveAccentColor(false)));
+        expect(guideChip.backgroundColor, equals(peach.resolveChipFill(false)));
+
+        var approvedText = tester.widget<Text>(find.text('Approved'));
+        expect(approvedText.style?.color, equals(peach.resolveAccentColor(false)));
+
+        var lowText = tester.widget<Text>(find.text('Low'));
+        expect(lowText.style?.color, equals(peach.resolveAccentColor(false)));
+
+        final embedCardFinder = find.byType(WorkspaceEmbedCard);
+        expect(embedCardFinder, findsOneWidget);
+        var openBoardText = tester.widget<Text>(find.text('Open Board →'));
+        expect(openBoardText.style?.color, equals(peach.resolveAccentColor(false)));
+
+        // Switch palette to Lavender Mist via Overflow Menu -> Color Palette
+        await tester.tap(find.byTooltip('More options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Color Palette'));
+        await tester.pumpAndSettle();
+
+        final lavenderSwatch = find.bySemanticsLabel('Lavender Mist color');
+        await tester.ensureVisible(lavenderSwatch);
+        await tester.tap(lavenderSwatch);
+        await tester.pumpAndSettle();
+
+        // Assert canvas, tags, frontmatter pills, and embed card updated to Lavender Mist
+        scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.backgroundColor, equals(lavender.resolveNoteCanvas(false)));
+
+        guideChip = tester.widget<Chip>(find.widgetWithText(Chip, '#guide'));
+        expect(guideChip.labelStyle?.color, equals(lavender.resolveAccentColor(false)));
+        expect(guideChip.backgroundColor, equals(lavender.resolveChipFill(false)));
+
+        approvedText = tester.widget<Text>(find.text('Approved'));
+        expect(approvedText.style?.color, equals(lavender.resolveAccentColor(false)));
+
+        lowText = tester.widget<Text>(find.text('Low'));
+        expect(lowText.style?.color, equals(lavender.resolveAccentColor(false)));
+
+        openBoardText = tester.widget<Text>(find.text('Open Board →'));
+        expect(openBoardText.style?.color, equals(lavender.resolveAccentColor(false)));
+      },
+    );
+
+    testWidgets(
+      '31. TactileFilterPill keeps Material InkWell clipped inside the visual pill while preserving 48dp hit target',
+      (WidgetTester tester) async {
+        int taps = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Center(
+                child: StatefulBuilder(
+                  builder: (ctx, setState) => TactileFilterPill(
+                    label: 'Connected Specs',
+                    isSelected: taps.isOdd,
+                    onTap: () => setState(() => taps++),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final targetFinder = find.byType(TactileInkTarget);
+        final inkFinder = find.descendant(
+          of: targetFinder,
+          matching: find.byType(InkWell),
+        );
+        final visualContainerFinder = find.descendant(
+          of: targetFinder,
+          matching: find.byType(AnimatedContainer),
+        );
+        final clippedMaterialFinder = find.descendant(
+          of: visualContainerFinder,
+          matching: find.byType(Material),
+        );
+
+        final outerSize = tester.getSize(targetFinder);
+        final inkSize = tester.getSize(inkFinder);
+        final pillSize = tester.getSize(visualContainerFinder);
+        final clippedMat = tester.widget<Material>(clippedMaterialFinder);
+
+        // Outer target meets 48dp accessibility minimum; ink stays strictly <= pill bounds
+        expect(outerSize.height, greaterThanOrEqualTo(AppSpacing.minTouchTarget));
+        expect(pillSize.height, lessThan(outerSize.height));
+        expect(inkSize.height, lessThanOrEqualTo(pillSize.height));
+        expect(inkSize.width, lessThanOrEqualTo(pillSize.width));
+        expect(clippedMat.clipBehavior, equals(Clip.antiAlias));
+
+        // Tapping in the top 3dp margin (inside 48dp hit zone, outside ~36dp pill) still fires onTap
+        final topEdgeHit = tester.getTopLeft(targetFinder) + Offset(outerSize.width / 2, 2);
+        await tester.tapAt(topEdgeHit);
+        await tester.pumpAndSettle();
+        expect(taps, equals(1));
+
+        // Also verify ReleaseNotesTab category pills use TactileFilterPill with clipped ink
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const Scaffold(body: ReleaseNotesTab()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: find.byType(ReleaseNotesTab),
+            matching: find.byType(TactileFilterPill),
+          ),
+          findsWidgets,
+        );
+        final connectedPill = find.widgetWithText(TactileFilterPill, 'Connected Specs');
+        final connectedInk = find.descendant(
+          of: connectedPill,
+          matching: find.byType(InkWell),
+        );
+        final connectedVisual = find.descendant(
+          of: connectedPill,
+          matching: find.byType(AnimatedContainer),
+        );
+        expect(
+          tester.getSize(connectedInk).height,
+          lessThanOrEqualTo(tester.getSize(connectedVisual).height),
+        );
       },
     );
   });

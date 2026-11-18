@@ -425,6 +425,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             WorkspaceEmbedCard(
               link: parsedEmbed,
               resolvedItem: resolved,
+              hostPaletteId: paletteId,
               onTap: () => onWikiLinkTap?.call(parsedEmbed),
             ),
           );
@@ -681,20 +682,17 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     required bool isDark,
     required ThemeData theme,
   }) {
+    final tokens = context.tokens;
     final isOpen = _toggleOpenState[lineIndex] ?? defaultOpen;
     final accent = palette.resolveAccentColor(isDark);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurfaceAlt.withValues(alpha: 0.65)
-            : Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(12),
+        color: isOpen ? palette.resolveChipFill(isDark) : tokens.surfacePrimary.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isOpen
-              ? accent.withValues(alpha: 0.45)
-              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          color: isOpen ? accent.withValues(alpha: 0.42) : palette.resolveChipBorder(isDark),
         ),
       ),
       child: Column(
@@ -945,7 +943,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                                         ? (isDark ? AppColors.darkStateDanger : AppColors.lightStateDanger)
                                         : isTaskDueToday
                                             ? (isDark ? AppColors.darkStateWarning : AppColors.lightStateWarning)
-                                            : (isDark ? AppColors.darkStateInfo : AppColors.lightStateInfo),
+                                            : palette.resolveAccentColor(isDark),
                                 isDark: isDark,
                               ),
                             if (repeatLabel != null)
@@ -954,7 +952,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                                 label: repeatLabel,
                                 color: isChecked
                                     ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    : palette.resolveAccentColor(isDark),
                                 isDark: isDark,
                               ),
                           ],
@@ -1086,28 +1084,29 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       }
       final bodyText = bodyLines.join('\n').trim();
 
+      final tokens = context.tokens;
       Color alertColor;
       TackGlyph alertIcon;
       switch (alertType) {
         case 'TIP':
-          alertColor = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
+          alertColor = tokens.stateSuccess;
           alertIcon = TackIcons.lightbulb;
           break;
         case 'IMPORTANT':
-          alertColor = isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
+          alertColor = palette.resolveAccentColor(isDark);
           alertIcon = TackIcons.star;
           break;
         case 'WARNING':
-          alertColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
+          alertColor = tokens.stateWarning;
           alertIcon = TackIcons.warning;
           break;
         case 'CAUTION':
-          alertColor = isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
+          alertColor = tokens.stateDanger;
           alertIcon = TackIcons.shield;
           break;
         case 'NOTE':
         default:
-          alertColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+          alertColor = palette.resolveAccentColor(isDark);
           alertIcon = TackIcons.info;
           break;
       }
@@ -2594,9 +2593,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         WikiLinkService.resolveTarget(parsedLink.target, workspaceItems);
     final isBoard = targetItem is WhiteboardCanvasItem;
     final exists = targetItem != null;
-    final linkPalette =
-        exists ? AppColors.getPaletteById(targetItem.paletteId) : palette;
-    final linkAccent = linkPalette.resolveAccentColor(isDark);
+    final linkAccent = palette.resolveAccentColor(isDark);
 
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
@@ -2604,8 +2601,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         child: Material(
           color: exists
-              ? linkAccent.withValues(alpha: isDark ? 0.18 : 0.12)
-              : (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F7)),
+              ? palette.resolveChipFill(isDark)
+              : palette.resolveInlineCodeBg(isDark),
           borderRadius: BorderRadius.circular(7),
           child: InkWell(
             onTap: () {
@@ -2618,12 +2615,13 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
                 border: exists
-                    ? null
+                    ? Border.all(
+                        color: palette.resolveChipBorder(isDark),
+                        width: 0.75,
+                      )
                     : Border.all(
-                        color: isDark
-                            ? AppColors.darkBorder
-                            : AppColors.lightBorder,
-                        width: 0.8,
+                        color: palette.resolveChipBorder(isDark),
+                        width: 0.9,
                       ),
               ),
               child: Row(
@@ -2634,7 +2632,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                         ? TackIcons.plus
                         : (isBoard ? TackIcons.whiteboardSvg : TackIcons.notesSvg),
                     size: 11.5,
-                    color: exists ? linkAccent : AppColors.accentAmber,
+                    color: linkAccent,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
@@ -2642,16 +2640,10 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       parsedLink.displayLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
+                      style: AppTypography.bodySm(
                         fontSize: (currentStyle?.fontSize ?? 15) * 0.86,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                        color: exists
-                            ? linkAccent
-                            : (isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary),
+                        weight: FontWeight.w700,
+                        color: linkAccent,
                       ),
                     ),
                   ),
@@ -3367,9 +3359,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     '[^${entry.id}]',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: AppTypography.caption(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      weight: FontWeight.w600,
                       color: muted,
                     ),
                   ),
@@ -3444,9 +3436,9 @@ class _CopyCodeButtonState extends State<_CopyCodeButton> {
             const SizedBox(width: 4),
             Text(
               _copied ? 'Copied!' : 'Copy',
-              style: GoogleFonts.jetBrainsMono(
+              style: AppTypography.caption(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                weight: FontWeight.w600,
                 color: _copied ? activeFg : fg,
               ),
             ),

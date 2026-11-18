@@ -27,6 +27,7 @@ import '../../../shared/providers/workspace_provider.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/app_floating_dialog.dart';
 import '../../../shared/widgets/tack_dropdown.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../notes/screens/note_editor_screen.dart';
 
 /// Immutable snapshot for Undo / Redo history ring buffer.
@@ -3716,48 +3717,38 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
         button: true,
         selected: isSelected,
         label: tooltip,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            if (onTapOverride != null) {
-              onTapOverride();
-            } else {
-              setState(() {
-                _activeTool = id;
-                _showShapesMenu = false;
-              });
-            }
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            constraints: const BoxConstraints(
-              minWidth: 44,
-              minHeight: AppSpacing.minTouchTarget,
-            ),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF6FF))
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isSelected
-                    ? Border.all(
-                        color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
-                        width: 1.2,
-                      )
-                    : null,
-              ),
-              child: Center(
-                child: TackIcon(
-                  icon,
-                  size: 20,
-                  color: iconColor,
-                ),
-              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: TactileInkTarget(
+            borderRadius: BorderRadius.circular(8),
+            minWidth: 36,
+            minHeight: AppSpacing.minTouchTarget,
+            width: 36,
+            height: 36,
+            triggerHaptics: true,
+            color: isSelected
+                ? (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF6FF))
+                : null,
+            border: isSelected
+                ? Border.all(
+                    color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
+                    width: 1.2,
+                  )
+                : null,
+            onTap: () {
+              if (onTapOverride != null) {
+                onTapOverride();
+              } else {
+                setState(() {
+                  _activeTool = id;
+                  _showShapesMenu = false;
+                });
+              }
+            },
+            child: TackIcon(
+              icon,
+              size: 20,
+              color: iconColor,
             ),
           ),
         ),
@@ -3916,43 +3907,31 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen> with Si
             // Tool 4: Add Shape (+)
             Tooltip(
               message: 'Add Flowchart Shape',
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _showShapesMenu = !_showShapesMenu);
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: AppSpacing.minTouchTarget,
-                  ),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: _showShapesMenu
-                          ? (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF6FF))
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: _showShapesMenu
-                          ? Border.all(
-                              color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
-                              width: 1.2,
-                            )
-                          : null,
-                    ),
-                    child: Center(
-                      child: TackIcon(
-                        TackIcons.plusSvg,
-                        size: 20,
-                        color: _showShapesMenu
-                            ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
-                            : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-                      ),
-                    ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: TactileInkTarget(
+                  borderRadius: BorderRadius.circular(8),
+                  minWidth: 36,
+                  minHeight: AppSpacing.minTouchTarget,
+                  width: 36,
+                  height: 36,
+                  triggerHaptics: true,
+                  color: _showShapesMenu
+                      ? (isDark ? AppColors.darkSurfaceAlt : const Color(0xFFEFF6FF))
+                      : null,
+                  border: _showShapesMenu
+                      ? Border.all(
+                          color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
+                          width: 1.2,
+                        )
+                      : null,
+                  onTap: () => setState(() => _showShapesMenu = !_showShapesMenu),
+                  child: TackIcon(
+                    TackIcons.plusSvg,
+                    size: 20,
+                    color: _showShapesMenu
+                        ? (isDark ? AppColors.primaryLight : AppColors.primaryDark)
+                        : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
                   ),
                 ),
               ),

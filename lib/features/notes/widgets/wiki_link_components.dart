@@ -14,6 +14,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
   final ActiveWikiTrigger trigger;
   final List<BaseWorkspaceItem> workspaceItems;
   final String currentItemId;
+  final String? paletteId;
   final ValueChanged<String> onSelectCompletion;
   final VoidCallback onDismiss;
 
@@ -22,13 +23,17 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
     required this.trigger,
     required this.workspaceItems,
     required this.currentItemId,
+    this.paletteId,
     required this.onSelectCompletion,
     required this.onDismiss,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final hostPalette = AppColors.getPaletteById(paletteId);
+    final hostAccent = hostPalette.resolveAccentColor(isDark);
     final candidates = workspaceItems
         .where((i) => !i.isTrash && i.id != currentItemId && i.type != ItemType.clipboard)
         .toList();
@@ -70,10 +75,10 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: tokens.surfacePrimary,
         borderRadius: AppSpacing.roundedPill,
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          color: hostPalette.resolveChipBorder(isDark),
         ),
         boxShadow: AppSpacing.floatingControlShadow,
       ),
@@ -83,12 +88,10 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Text(
               trigger.isEmbed ? 'Embed' : 'Link',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
+              style: AppTypography.caption(
                 fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
-                color: AppColors.accentAmber,
+                weight: FontWeight.w800,
+                color: hostAccent,
               ),
             ),
           ),
@@ -100,7 +103,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
                   _buildChip(
                     isDark: isDark,
                     icon: TackIcons.plus,
-                    accentColor: AppColors.accentAmber,
+                    accentColor: hostAccent,
                     label: 'New "${trigger.targetQuery.trim()}"',
                     onTap: () {
                       final clean = trigger.targetQuery.trim();
@@ -113,7 +116,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
                     icon: item is WhiteboardCanvasItem
                         ? TackIcons.whiteboardSvg
                         : TackIcons.notesSvg,
-                    accentColor: AppColors.getPaletteById(item.paletteId).resolveAccentColor(isDark),
+                    accentColor: hostAccent,
                     label: item.title,
                     onTap: () {
                       final prefix = trigger.isEmbed ? '![[' : '[[';
@@ -124,7 +127,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const TackIcon(TackIcons.close, size: 15),
+            icon: TackIcon(TackIcons.close, size: 15, color: hostAccent),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             onPressed: onDismiss,
@@ -169,14 +172,18 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
 
     if (entries.isEmpty) return const SizedBox.shrink();
 
+    final tokens = context.tokens;
+    final hostPalette = AppColors.getPaletteById(paletteId);
+    final hostAccent = hostPalette.resolveAccentColor(isDark);
+
     return Container(
       height: 46,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
+        color: tokens.surfacePrimary,
         borderRadius: AppSpacing.roundedPill,
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        border: Border.all(color: hostPalette.resolveChipBorder(isDark)),
         boxShadow: AppSpacing.floatingControlShadow,
       ),
       child: ListView(
@@ -186,7 +193,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
             _buildChip(
               isDark: isDark,
               icon: TackIcons.link,
-              accentColor: AppColors.accentCyan,
+              accentColor: hostAccent,
               label: entry.label,
               onTap: () => onSelectCompletion(entry.value),
             ),
@@ -202,10 +209,11 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
+    final palette = AppColors.getPaletteById(paletteId);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
       child: Material(
-        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF3F5F8),
+        color: palette.resolveChipFill(isDark),
         borderRadius: AppSpacing.roundedPill,
         child: InkWell(
           onTap: () {
@@ -226,12 +234,10 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
+                    style: AppTypography.caption(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      weight: FontWeight.w700,
+                      color: accentColor,
                     ),
                   ),
                 ),
@@ -248,6 +254,7 @@ class WikiLinkAutocompleteBar extends StatelessWidget {
 class NoteBacklinksSection extends StatefulWidget {
   final List<BacklinkEntry> linked;
   final List<BacklinkEntry> unlinked;
+  final String? paletteId;
   final void Function(BacklinkEntry entry) onOpenEntry;
   final void Function(BacklinkEntry entry) onConvertUnlinkedToWikiLink;
 
@@ -255,6 +262,7 @@ class NoteBacklinksSection extends StatefulWidget {
     super.key,
     required this.linked,
     required this.unlinked,
+    this.paletteId,
     required this.onOpenEntry,
     required this.onConvertUnlinkedToWikiLink,
   });
@@ -271,16 +279,21 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
     final total = widget.linked.length + widget.unlinked.length;
     if (total == 0) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final palette = AppColors.getPaletteById(widget.paletteId);
+    final accent = palette.resolveAccentColor(isDark);
 
     return Padding(
       padding: const EdgeInsets.only(top: 28, bottom: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface.withValues(alpha: 0.75) : Colors.white.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1),
+          color: tokens.surfacePrimary.withValues(alpha: isDark ? 0.85 : 0.90),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: palette.resolveChipBorder(isDark),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -290,12 +303,12 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
                 HapticFeedback.selectionClick();
                 setState(() => _expanded = !_expanded);
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
-                    const TackIcon(TackIcons.link, size: 15, color: AppColors.accentCyan),
+                    TackIcon(TackIcons.link, size: 15, color: accent),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -303,12 +316,10 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
                             ? '${widget.linked.length} Backlink${widget.linked.length == 1 ? '' : 's'}'
                                 '${widget.unlinked.isNotEmpty ? '  •  ${widget.unlinked.length} Unlinked' : ''}'
                             : '${widget.unlinked.length} Unlinked Mention${widget.unlinked.length == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
+                        style: AppTypography.bodySm(
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          weight: FontWeight.w700,
+                          color: tokens.textPrimary,
                         ),
                       ),
                     ),
@@ -322,7 +333,7 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
               ),
             ),
             if (_expanded) ...[
-              Divider(height: 1, color: borderColor),
+              Divider(height: 1, color: palette.resolveChipBorder(isDark)),
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: Column(
@@ -348,14 +359,15 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
     required bool isDark,
     required bool isUnlinked,
   }) {
-    final palette = AppColors.getPaletteById(entry.sourceItem.paletteId);
-    final accent = palette.resolveAccentColor(isDark);
+    final tokens = context.tokens;
+    final hostPalette = AppColors.getPaletteById(widget.paletteId ?? entry.sourceItem.paletteId);
+    final accent = hostPalette.resolveAccentColor(isDark);
     final isBoard = entry.sourceItem is WhiteboardCanvasItem;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF6F7FA),
+        color: hostPalette.resolveChipFill(isDark),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () {
@@ -381,12 +393,10 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
                         entry.sourceItem.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
+                        style: AppTypography.bodySm(
                           fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: isDark ? Colors.white : const Color(0xFF191A23),
+                          weight: FontWeight.w700,
+                          color: tokens.textPrimary,
                         ),
                       ),
                       if (entry.contextSnippet.isNotEmpty) ...[
@@ -395,10 +405,9 @@ class _NoteBacklinksSectionState extends State<NoteBacklinksSection> {
                           entry.contextSnippet,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
+                          style: AppTypography.caption(
                             fontSize: 11.5,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            color: tokens.textSecondary,
                           ),
                         ),
                       ],

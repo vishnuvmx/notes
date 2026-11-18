@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/tack_icons.dart';
+import 'tactile_ink_target.dart';
 
 /// Interactive color swatch picker for the 8 curated Paper & Pin object palettes (`07` §2.3).
 /// Enforces 48×48dp minimum touch targets (`07` §5.3).
@@ -39,47 +39,31 @@ class ColorSwatchPicker extends StatelessWidget {
             button: true,
             selected: isSelected,
             label: '${palette.name} color',
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onPaletteSelected(palette.id);
-              },
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: AppSpacing.minTouchTarget,
-                height: AppSpacing.minTouchTarget,
-                child: Center(
-                  child: AnimatedScale(
-                    duration: AppSpacing.durationFast,
-                    curve: AppSpacing.curveStandard,
-                    scale: isSelected ? 1.0 : 30 / 34,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: swatchColor,
-                        border: Border.all(
-                          color: isSelected
-                              ? tokens.textPrimary
-                              : tokens.borderStrong.withValues(alpha: 0.45),
-                          width: isSelected ? 2.0 : 1.0,
-                        ),
-                      ),
-                      child: isSelected
-                          ? const Center(
-                              child: TackIcon(
-                                TackIcons.check,
-                                size: 16,
-                                color: AppColors.lightTextPrimary,
-                                style: HeroIconStyle.solid,
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
+            child: TactileInkTarget(
+              useCircleShape: true,
+              width: isSelected ? 34 : 30,
+              height: isSelected ? 34 : 30,
+              duration: AppSpacing.durationFast,
+              curve: AppSpacing.curveStandard,
+              triggerHaptics: true,
+              color: swatchColor,
+              border: Border.all(
+                color: isSelected
+                    ? tokens.textPrimary
+                    : tokens.borderStrong.withValues(alpha: 0.45),
+                width: isSelected ? 2.0 : 1.0,
               ),
+              splashColor: AppColors.lightTextPrimary.withValues(alpha: 0.16),
+              hoverColor: AppColors.lightTextPrimary.withValues(alpha: 0.08),
+              onTap: () => onPaletteSelected(palette.id),
+              child: isSelected
+                  ? const TackIcon(
+                      TackIcons.check,
+                      size: 16,
+                      color: AppColors.lightTextPrimary,
+                      style: HeroIconStyle.solid,
+                    )
+                  : const SizedBox.shrink(),
             ),
           );
         },

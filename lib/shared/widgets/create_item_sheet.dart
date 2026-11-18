@@ -12,6 +12,7 @@ import '../../features/notes/services/note_template_service.dart';
 import '../providers/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
 import 'color_swatch_picker.dart';
+import 'tactile_ink_target.dart';
 import 'tack_toast.dart';
 
 /// Fast Capture Sheet (`05-information-architecture.md` §4, `07-design-system.md` §7).
@@ -330,60 +331,46 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               child: Semantics(
                 button: true,
                 label: 'Notes and boards file to $_selectedFolder. Tap to clear.',
-                child: InkWell(
+                child: TactileInkTarget(
                   borderRadius: AppSpacing.roundedPill,
+                  minWidth: 0,
+                  triggerHaptics: true,
+                  color: tokens.canvasSunken,
+                  border: Border.all(color: tokens.borderSubtle),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s3,
+                    vertical: AppSpacing.s1,
+                  ),
                   onTap: _isSubmitting
                       ? null
-                      : () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedFolder = null);
-                        },
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.minTouchTarget,
-                    ),
-                    child: Center(
-                      widthFactor: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.s3,
-                          vertical: AppSpacing.s1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tokens.canvasSunken,
-                          borderRadius: AppSpacing.roundedPill,
-                          border: Border.all(color: tokens.borderSubtle),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TackIcon(
-                              TackIcons.folder,
-                              size: 14,
-                              color: tokens.textSecondary,
-                            ),
-                            const SizedBox(width: AppSpacing.s1),
-                            Flexible(
-                              child: Text(
-                                'File in $_selectedFolder',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.caption(
-                                  color: tokens.textSecondary,
-                                  weight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.s1),
-                            TackIcon(
-                              TackIcons.close,
-                              size: 12,
-                              color: tokens.textTertiary,
-                            ),
-                          ],
+                      : () => setState(() => _selectedFolder = null),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(
+                        TackIcons.folder,
+                        size: 14,
+                        color: tokens.textSecondary,
+                      ),
+                      const SizedBox(width: AppSpacing.s1),
+                      Flexible(
+                        child: Text(
+                          'File in $_selectedFolder',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption(
+                            color: tokens.textSecondary,
+                            weight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.s1),
+                      TackIcon(
+                        TackIcons.close,
+                        size: 12,
+                        color: tokens.textTertiary,
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -8,6 +8,7 @@
 - [First-run 4-slide OnboardingScreen & custom illustrations](decisions/mem_010-first-run-4-slide-onboardingscreen-custom-illust.md)
 - [Contextual page transitions via TackRoutes and image Hero flights](decisions/mem_011-contextual-page-transitions-via-tackroutes-and-i.md)
 - [Starter showcase note/board & bundled asset image support](decisions/mem_012-starter-showcase-note-board-bundled-asset-image.md)
+- [Container Transform, TOC jump precision, and To-Do switcher polish](decisions/mem_013-container-transform-toc-jump-precision-and-to-do.md)
 
 ## Conventions
 - [Settings Copy & Privacy Legal Coverage](rules/mem_003-settings-copy-privacy-legal-coverage.md)

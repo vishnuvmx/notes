@@ -18,6 +18,7 @@ import '../../../shared/widgets/card_peek_sheet.dart';
 import '../../../shared/widgets/create_item_sheet.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/smart_bottom_nav_bar.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../../shared/widgets/tack_toast.dart';
 import '../../search/screens/search_command_screen.dart';
 import '../../settings/screens/settings_screen.dart';
@@ -763,63 +764,21 @@ class _LibraryFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final bg = isSelected ? tokens.actionPrimary : tokens.surfacePrimary;
-    final fg = isSelected ? tokens.actionPrimaryFg : tokens.textPrimary;
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
+    return TactileFilterPill(
       label: label,
-      child: Center(
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap();
-          },
-          borderRadius: AppSpacing.roundedPill,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.minTouchTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              child: AnimatedContainer(
-                duration: AppSpacing.durationFast,
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: AppSpacing.roundedPill,
-                  boxShadow: AppSpacing.elev1(tokens.isDark),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (leadingWidget != null) ...[
-                      leadingWidget!,
-                      const SizedBox(width: 6),
-                    ] else if (icon != null) ...[
-                      TackIcon(icon, size: 14, color: fg),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      label,
-                      style: AppTypography.label(
-                        color: fg,
-                        weight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                    ),
-                    if (showChevron) ...[
-                      const SizedBox(width: 4),
-                      TackIcon(TackIcons.chevronDown, size: 13, color: fg),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      isSelected: isSelected,
+      onTap: onTap,
+      icon: icon,
+      leadingWidget: leadingWidget,
+      showChevron: showChevron,
+      height: 36,
+      minWidth: 0,
+      minHeight: AppSpacing.minTouchTarget,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+      unselectedFg: tokens.textPrimary,
+      borderWidth: 0,
+      boxShadow: AppSpacing.elev1(tokens.isDark),
     );
   }
 }

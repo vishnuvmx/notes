@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../../shared/widgets/z_order_column.dart';
 
 enum _ReleaseCategory {
@@ -220,58 +220,11 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                         final selected = _selectedCategory == cat;
                         return Padding(
                           padding: const EdgeInsets.only(right: AppSpacing.s2),
-                          child: Semantics(
-                            button: true,
-                            selected: selected,
-                            label: '${cat.label} category filter',
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  setState(() => _selectedCategory = cat);
-                                },
-                                borderRadius: AppSpacing.roundedPill,
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minHeight: AppSpacing.minTouchTarget,
-                                    minWidth: AppSpacing.minTouchTarget,
-                                  ),
-                                  child: Center(
-                                    child: AnimatedContainer(
-                                      duration: AppSpacing.durationFast,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.s4,
-                                        vertical: AppSpacing.s2 + 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: selected
-                                            ? tokens.actionPrimary
-                                            : tokens.surfacePrimary,
-                                        borderRadius: AppSpacing.roundedPill,
-                                        border: selected
-                                            ? null
-                                            : Border.all(
-                                                color: tokens.borderSubtle,
-                                                width: 1,
-                                              ),
-                                      ),
-                                      child: Text(
-                                        cat.label,
-                                        style: AppTypography.label(
-                                          color: selected
-                                              ? tokens.actionPrimaryFg
-                                              : tokens.textSecondary,
-                                          weight: selected
-                                              ? FontWeight.w600
-                                              : FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                          child: TactileFilterPill(
+                            label: cat.label,
+                            semanticsLabel: '${cat.label} category filter',
+                            isSelected: selected,
+                            onTap: () => setState(() => _selectedCategory = cat),
                           ),
                         );
                       }).toList(),
@@ -450,8 +403,9 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
-                    style: AppTypography.mono(
+                    style: AppTypography.caption(
                       fontSize: 11.5,
+                      weight: FontWeight.w600,
                       color: tokens.textTertiary,
                     ),
                   ),

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 
 /// Supported item types in the formatting toolbar using OOP sealed hierarchy.
 sealed class ToolbarActionItem {
@@ -44,8 +44,13 @@ class DividerToolbarItem extends ToolbarActionItem {
 /// diagram, callout, and image triggers with accessible touch targets.
 class EditorFormattingToolbar extends StatelessWidget {
   final void Function(String action)? onFormatAction;
+  final String? paletteId;
 
-  const EditorFormattingToolbar({super.key, this.onFormatAction});
+  const EditorFormattingToolbar({
+    super.key,
+    this.onFormatAction,
+    this.paletteId,
+  });
 
   static const List<ToolbarActionItem> tools = [
     TextToolbarItem(
@@ -98,7 +103,6 @@ class EditorFormattingToolbar extends StatelessWidget {
       customStyle: TextStyle(
         fontWeight: FontWeight.w800,
         fontSize: 15,
-        fontFamily: 'serif',
       ),
     ),
     TextToolbarItem(
@@ -109,7 +113,6 @@ class EditorFormattingToolbar extends StatelessWidget {
         fontWeight: FontWeight.w600,
         fontSize: 15,
         fontStyle: FontStyle.italic,
-        fontFamily: 'serif',
       ),
     ),
     TextToolbarItem(
@@ -120,7 +123,6 @@ class EditorFormattingToolbar extends StatelessWidget {
         fontWeight: FontWeight.w700,
         fontSize: 15,
         decoration: TextDecoration.lineThrough,
-        fontFamily: 'serif',
       ),
     ),
     TextToolbarItem(
@@ -130,8 +132,6 @@ class EditorFormattingToolbar extends StatelessWidget {
       customStyle: TextStyle(
         fontWeight: FontWeight.w800,
         fontSize: 11,
-        color: AppColors.lightTextPrimary,
-        backgroundColor: AppColors.objectAmber,
       ),
     ),
     DividerToolbarItem(),
@@ -175,13 +175,15 @@ class EditorFormattingToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final palette = AppColors.getPaletteById(paletteId);
+    final accent = palette.resolveAccentColor(tokens.isDark);
 
     return Container(
       height: AppSpacing.minTouchTarget,
       decoration: BoxDecoration(
-        color: tokens.surfacePrimary,
+        color: palette.resolveNoteFooterBg(tokens.isDark),
         border: Border(
-          top: BorderSide(color: tokens.borderSubtle, width: 1),
+          top: BorderSide(color: palette.resolveChipBorder(tokens.isDark), width: 1),
         ),
       ),
       child: ListView.builder(
@@ -199,7 +201,7 @@ class EditorFormattingToolbar extends StatelessWidget {
                 horizontal: AppSpacing.s1,
                 vertical: 14,
               ),
-              color: tokens.borderSubtle,
+              color: palette.resolveChipBorder(tokens.isDark),
             );
           }
 
@@ -211,61 +213,51 @@ class EditorFormattingToolbar extends StatelessWidget {
             label: item.label,
             child: Tooltip(
               message: item.label,
-              child: InkWell(
-                borderRadius: AppSpacing.roundedSm,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onFormatAction?.call(item.action);
-                },
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: AppSpacing.minTouchTarget,
-                    minHeight: AppSpacing.minTouchTarget,
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: isPrimaryCommand
-                          ? BoxDecoration(
-                              color: tokens.canvasSunken,
-                              borderRadius: AppSpacing.roundedXs,
-                              border: Border.all(
-                                color: tokens.borderStrong,
-                                width: 1,
-                              ),
-                            )
-                          : (isHighlight
-                              ? BoxDecoration(
-                                  color: AppColors.pastelAmberLight
-                                      .withValues(alpha: 0.85),
-                                  borderRadius: AppSpacing.roundedXs,
-                                )
-                              : null),
-                      child: switch (item) {
-                        IconToolbarItem iconItem => TackIcon(
-                            iconItem.icon,
-                            size: 19,
-                            color: tokens.textPrimary,
-                          ),
-                        TextToolbarItem textItem => Text(
-                            textItem.display,
-                            style: (textItem.customStyle ??
-                                    AppTypography.label(
-                                      color: tokens.textPrimary,
-                                    ))
-                                .copyWith(
-                              color: isHighlight
-                                  ? AppColors.lightTextPrimary
-                                  : tokens.textPrimary,
-                            ),
-                          ),
-                        DividerToolbarItem() => const SizedBox.shrink(),
-                      },
+              child: TactileInkTarget(
+                borderRadius: AppSpacing.roundedXs,
+                width: 34,
+                height: 34,
+                triggerHaptics: true,
+                color: isPrimaryCommand
+                    ? palette.resolveChipFill(tokens.isDark)
+                    : (isHighlight
+                        ? (tokens.isDark
+                            ? accent.withValues(alpha: 0.24)
+                            : palette.lightColor.withValues(alpha: 0.65))
+                        : null),
+                border: isPrimaryCommand
+                    ? Border.all(
+                        color: palette.resolveChipBorder(tokens.isDark),
+                        width: 1,
+                      )
+                    : null,
+                splashColor: accent.withValues(alpha: 0.14),
+                highlightColor: accent.withValues(alpha: 0.08),
+                hoverColor: accent.withValues(alpha: 0.06),
+                onTap: () => onFormatAction?.call(item.action),
+                child: switch (item) {
+                  IconToolbarItem iconItem => TackIcon(
+                      iconItem.icon,
+                      size: 19,
+                      color: accent,
                     ),
-                  ),
-                ),
+                  TextToolbarItem textItem => Text(
+                      textItem.display,
+                      style: (textItem.customStyle ??
+                              AppTypography.label(
+                                color: accent,
+                              ))
+                          .copyWith(
+                        fontFamily: AppTypography.fontFamily,
+                        color: isHighlight
+                            ? (tokens.isDark
+                                ? accent
+                                : AppColors.lightTextPrimary)
+                            : accent,
+                      ),
+                    ),
+                  DividerToolbarItem() => const SizedBox.shrink(),
+                },
               ),
             ),
           );
