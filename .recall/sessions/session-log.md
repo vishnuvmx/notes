@@ -99,3 +99,31 @@
 - **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Done—generated the 1:1 onboarding hero illustration and sent the artifact path and notes to ...
 - **Model**: gemini-4-hydrogen-tiered-high
 - **Modified**: lib/core/theme/app_theme.dart, lib/core/theme/tack_icons.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/markdown_table_editor_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, pubspec.lock, pubspec.yaml, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart, assets/images/onboarding/floating_cloud_meadows.jpg, docs/design/onboarding-references/01-floating-cloud-meadows.jpg, docs/design/onboarding-references/02-soft-lavender-narrative-panels.jpg, docs/design/onboarding-references/03-clear-horizon-meadow-ocean.jpg, docs/design/onboarding-references/04-soft-3d-clay-icons.png, docs/design/onboarding-references/05-diecut-sticker-icons-paper-grid.jpg, docs/design/onboarding-references/06-risograph-grain-botanicals-dark.jpg
+
+### [2026-11-18 06:50:40] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Slide 1 custom illustration (`slide1_tactile_grid.jpg`) looks great and is saved in `assets/...
+- **Model**: gemini-4-hydrogen-xhigh
+
+### [2026-11-18 06:51:05] Checkpoint
+- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Generated the 1:1 Slide 3 illustration (`C:\Users\vmxvi\.gemini\antigravity\brain\e882d2f9-9...
+- **Model**: gemini-4-hydrogen-tiered-high
+
+### [2026-11-18 06:51:35] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Slide 3 custom illustration (`slide3_connected_ideas.jpg`) looks great and is saved in `asse...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: assets/images/onboarding/slide3_connected_ideas.jpg
+
+### [2026-11-18 06:51:57] Checkpoint
+- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Generated `slide4_local_sanctuary_1794984700793.jpg` in the artifact directory and sent the ...
+- **Model**: gemini-4-hydrogen-tiered-high
+- **Modified**: assets/images/onboarding/slide3_connected_ideas.jpg
+
+### [2026-11-18 06:59:08] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Built the 4-slide first-run **Onboarding Screen** using bespoke illustrations generated in t...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: lib/core/routing/app_router.dart, lib/features/settings/screens/settings_screen.dart, lib/main.dart, assets/images/onboarding/slide3_connected_ideas.jpg, assets/images/onboarding/slide4_local_sanctuary.jpg, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, test/onboarding_screen_test.dart
+
+### [2026-11-18 06:59:56] Checkpoint
+- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "This is something annother ai model suggested to do out of.. can you check which screen..." — Here is how those transition patterns map onto **Tack's actual screens and routes**, includi...
+- **Model**: gemini-4-hydrogen-xhigh
+- **Modified**: lib/core/routing/app_router.dart, lib/features/settings/screens/settings_screen.dart, lib/main.dart, assets/images/onboarding/slide3_connected_ideas.jpg, assets/images/onboarding/slide4_local_sanctuary.jpg, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, test/onboarding_screen_test.dart

@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide ProcessTextService;
 import 'package:provider/provider.dart';
 
+import '../services/onboarding_service.dart';
 import '../services/pinned_notification_service.dart';
 import '../services/process_text_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 import '../theme/tack_icons.dart';
 import '../../features/folders/screens/folder_view_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/notes/models/text_note.dart';
 import '../../features/notes/screens/note_editor_screen.dart';
+import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/whiteboard/models/whiteboard_item.dart';
 import '../../features/whiteboard/screens/whiteboard_canvas_screen.dart';
@@ -19,16 +22,23 @@ import '../../shared/models/base_item.dart';
 import '../../shared/providers/workspace_provider.dart';
 import '../../shared/widgets/create_item_sheet.dart';
 
-/// Root navigator managing routing between the 5-slot Shell, Note Editor,
-/// Board Canvas, and System Intents (`05` §9).
+/// Root navigator managing routing between Onboarding, the 5-slot Shell,
+/// Note Editor, Board Canvas, and System Intents (`05` §9).
 class TackRootNavigator extends StatefulWidget {
-  const TackRootNavigator({super.key});
+  final bool initialShowOnboarding;
+
+  const TackRootNavigator({
+    super.key,
+    this.initialShowOnboarding = false,
+  });
 
   @override
   State<TackRootNavigator> createState() => _TackRootNavigatorState();
 }
 
 class _TackRootNavigatorState extends State<TackRootNavigator> {
+  late bool _showOnboarding = widget.initialShowOnboarding;
+
   static Route<T> _buildRoute<T>(Widget page) {
     return MaterialPageRoute<T>(
       builder: (context) => page,
@@ -43,11 +53,21 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     });
   }
 
+  Future<void> _completeOnboarding() async {
+    await OnboardingService.markCompleted();
+    if (mounted && _showOnboarding) {
+      setState(() => _showOnboarding = false);
+    }
+  }
+
   void _initSystemIntegration() async {
     // 1. Listen for incoming text / actions via `com.notes.tacknotes/process_text`
     ProcessTextService.initialize(
       onTextReceived: (data) {
         if (mounted) {
+          if (_showOnboarding) {
+            _completeOnboarding();
+          }
           _handleIncomingText(data);
         }
       },
@@ -56,7 +76,12 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
     // 2. Check if app was launched via "Save to Tack", SEND intent, or Quick Capture
     final initialData = await ProcessTextService.getInitialText();
     if (initialData != null && mounted) {
-      _handleIncomingText(initialData);
+      if (_showOnboarding) {
+        await _completeOnboarding();
+      }
+      if (mounted) {
+        _handleIncomingText(initialData);
+      }
     }
 
     // 3. Keep persistent Quick Capture notification & pinned note notifications synced
@@ -381,12 +406,28 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    return HomeScreen(
-      onOpenItem: (item, {startInEditMode = false}) => _openItemDetail(
-        context,
-        item,
-        startInEditMode: startInEditMode,
-      ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 140),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: TackAnimatedTransition.switcherTransition,
+      child: _showOnboarding
+          ? KeyedSubtree(
+              key: const ValueKey('root_onboarding'),
+              child: OnboardingScreen(
+                onCompleted: _completeOnboarding,
+              ),
+            )
+          : KeyedSubtree(
+              key: const ValueKey('root_home'),
+              child: HomeScreen(
+                onOpenItem: (item, {startInEditMode = false}) =>
+                    _openItemDetail(
+                  context,
+                  item,
+                  startInEditMode: startInEditMode,
+                ),
       onOpenFavorites: () {
         Navigator.of(context).push(
           _buildRoute(
@@ -422,6 +463,8 @@ class _TackRootNavigatorState extends State<TackRootNavigator> {
           _buildRoute(const SettingsScreen()),
         );
       },
+    ),
+    ),
     );
   }
 }

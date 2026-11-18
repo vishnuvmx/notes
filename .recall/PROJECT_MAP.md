@@ -140,23 +140,23 @@ When modifying UI components, reuse tokens from:
 - **L1164**: `_QuietEmptyBox` (class)
 - **L1176**: `build` (method)
 
-### `lib/features/settings/screens/settings_screen.dart` (1,185 lines)
-- **L34**: `ProfileSettingsScreen` (class)
-- **L43**: `createState` (method)
-- **L49**: `_ProfileSettingsScreenState` (class)
-- **L57**: `initState` (method)
-- **L69**: `_onTabChanged` (method)
-- **L79**: `dispose` (method)
-- **L85**: `_loadProfileName` (method)
-- **L95**: `_editProfileName` (method)
-- **L114**: `_exportBackup` (method)
-- **L185**: `_showRestoreDialog` (method)
-- **L205**: `build` (method)
-- **L773**: `_StatMetricPill` (class)
-- **L785**: `build` (method)
-- **L817**: `_ThemeSegmentedControl` (class)
-- **L823**: `build` (method)
-- **L891**: `_RestoreBackupDialog` (class)
+### `lib/features/settings/screens/settings_screen.dart` (1,216 lines)
+- **L35**: `ProfileSettingsScreen` (class)
+- **L44**: `createState` (method)
+- **L50**: `_ProfileSettingsScreenState` (class)
+- **L58**: `initState` (method)
+- **L70**: `_onTabChanged` (method)
+- **L80**: `dispose` (method)
+- **L86**: `_loadProfileName` (method)
+- **L96**: `_editProfileName` (method)
+- **L115**: `_exportBackup` (method)
+- **L186**: `_showRestoreDialog` (method)
+- **L206**: `build` (method)
+- **L804**: `_StatMetricPill` (class)
+- **L816**: `build` (method)
+- **L848**: `_ThemeSegmentedControl` (class)
+- **L854**: `build` (method)
+- **L922**: `_RestoreBackupDialog` (class)
 
 ### `lib/features/graph/screens/knowledge_graph_screen.dart` (1,144 lines)
 - **L26**: `_GraphNode` (class)
@@ -415,7 +415,7 @@ When modifying UI components, reuse tokens from:
 | `android/gradle/wrapper/` | 2 | .jar, .properties |
 | `assets/` | 0 | - |
 | `assets/images/` | 0 | - |
-| `assets/images/onboarding/` | 1 | .jpg |
+| `assets/images/onboarding/` | 4 | .jpg |
 | `docs/` | 0 | - |
 | `docs/design/` | 11 | .md |
 | `docs/design/onboarding-references/` | 7 | .jpg, .png, .md |
@@ -423,7 +423,7 @@ When modifying UI components, reuse tokens from:
 | `icons/dark-icons/` | 112 | .svg |
 | `icons/white-icons/` | 112 | .svg |
 | `lib/` | 2 | .dart, .md |
-| _... (27 more subdirectories)_ | - | _(use targeted live search)_ |
+| _... (28 more subdirectories)_ | - | _(use targeted live search)_ |
 
 ## Directory Tree (Top Levels)
 ```text
@@ -479,6 +479,9 @@ When modifying UI components, reuse tokens from:
 |   |   |   |-- models/
 |   |   |   |-- screens/
 |   |   |   |-- services/
+|   |   |   \-- widgets/
+|   |   |-- onboarding/
+|   |   |   |-- screens/
 |   |   |   \-- widgets/
 |   |   |-- search/
 |   |   |   \-- screens/

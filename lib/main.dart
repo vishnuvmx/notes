@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/routing/app_router.dart';
+import 'core/services/onboarding_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'shared/data/workspace_repo_impl.dart';
@@ -25,8 +26,9 @@ void main() async {
     ),
   );
 
-  // Load saved theme preference & repository items from local storage
+  // Load saved theme preference, onboarding status, & repository items from local storage
   final initialTheme = await ThemeProvider.loadSavedThemeMode();
+  final showOnboarding = await OnboardingService.shouldShowOnboarding();
   final repository = LocalStorageWorkspaceRepository();
   await repository.getAllActiveItems();
 
@@ -38,13 +40,18 @@ void main() async {
           create: (_) => ThemeProvider(initialMode: initialTheme),
         ),
       ],
-      child: const TackApp(),
+      child: TackApp(initialShowOnboarding: showOnboarding),
     ),
   );
 }
 
 class TackApp extends StatelessWidget {
-  const TackApp({super.key});
+  final bool initialShowOnboarding;
+
+  const TackApp({
+    super.key,
+    this.initialShowOnboarding = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +100,9 @@ class TackApp extends StatelessWidget {
             child: child ?? const SizedBox.shrink(),
           );
         },
-        home: const TackRootNavigator(),
+        home: TackRootNavigator(
+          initialShowOnboarding: initialShowOnboarding,
+        ),
       ),
     );
   }

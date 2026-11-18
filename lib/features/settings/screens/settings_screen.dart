@@ -20,6 +20,7 @@ import '../../../shared/widgets/sliding_pill_track.dart';
 import '../../../shared/widgets/z_order_column.dart';
 import '../../folders/screens/folder_view_screen.dart';
 import '../../about/screens/about_tack_screen.dart';
+import '../../onboarding/screens/onboarding_screen.dart';
 import '../../about/widgets/release_notes_tab.dart';
 
 /// Clean, editorial Profile & Settings screen (`05-information-architecture.md` §6).
@@ -732,6 +733,36 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen>
             color: Colors.transparent,
             child: Column(
             children: [
+              ListTile(
+                leading: TackIcon(
+                  TackIcons.sparkles,
+                  size: 20,
+                  color: tokens.textPrimary,
+                ),
+                title: Text(
+                  'Welcome Guide',
+                  style: AppTypography.body(
+                    color: tokens.textPrimary,
+                    weight: FontWeight.w500,
+                  ),
+                ),
+                trailing: TackIcon(
+                  TackIcons.chevronRight,
+                  size: 16,
+                  color: tokens.textTertiary,
+                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (routeCtx) => OnboardingScreen(
+                        isReplay: true,
+                        onCompleted: () => Navigator.of(routeCtx).pop(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              Divider(height: 1, indent: 52, color: tokens.borderSubtle),
               ListTile(
                 leading: TackIcon(
                   TackIcons.notes,

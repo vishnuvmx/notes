@@ -18,6 +18,7 @@
 - **[bugfix] Composited fade-out transitions via TackAnimatedTransition**: In Flutter CurvedAnimation, reverse evaluation calls activeCurve.transform(parent.value) directly as t drops from 1.0 to 0.0 (not 1 - cur... _(mem_007)_
 - **[decision] Unified TackIcons on tabler_icons_plus via TackGlyph**: Migrated TackIcons and TackIcon in lib/core/theme/tack_icons.dart from mixed custom SVG packs + LucideIcons to tabler_icons_plus (^3.52.0... _(mem_008)_
 - **[decision] Home Hi Wassup, transparent nav bar, 2-tab tasks & decluttered Search**: Refined Home, TodayScreen, SmartBottomNavBar, and SearchCommandScreen: HomeScreen header shows 'Hi Wassup!' with no subtagline and Scaffo... _(mem_009)_
+- **[decision] First-run 4-slide OnboardingScreen & custom illustrations**: Added 4-slide first-run OnboardingScreen (lib/features/onboarding/) backed by OnboardingService (prefKey: 'has_completed_onboarding'), cu... _(mem_010)_
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
@@ -37,8 +38,5 @@
 - `lib/core/utils/url_launcher_helper.dart`: `UrlLauncherHelper`
 - `lib/features/about/screens/about_tack_screen.dart`: `AboutTackScreen`
 - `lib/features/about/widgets/release_notes_tab.dart`: `ReleaseNotesTab`
-- `lib/features/folders/screens/folder_view_screen.dart`: `FolderViewScreen`
-- `lib/features/graph/screens/knowledge_graph_screen.dart`: `KnowledgeGraphScreen`
-- `lib/features/home/screens/home_screen.dart`: `HomeScreen`
-- _... (70 more modules — query `recall where <name>`)_
+- _... (75 more modules — query `recall where <name>`)_
 <!-- recall:passport:end -->
