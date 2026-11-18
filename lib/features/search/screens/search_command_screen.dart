@@ -22,12 +22,10 @@ import '../../whiteboard/models/whiteboard_item.dart';
 /// expands cleanly into focused `Actions · Tasks · Notes · Boards` results
 /// as you type — without taglines or noisy metadata clutter.
 class SearchCommandScreen extends StatefulWidget {
-  final void Function(BaseWorkspaceItem item, {bool startInEditMode}) onOpenItem;
+  final void Function(BaseWorkspaceItem item, {bool startInEditMode})
+  onOpenItem;
 
-  const SearchCommandScreen({
-    super.key,
-    required this.onOpenItem,
-  });
+  const SearchCommandScreen({super.key, required this.onOpenItem});
 
   @override
   State<SearchCommandScreen> createState() => _SearchCommandScreenState();
@@ -105,9 +103,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         onExecute: () {
           Navigator.of(context).push(
             TackRoutes.sharedAxisHorizontal(
-              const FolderViewScreen(
-                folderType: FolderType.trash,
-              ),
+              const FolderViewScreen(folderType: FolderType.trash),
             ),
           );
         },
@@ -117,9 +113,8 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
         title: 'Settings',
         keywords: 'settings backup export import restore json',
         onExecute: () {
-          Navigator.of(context).push(
-            TackRoutes.slideUp(const SettingsScreen()),
-          );
+          Navigator.of(context)
+              .push(TackRoutes.slideUp(const SettingsScreen()));
         },
       ),
     ];
@@ -138,27 +133,31 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
     final matchingCommands = q.isEmpty
         ? allCommands.take(4).toList()
         : allCommands
-            .where((c) =>
-                c.title.toLowerCase().contains(lowerQ) ||
-                c.keywords.toLowerCase().contains(lowerQ))
-            .toList();
+              .where(
+                (c) =>
+                    c.title.toLowerCase().contains(lowerQ) ||
+                    c.keywords.toLowerCase().contains(lowerQ),
+              )
+              .toList();
 
     final recentItems = q.isEmpty
         ? (List<BaseWorkspaceItem>.from(
-              workspace.allActiveItems.where((i) => !i.isTrash && !i.isInbox),
-            )..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)))
-            .take(4)
-            .toList()
+                workspace.allActiveItems.where((i) => !i.isTrash && !i.isInbox),
+              )..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)))
+              .take(4)
+              .toList()
         : const <BaseWorkspaceItem>[];
 
     final matchingNotes = q.isEmpty
         ? const <BaseWorkspaceItem>[]
         : workspace.allActiveItems
-            .where((i) =>
-                i.type != ItemType.whiteboard &&
-                !i.isTrash &&
-                i.matchesQuery(q))
-            .toList();
+              .where(
+                (i) =>
+                    i.type != ItemType.whiteboard &&
+                    !i.isTrash &&
+                    i.matchesQuery(q),
+              )
+              .toList();
 
     final matchingBoards = q.isEmpty
         ? const <WhiteboardCanvasItem>[]
@@ -167,12 +166,15 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
     final matchingTasks = q.isEmpty
         ? const []
         : workspace.openTasks
-            .where((t) =>
-                t.text.toLowerCase().contains(lowerQ) ||
-                t.noteTitle.toLowerCase().contains(lowerQ))
-            .toList();
+              .where(
+                (t) =>
+                    t.text.toLowerCase().contains(lowerQ) ||
+                    t.noteTitle.toLowerCase().contains(lowerQ),
+              )
+              .toList();
 
-    final hasNoResults = q.isNotEmpty &&
+    final hasNoResults =
+        q.isNotEmpty &&
         matchingCommands.isEmpty &&
         matchingNotes.isEmpty &&
         matchingBoards.isEmpty &&
@@ -245,8 +247,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                               ),
                               onPressed: () async {
                                 try {
-                                  final note =
-                                      await workspace.createQuickItem(
+                                  final note = await workspace.createQuickItem(
                                     title: q,
                                     type: ItemType.note,
                                     paletteId: 'amber',
@@ -366,41 +367,40 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                                   size: 19,
                                   color: tokens.textSecondary,
                                 ),
-                                  onPressed: () async {
-                                    HapticFeedback.selectionClick();
-                                    final task = matchingTasks[i];
-                                    final previousItem =
-                                        workspace.getItemByIdSync(task.noteId);
-                                    try {
-                                      await workspace.toggleTask(task);
-                                      if (!context.mounted) return;
+                                onPressed: () async {
+                                  HapticFeedback.selectionClick();
+                                  final task = matchingTasks[i];
+                                  final previousItem = workspace
+                                      .getItemByIdSync(task.noteId);
+                                  try {
+                                    await workspace.toggleTask(task);
+                                    if (!context.mounted) return;
+                                    TackToast.show(
+                                      context,
+                                      message: 'Completed "${task.text}"',
+                                      icon: TackIcons.check,
+                                      iconColor: tokens.success,
+                                      duration: const Duration(seconds: 4),
+                                      actionLabel: previousItem != null
+                                          ? 'Undo'
+                                          : null,
+                                      onAction: previousItem != null
+                                          ? () =>
+                                                workspace.saveItem(previousItem)
+                                          : null,
+                                    );
+                                  } catch (_) {
+                                    if (context.mounted) {
                                       TackToast.show(
                                         context,
-                                        message: 'Completed "${task.text}"',
-                                        icon: TackIcons.check,
-                                        iconColor: tokens.success,
-                                        duration: const Duration(seconds: 4),
-                                        actionLabel: previousItem != null
-                                            ? 'Undo'
-                                            : null,
-                                        onAction: previousItem != null
-                                            ? () => workspace.saveItem(
-                                                  previousItem,
-                                                )
-                                            : null,
+                                        message: 'Could not update task',
+                                        icon: TackIcons.close,
+                                        iconColor: tokens.danger,
                                       );
-                                    } catch (_) {
-                                      if (context.mounted) {
-                                        TackToast.show(
-                                          context,
-                                          message: 'Could not update task',
-                                          icon: TackIcons.close,
-                                          iconColor: tokens.danger,
-                                        );
-                                      }
                                     }
-                                  },
-                                ),
+                                  }
+                                },
+                              ),
                               title: Text(
                                 matchingTasks[i].text,
                                 maxLines: 1,
@@ -471,8 +471,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
                             _SearchResultItemRow(
                               item: matchingBoards[i],
                               query: q,
-                              onTap: () =>
-                                  widget.onOpenItem(matchingBoards[i]),
+                              onTap: () => widget.onOpenItem(matchingBoards[i]),
                             ),
                           ],
                         ],

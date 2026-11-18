@@ -70,8 +70,8 @@ class TactileInkTarget extends StatelessWidget {
   Widget build(BuildContext context) {
     final BorderSide borderSide =
         (border is Border && (border as Border).isUniform)
-            ? (border as Border).top
-            : BorderSide.none;
+        ? (border as Border).top
+        : BorderSide.none;
 
     final ShapeBorder shape = useCircleShape
         ? const CircleBorder()
@@ -92,10 +92,7 @@ class TactileInkTarget extends StatelessWidget {
     final Widget paddedChild = Center(
       widthFactor: width == null ? 1 : null,
       heightFactor: height == null ? 1 : null,
-      child: Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: child,
-      ),
+      child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
     );
 
     final Widget styledChild = textStyle != null
@@ -140,15 +137,8 @@ class TactileInkTarget extends StatelessWidget {
       onTap: onTap != null ? handleTap : null,
       onLongPress: onLongPress,
       child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: minWidth,
-          minHeight: minHeight,
-        ),
-        child: Center(
-          widthFactor: 1,
-          heightFactor: 1,
-          child: visualControl,
-        ),
+        constraints: BoxConstraints(minWidth: minWidth, minHeight: minHeight),
+        child: Center(widthFactor: 1, heightFactor: 1, child: visualControl),
       ),
     );
 
@@ -234,7 +224,8 @@ class TactileFilterPill extends StatelessWidget {
         ? (selectedBorderColor ?? Colors.transparent)
         : (unselectedBorderColor ?? tokens.borderSubtle);
 
-    final baseStyle = textStyle ??
+    final baseStyle =
+        textStyle ??
         AppTypography.label(
           color: fg,
           weight: isSelected ? FontWeight.w600 : FontWeight.w500,

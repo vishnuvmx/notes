@@ -71,7 +71,8 @@ class TackDropdown<T> extends StatelessWidget {
     final selectedItem = items.where((i) => i.value == value).firstOrNull;
     final displayLabel = customLabel ?? selectedItem?.label ?? hint ?? '';
     final effectiveLeadingIcon = leadingIcon ?? selectedItem?.icon;
-    final effectiveLeadingIconColor = leadingIconColor ?? selectedItem?.iconColor;
+    final effectiveLeadingIconColor =
+        leadingIconColor ?? selectedItem?.iconColor;
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -85,7 +86,9 @@ class TackDropdown<T> extends StatelessWidget {
         offset: const Offset(0, AppSpacing.s1),
         elevation: 8,
         borderRadius: effectiveRadius,
-        shadowColor: Colors.black.withValues(alpha: tokens.isDark ? 0.45 : 0.12),
+        shadowColor: Colors.black.withValues(
+          alpha: tokens.isDark ? 0.45 : 0.12,
+        ),
         shape: AppSpacing.smoothMd(
           side: BorderSide(color: effectiveBorderColor, width: 1.2),
         ),
@@ -107,8 +110,11 @@ class TackDropdown<T> extends StatelessWidget {
                   TackIcon(
                     item.icon!,
                     size: iconSize,
-                    color: item.iconColor ??
-                        (isSelected ? tokens.actionPrimary : tokens.textSecondary),
+                    color:
+                        item.iconColor ??
+                        (isSelected
+                            ? tokens.actionPrimary
+                            : tokens.textSecondary),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -155,8 +161,9 @@ class TackDropdown<T> extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: isExpanded ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment:
-                    isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+                mainAxisAlignment: isExpanded
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.start,
                 children: [
                   Flexible(
                     fit: isExpanded ? FlexFit.tight : FlexFit.loose,
@@ -167,7 +174,9 @@ class TackDropdown<T> extends StatelessWidget {
                           TackIcon(
                             effectiveLeadingIcon,
                             size: iconSize,
-                            color: effectiveLeadingIconColor ?? tokens.textSecondary,
+                            color:
+                                effectiveLeadingIconColor ??
+                                tokens.textSecondary,
                           ),
                           if (displayLabel.isNotEmpty) const SizedBox(width: 6),
                         ],

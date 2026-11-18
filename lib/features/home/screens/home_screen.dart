@@ -33,7 +33,8 @@ import '../../tasks/screens/today_screen.dart';
 /// - `3`: **Boards** (`_BoardsView` — `BoardGridCard`s with live mini-thumbnails)
 /// - `4`: **Search** (`SearchCommandScreen` — full-text + "Do anything")
 class HomeScreen extends StatefulWidget {
-  final void Function(BaseWorkspaceItem item, {bool startInEditMode})? onOpenItem;
+  final void Function(BaseWorkspaceItem item, {bool startInEditMode})?
+  onOpenItem;
   final VoidCallback? onOpenFavorites;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenTrash;
@@ -59,11 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.onOpenItem != null) {
       widget.onOpenItem!(item, startInEditMode: startInEditMode);
     } else {
-      openWorkspaceItemScreen(
-        context,
-        item,
-        startInEditMode: startInEditMode,
-      );
+      openWorkspaceItemScreen(context, item, startInEditMode: startInEditMode);
     }
   }
 
@@ -73,10 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       defaultType: defaultType,
     );
     if (created != null && mounted) {
-      _openItem(
-        created,
-        startInEditMode: created.type != ItemType.whiteboard,
-      );
+      _openItem(created, startInEditMode: created.type != ItemType.whiteboard);
     }
   }
 
@@ -128,7 +122,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final tokens = ctx.tokens;
         final current = workspace.sortMode;
         final options = [
-          (mode: HomeSortMode.newestFirst, label: 'Recently updated (Pinned first)'),
+          (
+            mode: HomeSortMode.newestFirst,
+            label: 'Recently updated (Pinned first)',
+          ),
           (mode: HomeSortMode.oldestFirst, label: 'Oldest created first'),
           (mode: HomeSortMode.alphabetical, label: 'Title (A – Z)'),
         ];
@@ -233,7 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     semanticsLabel: 'Sort',
                     width: 38,
                     height: 38,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm + 2),
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.radiusSm + 2,
+                    ),
                     color: tokens.surfacePrimary,
                     boxShadow: AppSpacing.elev1(tokens.isDark),
                     triggerHaptics: true,
@@ -247,9 +246,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : null,
           onOpenProfileSettings: () {
-            Navigator.of(context).push(
-              TackRoutes.slideUp(const ProfileSettingsScreen()),
-            );
+            Navigator.of(context)
+                .push(TackRoutes.slideUp(const ProfileSettingsScreen()));
           },
         ),
         body: workspace.isLoading
@@ -258,17 +256,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: _stackIndexForTab(activeTab),
                 children: [
                   // 0: Today
-                  RepaintBoundary(
-                    child: TodayScreen(onOpenItem: _openItem),
-                  ),
+                  RepaintBoundary(child: TodayScreen(onOpenItem: _openItem)),
 
                   // 1: Library
                   RepaintBoundary(
                     child: _LibraryView(
                       onOpenItem: _openItem,
-                      onCreateNote: () => _openCaptureSheet(
-                        defaultType: ItemType.note,
-                      ),
+                      onCreateNote: () =>
+                          _openCaptureSheet(defaultType: ItemType.note),
                     ),
                   ),
 
@@ -287,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                           if (mounted) _openItem(board);
                         } catch (_) {
-                          if (mounted) {
+                          if (context.mounted) {
                             TackToast.show(
                               context,
                               message: 'Could not create board',
@@ -336,13 +331,11 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _LibraryView extends StatelessWidget {
-  final void Function(BaseWorkspaceItem item, {bool startInEditMode}) onOpenItem;
+  final void Function(BaseWorkspaceItem item, {bool startInEditMode})
+  onOpenItem;
   final VoidCallback onCreateNote;
 
-  const _LibraryView({
-    required this.onOpenItem,
-    required this.onCreateNote,
-  });
+  const _LibraryView({required this.onOpenItem, required this.onCreateNote});
 
   void _showFolderSheet(BuildContext context, WorkspaceProvider workspace) {
     AppBottomSheet.show<void>(
@@ -360,7 +353,8 @@ class _LibraryView extends StatelessWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final gutter = AppSpacing.screenGutter(screenWidth);
     final cols = AppSpacing.gridColumnsForWidth(screenWidth);
-    final hasActiveFilter = workspace.pinnedFilterOnly ||
+    final hasActiveFilter =
+        workspace.pinnedFilterOnly ||
         workspace.selectedTag != null ||
         workspace.selectedFolder != 'All Notes';
 
@@ -467,7 +461,8 @@ class _LibraryView extends StatelessWidget {
                     const SizedBox(width: AppSpacing.s2),
                     _LibraryFilterChip(
                       label: '#$tag',
-                      isSelected: workspace.selectedTag?.toLowerCase() ==
+                      isSelected:
+                          workspace.selectedTag?.toLowerCase() ==
                           tag.toLowerCase(),
                       onTap: () => workspace.setTagFilter(tag),
                     ),
@@ -486,8 +481,7 @@ class _LibraryView extends StatelessWidget {
                 title: emptyTitle(),
                 subtitle: emptySubtitle(),
                 actionLabel: hasActiveFilter ? 'Reset filters' : 'New note',
-                actionIcon:
-                    hasActiveFilter ? TackIcons.close : TackIcons.plus,
+                actionIcon: hasActiveFilter ? TackIcons.close : TackIcons.plus,
                 onAction: hasActiveFilter ? resetAllFilters : onCreateNote,
                 secondaryActionLabel: hasActiveFilter ? 'New note' : null,
                 onSecondaryAction: hasActiveFilter ? onCreateNote : null,
@@ -528,13 +522,11 @@ class _LibraryView extends StatelessWidget {
 }
 
 class _BoardsView extends StatelessWidget {
-  final void Function(BaseWorkspaceItem item, {bool startInEditMode}) onOpenItem;
+  final void Function(BaseWorkspaceItem item, {bool startInEditMode})
+  onOpenItem;
   final VoidCallback onCreateBoard;
 
-  const _BoardsView({
-    required this.onOpenItem,
-    required this.onCreateBoard,
-  });
+  const _BoardsView({required this.onOpenItem, required this.onCreateBoard});
 
   @override
   Widget build(BuildContext context) {
@@ -548,8 +540,7 @@ class _BoardsView extends StatelessWidget {
       return EmptyStateWidget(
         icon: TackIcons.boards,
         title: 'No Boards yet',
-        subtitle:
-            'Map flowcharts, system diagrams, and pin Markdown Spec Cards on an infinite board.',
+        subtitle: 'Map flowcharts, system diagrams, and pin Markdown Spec Cards on an infinite board.',
         actionLabel: 'Create Board',
         actionIcon: TackIcons.plus,
         onAction: onCreateBoard,
@@ -619,9 +610,9 @@ class _FolderPickerSheetState extends State<_FolderPickerSheet> {
       return;
     }
     final existing = widget.workspace.folders.cast<String?>().firstWhere(
-          (f) => f!.toLowerCase() == raw.toLowerCase(),
-          orElse: () => null,
-        );
+      (f) => f!.toLowerCase() == raw.toLowerCase(),
+      orElse: () => null,
+    );
     if (existing != null) {
       widget.workspace.setSelectedFolder(existing);
       Navigator.of(context).pop();

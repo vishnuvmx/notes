@@ -108,10 +108,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final workspace = context.read<WorkspaceProvider>();
     final hostContext = ScaffoldMessenger.maybeOf(context)?.context;
     try {
-      await workspace.captureToInbox(
-        raw,
-        paletteId: _selectedPaletteId,
-      );
+      await workspace.captureToInbox(raw, paletteId: _selectedPaletteId);
       if (!mounted) return;
       Navigator.of(context).pop(null);
       if (hostContext != null && hostContext.mounted) {
@@ -170,11 +167,12 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
       final firstLine = lines.first.replaceAll(RegExp(r'^#+\s*'), '').trim();
       resolvedTitle = firstLine.isNotEmpty
           ? (firstLine.length > 56
-              ? '${firstLine.substring(0, 56)}…'
-              : firstLine)
+                ? '${firstLine.substring(0, 56)}…'
+                : firstLine)
           : 'Untitled Note';
-      resolvedBody =
-          lines.length > 1 ? lines.sublist(1).join('\n').trimLeft() : raw;
+      resolvedBody = lines.length > 1
+          ? lines.sublist(1).join('\n').trimLeft()
+          : raw;
     }
 
     try {
@@ -214,8 +212,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
       final board = await workspace.createQuickItem(
         title: title,
         type: ItemType.whiteboard,
-        paletteId:
-            _selectedPaletteId == 'amber' ? 'cyan' : _selectedPaletteId,
+        paletteId: _selectedPaletteId == 'amber' ? 'cyan' : _selectedPaletteId,
         folderName: _selectedFolder,
       );
       if (!mounted) return;
@@ -325,7 +322,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               alignment: Alignment.centerLeft,
               child: Semantics(
                 button: true,
-                label: 'Notes and boards file to $_selectedFolder. Tap to clear.',
+                label:
+                    'Notes and boards file to $_selectedFolder. Tap to clear.',
                 child: TactileInkTarget(
                   semanticsLabel:
                       'Notes and boards file to $_selectedFolder. Tap to clear.',
@@ -436,9 +434,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              for (int idx = 0;
-                                  idx < _templates.length;
-                                  idx++) ...[
+                              for (
+                                int idx = 0;
+                                idx < _templates.length;
+                                idx++
+                              ) ...[
                                 if (idx > 0)
                                   const SizedBox(width: AppSpacing.s2),
                                 _buildTemplateCard(
@@ -496,8 +496,8 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                   onPressed: _isSubmitting
                       ? null
                       : (_captureController.text.trim().isEmpty
-                          ? _handleOpenAsNote
-                          : _handleSaveToInbox),
+                            ? _handleOpenAsNote
+                            : _handleSaveToInbox),
                   child: _isSubmitting
                       ? SizedBox(
                           width: 18,
@@ -578,8 +578,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               HapticFeedback.selectionClick();
               setState(() {
                 _selectedTemplateId = tpl.id;
-                _selectedPaletteId =
-                    AppColors.normalizePaletteId(tpl.paletteId);
+                _selectedPaletteId = AppColors.normalizePaletteId(
+                  tpl.paletteId,
+                );
               });
             },
       excludeSemantics: true,
@@ -604,8 +605,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                     HapticFeedback.selectionClick();
                     setState(() {
                       _selectedTemplateId = tpl.id;
-                      _selectedPaletteId =
-                          AppColors.normalizePaletteId(tpl.paletteId);
+                      _selectedPaletteId = AppColors.normalizePaletteId(
+                        tpl.paletteId,
+                      );
                     });
                   },
             child: Padding(
@@ -618,9 +620,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                     children: [
                       Text(
                         tpl.iconEmoji,
-                        style: AppTypography.bodySm(
-                          color: tokens.textPrimary,
-                        ),
+                        style: AppTypography.bodySm(color: tokens.textPrimary),
                       ),
                       const SizedBox(width: AppSpacing.s1),
                       Expanded(
@@ -641,9 +641,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                     tpl.subtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(
-                      color: tokens.textTertiary,
-                    ),
+                    style: AppTypography.caption(color: tokens.textTertiary),
                   ),
                 ],
               ),

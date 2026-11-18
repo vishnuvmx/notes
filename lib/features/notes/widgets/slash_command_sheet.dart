@@ -138,8 +138,7 @@ class SlashCommandsCatalog {
       subtitle: '3-column editable Markdown table',
       icon: TackIcons.table,
       group: SlashCommandGroup.structure,
-      markdownSnippet:
-          '| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Item | Detail | Status |\n',
+      markdownSnippet: '| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Item | Detail | Status |\n',
     ),
     SlashCommandItem(
       id: 'diagram',
@@ -229,12 +228,14 @@ class SlashCommandsCatalog {
 /// Non-intrusive keyboard-docked bar shown automatically when typing `/...` at line start.
 class SlashCommandInlineBar extends StatelessWidget {
   final ActiveSlashTrigger trigger;
+  final String? paletteId;
   final ValueChanged<SlashCommandItem> onSelectCommand;
   final VoidCallback onOpenFullSheet;
 
   const SlashCommandInlineBar({
     super.key,
     required this.trigger,
+    this.paletteId,
     required this.onSelectCommand,
     required this.onOpenFullSheet,
   });
@@ -245,10 +246,22 @@ class SlashCommandInlineBar extends StatelessWidget {
     final matches = SlashCommandsCatalog.filter(trigger.query);
     if (matches.isEmpty) return const SizedBox.shrink();
 
+    final palette = paletteId != null
+        ? AppColors.getPaletteById(paletteId)
+        : null;
+    final chipAccent =
+        palette?.resolveAccentColor(tokens.isDark) ?? tokens.accentPinText;
+    final chipBg =
+        palette?.resolveChipFill(tokens.isDark) ??
+        tokens.accentPin.withValues(alpha: tokens.isDark ? 0.18 : 0.12);
+
     return Container(
-      height: 46,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 3,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: tokens.surfaceElevated,
         borderRadius: AppSpacing.roundedPill,
@@ -257,73 +270,94 @@ class SlashCommandInlineBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          InkWell(
-            onTap: onOpenFullSheet,
-            borderRadius: AppSpacing.roundedPill,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: tokens.accentPin.withValues(
-                  alpha: tokens.isDark ? 0.18 : 0.12,
-                ),
+          Tooltip(
+            message: 'Browse all commands',
+            child: Material(
+              color: chipBg,
+              borderRadius: AppSpacing.roundedPill,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onOpenFullSheet,
                 borderRadius: AppSpacing.roundedPill,
-              ),
-              child: Text(
-                '/${trigger.query}',
-                style: AppTypography.caption(
-                  fontSize: 11.5,
-                  weight: FontWeight.w700,
-                  color: tokens.accentPinText,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 112,
+                    minHeight: 36,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(
+                        '/${trigger.query}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          fontSize: 12,
+                          weight: FontWeight.w700,
+                          color: chipAccent,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: matches.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final cmd = matches[index];
-                return Center(
-                  child: Material(
-                    color: tokens.canvasSunken,
-                    borderRadius: AppSpacing.roundedPill,
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        onSelectCommand(cmd);
-                      },
+            child: SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: matches.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, index) {
+                  final cmd = matches[index];
+                  return Center(
+                    child: Material(
+                      color: tokens.canvasSunken,
                       borderRadius: AppSpacing.roundedPill,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TackIcon(
-                              cmd.icon,
-                              size: 14,
-                              color: tokens.textPrimary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              cmd.label,
-                              style: AppTypography.caption(
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onSelectCommand(cmd);
+                        },
+                        borderRadius: AppSpacing.roundedPill,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TackIcon(
+                                cmd.icon,
+                                size: 14,
                                 color: tokens.textPrimary,
-                                weight: FontWeight.w600,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Text(
+                                cmd.label,
+                                style: AppTypography.caption(
+                                  fontSize: 12,
+                                  color: tokens.textPrimary,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -419,6 +453,8 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
               Expanded(
                 child: Text(
                   _showTurnInto ? 'Transform block' : 'Insert block',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.titleSm(
                     color: tokens.textPrimary,
                     weight: FontWeight.w700,
@@ -426,20 +462,25 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 ),
               ),
               if (_showTurnInto) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s2 + 2,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.canvasSunken,
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Text(
-                    widget.currentBlockKind.label,
-                    style: AppTypography.caption(
-                      color: tokens.textSecondary,
-                      weight: FontWeight.w600,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 132),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s2 + 2,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    child: Text(
+                      widget.currentBlockKind.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: tokens.textSecondary,
+                        weight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -508,10 +549,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 switchOutCurve: Curves.easeInCubic,
                 layoutBuilder: (currentChild, previousChildren) => Stack(
                   alignment: Alignment.topCenter,
-                  children: [
-                    ...previousChildren,
-                    ?currentChild,
-                  ],
+                  children: [...previousChildren, ?currentChild],
                 ),
                 transitionBuilder: (child, animation) {
                   final isInsert = child.key == const ValueKey('sheet_insert');
@@ -522,10 +560,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                   return RepaintBoundary(
                     child: FadeTransition(
                       opacity: animation,
-                      child: SlideTransition(
-                        position: slide,
-                        child: child,
-                      ),
+                      child: SlideTransition(position: slide, child: child),
                     ),
                   );
                 },
@@ -663,7 +698,11 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                     widget.onMoveUp();
                   },
                 ),
-                VerticalDivider(width: 1, thickness: 1, color: tokens.borderSubtle),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: tokens.borderSubtle,
+                ),
                 _ReorderSegmentButton(
                   icon: TackIcons.arrowDown,
                   label: 'Move down',
@@ -672,7 +711,11 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                     widget.onMoveDown();
                   },
                 ),
-                VerticalDivider(width: 1, thickness: 1, color: tokens.borderSubtle),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: tokens.borderSubtle,
+                ),
                 _ReorderSegmentButton(
                   icon: TackIcons.add,
                   label: 'Duplicate',
@@ -786,23 +829,33 @@ class _ModeSegmentPill extends StatelessWidget {
               vertical: AppSpacing.s2,
               horizontal: AppSpacing.s2,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TackIcon(icon, size: 14, color: fg),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(
-                      color: fg,
-                      weight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              style: AppTypography.caption(
+                color: fg,
+                weight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+              child: Builder(
+                builder: (context) {
+                  final syncedFg =
+                      DefaultTextStyle.of(context).style.color ?? fg;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TackIcon(icon, size: 14, color: syncedFg),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -864,11 +917,7 @@ class _GroupedCommandListCard extends StatelessWidget {
           children: [
             for (int i = 0; i < commands.length; i++) ...[
               if (i > 0)
-                Divider(
-                  height: 1,
-                  indent: 52,
-                  color: tokens.borderSubtle,
-                ),
+                Divider(height: 1, indent: 52, color: tokens.borderSubtle),
               _CommandOptionRow(
                 command: commands[i],
                 onTap: () => onSelect(commands[i]),
@@ -885,10 +934,7 @@ class _CommandOptionRow extends StatelessWidget {
   final SlashCommandItem command;
   final VoidCallback onTap;
 
-  const _CommandOptionRow({
-    required this.command,
-    required this.onTap,
-  });
+  const _CommandOptionRow({required this.command, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -897,9 +943,7 @@ class _CommandOptionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.minTouchTarget,
-        ),
+        constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.s3,
@@ -942,9 +986,7 @@ class _CommandOptionRow extends StatelessWidget {
                       command.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTypography.caption(
-                        color: tokens.textTertiary,
-                      ),
+                      style: AppTypography.caption(color: tokens.textTertiary),
                     ),
                   ],
                 ),
@@ -1057,10 +1099,7 @@ class _TransformBlockTile extends StatelessWidget {
         shape: SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedSm,
           smoothness: AppSpacing.defaultSmoothing,
-          side: BorderSide(
-            color: borderColor,
-            width: isSelected ? 1.4 : 1.0,
-          ),
+          side: BorderSide(color: borderColor, width: isSelected ? 1.4 : 1.0),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

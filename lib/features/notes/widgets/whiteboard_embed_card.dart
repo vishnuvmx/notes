@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -52,22 +53,22 @@ class WorkspaceEmbedCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Material(
         color: tokens.surfacePrimary,
-        borderRadius: BorderRadius.circular(14),
+        shape: AppSpacing.smoothBorder(
+          BorderRadius.circular(14),
+          side: BorderSide(
+            color: palette.resolveChipBorder(isDark),
+            width: 1.1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
             HapticFeedback.lightImpact();
             onTap();
           },
           borderRadius: BorderRadius.circular(14),
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: palette.resolveChipBorder(isDark),
-                width: 1.1,
-              ),
-            ),
             child: Row(
               children: [
                 Container(
@@ -123,11 +124,12 @@ class WorkspaceEmbedCard extends StatelessWidget {
     if (link.anchor != null && link.anchor!.isNotEmpty) {
       final needle = link.anchor!.toLowerCase();
       focusedNode = board.nodes.cast<CanvasNode?>().firstWhere(
-            (n) =>
-                n != null &&
-                (n.id.toLowerCase() == needle || n.text.toLowerCase().contains(needle)),
-            orElse: () => null,
-          );
+        (n) =>
+            n != null &&
+            (n.id.toLowerCase() == needle ||
+                n.text.toLowerCase().contains(needle)),
+        orElse: () => null,
+      );
     }
 
     return Container(
@@ -154,7 +156,10 @@ class WorkspaceEmbedCard extends StatelessWidget {
             children: [
               // Header Strip
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: palette.resolveChipFill(isDark),
                   border: Border(
@@ -188,15 +193,19 @@ class WorkspaceEmbedCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.caption(
-                              fontSize: 11.5,
+                              fontSize: 12,
                               color: tokens.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.s2),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: tokens.surfacePrimary,
                         borderRadius: AppSpacing.roundedPill,
@@ -207,7 +216,7 @@ class WorkspaceEmbedCard extends StatelessWidget {
                       child: Text(
                         'Open Board →',
                         style: AppTypography.caption(
-                          fontSize: 11,
+                          fontSize: 12,
                           weight: FontWeight.w700,
                           color: accent,
                         ),
@@ -241,11 +250,13 @@ class WorkspaceEmbedCard extends StatelessWidget {
     bool isDark,
   ) {
     final tokens = context.tokens;
-    final palette = AppColors.getPaletteById(hostPaletteId ?? noteItem.paletteId);
+    final palette = AppColors.getPaletteById(
+      hostPaletteId ?? noteItem.paletteId,
+    );
     final accent = palette.resolveAccentColor(isDark);
-    final rawBody =
-        FrontmatterService.parse(WikiLinkService.contentOfItem(noteItem))
-            .bodyWithoutFrontmatter;
+    final rawBody = FrontmatterService.parse(
+      WikiLinkService.contentOfItem(noteItem),
+    ).bodyWithoutFrontmatter;
     final excerpt = WikiLinkService.extractSectionMarkdown(
       rawBody,
       anchor: link.anchor,
@@ -289,11 +300,19 @@ class WorkspaceEmbedCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            if (noteItem.iconEmoji != null && noteItem.iconEmoji!.isNotEmpty) ...[
-                              Text(noteItem.iconEmoji!, style: const TextStyle(fontSize: 14)),
+                            if (noteItem.iconEmoji != null &&
+                                noteItem.iconEmoji!.isNotEmpty) ...[
+                              Text(
+                                noteItem.iconEmoji!,
+                                style: const TextStyle(fontSize: 14),
+                              ),
                               const SizedBox(width: 6),
                             ] else ...[
-                              TackIcon(TackIcons.notesSvg, size: 15, color: accent),
+                              TackIcon(
+                                TackIcons.notesSvg,
+                                size: 15,
+                                color: accent,
+                              ),
                               const SizedBox(width: 7),
                             ],
                             Expanded(
@@ -309,8 +328,12 @@ class WorkspaceEmbedCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.s2),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: accent.withValues(alpha: 0.14),
                                 borderRadius: AppSpacing.roundedPill,
@@ -318,7 +341,7 @@ class WorkspaceEmbedCard extends StatelessWidget {
                               child: Text(
                                 link.anchor != null ? 'Section ↗' : 'Embed ↗',
                                 style: AppTypography.caption(
-                                  fontSize: 10.5,
+                                  fontSize: 12,
                                   weight: FontWeight.w800,
                                   color: accent,
                                 ),
@@ -328,7 +351,10 @@ class WorkspaceEmbedCard extends StatelessWidget {
                         ),
                         if (lines.isNotEmpty) ...[
                           const SizedBox(height: 9),
-                          ...lines.map((rawLine) => _buildTranscludedLine(rawLine, isDark, accent)),
+                          ...lines.map(
+                            (rawLine) =>
+                                _buildTranscludedLine(rawLine, isDark, accent),
+                          ),
                         ],
                       ],
                     ),
@@ -344,8 +370,12 @@ class WorkspaceEmbedCard extends StatelessWidget {
 
   Widget _buildTranscludedLine(String rawLine, bool isDark, Color accent) {
     final trimmed = rawLine.trim();
-    final primary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final secondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final primary = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.lightTextPrimary;
+    final secondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     // Heading line
     final headingMatch = RegExp(r'^(#{1,4})\s+(.+)$').firstMatch(trimmed);
@@ -368,7 +398,8 @@ class WorkspaceEmbedCard extends StatelessWidget {
     }
 
     // Checklist line
-    final taskMatch = RegExp(r'^(?:[-*]\s+)?\[([ xX])\]\s+(.+)$').firstMatch(trimmed);
+    final taskMatch = RegExp(r'^(?:[-*]\s+)?\[([ xX])\]\s+(.+)$')
+        .firstMatch(trimmed);
     if (taskMatch != null) {
       final done = taskMatch.group(1)!.toLowerCase() == 'x';
       return Padding(
@@ -382,7 +413,11 @@ class WorkspaceEmbedCard extends StatelessWidget {
                 fontFamily: AppTypography.fontFamily,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: done ? AppColors.success : accent,
+                color: done
+                    ? (isDark
+                          ? AppColors.darkStateSuccess
+                          : AppColors.lightStateSuccess)
+                    : accent,
               ),
             ),
             Expanded(
@@ -439,7 +474,9 @@ class WorkspaceEmbedCard extends StatelessWidget {
     }
 
     // Plain / quote line
-    final cleanText = trimmed.startsWith('>') ? trimmed.substring(1).trim() : trimmed;
+    final cleanText = trimmed.startsWith('>')
+        ? trimmed.substring(1).trim()
+        : trimmed;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Text(
@@ -449,7 +486,9 @@ class WorkspaceEmbedCard extends StatelessWidget {
         style: TextStyle(
           fontFamily: AppTypography.fontFamily,
           fontSize: 12.8,
-          fontStyle: trimmed.startsWith('>') ? FontStyle.italic : FontStyle.normal,
+          fontStyle: trimmed.startsWith('>')
+              ? FontStyle.italic
+              : FontStyle.normal,
           height: 1.38,
           color: secondary,
         ),
@@ -516,7 +555,9 @@ class _MiniWhiteboardPreviewPainter extends CustomPainter {
 
     // Draw edges
     final edgePaint = Paint()
-      ..color = isDark ? AppColors.darkTextTertiary : AppColors.lightTextSecondary
+      ..color = isDark
+          ? AppColors.darkTextTertiary
+          : AppColors.lightTextSecondary
       ..strokeWidth = (1.8 / scale).clamp(1.2, 4.0)
       ..style = PaintingStyle.stroke;
 
@@ -534,11 +575,17 @@ class _MiniWhiteboardPreviewPainter extends CustomPainter {
       final rect = Rect.fromLTWH(node.x, node.y, node.width, node.height);
 
       final fillPaint = Paint()
-        ..color = isDark ? palette.darkColor.withValues(alpha: 0.85) : palette.softBackground
+        ..color = isDark
+            ? palette.darkColor.withValues(alpha: 0.85)
+            : palette.softBackground
         ..style = PaintingStyle.fill;
       final strokePaint = Paint()
-        ..color = isFocused ? palette.resolveAccentColor(isDark) : palette.lightColor
-        ..strokeWidth = isFocused ? (3.0 / scale).clamp(2.0, 6.0) : (1.5 / scale).clamp(1.0, 3.0)
+        ..color = isFocused
+            ? palette.resolveAccentColor(isDark)
+            : palette.lightColor
+        ..strokeWidth = isFocused
+            ? (3.0 / scale).clamp(2.0, 6.0)
+            : (1.5 / scale).clamp(1.0, 3.0)
         ..style = PaintingStyle.stroke;
 
       final radius = node.shapeType == CanvasNodeType.startEnd
@@ -557,7 +604,9 @@ class _MiniWhiteboardPreviewPainter extends CustomPainter {
               fontFamily: AppTypography.fontFamily,
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.lightTextPrimary,
             ),
           ),
           maxLines: 1,
@@ -585,4 +634,3 @@ class _MiniWhiteboardPreviewPainter extends CustomPainter {
         oldDelegate.isDark != isDark;
   }
 }
-

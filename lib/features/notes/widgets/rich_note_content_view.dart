@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
+
 import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
+
 import 'package:google_fonts/google_fonts.dart';
+
 import 'code_syntax_highlighter.dart';
 import 'markdown_math_view.dart';
 import 'mermaid/mermaid_diagram_card.dart';
@@ -194,9 +198,6 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       key: _keyForHeading(lineIndex),
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
-      padding: isHighlighted
-          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
-          : EdgeInsets.zero,
       decoration: BoxDecoration(
         color: isHighlighted
             ? palette.resolveSoftBackground(isDark)
@@ -244,18 +245,23 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final parsedFrontmatter = FrontmatterService.parse(content);
     if (parsedFrontmatter.bodyWithoutFrontmatter.trim().isEmpty &&
         !parsedFrontmatter.hasProperties) {
-      return SizedBox(
-        width: double.infinity,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Text(
-            'No content yet. Switch to edit mode to write...',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontStyle: FontStyle.italic,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+      return _wrapLineTap(
+        SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Text(
+              'No content yet. Switch to edit mode to write...',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: isDark
+                    ? AppColors.darkTextMuted
+                    : AppColors.lightTextMuted,
+              ),
             ),
           ),
         ),
+        0,
       );
     }
 
@@ -282,7 +288,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       final trimmed = line.trim();
 
       // 0a. Inline Table of Contents: [TOC] or [[_TOC_]]
-      if (trimmed.toUpperCase() == '[TOC]' || trimmed.toUpperCase() == '[[_TOC_]]') {
+      if (trimmed.toUpperCase() == '[TOC]' ||
+          trimmed.toUpperCase() == '[[_TOC_]]') {
         widgets.add(
           InlineTocCard(
             content: content,
@@ -299,13 +306,22 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       }
 
       // 0b. HTML <details> / <summary> Toggle Block (portable Markdown/HTML)
-      if (RegExp(r'^<details(\s+open)?\s*>', caseSensitive: false).hasMatch(trimmed)) {
-        final defaultOpen = RegExp(r'^<details\s+open', caseSensitive: false).hasMatch(trimmed);
+      if (RegExp(
+        r'^<details(\s+open)?\s*>',
+        caseSensitive: false,
+      ).hasMatch(trimmed)) {
+        final defaultOpen = RegExp(
+          r'^<details\s+open',
+          caseSensitive: false,
+        ).hasMatch(trimmed);
         String summaryTitle = 'Toggle details';
         final bodyLines = <String>[];
         int j = i + 1;
         while (j < lines.length &&
-            !RegExp(r'^</details\s*>', caseSensitive: false).hasMatch(lines[j].trim())) {
+            !RegExp(
+              r'^</details\s*>',
+              caseSensitive: false,
+            ).hasMatch(lines[j].trim())) {
           final lTrim = lines[j].trim();
           final sumMatch = RegExp(
             r'^<summary>(.*?)</summary>$',
@@ -345,7 +361,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         final code = codeLines.join('\n');
         final normalizedLang = lang.toLowerCase();
         final trimmedCode = code.trim().toLowerCase();
-        final isMermaid = normalizedLang == 'mermaid' ||
+        final isMermaid =
+            normalizedLang == 'mermaid' ||
             normalizedLang == 'chart' ||
             normalizedLang == 'graph' ||
             normalizedLang == 'flowchart' ||
@@ -368,14 +385,14 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     trimmedCode.startsWith('mindmap')));
 
         if (isMermaid) {
+          widgets.add(MermaidDiagramCard(rawCode: code, paletteId: paletteId));
+        } else {
           widgets.add(
-            MermaidDiagramCard(
-              rawCode: code,
-              paletteId: paletteId,
+            _wrapLineTap(
+              _buildFencedCodeBlock(context, lang, code, isDark, theme),
+              i,
             ),
           );
-        } else {
-          widgets.add(_wrapLineTap(_buildFencedCodeBlock(context, lang, code, isDark, theme), i));
         }
         i = (j < lines.length) ? j + 1 : j;
         continue;
@@ -402,25 +419,39 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       if (line.contains('|') && (i + 1 < lines.length)) {
         final nextTrimmed = lines[i + 1].trim();
         if (nextTrimmed.contains('|') &&
-            RegExp(r'^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$').hasMatch(nextTrimmed)) {
+            RegExp(r'^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$')
+                .hasMatch(nextTrimmed)) {
           final tableLines = <String>[line, lines[i + 1]];
           int j = i + 2;
-          while (j < lines.length && lines[j].trim().isNotEmpty && lines[j].contains('|')) {
+          while (j < lines.length &&
+              lines[j].trim().isNotEmpty &&
+              lines[j].contains('|')) {
             tableLines.add(lines[j]);
             j++;
           }
-          widgets.add(_wrapLineTap(_buildTable(context, tableLines, i, j, isDark, theme), i));
+          widgets.add(
+            _wrapLineTap(
+              _buildTable(context, tableLines, i, j, isDark, theme),
+              i,
+            ),
+          );
           i = j;
           continue;
         }
       }
 
       // 2b. Standalone Workspace Embed: ![[Whiteboard]] or ![[Note#Section]]
-      final embedLineMatch = RegExp(r'^\s*(!\[\[[^\[\]\n]+\]\])\s*$').firstMatch(line);
+      final embedLineMatch = RegExp(r'^\s*(!\[\[[^\[\]\n]+\]\])\s*$')
+          .firstMatch(line);
       if (embedLineMatch != null) {
-        final parsedEmbed = WikiLinkService.parseToken(embedLineMatch.group(1)!);
+        final parsedEmbed = WikiLinkService.parseToken(
+          embedLineMatch.group(1)!,
+        );
         if (parsedEmbed != null) {
-          final resolved = WikiLinkService.resolveTarget(parsedEmbed.target, workspaceItems);
+          final resolved = WikiLinkService.resolveTarget(
+            parsedEmbed.target,
+            workspaceItems,
+          );
           widgets.add(
             WorkspaceEmbedCard(
               link: parsedEmbed,
@@ -451,17 +482,19 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
 
       // 4. Horizontal Rule: ---, ***, ___ (at least 3 characters)
       if (RegExp(r'^\s*(-{3,}|\*{3,}|_{3,})\s*$').hasMatch(line)) {
-        widgets.add(_wrapLineTap(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Divider(
-              height: 1,
-              thickness: 1.2,
-              color: palette.resolveTableBorder(isDark),
+        widgets.add(
+          _wrapLineTap(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Divider(
+                height: 1,
+                thickness: 1.2,
+                color: palette.resolveTableBorder(isDark),
+              ),
             ),
+            i,
           ),
-          i,
-        ));
+        );
         i++;
         continue;
       }
@@ -474,7 +507,10 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           quoteLines.add(lines[j]);
           j++;
         }
-        final firstStripped = quoteLines.first.trim().replaceFirst(RegExp(r'^>+\s*'), '');
+        final firstStripped = quoteLines.first.trim().replaceFirst(
+          RegExp(r'^>+\s*'),
+          '',
+        );
         if (firstStripped.startsWith('▸')) {
           final toggleTitle = firstStripped.substring(1).trim();
           final innerLines = quoteLines
@@ -493,7 +529,12 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             ),
           );
         } else {
-          widgets.add(_wrapLineTap(_buildBlockquoteOrAlert(context, quoteLines, isDark, theme), i));
+          widgets.add(
+            _wrapLineTap(
+              _buildBlockquoteOrAlert(context, quoteLines, isDark, theme),
+              i,
+            ),
+          );
         }
         i = j;
         continue;
@@ -520,7 +561,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           }
           sectionEnd++;
         }
-        final hasFoldableBody = sectionEnd > i + 1 &&
+        final hasFoldableBody =
+            sectionEnd > i + 1 &&
             lines.sublist(i + 1, sectionEnd).any((l) => l.trim().isNotEmpty);
         final isFolded = _foldedHeadingLines.contains(i);
 
@@ -551,7 +593,12 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           final parsedDefs = _consumeDefinitionList(lines, i);
           widgets.add(
             _wrapLineTap(
-              _buildDefinitionListWidget(context, parsedDefs.groups, isDark, theme),
+              _buildDefinitionListWidget(
+                context,
+                parsedDefs.groups,
+                isDark,
+                theme,
+              ),
               i,
             ),
           );
@@ -566,7 +613,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     }
 
     if (footnoteCollection.localDefinitions.isNotEmpty) {
-      widgets.add(_buildFootnotesSection(context, footnoteCollection, isDark, theme));
+      widgets.add(
+        _buildFootnotesSection(context, footnoteCollection, isDark, theme),
+      );
     }
 
     return _FootnoteScope(
@@ -612,21 +661,32 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    if (isFolded) {
-                      _foldedHeadingLines.remove(lineIndex);
-                    } else {
-                      _foldedHeadingLines.add(lineIndex);
-                    }
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 6, top: 6, bottom: 4),
-                  child: AnimatedRotation(
+              Semantics(
+                button: true,
+                label: isFolded ? 'Expand section' : 'Collapse section',
+                excludeSemantics: true,
+                child: IconButton(
+                  tooltip: isFolded ? 'Expand section' : 'Collapse section',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  style: IconButton.styleFrom(
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                  ),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      if (isFolded) {
+                        _foldedHeadingLines.remove(lineIndex);
+                      } else {
+                        _foldedHeadingLines.add(lineIndex);
+                      }
+                    });
+                  },
+                  icon: AnimatedRotation(
                     turns: isFolded ? -0.25 : 0.0,
                     duration: const Duration(milliseconds: 160),
                     child: TackIcon(
@@ -634,31 +694,41 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       size: 16,
                       color: isFolded
                           ? accent
-                          : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                          : (isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted),
                     ),
                   ),
                 ),
               ),
               Expanded(child: headingChild),
               if (isFolded)
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _foldedHeadingLines.remove(lineIndex));
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 8, top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: isDark ? 0.18 : 0.11),
-                      borderRadius: AppSpacing.roundedPill,
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: TextButton(
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _foldedHeadingLines.remove(lineIndex));
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: accent.withValues(
+                        alpha: isDark ? 0.18 : 0.11,
+                      ),
+                      foregroundColor: accent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      minimumSize: const Size(AppSpacing.minTouchTarget, 30),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                      shape: const StadiumBorder(),
+                      visualDensity: VisualDensity.compact,
                     ),
                     child: Text(
                       '••• $foldedLineCount lines',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
+                      style: AppTypography.caption(
+                        fontSize: 12,
+                        weight: FontWeight.w700,
                         color: accent,
                       ),
                     ),
@@ -686,67 +756,91 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final isOpen = _toggleOpenState[lineIndex] ?? defaultOpen;
     final accent = palette.resolveAccentColor(isDark);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: isOpen ? palette.resolveChipFill(isDark) : tokens.surfacePrimary.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isOpen ? accent.withValues(alpha: 0.42) : palette.resolveChipBorder(isDark),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _toggleOpenState[lineIndex] = !isOpen);
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  AnimatedRotation(
-                    turns: isOpen ? 0.25 : 0.0,
-                    duration: const Duration(milliseconds: 160),
-                    child: TackIcon(
-                      TackIcons.chevronRight,
-                      size: 16,
-                      color: accent,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildRichTextSpans(
-                      title,
-                      isDark,
-                      theme,
-                      context: context,
-                      baseStyle: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.25,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Material(
+        color: isOpen
+            ? palette.resolveChipFill(isDark)
+            : tokens.surfacePrimary.withValues(alpha: 0.85),
+        shape: AppSpacing.smoothBorder(
+          BorderRadius.circular(10),
+          side: BorderSide(
+            color: isOpen
+                ? accent.withValues(alpha: 0.42)
+                : palette.resolveChipBorder(isDark),
           ),
-          if (isOpen && bodyMarkdown.isNotEmpty && widget.transclusionDepth < 2)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 0, 12, 12),
-              child: RichNoteContentView(
-                content: bodyMarkdown,
-                paletteId: paletteId,
-                isInteractive: false,
-                workspaceItems: workspaceItems,
-                onWikiLinkTap: onWikiLinkTap,
-                transclusionDepth: widget.transclusionDepth + 1,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _toggleOpenState[lineIndex] = !isOpen);
+              },
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      AnimatedRotation(
+                        turns: isOpen ? 0.25 : 0.0,
+                        duration: const Duration(milliseconds: 160),
+                        child: TackIcon(
+                          TackIcons.chevronRight,
+                          size: 16,
+                          color: accent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildRichTextSpans(
+                          title,
+                          isDark,
+                          theme,
+                          context: context,
+                          baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.25,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-        ],
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild:
+                  (bodyMarkdown.isNotEmpty && widget.transclusionDepth < 2)
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(30, 0, 12, 12),
+                      child: RichNoteContentView(
+                        content: bodyMarkdown,
+                        paletteId: paletteId,
+                        isInteractive: false,
+                        workspaceItems: workspaceItems,
+                        onWikiLinkTap: onWikiLinkTap,
+                        transclusionDepth: widget.transclusionDepth + 1,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              crossFadeState: isOpen
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: AppSpacing.fastAnim,
+              sizeCurve: Curves.easeOutCubic,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -838,7 +932,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
 
     if (isUnchecked || isChecked) {
       final leadingSpaces = line.indexOf(RegExp(r'\[|\S'));
-      final indent = (leadingSpaces > 0 ? (leadingSpaces / 2).floor() : 0).clamp(0, 5);
+      final indent = (leadingSpaces > 0 ? (leadingSpaces / 2).floor() : 0)
+          .clamp(0, 5);
       final rawTaskText = line
           .replaceAll(RegExp(r'^\s*[-*+]?\s*\[[ xX]\]\s*'), '')
           .replaceAll(RegExp(r'\[[ xX]\]'), '')
@@ -865,103 +960,134 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       final isTaskOverdue = taskMetaPreview.isOverdue();
       final isTaskDueToday = taskMetaPreview.isDueToday();
 
+      final checkFill = palette.resolveBulletColor(isDark);
+      final checkFg = checkFill.computeLuminance() > 0.45
+          ? AppColors.lightTextPrimary
+          : Colors.white;
+
       return Padding(
-        padding: EdgeInsets.only(top: 3, bottom: 3, left: indent * 16.0),
-        child: InkWell(
-          onTap: isInteractive ? () => _toggleCheckbox(lineIndex) : null,
+        padding: EdgeInsets.only(left: indent * 16.0),
+        child: Material(
+          type: MaterialType.transparency,
           borderRadius: AppSpacing.roundedSm,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            child: Row(
-              crossAxisAlignment: (dueLabel != null || repeatLabel != null)
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: (dueLabel != null || repeatLabel != null) ? 2 : 0,
-                  ),
-                  child: AnimatedContainer(
-                    duration: AppSpacing.fastAnim,
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: isChecked
-                          ? palette.resolveBulletColor(isDark)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isChecked
-                            ? palette.resolveBulletColor(isDark)
-                            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        width: 1.8,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: isInteractive ? () => _toggleCheckbox(lineIndex) : null,
+            borderRadius: AppSpacing.roundedSm,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.minTouchTarget,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Row(
+                  crossAxisAlignment: (dueLabel != null || repeatLabel != null)
+                      ? CrossAxisAlignment.start
+                      : CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: (dueLabel != null || repeatLabel != null) ? 2 : 0,
+                      ),
+                      child: AnimatedContainer(
+                        duration: AppSpacing.fastAnim,
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: isChecked ? checkFill : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isChecked
+                                ? checkFill
+                                : (isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.lightBorder),
+                            width: 1.8,
+                          ),
+                        ),
+                        child: isChecked
+                            ? Center(
+                                child: TackIcon(
+                                  TackIcons.check,
+                                  size: 14,
+                                  color: checkFg,
+                                  style: HeroIconStyle.solid,
+                                ),
+                              )
+                            : null,
                       ),
                     ),
-                    child: isChecked
-                        ? const Center(
-                            child: TackIcon(
-                              TackIcons.check,
-                              size: 14,
-                              color: Colors.white,
-                              style: HeroIconStyle.solid,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRichTextSpans(
+                            taskText,
+                            isDark,
+                            theme,
+                            context: context,
+                            baseStyle: theme.textTheme.bodyLarge?.copyWith(
+                              decoration: isChecked
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: isChecked
+                                  ? (isDark
+                                        ? AppColors.darkTextMuted
+                                        : AppColors.lightTextMuted)
+                                  : (isDark
+                                        ? AppColors.darkTextPrimary
+                                        : AppColors.lightTextPrimary),
+                              fontWeight: isChecked
+                                  ? FontWeight.w400
+                                  : FontWeight.w500,
                             ),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildRichTextSpans(
-                        taskText,
-                        isDark,
-                        theme,
-                        context: context,
-                        baseStyle: theme.textTheme.bodyLarge?.copyWith(
-                          decoration: isChecked ? TextDecoration.lineThrough : null,
-                          color: isChecked
-                              ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                          fontWeight: isChecked ? FontWeight.w400 : FontWeight.w500,
-                        ),
-                      ),
-                      if (dueLabel != null || repeatLabel != null) ...[
-                        const SizedBox(height: 5),
-                        Wrap(
-                          spacing: AppSpacing.xs + 2,
-                          runSpacing: 4,
-                          children: [
-                            if (dueLabel != null)
-                              _TaskMetaBadge(
-                                icon: TackIcons.clock,
-                                label: dueLabel,
-                                color: isChecked
-                                    ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-                                    : isTaskOverdue
-                                        ? (isDark ? AppColors.darkStateDanger : AppColors.lightStateDanger)
+                          ),
+                          if (dueLabel != null || repeatLabel != null) ...[
+                            const SizedBox(height: 5),
+                            Wrap(
+                              spacing: AppSpacing.xs + 2,
+                              runSpacing: 4,
+                              children: [
+                                if (dueLabel != null)
+                                  _TaskMetaBadge(
+                                    icon: TackIcons.clock,
+                                    label: dueLabel,
+                                    color: isChecked
+                                        ? (isDark
+                                              ? AppColors.darkTextMuted
+                                              : AppColors.lightTextMuted)
+                                        : isTaskOverdue
+                                        ? (isDark
+                                              ? AppColors.darkStateDanger
+                                              : AppColors.lightStateDanger)
                                         : isTaskDueToday
-                                            ? (isDark ? AppColors.darkStateWarning : AppColors.lightStateWarning)
-                                            : palette.resolveAccentColor(isDark),
-                                isDark: isDark,
-                              ),
-                            if (repeatLabel != null)
-                              _TaskMetaBadge(
-                                icon: TackIcons.refresh,
-                                label: repeatLabel,
-                                color: isChecked
-                                    ? (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)
-                                    : palette.resolveAccentColor(isDark),
-                                isDark: isDark,
-                              ),
+                                        ? (isDark
+                                              ? AppColors.darkStateWarning
+                                              : AppColors.lightStateWarning)
+                                        : palette.resolveAccentColor(isDark),
+                                    isDark: isDark,
+                                  ),
+                                if (repeatLabel != null)
+                                  _TaskMetaBadge(
+                                    icon: TackIcons.refresh,
+                                    label: repeatLabel,
+                                    color: isChecked
+                                        ? (isDark
+                                              ? AppColors.darkTextMuted
+                                              : AppColors.lightTextMuted)
+                                        : palette.resolveAccentColor(isDark),
+                                    isDark: isDark,
+                                  ),
+                              ],
+                            ),
                           ],
-                        ),
-                      ],
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -996,7 +1122,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 ),
               ),
             ),
-            Expanded(child: _buildRichTextSpans(body, isDark, theme, context: context)),
+            Expanded(
+              child: _buildRichTextSpans(body, isDark, theme, context: context),
+            ),
           ],
         ),
       );
@@ -1021,19 +1149,12 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           ),
         );
       } else if (indent % 3 == 2) {
-        bulletWidget = Container(
-          width: 5,
-          height: 5,
-          color: bulletColor,
-        );
+        bulletWidget = Container(width: 5, height: 5, color: bulletColor);
       } else {
         bulletWidget = Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: bulletColor,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: bulletColor, shape: BoxShape.circle),
         );
       }
 
@@ -1046,7 +1167,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               padding: const EdgeInsets.only(top: 7, right: 8),
               child: bulletWidget,
             ),
-            Expanded(child: _buildRichTextSpans(body, isDark, theme, context: context)),
+            Expanded(
+              child: _buildRichTextSpans(body, isDark, theme, context: context),
+            ),
           ],
         ),
       );
@@ -1070,8 +1193,10 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final firstLine = quoteLines.first.trim();
     final strippedFirst = firstLine.replaceFirst(RegExp(r'^>+\s*'), '');
 
-    final alertMatch = RegExp(r'^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$', caseSensitive: false)
-        .firstMatch(strippedFirst);
+    final alertMatch = RegExp(
+      r'^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$',
+      caseSensitive: false,
+    ).firstMatch(strippedFirst);
 
     if (alertMatch != null) {
       final alertType = alertMatch.group(1)!.toUpperCase();
@@ -1165,7 +1290,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                           baseStyle: theme.textTheme.bodyMedium?.copyWith(
                             height: 1.45,
                             fontSize: 14,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
                           ),
                         ),
                       ],
@@ -1194,8 +1321,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final combinedQuote = quoteTexts.join('\n');
 
     return Container(
-      margin: EdgeInsets.only(top: 6, bottom: 6, left: (minDepth > 0 ? (minDepth - 1) * 12.0 : 0.0)),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      margin: EdgeInsets.only(
+        top: 6,
+        bottom: 6,
+        left: (minDepth > 0 ? (minDepth - 1) * 12.0 : 0.0),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: palette.resolveQuoteBg(isDark),
         borderRadius: BorderRadius.circular(8),
@@ -1211,7 +1345,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         baseStyle: theme.textTheme.bodyMedium?.copyWith(
           fontStyle: FontStyle.italic,
           height: 1.45,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          color: isDark
+              ? AppColors.darkTextPrimary
+              : AppColors.lightTextPrimary,
         ),
       ),
     );
@@ -1272,7 +1408,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               color: isDark ? const Color(0xFF1E2129) : const Color(0xFFECF0F6),
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? const Color(0xFF2A2D37) : const Color(0xFFE2E6ED),
+                  color: isDark
+                      ? const Color(0xFF2A2D37)
+                      : const Color(0xFFE2E6ED),
                   width: 1,
                 ),
               ),
@@ -1292,9 +1430,14 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 const SizedBox(width: 12),
                 // Language badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF282C37) : const Color(0xFFDEE3EC),
+                    color: isDark
+                        ? const Color(0xFF282C37)
+                        : const Color(0xFFDEE3EC),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -1319,12 +1462,19 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             children: [
               // Line Numbers Gutter
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF15171C) : const Color(0xFFF1F3F6),
+                  color: isDark
+                      ? const Color(0xFF15171C)
+                      : const Color(0xFFF1F3F6),
                   border: Border(
                     right: BorderSide(
-                      color: isDark ? const Color(0xFF252833) : const Color(0xFFE5E9F0),
+                      color: isDark
+                          ? const Color(0xFF252833)
+                          : const Color(0xFFE5E9F0),
                       width: 1,
                     ),
                   ),
@@ -1340,7 +1490,10 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                   child: SelectableText.rich(
                     TextSpan(
                       children: CodeSyntaxHighlighter.highlight(
@@ -1407,6 +1560,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       rows.add(parseCells(lines[i]));
     }
 
+    final tokens = context.tokens;
     final borderColor = palette.resolveTableBorder(isDark);
     final headerBg = palette.resolveTableHeaderBg(isDark);
     final canVisualEdit = isInteractive && onContentChanged != null;
@@ -1424,7 +1578,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           if (canVisualEdit)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: headerBg.withValues(alpha: 0.65),
                 border: Border(
@@ -1436,23 +1590,23 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                   TackIcon(
                     TackIcons.table,
                     size: 14,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    color: tokens.textSecondary,
                   ),
                   const SizedBox(width: 5),
                   Text(
                     '${rows.length} rows • ${headers.length} cols',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    style: AppTypography.caption(
+                      fontSize: 12,
+                      weight: FontWeight.w600,
+                      color: tokens.textSecondary,
                     ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      final parsedTable = MarkdownTableService.parseTableLines(lines);
+                  TextButton.icon(
+                    onPressed: () {
+                      final parsedTable = MarkdownTableService.parseTableLines(
+                        lines,
+                      );
                       if (parsedTable == null) return;
                       HapticFeedback.lightImpact();
                       MarkdownTableEditorSheet.show(
@@ -1460,44 +1614,41 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                         initialTable: parsedTable,
                         paletteId: paletteId,
                         onSave: (updatedTable) {
-                          final updatedDoc = MarkdownTableService.replaceTableInDocument(
-                            rawDocument: content,
-                            startLine: startLineIndex,
-                            endLineExclusive: endLineExclusive,
-                            updatedTable: updatedTable,
-                          );
+                          final updatedDoc =
+                              MarkdownTableService.replaceTableInDocument(
+                                rawDocument: content,
+                                startLine: startLineIndex,
+                                endLineExclusive: endLineExclusive,
+                                updatedTable: updatedTable,
+                              );
                           onContentChanged?.call(updatedDoc);
                         },
                       );
                     },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurface : Colors.white,
-                        borderRadius: AppSpacing.roundedPill,
-                        border: Border.all(color: borderColor),
+                    icon: TackIcon(
+                      TackIcons.pencil,
+                      size: 13,
+                      color: palette.resolveAccentColor(isDark),
+                    ),
+                    label: Text(
+                      'Edit Table',
+                      style: AppTypography.caption(
+                        fontSize: 12,
+                        weight: FontWeight.w700,
+                        color: tokens.textPrimary,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TackIcon(
-                            TackIcons.pencil,
-                            size: 12,
-                            color: palette.resolveAccentColor(isDark),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Edit Table',
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.lightTextPrimary,
-                            ),
-                          ),
-                        ],
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: tokens.surfaceElevated,
+                      foregroundColor: tokens.textPrimary,
+                      side: BorderSide(color: borderColor),
+                      shape: const StadiumBorder(),
+                      minimumSize: const Size(AppSpacing.minTouchTarget, 32),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
                       ),
                     ),
                   ),
@@ -1517,13 +1668,20 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 TableRow(
                   decoration: BoxDecoration(color: headerBg),
                   children: List.generate(headers.length, (colIdx) {
-                    final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
+                    final align = colIdx < alignments.length
+                        ? alignments[colIdx]
+                        : TextAlign.left;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       child: Align(
                         alignment: align == TextAlign.center
                             ? Alignment.center
-                            : (align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft),
+                            : (align == TextAlign.right
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft),
                         child: _buildRichTextSpans(
                           headers[colIdx],
                           isDark,
@@ -1531,7 +1689,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                           context: context,
                           baseStyle: theme.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
                           ),
                         ),
                       ),
@@ -1542,14 +1702,26 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                   return TableRow(
                     children: List.generate(headers.length, (colIdx) {
                       final text = colIdx < row.length ? row[colIdx] : '';
-                      final align = colIdx < alignments.length ? alignments[colIdx] : TextAlign.left;
+                      final align = colIdx < alignments.length
+                          ? alignments[colIdx]
+                          : TextAlign.left;
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         child: Align(
                           alignment: align == TextAlign.center
                               ? Alignment.center
-                              : (align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft),
-                          child: _buildRichTextSpans(text, isDark, theme, context: context),
+                              : (align == TextAlign.right
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft),
+                          child: _buildRichTextSpans(
+                            text,
+                            isDark,
+                            theme,
+                            context: context,
+                          ),
                         ),
                       );
                     }),
@@ -1570,19 +1742,20 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     bool isDark, {
     required int lineIndex,
   }) {
+    final tokens = context.tokens;
     final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
     final heroTag = 'note_img_block_${lineIndex}_$cleanUrl';
     final imgWidget = _buildResolvedMarkdownImage(
       cleanUrl,
       fit: BoxFit.contain,
-      fallback: _buildImageError(alt, isDark),
+      fallback: _buildImageError(alt, isDark, tokens: tokens),
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
         return Container(
           height: 180,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E2028) : const Color(0xFFF3F4F6),
+            color: tokens.canvasSunken,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const SizedBox(
@@ -1600,52 +1773,61 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _openImageLightbox(context, cleanUrl, alt, heroTag: heroTag);
-            },
-            child: Container(
+          Semantics(
+            button: true,
+            label: alt.trim().isNotEmpty
+                ? 'Inspect image: ${alt.trim()}'
+                : 'Inspect image',
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF2C2F38) : const Color(0xFFE2E6EE),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark ? Colors.black26 : const Color(0x0A191A23),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                border: Border.all(color: tokens.borderSubtle, width: 1.2),
+                boxShadow: AppSpacing.elev1(isDark),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 360, minWidth: 100),
-                    child: Hero(
-                      tag: heroTag,
-                      flightShuttleBuilder: TackRoutes.heroImageShuttle,
-                      child: imgWidget,
-                    ),
+              child: Material(
+                type: MaterialType.transparency,
+                shape: AppSpacing.smoothBorder(BorderRadius.circular(14)),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _openImageLightbox(
+                      context,
+                      cleanUrl,
+                      alt,
+                      heroTag: heroTag,
+                    );
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 360,
+                          minWidth: 100,
+                        ),
+                        child: Hero(
+                          tag: heroTag,
+                          flightShuttleBuilder: TackRoutes.heroImageShuttle,
+                          child: imgWidget,
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkCanvas.withValues(alpha: 0.65),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const TackIcon(
+                          TackIcons.maximize,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                  Container(
-                    margin: const EdgeInsets.all(8),
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const TackIcon(
-                      TackIcons.maximize,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -1659,7 +1841,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                   fontSize: 12.5,
                   fontWeight: FontWeight.w500,
                   fontStyle: FontStyle.italic,
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                  color: tokens.textSecondary,
                 ),
               ),
             ),
@@ -1669,24 +1851,29 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     );
   }
 
-  Widget _buildImageError(String alt, bool isDark) {
+  Widget _buildImageError(String alt, bool isDark, {TackTokens? tokens}) {
+    final bgColor =
+        tokens?.canvasSunken ??
+        (isDark ? AppColors.darkSunken : AppColors.lightSunken);
+    final borderColor =
+        tokens?.borderSubtle ??
+        (isDark ? AppColors.darkBorderSubtle : AppColors.lightBorderSubtle);
+    final fgColor =
+        tokens?.textSecondary ??
+        (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary);
     return Container(
       height: 100,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF1F3F5),
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          TackIcon(
-            TackIcons.imageOff,
-            size: 24,
-            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-          ),
+          TackIcon(TackIcons.imageOff, size: 24, color: fgColor),
           const SizedBox(width: AppSpacing.s2),
           Flexible(
             child: Text(
@@ -1694,7 +1881,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.caption(
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                color: isDark
+                    ? AppColors.darkTextMuted
+                    : AppColors.lightTextMuted,
               ),
             ),
           ),
@@ -1708,15 +1897,18 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
   static final RegExp _footnoteRefRegex = RegExp(r'\[\^([^\[\]\s\n]+)\](?!:)');
   static final RegExp _wikiTokenRegex = RegExp(r'!?\[\[[^\[\]\n]+\]\]');
   static final RegExp _inlineImgRegex = RegExp(r'!\[[^\]\n]*\]\([^)\n]+\)');
-  static final RegExp _bareUrlRegex =
-      RegExp(r'https?:\/\/[^\s<]+[^<.,:;"\)\]\s]');
+  static final RegExp _bareUrlRegex = RegExp(
+    r'https?:\/\/[^\s<]+[^<.,:;"\)\]\s]',
+  );
   static final RegExp _inlineHtmlTagRegex = RegExp(
     r'<(sup|sub|u)>(.*?)<\/\1>',
     caseSensitive: false,
   );
   static final RegExp _hashTokenRegex = RegExp(r'#[a-zA-Z0-9_-]+');
   static final RegExp _wordCharRegex = RegExp(r'[A-Za-z0-9_]');
-  static final RegExp _footnoteDefRegex = RegExp(r'^\s*\[\^([^\[\]\s\n]+)\]:(.*)$');
+  static final RegExp _footnoteDefRegex = RegExp(
+    r'^\s*\[\^([^\[\]\s\n]+)\]:(.*)$',
+  );
   static final RegExp _defLineRegex = RegExp(r'^\s{0,3}:\s+(.+)$');
 
   Widget _buildRichTextSpans(
@@ -1726,11 +1918,14 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     TextStyle? baseStyle,
     BuildContext? context,
   }) {
-    final defaultStyle = baseStyle ??
+    final defaultStyle =
+        baseStyle ??
         theme.textTheme.bodyLarge?.copyWith(
           height: 1.5,
           fontSize: 15,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          color: isDark
+              ? AppColors.darkTextPrimary
+              : AppColors.lightTextPrimary,
           fontFamily: AppTypography.fontFamily,
         );
 
@@ -1746,20 +1941,14 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     if (context != null) {
       return RichText(
         textScaler: MediaQuery.textScalerOf(context),
-        text: TextSpan(
-          style: defaultStyle,
-          children: spans,
-        ),
+        text: TextSpan(style: defaultStyle, children: spans),
       );
     }
 
     return Builder(
       builder: (ctx) => RichText(
         textScaler: MediaQuery.textScalerOf(ctx),
-        text: TextSpan(
-          style: defaultStyle,
-          children: spans,
-        ),
+        text: TextSpan(style: defaultStyle, children: spans),
       ),
     );
   }
@@ -1794,12 +1983,11 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       // 1. Inline code: `code` (atomic leaf, inherits emphasis/decoration from enclosing spans)
       if (codeUnit == 96) {
         final closeIdx = text.indexOf('`', i + 1);
-        if (closeIdx > i + 1 && !text.substring(i + 1, closeIdx).contains('\n')) {
+        if (closeIdx > i + 1 &&
+            !text.substring(i + 1, closeIdx).contains('\n')) {
           flushBuffer();
           final codeText = text.substring(i + 1, closeIdx);
-          spans.add(
-            _buildInlineCodeSpan(codeText, isDark, currentStyle),
-          );
+          spans.add(_buildInlineCodeSpan(codeText, isDark, currentStyle));
           i = closeIdx + 1;
           continue;
         }
@@ -1826,11 +2014,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         if (imgMatch != null) {
           flushBuffer();
           spans.add(
-            _buildInlineImageSpan(
-              imgMatch.group(0)!,
-              isDark,
-              context: context,
-            ),
+            _buildInlineImageSpan(imgMatch.group(0)!, isDark, context: context),
           );
           i = imgMatch.end;
           continue;
@@ -1841,7 +2025,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       if (text.startsWith('[^', i)) {
         final fnMatch = _footnoteRefRegex.matchAsPrefix(text, i);
         if (fnMatch != null &&
-            (fnMatch.end >= text.length || text.codeUnitAt(fnMatch.end) != 40)) {
+            (fnMatch.end >= text.length ||
+                text.codeUnitAt(fnMatch.end) != 40)) {
           final id = fnMatch.group(1)!;
           final entry = _footnoteCollection.byId[id];
           if (entry != null) {
@@ -1954,8 +2139,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                 expression: mathMatch.expression,
                 rawSource: mathMatch.rawSource,
                 baseStyle: currentStyle,
-                mathStyle:
-                    mathMatch.isDisplay ? MathStyle.display : MathStyle.text,
+                mathStyle: mathMatch.isDisplay
+                    ? MathStyle.display
+                    : MathStyle.text,
               ),
             ),
           );
@@ -1980,10 +2166,16 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               displayText = innerText.substring(colonIdx + 1);
               highlightBg = AppColors.getHighlightColor(prefix, isDark: isDark);
             } else {
-              highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
+              highlightBg = AppColors.getHighlightColor(
+                paletteId,
+                isDark: isDark,
+              );
             }
           } else {
-            highlightBg = AppColors.getHighlightColor(paletteId, isDark: isDark);
+            highlightBg = AppColors.getHighlightColor(
+              paletteId,
+              isDark: isDark,
+            );
           }
 
           final nextStyle = _mergeTextStyle(
@@ -2303,8 +2495,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           mergedDecoration,
         addDecoration,
       ];
-      mergedDecoration =
-          list.length == 1 ? list.first : TextDecoration.combine(list);
+      mergedDecoration = list.length == 1
+          ? list.first
+          : TextDecoration.combine(list);
     }
 
     return base.copyWith(
@@ -2338,7 +2531,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       if (ch == 10 || ch == 13) return null;
       if (ch == 96) {
         final closeTick = text.indexOf('`', k + 1);
-        if (closeTick != -1 && !text.substring(k + 1, closeTick).contains('\n')) {
+        if (closeTick != -1 &&
+            !text.substring(k + 1, closeTick).contains('\n')) {
           k = closeTick + 1;
           continue;
         }
@@ -2382,7 +2576,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       // Never match closing marker inside inline `code`
       if (ch == 96) {
         final closeTick = text.indexOf('`', j + 1);
-        if (closeTick != -1 && !text.substring(j + 1, closeTick).contains('\n')) {
+        if (closeTick != -1 &&
+            !text.substring(j + 1, closeTick).contains('\n')) {
           j = closeTick + 1;
           continue;
         }
@@ -2405,7 +2600,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             (allowNestedMarker == '__' && text.startsWith('___', j));
         if (!isTripleEdge) {
           final innerClose = text.indexOf(allowNestedMarker, j + nl);
-          if (innerClose != -1 && !text.substring(j + nl, innerClose).contains('\n')) {
+          if (innerClose != -1 &&
+              !text.substring(j + nl, innerClose).contains('\n')) {
             j = innerClose + nl;
             continue;
           }
@@ -2425,7 +2621,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         continue;
       }
 
-      if (text.startsWith(marker, j) && j > start && !_isWhitespace(text, j - 1)) {
+      if (text.startsWith(marker, j) &&
+          j > start &&
+          !_isWhitespace(text, j - 1)) {
         if (allowNestedSingleStar &&
             marker == '**' &&
             openSingleStar &&
@@ -2547,7 +2745,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Material(
-            color: Colors.transparent,
+            color: accent.withValues(alpha: isDark ? 0.22 : 0.14),
+            shape: AppSpacing.smoothBorder(
+              AppSpacing.roundedXs,
+              side: BorderSide(
+                color: accent.withValues(alpha: 0.48),
+                width: 0.8,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: context == null
                   ? null
@@ -2556,16 +2762,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                       _showFootnoteSheet(context, entry, isDark, theme);
                     },
               customBorder: AppSpacing.smoothBorder(AppSpacing.roundedXs),
-              child: Container(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: AppSpacing.smoothDecoration(
-                  color: accent.withValues(alpha: isDark ? 0.22 : 0.14),
-                  borderRadius: AppSpacing.roundedXs,
-                  side: BorderSide(
-                    color: accent.withValues(alpha: 0.48),
-                    width: 0.8,
-                  ),
-                ),
                 child: Text(
                   '${entry.number}',
                   style: TextStyle(
@@ -2589,11 +2787,20 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     bool isDark,
     TextStyle? currentStyle,
   ) {
-    final targetItem =
-        WikiLinkService.resolveTarget(parsedLink.target, workspaceItems);
+    final targetItem = WikiLinkService.resolveTarget(
+      parsedLink.target,
+      workspaceItems,
+    );
     final isBoard = targetItem is WhiteboardCanvasItem;
     final exists = targetItem != null;
     final linkAccent = palette.resolveAccentColor(isDark);
+    final chipShape = AppSpacing.smoothBorder(
+      BorderRadius.circular(7),
+      side: BorderSide(
+        color: palette.resolveChipBorder(isDark),
+        width: exists ? 0.75 : 0.9,
+      ),
+    );
 
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
@@ -2603,34 +2810,25 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           color: exists
               ? palette.resolveChipFill(isDark)
               : palette.resolveInlineCodeBg(isDark),
-          borderRadius: BorderRadius.circular(7),
+          shape: chipShape,
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () {
               HapticFeedback.selectionClick();
               onWikiLinkTap?.call(parsedLink);
             },
-            borderRadius: BorderRadius.circular(7),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: exists
-                    ? Border.all(
-                        color: palette.resolveChipBorder(isDark),
-                        width: 0.75,
-                      )
-                    : Border.all(
-                        color: palette.resolveChipBorder(isDark),
-                        width: 0.9,
-                      ),
-              ),
+            customBorder: chipShape,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TackIcon(
                     !exists
                         ? TackIcons.plus
-                        : (isBoard ? TackIcons.whiteboardSvg : TackIcons.notesSvg),
+                        : (isBoard
+                              ? TackIcons.whiteboardSvg
+                              : TackIcons.notesSvg),
                     size: 11.5,
                     color: linkAccent,
                   ),
@@ -2707,59 +2905,63 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           ? FontWeight.w800
           : FontWeight.w600,
       addDecoration: TextDecoration.underline,
-    )?.copyWith(
-      color: accent,
-      decorationColor: accent,
-    );
+    )?.copyWith(color: accent, decorationColor: accent);
 
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
-      child: InkWell(
-        onTap: () {
-          if (context != null) {
-            UrlLauncherHelper.openUrl(context, url);
-          }
-        },
-        onLongPress: () {
-          Clipboard.setData(ClipboardData(text: url));
-          HapticFeedback.lightImpact();
-          if (context != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Link copied: $url'),
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
+      child: Material(
+        type: MaterialType.transparency,
         borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RichText(
-                textScaler: TextScaler.noScaling,
-                text: TextSpan(
-                  style: linkLabelStyle,
-                  children: _parseInlineSpans(
-                    label,
-                    isDark,
-                    theme,
-                    linkLabelStyle,
-                    context: context,
-                    depth: depth,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            if (context != null) {
+              UrlLauncherHelper.openUrl(context, url);
+            }
+          },
+          onLongPress: () {
+            Clipboard.setData(ClipboardData(text: url));
+            HapticFeedback.lightImpact();
+            if (context != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Link copied: $url'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: RichText(
+                    textScaler: context != null
+                        ? MediaQuery.textScalerOf(context)
+                        : TextScaler.noScaling,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      style: linkLabelStyle,
+                      children: _parseInlineSpans(
+                        label,
+                        isDark,
+                        theme,
+                        linkLabelStyle,
+                        context: context,
+                        depth: depth,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 3),
-              TackIcon(
-                TackIcons.link,
-                size: 11,
-                color: accent,
-              ),
-            ],
+                const SizedBox(width: 3),
+                TackIcon(TackIcons.link, size: 11, color: accent),
+              ],
+            ),
           ),
         ),
       ),
@@ -2775,52 +2977,53 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
     final accent = palette.resolveAccentColor(isDark);
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
-      child: InkWell(
-        onTap: () {
-          if (context != null) {
-            UrlLauncherHelper.openUrl(context, url);
-          }
-        },
-        onLongPress: () {
-          Clipboard.setData(ClipboardData(text: url));
-          HapticFeedback.lightImpact();
-          if (context != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Link copied: $url'),
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
+      child: Material(
+        type: MaterialType.transparency,
         borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  url,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
-                    decorationColor: accent,
-                    fontSize: currentStyle?.fontSize,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            if (context != null) {
+              UrlLauncherHelper.openUrl(context, url);
+            }
+          },
+          onLongPress: () {
+            Clipboard.setData(ClipboardData(text: url));
+            HapticFeedback.lightImpact();
+            if (context != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Link copied: $url'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    url,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                      decorationColor: accent,
+                      fontSize: currentStyle?.fontSize,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 3),
-              TackIcon(
-                TackIcons.link,
-                size: 11,
-                color: accent,
-              ),
-            ],
+                const SizedBox(width: 3),
+                TackIcon(TackIcons.link, size: 11, color: accent),
+              ],
+            ),
           ),
         ),
       ),
@@ -2830,13 +3033,19 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
   WidgetSpan _buildHashTokenSpan(String matched, bool isDark) {
     final hexColor = AppColors.tryParseHexColor(matched);
     if (hexColor != null) {
+      final pillTint = hexColor.withValues(alpha: 0.5);
+      final canvasBg = isDark ? AppColors.darkCanvas : AppColors.lightCanvas;
+      final effectiveBg = Color.alphaBlend(pillTint, canvasBg);
+      final fgColor = effectiveBg.computeLuminance() > 0.45
+          ? AppColors.lightTextPrimary
+          : Colors.white;
       return WidgetSpan(
         alignment: PlaceholderAlignment.middle,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
           decoration: BoxDecoration(
-            color: hexColor.withValues(alpha: 0.5),
+            color: pillTint,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: hexColor.withValues(alpha: 0.8),
@@ -2853,8 +3062,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                   color: hexColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (isDark ? Colors.white : Colors.black)
-                        .withValues(alpha: 0.25),
+                    color: (isDark ? Colors.white : Colors.black).withValues(
+                      alpha: 0.25,
+                    ),
                     width: 0.8,
                   ),
                 ),
@@ -2863,9 +3073,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               Text(
                 matched,
                 style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF18191F),
+                  color: fgColor,
                 ),
               ),
             ],
@@ -2880,7 +3090,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
         decoration: BoxDecoration(
-          color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.14 : 0.08),
+          color: palette
+              .resolveAccentColor(isDark)
+              .withValues(alpha: isDark ? 0.14 : 0.08),
           borderRadius: AppSpacing.roundedXs,
         ),
         child: Text(
@@ -2928,7 +3140,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
           while (k < lines.length) {
             final next = lines[k];
             final nextTrim = next.trim();
-            if (nextTrim.startsWith('```') || _footnoteDefRegex.hasMatch(next)) {
+            if (nextTrim.startsWith('```') ||
+                _footnoteDefRegex.hasMatch(next)) {
               break;
             }
             if (next.startsWith('  ') || next.startsWith('\t')) {
@@ -2939,7 +3152,8 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             }
             if (nextTrim.isEmpty &&
                 k + 1 < lines.length &&
-                (lines[k + 1].startsWith('  ') || lines[k + 1].startsWith('\t'))) {
+                (lines[k + 1].startsWith('  ') ||
+                    lines[k + 1].startsWith('\t'))) {
               defLineIndices.add(k);
               k++;
               continue;
@@ -3254,7 +3468,11 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            for (int idx = 0; idx < collection.localDefinitions.length; idx++) ...[
+            for (
+              int idx = 0;
+              idx < collection.localDefinitions.length;
+              idx++
+            ) ...[
               if (idx > 0) const SizedBox(height: 8),
               _wrapLineTap(
                 Row(
@@ -3394,10 +3612,7 @@ class _CopyCodeButton extends StatefulWidget {
   final String code;
   final bool isDark;
 
-  const _CopyCodeButton({
-    required this.code,
-    required this.isDark,
-  });
+  const _CopyCodeButton({required this.code, required this.isDark});
 
   @override
   State<_CopyCodeButton> createState() => _CopyCodeButtonState();
@@ -3417,33 +3632,35 @@ class _CopyCodeButtonState extends State<_CopyCodeButton> {
 
   @override
   Widget build(BuildContext context) {
-    final fg = widget.isDark ? const Color(0xFFABB2BF) : const Color(0xFF5C6370);
-    final activeFg = widget.isDark ? const Color(0xFF98C379) : const Color(0xFF439446);
+    final fg = widget.isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
+    final activeFg = widget.isDark
+        ? AppColors.darkStateSuccess
+        : AppColors.lightStateSuccess;
 
-    return InkWell(
-      onTap: _onCopy,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TackIcon(
-              _copied ? TackIcons.check : TackIcons.copy,
-              size: 13,
-              color: _copied ? activeFg : fg,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              _copied ? 'Copied!' : 'Copy',
-              style: AppTypography.caption(
-                fontSize: 11,
-                weight: FontWeight.w600,
-                color: _copied ? activeFg : fg,
-              ),
-            ),
-          ],
+    return TextButton.icon(
+      onPressed: _onCopy,
+      icon: TackIcon(
+        _copied ? TackIcons.check : TackIcons.copy,
+        size: 13,
+        color: _copied ? activeFg : fg,
+      ),
+      label: Text(
+        _copied ? 'Copied!' : 'Copy',
+        style: AppTypography.caption(
+          fontSize: 12,
+          weight: FontWeight.w600,
+          color: _copied ? activeFg : fg,
         ),
+      ),
+      style: TextButton.styleFrom(
+        foregroundColor: _copied ? activeFg : fg,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: const Size(AppSpacing.minTouchTarget, 32),
+        tapTargetSize: MaterialTapTargetSize.padded,
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
     );
   }
@@ -3467,11 +3684,8 @@ void _openImageLightbox(
         fadeReverseCurve: Curves.easeInCubic,
         child: child,
       ),
-      pageBuilder: (ctx, _, _) => _ImageLightboxViewer(
-        url: url,
-        alt: alt,
-        heroTag: heroTag,
-      ),
+      pageBuilder: (ctx, _, _) =>
+          _ImageLightboxViewer(url: url, alt: alt, heroTag: heroTag),
     ),
   );
 }
@@ -3533,14 +3747,18 @@ class _ImageLightboxViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cleanUrl = url.trim().replaceFirst(RegExp(r'^file://'), '');
-    final isNetwork = cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
+    final isNetwork =
+        cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://');
     final imageWidget = _buildResolvedMarkdownImage(
       cleanUrl,
       fit: BoxFit.contain,
       loadingBuilder: (_, child, progress) {
         if (progress == null) return child;
         return const Center(
-          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: Colors.white,
+          ),
         );
       },
       fallback: const TackIcon(
@@ -3580,7 +3798,11 @@ class _ImageLightboxViewer extends StatelessWidget {
                 children: [
                   // Close button
                   IconButton(
-                    icon: const TackIcon(TackIcons.close, color: Colors.white, size: 24),
+                    icon: const TackIcon(
+                      TackIcons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.black45,
                       shape: const CircleBorder(),
@@ -3615,7 +3837,8 @@ class _ImageLightboxViewer extends StatelessWidget {
                         backgroundColor: Colors.black45,
                         shape: const CircleBorder(),
                       ),
-                      onPressed: () => UrlLauncherHelper.openUrl(context, cleanUrl),
+                      onPressed: () =>
+                          UrlLauncherHelper.openUrl(context, cleanUrl),
                     ),
                 ],
               ),
@@ -3653,18 +3876,15 @@ class _FootnoteCollection {
   });
 
   const _FootnoteCollection.empty()
-      : byId = const {},
-        localDefinitions = const [],
-        definitionLineIndices = const {};
+    : byId = const {},
+      localDefinitions = const [],
+      definitionLineIndices = const {};
 }
 
 class _FootnoteScope extends InheritedWidget {
   final _FootnoteCollection collection;
 
-  const _FootnoteScope({
-    required this.collection,
-    required super.child,
-  });
+  const _FootnoteScope({required this.collection, required super.child});
 
   static _FootnoteCollection? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_FootnoteScope>()?.collection;
@@ -3678,20 +3898,14 @@ class _DefinitionGroup {
   final String term;
   final List<String> definitions;
 
-  const _DefinitionGroup({
-    required this.term,
-    required this.definitions,
-  });
+  const _DefinitionGroup({required this.term, required this.definitions});
 }
 
 class _ParsedDefinitionList {
   final List<_DefinitionGroup> groups;
   final int nextIndex;
 
-  const _ParsedDefinitionList({
-    required this.groups,
-    required this.nextIndex,
-  });
+  const _ParsedDefinitionList({required this.groups, required this.nextIndex});
 }
 
 class _TaskMetaBadge extends StatelessWidget {
@@ -3737,4 +3951,3 @@ class _TaskMetaBadge extends StatelessWidget {
     );
   }
 }
-

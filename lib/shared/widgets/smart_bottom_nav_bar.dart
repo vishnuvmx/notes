@@ -36,7 +36,9 @@ class SmartBottomNavBar extends StatelessWidget {
       (icon: TackIcons.search, label: 'Search', index: 4, badge: 0),
     ];
 
-    final matchedSlot = navItems.indexWhere((item) => item.index == currentIndex);
+    final matchedSlot = navItems.indexWhere(
+      (item) => item.index == currentIndex,
+    );
     final selectedSlot = matchedSlot >= 0 ? matchedSlot : 0;
     final hasValidSelection = matchedSlot >= 0;
 
@@ -101,14 +103,11 @@ class SmartBottomNavBar extends StatelessWidget {
         : tokens.textSecondary.withValues(alpha: 0.62);
     const iconAnimDuration = AppSpacing.normalAnim;
     const iconAnimCurve = AppSpacing.smoothCurve;
-    final semanticLabel = item.badge > 0
-        ? '${item.label}, ${item.badge} items'
-        : item.label;
-
     return Semantics(
       button: true,
       selected: isSelected,
-      label: semanticLabel,
+      label: item.label,
+      value: item.badge > 0 ? '${item.badge} items' : null,
       onTap: () {
         HapticFeedback.selectionClick();
         onTap(item.index);

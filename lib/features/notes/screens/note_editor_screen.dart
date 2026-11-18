@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -27,6 +29,7 @@ import '../../../shared/widgets/color_swatch_picker.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/app_floating_dialog.dart';
 import '../../../shared/widgets/permission_rationale_dialog.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 import '../widgets/document_outline_sheet.dart';
 import '../../../shared/widgets/ios_menu_button.dart';
 import '../widgets/note_statistics_sheet.dart';
@@ -86,6 +89,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   final bool _autoSaveEnabled = true;
   bool _isNotificationPinned = false;
   Timer? _saveDebounce;
+  Timer? _scrollRestoreTimer;
 
   int? _dismissedWikiTriggerOffset;
 
@@ -100,8 +104,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final initialContent = widget.item is TextNote
         ? (widget.item as TextNote).content
         : (widget.item is StickyNote
-            ? (widget.item as StickyNote).content
-            : (widget.item is ClipboardItem ? (widget.item as ClipboardItem).clipText : ''));
+              ? (widget.item as StickyNote).content
+              : (widget.item is ClipboardItem
+                    ? (widget.item as ClipboardItem).clipText
+                    : ''));
     _paletteId = widget.item.paletteId;
     _contentController = MarkdownTextEditingController(
       text: initialContent,
@@ -110,7 +116,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     _startedAsBlankDraft =
         widget.startInEditMode && initialContent.trim().isEmpty;
     _isEditingMode = widget.startInEditMode;
-    _tags = widget.item is TextNote ? List.from((widget.item as TextNote).tags) : [];
+    _tags = widget.item is TextNote
+        ? List.from((widget.item as TextNote).tags)
+        : [];
     _folderName = widget.item.folderName;
     _parentId = widget.item.parentId;
     _iconEmoji = widget.item.iconEmoji;
@@ -122,7 +130,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         _savedScrollOffset = _scrollController.offset;
         final maxScroll = _scrollController.position.maxScrollExtent;
         if (maxScroll > 0) {
-          _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(0.0, 1.0);
+          _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(
+            0.0,
+            1.0,
+          );
         }
       }
     });
@@ -212,7 +223,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   bool get _isUntouchedEmptyDraft {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
-    final isDefaultTitle = title.isEmpty ||
+    final isDefaultTitle =
+        title.isEmpty ||
         title == 'Untitled Note' ||
         title == 'Untitled' ||
         title == 'Quick Sticky';
@@ -243,6 +255,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scrollRestoreTimer?.cancel();
     if (_saveDebounce?.isActive ?? false) {
       _saveDebounce?.cancel();
       _flushSave();
@@ -260,7 +273,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       _savedScrollOffset = _scrollController.offset;
       final maxScroll = _scrollController.position.maxScrollExtent;
       if (maxScroll > 0) {
-        _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(0.0, 1.0);
+        _savedScrollRatio = (_scrollController.offset / maxScroll).clamp(
+          0.0,
+          1.0,
+        );
       }
     }
 
@@ -277,44 +293,48 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           offset: charOffset.clamp(0, _contentController.text.length),
         );
       } else if (_savedScrollRatio > 0 && _contentController.text.isNotEmpty) {
-        final approxOffset = (_savedScrollRatio * _contentController.text.length).floor();
+        final approxOffset =
+            (_savedScrollRatio * _contentController.text.length).floor();
         _contentController.selection = TextSelection.collapsed(
           offset: approxOffset.clamp(0, _contentController.text.length),
         );
       }
 
       setState(() => _isEditingMode = true);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final maxScroll = _scrollController.position.maxScrollExtent;
-          if (maxScroll > 0 && _savedScrollRatio > 0) {
-            final targetOffset = (_savedScrollRatio * maxScroll).clamp(0.0, maxScroll);
-            _scrollController.jumpTo(targetOffset);
-          } else if (_savedScrollOffset <= maxScroll) {
-            _scrollController.jumpTo(_savedScrollOffset);
-          }
-        }
-        _contentFocusNode.requestFocus();
-      });
+      _scheduleScrollRestore(requestFocus: true);
     } else {
       _saveDebounce?.cancel();
       _flushSave();
       FocusScope.of(context).unfocus();
       setState(() => _isEditingMode = false);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final maxScroll = _scrollController.position.maxScrollExtent;
-          if (maxScroll > 0 && _savedScrollRatio > 0) {
-            final targetOffset = (_savedScrollRatio * maxScroll).clamp(0.0, maxScroll);
-            _scrollController.jumpTo(targetOffset);
-          } else if (_savedScrollOffset <= maxScroll) {
-            _scrollController.jumpTo(_savedScrollOffset);
-          }
-        }
-      });
+      _scheduleScrollRestore(requestFocus: false);
     }
+  }
+
+  void _scheduleScrollRestore({required bool requestFocus}) {
+    _scrollRestoreTimer?.cancel();
+    void applyJump() {
+      if (!mounted || !_scrollController.hasClients) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll > 0 && _savedScrollRatio > 0) {
+        final targetOffset = (_savedScrollRatio * maxScroll).clamp(
+          0.0,
+          maxScroll,
+        );
+        _scrollController.jumpTo(targetOffset);
+      } else if (_savedScrollOffset <= maxScroll) {
+        _scrollController.jumpTo(_savedScrollOffset);
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      applyJump();
+      if (requestFocus && mounted) {
+        _contentFocusNode.requestFocus();
+      }
+    });
+    // Re-sync after the AnimatedSwitcher finishes transitioning heights.
+    _scrollRestoreTimer = Timer(const Duration(milliseconds: 175), applyJump);
   }
 
   void _handleBackPress() {
@@ -363,9 +383,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     }
 
     if (_scrollController.hasClients) {
-      final ratio = text.isEmpty
-          ? 0.0
-          : (offset / text.length).clamp(0.0, 1.0);
+      final ratio = text.isEmpty ? 0.0 : (offset / text.length).clamp(0.0, 1.0);
       final target = ratio * _scrollController.position.maxScrollExtent;
       _scrollController.animateTo(
         target,
@@ -380,13 +398,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (_isEditingMode && _contentController.selection.isValid) {
       final before = _contentController.text.substring(
         0,
-        _contentController.selection.baseOffset.clamp(0, _contentController.text.length),
+        _contentController.selection.baseOffset.clamp(
+          0,
+          _contentController.text.length,
+        ),
       );
       currentLine = '\n'.allMatches(before).length;
     } else if (_scrollController.hasClients &&
         _scrollController.position.maxScrollExtent > 0) {
       final ratio =
-          (_scrollController.offset / _scrollController.position.maxScrollExtent)
+          (_scrollController.offset /
+                  _scrollController.position.maxScrollExtent)
               .clamp(0.0, 1.0);
       final totalLines = _contentController.text.split('\n').length;
       currentLine = (ratio * totalLines).round();
@@ -408,8 +430,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (!sel.isValid) return false;
     final cursor = sel.baseOffset.clamp(0, text.length);
     final textBefore = text.substring(0, cursor);
-    final openMatches = RegExp(r'```(?:mermaid|graph|flowchart|pie|sequence|timeline)').allMatches(textBefore).length;
-    final closeMatches = RegExp(r'```').allMatches(textBefore).length - openMatches;
+    final openMatches = RegExp(
+      r'```(?:mermaid|graph|flowchart|pie|sequence|timeline)',
+    ).allMatches(textBefore).length;
+    final closeMatches =
+        RegExp(r'```').allMatches(textBefore).length - openMatches;
     return openMatches > closeMatches;
   }
 
@@ -472,9 +497,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   void _showEmojiPickerSheet() {
     final tokens = context.tokens;
     final isDark = tokens.isDark;
+    final palette = AppColors.getPaletteById(_paletteId);
+    final accent = palette.resolveAccentColor(isDark);
     const emojis = [
-      '📝', '📐', '🎨', '⚖️', '🚀', '💡', '🧠', '☀️',
-      '🔥', '✅', '📌', '🗂️', '🧪', '🛠️', '🌟', '🔒',
+      '📝',
+      '📐',
+      '🎨',
+      '⚖️',
+      '🚀',
+      '💡',
+      '🧠',
+      '☀️',
+      '🔥',
+      '✅',
+      '📌',
+      '🗂️',
+      '🧪',
+      '🛠️',
+      '🌟',
+      '🔒',
     ];
     AppBottomSheet.show(
       context: context,
@@ -530,32 +571,33 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 return Semantics(
                   button: true,
                   selected: selected,
+                  excludeSemantics: true,
                   label: 'Use $e icon',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _iconEmoji = e);
-                      _saveNote();
-                      Navigator.of(ctx).pop();
-                    },
-                    child: Container(
-                      width: AppSpacing.minTouchTarget,
-                      height: AppSpacing.minTouchTarget,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.pastelLimeLight
-                            : (isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: selected
-                              ? AppColors.lightTextPrimary
-                              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                          width: selected ? 1.6 : 1.0,
-                        ),
+                  child: Material(
+                    color: selected
+                        ? palette.resolveChipFill(isDark)
+                        : tokens.canvasSunken,
+                    shape: AppSpacing.smoothSm(
+                      side: BorderSide(
+                        color: selected ? accent : tokens.borderSubtle,
+                        width: selected ? 1.6 : 1.0,
                       ),
-                      child: Center(
-                        child: Text(e, style: const TextStyle(fontSize: 22)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      customBorder: AppSpacing.smoothSm(),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _iconEmoji = e);
+                        _saveNote();
+                        Navigator.of(ctx).pop();
+                      },
+                      child: SizedBox(
+                        width: AppSpacing.minTouchTarget,
+                        height: AppSpacing.minTouchTarget,
+                        child: Center(
+                          child: Text(e, style: const TextStyle(fontSize: 22)),
+                        ),
                       ),
                     ),
                   ),
@@ -581,9 +623,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Move Note to Folder',
-                  style: AppTypography.titleSm(weight: FontWeight.w800),
+                Expanded(
+                  child: Text(
+                    'Move Note to Folder',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.titleSm(weight: FontWeight.w800),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -615,7 +661,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 trailing: _folderName == f
                     ? const TackIcon(TackIcons.check, size: 16)
                     : null,
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppSpacing.roundedMd,
+                ),
                 onTap: () => Navigator.of(ctx).pop(f),
               ),
             ),
@@ -642,9 +690,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       iconEmoji: '📄',
     );
     if (!mounted) return;
-    await Navigator.of(context).push(
-      TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: child)),
-    );
+    await Navigator.of(context)
+        .push(TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: child)));
     if (mounted) setState(() {});
   }
 
@@ -720,13 +767,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         }
         break;
       case 'h1':
-        final prefixH1 = (before.isEmpty || before.endsWith('\n')) ? '# ' : '\n# ';
+        final prefixH1 = (before.isEmpty || before.endsWith('\n'))
+            ? '# '
+            : '\n# ';
         newText = '$before$prefixH1$selectedText$after';
         newCursorStart = before.length + prefixH1.length + selectedText.length;
         newCursorEnd = newCursorStart;
         break;
       case 'h2':
-        final prefixH2 = (before.isEmpty || before.endsWith('\n')) ? '## ' : '\n## ';
+        final prefixH2 = (before.isEmpty || before.endsWith('\n'))
+            ? '## '
+            : '\n## ';
         newText = '$before$prefixH2$selectedText$after';
         newCursorStart = before.length + prefixH2.length + selectedText.length;
         newCursorEnd = newCursorStart;
@@ -788,25 +839,33 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         break;
       case 'bullet':
         // Use standard Markdown `- ` so exported notes render correctly in all Markdown renderers
-        final prefix = (before.isEmpty || before.endsWith('\n')) ? '- ' : '\n- ';
+        final prefix = (before.isEmpty || before.endsWith('\n'))
+            ? '- '
+            : '\n- ';
         newText = '$before$prefix$selectedText$after';
         newCursorStart = before.length + prefix.length + selectedText.length;
         newCursorEnd = newCursorStart;
         break;
       case 'numbered':
-        final prefix = (before.isEmpty || before.endsWith('\n')) ? '1. ' : '\n1. ';
+        final prefix = (before.isEmpty || before.endsWith('\n'))
+            ? '1. '
+            : '\n1. ';
         newText = '$before$prefix$selectedText$after';
         newCursorStart = before.length + prefix.length + selectedText.length;
         newCursorEnd = newCursorStart;
         break;
       case 'checkbox':
-        final prefix = (before.isEmpty || before.endsWith('\n')) ? '[ ] ' : '\n[ ] ';
+        final prefix = (before.isEmpty || before.endsWith('\n'))
+            ? '[ ] '
+            : '\n[ ] ';
         newText = '$before$prefix$selectedText$after';
         newCursorStart = before.length + prefix.length + selectedText.length;
         newCursorEnd = newCursorStart;
         break;
       case 'quote':
-        final prefix = (before.isEmpty || before.endsWith('\n')) ? '> ' : '\n> ';
+        final prefix = (before.isEmpty || before.endsWith('\n'))
+            ? '> '
+            : '\n> ';
         newText = '$before$prefix$selectedText$after';
         newCursorStart = before.length + prefix.length + selectedText.length;
         newCursorEnd = newCursorStart;
@@ -826,10 +885,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         _showImageSourcePicker();
         return;
       case 'table':
-        final prefixTable = (before.isEmpty || before.endsWith('\n')) ? '' : '\n\n';
-        const tableTemplate = '| Column 1 | Column 2 | Column 3 |\n| :--- | :---: | ---: |\n| Row 1 | Data | 100 |\n| Row 2 | Info | 250 |\n';
+        final prefixTable = (before.isEmpty || before.endsWith('\n'))
+            ? ''
+            : '\n\n';
+        const tableTemplate =
+            '| Column 1 | Column 2 | Column 3 |\n| :--- | :---: | ---: |\n| Row 1 | Data | 100 |\n| Row 2 | Info | 250 |\n';
         newText = '$before$prefixTable$tableTemplate$after';
-        newCursorStart = before.length + prefixTable.length + tableTemplate.length;
+        newCursorStart =
+            before.length + prefixTable.length + tableTemplate.length;
         newCursorEnd = newCursorStart;
         break;
       case 'diagram':
@@ -886,7 +949,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     _contentFocusNode.requestFocus();
   }
 
-  Future<void> _handleInsertedContent(KeyboardInsertedContent insertedContent) async {
+  Future<void> _handleInsertedContent(
+    KeyboardInsertedContent insertedContent,
+  ) async {
     try {
       final bytes = insertedContent.data;
       if (bytes != null && bytes.isNotEmpty) {
@@ -896,7 +961,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           await imagesDir.create(recursive: true);
         }
         final ext = insertedContent.mimeType.contains('png') ? 'png' : 'jpg';
-        final file = File('${imagesDir.path}/pasted_${DateTime.now().millisecondsSinceEpoch}.$ext');
+        final file = File(
+          '${imagesDir.path}/pasted_${DateTime.now().millisecondsSinceEpoch}.$ext',
+        );
         await file.writeAsBytes(bytes);
         if (!mounted) return;
         _insertImageMarkdown(file.path, alt: 'Pasted Image');
@@ -910,10 +977,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _showEditorFeedback(String message, {bool isError = false}) {
     if (!mounted) return;
+    final tokens = context.tokens;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : null,
+        content: Text(
+          message,
+          style: isError
+              ? TextStyle(
+                  color: tokens.isDark ? AppColors.darkCanvas : Colors.white,
+                  fontWeight: FontWeight.w600,
+                )
+              : null,
+        ),
+        backgroundColor: isError ? tokens.stateDanger : null,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -951,7 +1027,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   void _showAlertTemplatePicker() {
     final tokens = context.tokens;
     final isDark = tokens.isDark;
-    final paletteAccent = AppColors.getPaletteById(_paletteId).resolveAccentColor(isDark);
+    final paletteAccent = AppColors.getPaletteById(_paletteId)
+        .resolveAccentColor(isDark);
     AppBottomSheet.show(
       context: context,
       builder: (ctx) => SingleChildScrollView(
@@ -963,9 +1040,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Insert Callout Alert',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                Expanded(
+                  child: Text(
+                    'Insert Callout Alert',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -987,18 +1069,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
                 Navigator.of(ctx).pop();
-                _insertAtCursor('> [!NOTE]\n> Write your important context or informational notice here.\n');
+                _insertAtCursor(
+                  '> [!NOTE]\n> Write your important context or informational notice here.\n',
+                );
               },
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: TackIcon(TackIcons.lightbulb, size: 22, color: tokens.stateSuccess),
+              leading: TackIcon(
+                TackIcons.lightbulb,
+                size: 22,
+                color: tokens.stateSuccess,
+              ),
               title: const Text('Tip Alert'),
               subtitle: const Text('> [!TIP] Helpful recommendation'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
                 Navigator.of(ctx).pop();
-                _insertAtCursor('> [!TIP]\n> Pro-tip: Organize your notes using tags or custom pastel palettes.\n');
+                _insertAtCursor(
+                  '> [!TIP]\n> Pro-tip: Organize your notes using tags or custom pastel palettes.\n',
+                );
               },
             ),
             ListTile(
@@ -1009,29 +1099,43 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
                 Navigator.of(ctx).pop();
-                _insertAtCursor('> [!IMPORTANT]\n> Essential requirement or critical step to keep in mind.\n');
+                _insertAtCursor(
+                  '> [!IMPORTANT]\n> Essential requirement or critical step to keep in mind.\n',
+                );
               },
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: TackIcon(TackIcons.warning, size: 22, color: tokens.stateWarning),
+              leading: TackIcon(
+                TackIcons.warning,
+                size: 22,
+                color: tokens.stateWarning,
+              ),
               title: const Text('Warning Alert'),
               subtitle: const Text('> [!WARNING] Potential pitfall or caution'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
                 Navigator.of(ctx).pop();
-                _insertAtCursor('> [!WARNING]\n> Warning: Changes made here cannot be undone once deleted.\n');
+                _insertAtCursor(
+                  '> [!WARNING]\n> Warning: Changes made here cannot be undone once deleted.\n',
+                );
               },
             ),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: TackIcon(TackIcons.shield, size: 22, color: tokens.stateDanger),
+              leading: TackIcon(
+                TackIcons.shield,
+                size: 22,
+                color: tokens.stateDanger,
+              ),
               title: const Text('Caution Alert'),
               subtitle: const Text('> [!CAUTION] High-risk action notice'),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.roundedMd),
               onTap: () {
                 Navigator.of(ctx).pop();
-                _insertAtCursor('> [!CAUTION]\n> High-risk action: Proceed with caution.\n');
+                _insertAtCursor(
+                  '> [!CAUTION]\n> High-risk action: Proceed with caution.\n',
+                );
               },
             ),
           ],
@@ -1040,7 +1144,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     );
   }
 
-  Future<void> _pickAndSaveImage(ImageSource source, {required String alt}) async {
+  Future<void> _pickAndSaveImage(
+    ImageSource source, {
+    required String alt,
+  }) async {
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: source);
@@ -1080,9 +1187,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Insert Image',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                Expanded(
+                  child: Text(
+                    'Insert Image',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -1177,7 +1289,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             children: [
               Text(
                 'Note Background Theme',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.md),
               ColorSwatchPicker(
@@ -1223,9 +1336,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Export & Share Note',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                Expanded(
+                  child: Text(
+                    'Export & Share Note',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(ctx).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -1245,13 +1363,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               title: const Text('Copy Formatted Markdown'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await runExport(
-                  () async {
-                    await NoteExportService.copyMarkdown(title: title, content: content, tags: _tags);
-                    _showEditorFeedback('Markdown copied to clipboard!');
-                  },
-                  'Could not copy Markdown.',
-                );
+                await runExport(() async {
+                  await NoteExportService.copyMarkdown(
+                    title: title,
+                    content: content,
+                    tags: _tags,
+                  );
+                  _showEditorFeedback('Markdown copied to clipboard!');
+                }, 'Could not copy Markdown.');
               },
             ),
             const Divider(),
@@ -1261,20 +1380,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               title: const Text('Copy Plain Text'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await runExport(
-                  () async {
-                    await NoteExportService.copyPlainText(title: title, content: content);
-                    _showEditorFeedback('Plain text copied to clipboard!');
-                  },
-                  'Could not copy plain text.',
-                );
+                await runExport(() async {
+                  await NoteExportService.copyPlainText(
+                    title: title,
+                    content: content,
+                  );
+                  _showEditorFeedback('Plain text copied to clipboard!');
+                }, 'Could not copy plain text.');
               },
             ),
             const Divider(),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
               leading: const TackIcon(TackIcons.photo, size: 22),
-              title: Text(widget.item is StickyNote ? 'Export Sticky as Image (PNG)' : 'Export as Image (PNG)'),
+              title: Text(
+                widget.item is StickyNote
+                    ? 'Export Sticky as Image (PNG)'
+                    : 'Export as Image (PNG)',
+              ),
               subtitle: const Text('High-resolution shareable card image'),
               onTap: () async {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1358,8 +1481,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _openSlashAndBlockSheet({required bool startOnTurnIntoTab}) {
     final sel = _contentController.selection;
-    final cursor = sel.isValid ? sel.baseOffset : _contentController.text.length;
-    final currentKind = BlockTransformService.detectBlockKind(_contentController.text, cursor);
+    final cursor = sel.isValid
+        ? sel.baseOffset
+        : _contentController.text.length;
+    final currentKind = BlockTransformService.detectBlockKind(
+      _contentController.text,
+      cursor,
+    );
 
     SlashAndBlockActionsSheet.show(
       context,
@@ -1367,27 +1495,39 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       startOnTurnIntoTab: startOnTurnIntoTab,
       onInsertCommand: (cmd) => _executeSlashCommand(cmd),
       onTurnInto: (kind) {
-        _contentController.value = BlockTransformService.turnInto(_contentController.value, kind);
+        _contentController.value = BlockTransformService.turnInto(
+          _contentController.value,
+          kind,
+        );
         _saveNote();
         _contentFocusNode.requestFocus();
       },
       onMoveUp: () {
-        _contentController.value = BlockTransformService.moveBlockUp(_contentController.value);
+        _contentController.value = BlockTransformService.moveBlockUp(
+          _contentController.value,
+        );
         _saveNote();
       },
       onMoveDown: () {
-        _contentController.value = BlockTransformService.moveBlockDown(_contentController.value);
+        _contentController.value = BlockTransformService.moveBlockDown(
+          _contentController.value,
+        );
         _saveNote();
       },
       onDuplicateBlock: () {
-        _contentController.value = BlockTransformService.duplicateBlock(_contentController.value);
+        _contentController.value = BlockTransformService.duplicateBlock(
+          _contentController.value,
+        );
         _saveNote();
         _contentFocusNode.requestFocus();
       },
     );
   }
 
-  void _executeSlashCommand(SlashCommandItem cmd, {ActiveSlashTrigger? slashTrigger}) {
+  void _executeSlashCommand(
+    SlashCommandItem cmd, {
+    ActiveSlashTrigger? slashTrigger,
+  }) {
     if (cmd.id == 'diagram') {
       if (slashTrigger != null) {
         _removeSlashToken(slashTrigger);
@@ -1425,14 +1565,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       replaceEnd = slashTrigger.cursorOffset.clamp(replaceStart, text.length);
     } else {
       final sel = _contentController.selection;
-      replaceStart = sel.isValid ? sel.start.clamp(0, text.length) : text.length;
-      replaceEnd = sel.isValid ? sel.end.clamp(replaceStart, text.length) : text.length;
+      replaceStart = sel.isValid
+          ? sel.start.clamp(0, text.length)
+          : text.length;
+      replaceEnd = sel.isValid
+          ? sel.end.clamp(replaceStart, text.length)
+          : text.length;
     }
 
     final before = text.substring(0, replaceStart);
     final after = text.substring(replaceEnd);
 
-    final needsLeadingNewline = slashTrigger == null &&
+    final needsLeadingNewline =
+        slashTrigger == null &&
         cmd.id != 'link' &&
         before.isNotEmpty &&
         !before.endsWith('\n');
@@ -1449,7 +1594,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
     _contentController.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: newCursor.clamp(0, newText.length)),
+      selection: TextSelection.collapsed(
+        offset: newCursor.clamp(0, newText.length),
+      ),
     );
     _saveNote();
     _contentFocusNode.requestFocus();
@@ -1484,15 +1631,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
     final text = _contentController.text;
     final sel = _contentController.selection;
-    final replaceStart = sel.isValid ? sel.start.clamp(0, text.length) : text.length;
-    final replaceEnd = sel.isValid ? sel.end.clamp(replaceStart, text.length) : text.length;
+    final replaceStart = sel.isValid
+        ? sel.start.clamp(0, text.length)
+        : text.length;
+    final replaceEnd = sel.isValid
+        ? sel.end.clamp(replaceStart, text.length)
+        : text.length;
 
     final before = text.substring(0, replaceStart);
     final after = text.substring(replaceEnd);
 
-    final needsLeadingNewline = !hadSlashTrigger &&
-        before.isNotEmpty &&
-        !before.endsWith('\n');
+    final needsLeadingNewline =
+        !hadSlashTrigger && before.isNotEmpty && !before.endsWith('\n');
     final prefix = '${needsLeadingNewline ? '\n' : ''}- [ ] ';
     final tokenSuffix = tokens.isEmpty ? '' : ' ${tokens.join(' ')}';
     final inserted = '$prefix$tokenSuffix';
@@ -1540,7 +1690,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       const SizedBox(height: 2),
                       Text(
                         'Inserts a live interactive preview right inside this note.',
-                        style: AppTypography.caption(color: tokens.textSecondary),
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -1559,16 +1711,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             const SizedBox(height: AppSpacing.md),
             ListTile(
               minTileHeight: AppSpacing.minTouchTarget,
-              leading: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.accentCyan.withValues(alpha: 0.16),
-                  borderRadius: AppSpacing.roundedXs,
-                ),
-                child: const Center(
-                  child: TackIcon(TackIcons.plus, size: 18, color: AppColors.accentCyan),
-                ),
+              leading: Builder(
+                builder: (context) {
+                  final cyanAccent = AppColors.getPaletteById('cyan')
+                      .resolveAccentColor(isDark);
+                  return Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: cyanAccent.withValues(alpha: isDark ? 0.22 : 0.14),
+                      borderRadius: AppSpacing.roundedXs,
+                    ),
+                    child: Center(
+                      child: TackIcon(
+                        TackIcons.plus,
+                        size: 18,
+                        color: cyanAccent,
+                      ),
+                    ),
+                  );
+                },
               ),
               title: Text(
                 'Create & Embed New Whiteboard',
@@ -1579,7 +1741,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 Navigator.of(ctx).pop();
                 try {
                   final baseTitle = _titleController.text.trim();
-                  final boardTitle = baseTitle.isEmpty ? 'Spec Flow' : '$baseTitle (Flow)';
+                  final boardTitle = baseTitle.isEmpty
+                      ? 'Spec Flow'
+                      : '$baseTitle (Flow)';
                   final created = await workspace.createQuickItem(
                     title: boardTitle,
                     type: ItemType.whiteboard,
@@ -1588,7 +1752,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   if (!mounted) return;
                   _insertAtCursor('![[${created.title}]]');
                 } catch (_) {
-                  _showEditorFeedback('Could not create whiteboard embed.', isError: true);
+                  _showEditorFeedback(
+                    'Could not create whiteboard embed.',
+                    isError: true,
+                  );
                 }
               },
             ),
@@ -1659,7 +1826,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   Future<void> _handleWikiLinkTap(ParsedWikiLink link) async {
     _flushSave();
     final workspace = context.read<WorkspaceProvider>();
-    final resolved = WikiLinkService.resolveTarget(link.target, workspace.rawItems);
+    final resolved = WikiLinkService.resolveTarget(
+      link.target,
+      workspace.rawItems,
+    );
 
     if (resolved != null) {
       if (!mounted) return;
@@ -1675,10 +1845,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       } else {
         await Navigator.of(context).push(
           TackRoutes.sharedAxisHorizontal(
-            NoteEditorScreen(
-              item: resolved,
-              initialHeadingAnchor: link.anchor,
-            ),
+            NoteEditorScreen(item: resolved, initialHeadingAnchor: link.anchor),
           ),
         );
       }
@@ -1694,9 +1861,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
       content: '',
     );
     if (!mounted) return;
-    await Navigator.of(context).push(
-      TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: created)),
-    );
+    await Navigator.of(context)
+        .push(TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: created)));
     if (mounted) setState(() {});
   }
 
@@ -1706,19 +1872,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (offset == null || length == null) return;
 
     final workspace = context.read<WorkspaceProvider>();
-    final source = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
+    final source =
+        workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
     final raw = WikiLinkService.contentOfItem(source);
     if (offset < 0 || offset + length > raw.length) return;
 
     final targetTitle = _titleController.text.trim();
     if (targetTitle.isEmpty) return;
 
-    final updatedContent = raw.replaceRange(offset, offset + length, '[[$targetTitle]]');
+    final updatedContent = raw.replaceRange(
+      offset,
+      offset + length,
+      '[[$targetTitle]]',
+    );
     BaseWorkspaceItem? updatedItem;
     if (source is TextNote) {
-      updatedItem = source.copyWith(content: updatedContent, updatedAt: DateTime.now());
+      updatedItem = source.copyWith(
+        content: updatedContent,
+        updatedAt: DateTime.now(),
+      );
     } else if (source is StickyNote) {
-      updatedItem = source.copyWith(content: updatedContent, updatedAt: DateTime.now());
+      updatedItem = source.copyWith(
+        content: updatedContent,
+        updatedAt: DateTime.now(),
+      );
     }
     if (updatedItem != null) {
       await workspace.saveItem(updatedItem);
@@ -1739,12 +1916,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
     final content = _contentController.text;
     final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
-    final wordCount = content.trim().isEmpty ? 0 : content.trim().split(RegExp(r'\s+')).length;
-    final readTime = wordCount == 0 ? 0 : ((wordCount / 180).ceil()).clamp(1, 60);
+    final wordCount = content.trim().isEmpty
+        ? 0
+        : content.trim().split(RegExp(r'\s+')).length;
+    final readTime = wordCount == 0
+        ? 0
+        : ((wordCount / 180).ceil()).clamp(1, 60);
 
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
-    final allChecklistsCompleted = totalChecklists > 0 && completedChecklists == totalChecklists;
+    final allChecklistsCompleted =
+        totalChecklists > 0 && completedChecklists == totalChecklists;
 
     final sel = _contentController.selection;
     final cursorOffset = sel.isValid ? sel.baseOffset : -1;
@@ -1754,9 +1936,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (activeWikiTrigger == null && _dismissedWikiTriggerOffset != null) {
       _dismissedWikiTriggerOffset = null;
     }
-    final showWikiBar = activeWikiTrigger != null &&
+    final showWikiBar =
+        activeWikiTrigger != null &&
         _dismissedWikiTriggerOffset != activeWikiTrigger.triggerStart;
-    final activeSlashTrigger = (_isEditingMode && !showWikiBar && cursorOffset >= 0)
+    final activeSlashTrigger =
+        (_isEditingMode && !showWikiBar && cursorOffset >= 0)
         ? WikiLinkService.detectActiveSlashTrigger(content, cursorOffset)
         : null;
 
@@ -1817,706 +2001,741 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             onPressed: _handleBackPress,
             tooltip: 'Back',
           ),
-        actions: [
-          if (hasHeadings)
+          actions: [
+            if (hasHeadings)
+              IconButton(
+                icon: TackIcon(TackIcons.nestedList, size: 20, color: accent),
+                tooltip: 'Document Outline',
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  _showDocumentOutlineSheet();
+                },
+              ),
+
+            // Edit / Read View Mode Switcher
             IconButton(
               icon: TackIcon(
-                TackIcons.nestedList,
+                _isEditingMode ? TackIcons.eyeSvg : TackIcons.editSvg,
                 size: 20,
                 color: accent,
               ),
-              tooltip: 'Document Outline',
+              tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Note',
               onPressed: () {
                 HapticFeedback.selectionClick();
-                _showDocumentOutlineSheet();
+                _toggleViewMode();
               },
             ),
 
-          // Edit / Read View Mode Switcher
-          IconButton(
-            icon: TackIcon(
-              _isEditingMode ? TackIcons.eyeSvg : TackIcons.editSvg,
-              size: 20,
-              color: accent,
-            ),
-            tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Note',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              _toggleViewMode();
-            },
-          ),
-
-          // iOS-Style Overflow Menu (Palette, Favorite, Graph, Folder, Template, Share, Trash)
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: IosThreeDotMenu<String>(
-              size: AppSpacing.minTouchTarget,
-              icon: TackIcons.more,
-              iconColor: accent,
-              buttonBackgroundColor: accent,
-              onSelected: (val) async {
-                if (val == 'palette') {
-                  HapticFeedback.lightImpact();
-                  _showColorPicker();
-                } else if (val == 'favorite') {
-                  workspace.toggleFavorite(widget.item.id);
-                  setState(() {});
-                } else if (val == 'local_graph') {
-                  _flushSave();
-                  Navigator.of(context).push(
-                    TackRoutes.slideUp(
-                      KnowledgeGraphScreen(focusItemId: widget.item.id),
-                    ),
-                  );
-                } else if (val == 'move_folder') {
-                  await _showMoveToFolderSheet();
-                } else if (val == 'save_template') {
-                  await _handleSaveAsTemplate();
-                } else if (val == 'duplicate') {
-                  HapticFeedback.lightImpact();
-                  await workspace.duplicateItem(widget.item);
-                  _showEditorFeedback('Note duplicated!');
-                } else if (val == 'pin_notification') {
-                  HapticFeedback.lightImpact();
-                  _flushSave();
-                  final latest = workspace.getItemByIdSync(widget.item.id) ??
-                      _buildUpdatedItem(workspace);
-                  if (_isNotificationPinned) {
-                    await PinnedNotificationService.unpinNote(latest.id);
-                    if (mounted) {
-                      setState(() => _isNotificationPinned = false);
-                      _showEditorFeedback('Unpinned from notification bar');
-                    }
-                  } else {
-                    final allowed = await ensureNotificationPermissionWithRationale(
-                      context,
-                      title: 'Allow notifications to pin notes?',
-                      rationale:
-                          'Tack uses Android notifications to keep your pinned note visible in the notification shade.',
+            // iOS-Style Overflow Menu (Palette, Favorite, Graph, Folder, Template, Share, Trash)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: IosThreeDotMenu<String>(
+                size: AppSpacing.minTouchTarget,
+                icon: TackIcons.more,
+                iconColor: accent,
+                buttonBackgroundColor: accent,
+                onSelected: (val) async {
+                  if (val == 'palette') {
+                    HapticFeedback.lightImpact();
+                    _showColorPicker();
+                  } else if (val == 'favorite') {
+                    workspace.toggleFavorite(widget.item.id);
+                    setState(() {});
+                  } else if (val == 'local_graph') {
+                    _flushSave();
+                    Navigator.of(context).push(
+                      TackRoutes.slideUp(
+                        KnowledgeGraphScreen(focusItemId: widget.item.id),
+                      ),
                     );
-                    if (!allowed || !mounted) return;
-                    final ok = await PinnedNotificationService.pinNote(latest);
-                    if (mounted) {
-                      setState(() => _isNotificationPinned = ok);
-                      _showEditorFeedback(
-                        ok
-                            ? 'Pinned to notification bar'
-                            : 'Could not pin note to notification bar',
-                        isError: !ok,
+                  } else if (val == 'move_folder') {
+                    await _showMoveToFolderSheet();
+                  } else if (val == 'save_template') {
+                    await _handleSaveAsTemplate();
+                  } else if (val == 'duplicate') {
+                    HapticFeedback.lightImpact();
+                    await workspace.duplicateItem(widget.item);
+                    _showEditorFeedback('Note duplicated!');
+                  } else if (val == 'pin_notification') {
+                    HapticFeedback.lightImpact();
+                    _flushSave();
+                    final latest =
+                        workspace.getItemByIdSync(widget.item.id) ??
+                        _buildUpdatedItem(workspace);
+                    if (_isNotificationPinned) {
+                      await PinnedNotificationService.unpinNote(latest.id);
+                      if (mounted) {
+                        setState(() => _isNotificationPinned = false);
+                        _showEditorFeedback('Unpinned from notification bar');
+                      }
+                    } else {
+                      final allowed =
+                          await ensureNotificationPermissionWithRationale(
+                            context,
+                            title: 'Allow notifications to pin notes?',
+                            rationale: 'Tack uses Android notifications to keep your pinned note visible in the notification shade.',
+                          );
+                      if (!allowed || !mounted) return;
+                      final ok = await PinnedNotificationService.pinNote(
+                        latest,
                       );
-                    }
-                  }
-                } else if (val == 'share') {
-                  _showShareExportSheet();
-                } else if (val == 'trash') {
-                  await workspace.moveToTrash(widget.item.id);
-                  if (mounted) Navigator.of(context).pop();
-                }
-              },
-              items: [
-                const IosMenuItem(
-                  value: 'palette',
-                  title: 'Color Palette',
-                  icon: TackIcons.palette,
-                ),
-                IosMenuItem(
-                  value: 'favorite',
-                  title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
-                  icon: TackIcons.star,
-                  iconStyle: widget.item.isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                  iconColor: accent,
-                ),
-                IosMenuItem(
-                  value: 'local_graph',
-                  title: 'Local Graph',
-                  icon: TackIcons.graph,
-                  iconColor: accent,
-                ),
-                const IosMenuItem(
-                  value: 'move_folder',
-                  title: 'Move to Folder',
-                  icon: TackIcons.folder,
-                ),
-                if (widget.item is TextNote)
-                  const IosMenuItem(
-                    value: 'save_template',
-                    title: 'Save as Template',
-                    icon: TackIcons.sparkles,
-                  ),
-                const IosMenuItem(
-                  value: 'duplicate',
-                  title: 'Duplicate Note',
-                  icon: TackIcons.copy,
-                ),
-                if (widget.item is TextNote)
-                  IosMenuItem(
-                    value: 'pin_notification',
-                    title: _isNotificationPinned
-                        ? 'Unpin Notification'
-                        : 'Pin to Notification',
-                    icon: TackIcons.notification,
-                  ),
-                const IosMenuItem(
-                  value: 'share',
-                  title: 'Export & Share',
-                  icon: TackIcons.share,
-                ),
-                const IosMenuItem(
-                  value: 'trash',
-                  title: 'Delete Note',
-                  icon: TackIcons.trash,
-                  isDestructive: true,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Scrollable Note Document (constrained to 720dp reading measure on wide screens)
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: AppSpacing.readMaxWidth,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    // Breadcrumbs, Folder & Hierarchy Bar
-                    if (_folderName != null ||
-                        breadcrumbs.isNotEmpty ||
-                        _isEditingMode ||
-                        _iconEmoji != null)
-                      _buildBreadcrumbAndHierarchyBar(
-                        breadcrumbs: breadcrumbs,
-                        isDark: isDark,
-                        palette: palette,
-                      ),
-
-                    // Date stamp above title (Screenshot 4 editorial style)
-                    Text(
-                      DateFormatter.formatOrdinalDate(widget.item.updatedAt),
-                      style: AppTypography.cardDateStyle(
-                        color: tokens.textTertiary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Large Note Title (with optional Emoji Icon)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (_iconEmoji != null && _iconEmoji!.isNotEmpty) ...[
-                          Tooltip(
-                            message: 'Change note icon',
-                            child: InkWell(
-                              borderRadius: AppSpacing.roundedSm,
-                              onTap: _showEmojiPickerSheet,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 10),
-                                child: Text(
-                                  _iconEmoji!,
-                                  style: const TextStyle(fontSize: 30),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        Expanded(
-                          child: _isEditingMode
-                              ? TextField(
-                                  controller: _titleController,
-                                  style: AppTypography.display(
-                                    color: tokens.textPrimary,
-                                  ),
-                                  maxLines: null,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Note title...',
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    filled: false,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                )
-                              : Text(
-                                  _titleController.text.isEmpty
-                                      ? 'Untitled Note'
-                                      : _titleController.text,
-                                  style: AppTypography.display(
-                                    color: tokens.textPrimary,
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Screenshot 4 ("Design Ideas") Minimalist Metadata Row
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        if (_folderName != null &&
-                            _folderName!.isNotEmpty &&
-                            _folderName != 'All Notes')
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.resolveChipFill(isDark),
-                              borderRadius: AppSpacing.roundedPill,
-                              border: Border.all(
-                                color: palette.resolveChipBorder(isDark),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TackIcon(
-                                  TackIcons.folder,
-                                  size: 12,
-                                  color: accent,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _folderName!,
-                                  style: AppTypography.caption(
-                                    color: accent,
-                                    weight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Semantics(
-                          button: true,
-                          label: 'Open note statistics',
-                          child: Tooltip(
-                            message: 'Note statistics',
-                            child: InkWell(
-                              borderRadius: AppSpacing.roundedPill,
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                _showNoteStatisticsSheet();
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 6,
-                                ),
-                                child: Text(
-                                  '$wordCount ${wordCount == 1 ? 'word' : 'words'}  •  ${readTime}m read',
-                                  style: AppTypography.caption(
-                                    color: tokens.textSecondary,
-                                    weight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (totalChecklists > 0)
-                          Text(
-                            allChecklistsCompleted
-                                ? '•  ✓ All done'
-                                : '•  $completedChecklists/$totalChecklists tasks',
-                            style: AppTypography.caption(
-                              color: allChecklistsCompleted
-                                  ? tokens.success
-                                  : tokens.textTertiary,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (widget.item is TextNote && (widget.item as TextNote).sourceApp != null) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.16 : 0.12),
-                              borderRadius: AppSpacing.roundedPill,
-                              border: Border.all(
-                                color: palette.resolveAccentColor(isDark).withValues(alpha: isDark ? 0.38 : 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TackIcon(
-                                  TackIcons.share,
-                                  size: 12,
-                                  color: palette.resolveAccentColor(isDark),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Saved from ${(widget.item as TextNote).sourceApp}',
-                                  style: AppTypography.caption(
-                                    color: palette.resolveAccentColor(isDark),
-                                    weight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Dynamic Tag Chips Bar
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ..._tags.map(
-                          (tag) => Chip(
-                            label: Text('#$tag'),
-                            labelStyle: AppTypography.caption(
-                              color: accent,
-                              weight: FontWeight.w700,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            materialTapTargetSize: MaterialTapTargetSize.padded,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppSpacing.roundedPill,
-                              side: BorderSide(
-                                color: palette.resolveChipBorder(isDark),
-                              ),
-                            ),
-                            backgroundColor: palette.resolveChipFill(isDark),
-                            deleteButtonTooltipMessage: 'Remove #$tag',
-                            onDeleted: _isEditingMode ? () => _removeTag(tag) : null,
-                            deleteIcon: _isEditingMode
-                                ? TackIcon(TackIcons.close, size: 14, color: accent)
-                                : null,
-                          ),
-                        ),
-                        if (_isEditingMode)
-                          if (_isAddingTag)
-                            Container(
-                              constraints: const BoxConstraints(minHeight: 38),
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              decoration: BoxDecoration(
-                                color: palette.resolveChipFill(isDark),
-                                borderRadius: AppSpacing.roundedPill,
-                                border: Border.all(color: accent, width: 1.4),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '#',
-                                    style: AppTypography.caption(
-                                      fontSize: 13,
-                                      weight: FontWeight.w700,
-                                      color: accent,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  SizedBox(
-                                    width: 84,
-                                    child: TextField(
-                                      controller: _newTagController,
-                                      autofocus: true,
-                                      style: AppTypography.caption(
-                                        color: tokens.textPrimary,
-                                        weight: FontWeight.w600,
-                                      ),
-                                      decoration: const InputDecoration(
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                        border: InputBorder.none,
-                                        hintText: 'tag...',
-                                      ),
-                                      onSubmitted: (_) => _submitNewTag(),
-                                    ),
-                                  ),
-                                  Tooltip(
-                                    message: 'Add tag',
-                                    child: InkWell(
-                                      borderRadius: AppSpacing.roundedPill,
-                                      onTap: _submitNewTag,
-                                      child: SizedBox(
-                                        width: 32,
-                                        height: 32,
-                                        child: Center(
-                                          child: TackIcon(
-                                            TackIcons.check,
-                                            size: 15,
-                                            color: accent,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Tooltip(
-                                    message: 'Cancel tag',
-                                    child: InkWell(
-                                      borderRadius: AppSpacing.roundedPill,
-                                      onTap: () {
-                                        _newTagController.clear();
-                                        setState(() => _isAddingTag = false);
-                                      },
-                                      child: SizedBox(
-                                        width: 32,
-                                        height: 32,
-                                        child: Center(
-                                          child: TackIcon(
-                                            TackIcons.close,
-                                            size: 14,
-                                            color: accent,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else
-                            ActionChip(
-                              avatar: TackIcon(TackIcons.plus, size: 14, color: accent),
-                              label: const Text('Add Tag'),
-                              labelStyle: AppTypography.caption(
-                                color: accent,
-                                weight: FontWeight.w700,
-                              ),
-                              backgroundColor: palette.resolveChipFill(isDark),
-                              materialTapTargetSize: MaterialTapTargetSize.padded,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppSpacing.roundedPill,
-                                side: BorderSide(
-                                  color: palette.resolveChipBorder(isDark),
-                                ),
-                              ),
-                              onPressed: () => setState(() => _isAddingTag = true),
-                            ),
-                      ],
-                    ),
-
-                    // Structured YAML Frontmatter Properties Bar
-                    FrontmatterPropertiesBar(
-                      rawContent: _contentController.text,
-                      paletteId: _paletteId,
-                      isEditingMode: _isEditingMode,
-                      onContentChanged: (updatedContent) {
-                        _contentController.text = updatedContent;
-                        _saveNote();
-                        setState(() {});
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Body Content (Editing TextField vs Interactive Rich Preview)
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 160),
-                      reverseDuration: const Duration(milliseconds: 110),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder:
-                          TackAnimatedTransition.switcherTransition,
-                      layoutBuilder: (currentChild, previousChildren) {
-                        return Stack(
-                          alignment: Alignment.topLeft,
-                          children: <Widget>[
-                            ...previousChildren,
-                            ?currentChild,
-                          ],
+                      if (mounted) {
+                        setState(() => _isNotificationPinned = ok);
+                        _showEditorFeedback(
+                          ok
+                              ? 'Pinned to notification bar'
+                              : 'Could not pin note to notification bar',
+                          isError: !ok,
                         );
-                      },
-                      child: _isEditingMode
-                          ? KeyedSubtree(
-                              key: const ValueKey('editor_edit_mode'),
-                              child: TextField(
-                                controller: _contentController,
-                                focusNode: _contentFocusNode,
-                                inputFormatters: const [
-                                  SmartMarkdownContinuationFormatter(),
-                                ],
-                                contentInsertionConfiguration:
-                                    ContentInsertionConfiguration(
-                                  allowedMimeTypes: const <String>[
-                                    'image/png',
-                                    'image/jpeg',
-                                    'image/gif',
-                                    'image/webp',
-                                  ],
-                                  onContentInserted: _handleInsertedContent,
-                                ),
-                                style: AppTypography.body(
-                                  color: tokens.textPrimary,
-                                ).copyWith(fontSize: 16, height: 1.55),
-                                maxLines: null,
-                                decoration: const InputDecoration(
-                                  hintText:
-                                      'Start writing...\n\nTip: Type / for blocks, [[ to link notes or boards, or [ ] for tasks.',
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey('editor_read_mode'),
-                              child: SelectionArea(
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.deferToChild,
-                                  onTap: () {
-                                    _toggleViewMode();
-                                  },
-                                  child: RichNoteContentView(
-                                    content: _contentController.text,
-                                    paletteId: _paletteId,
-                                    workspaceItems: workspace.rawItems,
-                                    navigationController: _richNoteNavController,
-                                    onWikiLinkTap: _handleWikiLinkTap,
-                                    onHeadingJump: _jumpToLineIndex,
-                                    onLineTap: (lineIdx) {
-                                      _toggleViewMode(targetLineIndex: lineIdx);
-                                    },
-                                    onContentChanged: (newContent) {
-                                      _contentController.text = newContent;
-                                      _saveNote();
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
+                      }
+                    }
+                  } else if (val == 'share') {
+                    _showShareExportSheet();
+                  } else if (val == 'trash') {
+                    await workspace.moveToTrash(widget.item.id);
+                    if (context.mounted) Navigator.of(context).pop();
+                  }
+                },
+                items: [
+                  const IosMenuItem(
+                    value: 'palette',
+                    title: 'Color Palette',
+                    icon: TackIcons.palette,
+                  ),
+                  IosMenuItem(
+                    value: 'favorite',
+                    title: widget.item.isFavorite ? 'Unfavorite' : 'Favorite',
+                    icon: TackIcons.star,
+                    iconStyle: widget.item.isFavorite
+                        ? HeroIconStyle.solid
+                        : HeroIconStyle.outline,
+                    iconColor: accent,
+                  ),
+                  IosMenuItem(
+                    value: 'local_graph',
+                    title: 'Local Graph',
+                    icon: TackIcons.graph,
+                    iconColor: accent,
+                  ),
+                  const IosMenuItem(
+                    value: 'move_folder',
+                    title: 'Move to Folder',
+                    icon: TackIcons.folder,
+                  ),
+                  if (widget.item is TextNote)
+                    const IosMenuItem(
+                      value: 'save_template',
+                      title: 'Save as Template',
+                      icon: TackIcons.sparkles,
                     ),
-
-                    // Nested Sub-Notes Section (Feature 9)
-                    if (childItems.isNotEmpty)
-                      _buildSubNotesSection(
-                        childItems: childItems,
-                        isDark: isDark,
-                        palette: palette,
-                      ),
-
-                    // Collapsible Bi-Directional Backlinks & Unlinked Mentions
-                    NoteBacklinksSection(
-                      linked: backlinks.linked,
-                      unlinked: backlinks.unlinked,
-                      paletteId: _paletteId,
-                      onOpenEntry: (entry) async {
-                        _flushSave();
-                        final target = workspace.getItemById(entry.sourceItem.id) ?? entry.sourceItem;
-                        if (target is WhiteboardCanvasItem) {
-                          await Navigator.of(context).push(
-                            TackRoutes.sharedAxisHorizontal(
-                              WhiteboardCanvasScreen(
-                                item: target,
-                                initialFocusNodeId: entry.canvasNodeId,
-                              ),
-                            ),
-                          );
-                        } else {
-                          await Navigator.of(context).push(
-                            TackRoutes.sharedAxisHorizontal(
-                              NoteEditorScreen(item: target),
-                            ),
-                          );
-                        }
-                        if (mounted) setState(() {});
-                      },
-                      onConvertUnlinkedToWikiLink: _handleConvertUnlinkedMention,
+                  const IosMenuItem(
+                    value: 'duplicate',
+                    title: 'Duplicate Note',
+                    icon: TackIcons.copy,
+                  ),
+                  if (widget.item is TextNote)
+                    IosMenuItem(
+                      value: 'pin_notification',
+                      title: _isNotificationPinned
+                          ? 'Unpin Notification'
+                          : 'Pin to Notification',
+                      icon: TackIcons.notification,
                     ),
-                    ],
+                  const IosMenuItem(
+                    value: 'share',
+                    title: 'Export & Share',
+                    icon: TackIcons.share,
                   ),
-                ),
-              ),
-            ),
-          ),
-
-            // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
-            if (_isEditingMode) ...[
-              if (showWikiBar)
-                WikiLinkAutocompleteBar(
-                  trigger: activeWikiTrigger,
-                  workspaceItems: workspace.rawItems,
-                  currentItemId: widget.item.id,
-                  paletteId: _paletteId,
-                  onSelectCompletion: (token) => _completeWikiTrigger(activeWikiTrigger, token),
-                  onDismiss: () {
-                    setState(() => _dismissedWikiTriggerOffset = activeWikiTrigger.triggerStart);
-                  },
-                )
-              else if (activeSlashTrigger != null)
-                SlashCommandInlineBar(
-                  trigger: activeSlashTrigger,
-                  onSelectCommand: (cmd) => _executeSlashCommand(cmd, slashTrigger: activeSlashTrigger),
-                  onOpenFullSheet: () {
-                    _removeSlashToken(activeSlashTrigger);
-                    _openSlashAndBlockSheet(startOnTurnIntoTab: false);
-                  },
-                )
-              else if (_isCursorInsideMermaidBlock())
-                MermaidCompletionBar(
-                  onInsertSnippet: _insertMermaidSnippet,
-                  onOpenTemplates: () {
-                    MermaidTemplateSheet.show(context, onSelectTemplate: _insertAtCursor);
-                  },
-                ),
-              EditorFormattingToolbar(
-                onFormatAction: _applyFormatting,
-                paletteId: _paletteId,
-              ),
-              const SizedBox(height: 4),
-            ],
-
-            // Always-at-bottom Status Footer (Last edited & Char count)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: palette.resolveNoteFooterBg(isDark),
-                border: Border(
-                  top: BorderSide(
-                    color: palette.resolveChipBorder(isDark).withValues(alpha: 0.7),
-                    width: 1,
+                  const IosMenuItem(
+                    value: 'trash',
+                    title: 'Delete Note',
+                    icon: TackIcons.trash,
+                    isDestructive: true,
                   ),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.caption(
-                    color: tokens.textSecondary,
-                    weight: FontWeight.w500,
-                  ),
-                ),
+                ],
               ),
             ),
           ],
         ),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Scrollable Note Document (constrained to 720dp reading measure on wide screens)
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSpacing.readMaxWidth,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Breadcrumbs, Folder & Hierarchy Bar
+                          if (_folderName != null ||
+                              breadcrumbs.isNotEmpty ||
+                              _isEditingMode ||
+                              _iconEmoji != null)
+                            _buildBreadcrumbAndHierarchyBar(
+                              breadcrumbs: breadcrumbs,
+                              isDark: isDark,
+                              palette: palette,
+                              hasSubNotes: childItems.isNotEmpty,
+                            ),
+
+                          // Date stamp above title (Screenshot 4 editorial style)
+                          Text(
+                            DateFormatter.formatOrdinalDate(
+                              widget.item.updatedAt,
+                            ),
+                            style: AppTypography.cardDateStyle(
+                              color: tokens.textTertiary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+
+                          // Large Note Title (with optional Emoji Icon)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              if (_iconEmoji != null &&
+                                  _iconEmoji!.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    right: AppSpacing.s2,
+                                  ),
+                                  child: Tooltip(
+                                    message: 'Change note icon',
+                                    child: TactileInkTarget(
+                                      width: AppSpacing.minTouchTarget,
+                                      height: AppSpacing.minTouchTarget,
+                                      borderRadius: AppSpacing.roundedSm,
+                                      semanticsLabel: 'Change note icon',
+                                      triggerHaptics: true,
+                                      onTap: _showEmojiPickerSheet,
+                                      child: Text(
+                                        _iconEmoji!,
+                                        style: const TextStyle(fontSize: 28),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              Expanded(
+                                child: _isEditingMode
+                                    ? TextField(
+                                        controller: _titleController,
+                                        style: AppTypography.display(
+                                          color: tokens.textPrimary,
+                                        ),
+                                        maxLines: null,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Note title...',
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          filled: false,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                      )
+                                    : Text(
+                                        _titleController.text.isEmpty
+                                            ? 'Untitled Note'
+                                            : _titleController.text,
+                                        style: AppTypography.display(
+                                          color: tokens.textPrimary,
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+
+                          // Screenshot 4 ("Design Ideas") Minimalist Metadata Row
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Tooltip(
+                                message: 'Note statistics',
+                                child: TactileInkTarget(
+                                  minWidth: AppSpacing.minTouchTarget,
+                                  minHeight: AppSpacing.minTouchTarget,
+                                  borderRadius: AppSpacing.roundedSm,
+                                  semanticsLabel: 'Open note statistics',
+                                  triggerHaptics: true,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.s2,
+                                    vertical: AppSpacing.s2,
+                                  ),
+                                  onTap: _showNoteStatisticsSheet,
+                                  child: Text(
+                                    '$wordCount ${wordCount == 1 ? 'word' : 'words'}  •  ${readTime}m read',
+                                    style: AppTypography.caption(
+                                      color: tokens.textSecondary,
+                                      weight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (totalChecklists > 0)
+                                Text(
+                                  allChecklistsCompleted
+                                      ? '•  ✓ All done'
+                                      : '•  $completedChecklists/$totalChecklists tasks',
+                                  style: AppTypography.caption(
+                                    color: allChecklistsCompleted
+                                        ? tokens.success
+                                        : tokens.textTertiary,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (widget.item is TextNote &&
+                              (widget.item as TextNote).sourceApp != null) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette
+                                        .resolveAccentColor(isDark)
+                                        .withValues(
+                                          alpha: isDark ? 0.16 : 0.12,
+                                        ),
+                                    borderRadius: AppSpacing.roundedPill,
+                                    border: Border.all(
+                                      color: palette
+                                          .resolveAccentColor(isDark)
+                                          .withValues(
+                                            alpha: isDark ? 0.38 : 0.3,
+                                          ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TackIcon(
+                                        TackIcons.share,
+                                        size: 12,
+                                        color: palette.resolveAccentColor(
+                                          isDark,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Saved from ${(widget.item as TextNote).sourceApp}',
+                                        style: AppTypography.caption(
+                                          color: palette.resolveAccentColor(
+                                            isDark,
+                                          ),
+                                          weight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.sm),
+
+                          // Dynamic Tag Chips Bar
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              ..._tags.map(
+                                (tag) => Chip(
+                                  label: Text('#$tag'),
+                                  labelStyle: AppTypography.caption(
+                                    color: accent,
+                                    weight: FontWeight.w700,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.padded,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppSpacing.roundedPill,
+                                    side: BorderSide(
+                                      color: palette.resolveChipBorder(isDark),
+                                    ),
+                                  ),
+                                  backgroundColor: palette.resolveChipFill(
+                                    isDark,
+                                  ),
+                                  deleteButtonTooltipMessage: 'Remove #$tag',
+                                  onDeleted: _isEditingMode
+                                      ? () => _removeTag(tag)
+                                      : null,
+                                  deleteIcon: _isEditingMode
+                                      ? TackIcon(
+                                          TackIcons.close,
+                                          size: 14,
+                                          color: accent,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              if (_isEditingMode)
+                                if (_isAddingTag)
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                      minHeight: AppSpacing.minTouchTarget,
+                                    ),
+                                    padding: const EdgeInsets.only(
+                                      left: 12,
+                                      right: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: palette.resolveChipFill(isDark),
+                                      borderRadius: AppSpacing.roundedPill,
+                                      border: Border.all(
+                                        color: accent,
+                                        width: 1.4,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '#',
+                                          style: AppTypography.caption(
+                                            fontSize: 13,
+                                            weight: FontWeight.w700,
+                                            color: accent,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        SizedBox(
+                                          width: 88,
+                                          child: TextField(
+                                            controller: _newTagController,
+                                            autofocus: true,
+                                            style: AppTypography.caption(
+                                              color: tokens.textPrimary,
+                                              weight: FontWeight.w600,
+                                            ),
+                                            decoration: const InputDecoration(
+                                              isDense: true,
+                                              filled: false,
+                                              contentPadding: EdgeInsets.zero,
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              hintText: 'tag...',
+                                            ),
+                                            onSubmitted: (_) => _submitNewTag(),
+                                          ),
+                                        ),
+                                        Tooltip(
+                                          message: 'Add tag',
+                                          child: TactileInkTarget(
+                                            useCircleShape: true,
+                                            width: AppSpacing.minTouchTarget,
+                                            height: AppSpacing.minTouchTarget,
+                                            semanticsLabel: 'Add tag',
+                                            onTap: _submitNewTag,
+                                            child: TackIcon(
+                                              TackIcons.check,
+                                              size: 16,
+                                              color: accent,
+                                            ),
+                                          ),
+                                        ),
+                                        Tooltip(
+                                          message: 'Cancel tag',
+                                          child: TactileInkTarget(
+                                            useCircleShape: true,
+                                            width: AppSpacing.minTouchTarget,
+                                            height: AppSpacing.minTouchTarget,
+                                            semanticsLabel: 'Cancel tag',
+                                            onTap: () {
+                                              _newTagController.clear();
+                                              setState(
+                                                () => _isAddingTag = false,
+                                              );
+                                            },
+                                            child: TackIcon(
+                                              TackIcons.close,
+                                              size: 15,
+                                              color: accent,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  ActionChip(
+                                    avatar: TackIcon(
+                                      TackIcons.plus,
+                                      size: 14,
+                                      color: accent,
+                                    ),
+                                    label: const Text('Add Tag'),
+                                    labelStyle: AppTypography.caption(
+                                      color: accent,
+                                      weight: FontWeight.w700,
+                                    ),
+                                    backgroundColor: palette.resolveChipFill(
+                                      isDark,
+                                    ),
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.padded,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppSpacing.roundedPill,
+                                      side: BorderSide(
+                                        color: palette.resolveChipBorder(
+                                          isDark,
+                                        ),
+                                      ),
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _isAddingTag = true),
+                                  ),
+                            ],
+                          ),
+
+                          // Structured YAML Frontmatter Properties Bar
+                          FrontmatterPropertiesBar(
+                            rawContent: _contentController.text,
+                            paletteId: _paletteId,
+                            isEditingMode: _isEditingMode,
+                            onContentChanged: (updatedContent) {
+                              _contentController.text = updatedContent;
+                              _saveNote();
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+
+                          // Body Content (Editing TextField vs Interactive Rich Preview)
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 160),
+                            reverseDuration: const Duration(milliseconds: 110),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder:
+                                TackAnimatedTransition.switcherTransition,
+                            layoutBuilder: (currentChild, previousChildren) {
+                              return Stack(
+                                alignment: Alignment.topLeft,
+                                children: <Widget>[
+                                  ...previousChildren,
+                                  ?currentChild,
+                                ],
+                              );
+                            },
+                            child: _isEditingMode
+                                ? KeyedSubtree(
+                                    key: const ValueKey('editor_edit_mode'),
+                                    child: TextField(
+                                      controller: _contentController,
+                                      focusNode: _contentFocusNode,
+                                      inputFormatters: const [
+                                        SmartMarkdownContinuationFormatter(),
+                                      ],
+                                      contentInsertionConfiguration:
+                                          ContentInsertionConfiguration(
+                                            allowedMimeTypes: const <String>[
+                                              'image/png',
+                                              'image/jpeg',
+                                              'image/gif',
+                                              'image/webp',
+                                            ],
+                                            onContentInserted:
+                                                _handleInsertedContent,
+                                          ),
+                                      style: AppTypography.body(
+                                        color: tokens.textPrimary,
+                                      ).copyWith(fontSize: 16, height: 1.55),
+                                      maxLines: null,
+                                      decoration: const InputDecoration(
+                                        hintText: 'Start writing...\n\nTip: Type / for blocks, [[ to link notes or boards, or [ ] for tasks.',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        filled: false,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  )
+                                : KeyedSubtree(
+                                    key: const ValueKey('editor_read_mode'),
+                                    child: SelectionArea(
+                                      child: RichNoteContentView(
+                                        content: _contentController.text,
+                                        paletteId: _paletteId,
+                                        workspaceItems: workspace.rawItems,
+                                        navigationController:
+                                            _richNoteNavController,
+                                        onWikiLinkTap: _handleWikiLinkTap,
+                                        onHeadingJump: _jumpToLineIndex,
+                                        onLineTap: (lineIdx) {
+                                          _toggleViewMode(
+                                            targetLineIndex: lineIdx,
+                                          );
+                                        },
+                                        onContentChanged: (newContent) {
+                                          _contentController.text = newContent;
+                                          _saveNote();
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                          ),
+
+                          // Nested Sub-Notes Section (Feature 9)
+                          if (childItems.isNotEmpty)
+                            _buildSubNotesSection(
+                              childItems: childItems,
+                              isDark: isDark,
+                              palette: palette,
+                            ),
+
+                          // Collapsible Bi-Directional Backlinks & Unlinked Mentions
+                          NoteBacklinksSection(
+                            linked: backlinks.linked,
+                            unlinked: backlinks.unlinked,
+                            paletteId: _paletteId,
+                            onOpenEntry: (entry) async {
+                              _flushSave();
+                              final target =
+                                  workspace.getItemById(entry.sourceItem.id) ??
+                                  entry.sourceItem;
+                              if (target is WhiteboardCanvasItem) {
+                                await Navigator.of(context).push(
+                                  TackRoutes.sharedAxisHorizontal(
+                                    WhiteboardCanvasScreen(
+                                      item: target,
+                                      initialFocusNodeId: entry.canvasNodeId,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                await Navigator.of(context).push(
+                                  TackRoutes.sharedAxisHorizontal(
+                                    NoteEditorScreen(item: target),
+                                  ),
+                                );
+                              }
+                              if (mounted) setState(() {});
+                            },
+                            onConvertUnlinkedToWikiLink:
+                                _handleConvertUnlinkedMention,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Keyboard-Docked Formatting Toolbar (Only in Editing Mode)
+              if (_isEditingMode) ...[
+                if (showWikiBar)
+                  WikiLinkAutocompleteBar(
+                    trigger: activeWikiTrigger,
+                    workspaceItems: workspace.rawItems,
+                    currentItemId: widget.item.id,
+                    paletteId: _paletteId,
+                    onSelectCompletion: (token) =>
+                        _completeWikiTrigger(activeWikiTrigger, token),
+                    onDismiss: () {
+                      setState(
+                        () => _dismissedWikiTriggerOffset =
+                            activeWikiTrigger.triggerStart,
+                      );
+                    },
+                  )
+                else if (activeSlashTrigger != null)
+                  SlashCommandInlineBar(
+                    trigger: activeSlashTrigger,
+                    paletteId: _paletteId,
+                    onSelectCommand: (cmd) => _executeSlashCommand(
+                      cmd,
+                      slashTrigger: activeSlashTrigger,
+                    ),
+                    onOpenFullSheet: () {
+                      _removeSlashToken(activeSlashTrigger);
+                      _openSlashAndBlockSheet(startOnTurnIntoTab: false);
+                    },
+                  )
+                else if (_isCursorInsideMermaidBlock())
+                  MermaidCompletionBar(
+                    onInsertSnippet: _insertMermaidSnippet,
+                    onOpenTemplates: () {
+                      MermaidTemplateSheet.show(
+                        context,
+                        onSelectTemplate: _insertAtCursor,
+                      );
+                    },
+                  ),
+                EditorFormattingToolbar(
+                  onFormatAction: _applyFormatting,
+                  paletteId: _paletteId,
+                ),
+              ],
+
+              // Always-at-bottom Status Footer (Last edited & Char count)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: AppSpacing.lg,
+                ),
+                decoration: BoxDecoration(
+                  color: palette.resolveNoteFooterBg(isDark),
+                  border: Border(
+                    top: BorderSide(
+                      color: palette
+                          .resolveChipBorder(isDark)
+                          .withValues(alpha: 0.7),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'Last edited: ${DateFormatter.formatTimestamp(widget.item.updatedAt)}  •  $letterCount chars',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: tokens.textSecondary,
+                      weight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildBreadcrumbAndHierarchyBar({
     required List<BaseWorkspaceItem> breadcrumbs,
     required bool isDark,
     required TackColorPalette palette,
+    required bool hasSubNotes,
   }) {
     final pillBg = palette.resolveChipFill(isDark);
     final borderColor = palette.resolveChipBorder(isDark);
@@ -2530,31 +2749,32 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           children: [
             // Folder pill
             if (_folderName != null || _isEditingMode)
-              InkWell(
+              TactileInkTarget(
+                color: pillBg,
+                border: Border.all(color: borderColor),
                 borderRadius: AppSpacing.roundedPill,
+                minHeight: AppSpacing.minTouchTarget,
+                semanticsLabel: 'Folder: ${_folderName ?? 'None'}',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 onTap: _showMoveToFolderSheet,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: pillBg,
-                    borderRadius: AppSpacing.roundedPill,
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TackIcon(TackIcons.folder, size: 13, color: muted),
-                      const SizedBox(width: 5),
-                      Text(
-                        _folderName ?? 'Folder',
-                        style: AppTypography.caption(
-                          color: muted,
-                          weight: FontWeight.w700,
-                        ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TackIcon(TackIcons.folder, size: 13, color: muted),
+                    const SizedBox(width: 5),
+                    Text(
+                      _folderName ?? 'Folder',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(
+                        color: muted,
+                        weight: FontWeight.w700,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -2564,8 +2784,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: TackIcon(TackIcons.chevronRight, size: 13, color: muted),
               ),
-              InkWell(
+              TactileInkTarget(
+                color: pillBg,
+                border: Border.all(color: borderColor),
                 borderRadius: AppSpacing.roundedPill,
+                minHeight: AppSpacing.minTouchTarget,
+                semanticsLabel: 'Open parent note ${ancestor.title}',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 onTap: () async {
                   _flushSave();
                   await Navigator.of(context).push(
@@ -2575,23 +2803,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   );
                   if (mounted) setState(() {});
                 },
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: pillBg,
-                    borderRadius: AppSpacing.roundedPill,
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Center(
-                    child: Text(
-                      ancestor.iconEmoji != null
-                          ? '${ancestor.iconEmoji} ${ancestor.title}'
-                          : ancestor.title,
-                      style: AppTypography.caption(
-                        color: muted,
-                        weight: FontWeight.w700,
-                      ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    ancestor.iconEmoji != null
+                        ? '${ancestor.iconEmoji} ${ancestor.title}'
+                        : ancestor.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption(
+                      color: muted,
+                      weight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -2601,61 +2823,63 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             if (_isEditingMode) ...[
               if (_iconEmoji == null) ...[
                 const SizedBox(width: 6),
-                InkWell(
+                TactileInkTarget(
+                  color: pillBg,
+                  border: Border.all(color: borderColor),
                   borderRadius: AppSpacing.roundedPill,
+                  minHeight: AppSpacing.minTouchTarget,
+                  semanticsLabel: 'Add icon',
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   onTap: _showEmojiPickerSheet,
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: pillBg,
-                      borderRadius: AppSpacing.roundedPill,
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TackIcon(TackIcons.smile, size: 13, color: muted),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Add Icon',
-                          style: AppTypography.caption(
-                            color: muted,
-                            weight: FontWeight.w600,
-                          ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(TackIcons.smile, size: 13, color: muted),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Add Icon',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          color: muted,
+                          weight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-              if (widget.item is TextNote) ...[
+              if (widget.item is TextNote && !hasSubNotes) ...[
                 const SizedBox(width: 6),
-                InkWell(
+                TactileInkTarget(
+                  color: pillBg,
+                  border: Border.all(color: borderColor),
                   borderRadius: AppSpacing.roundedPill,
+                  minHeight: AppSpacing.minTouchTarget,
+                  semanticsLabel: 'Create sub-note',
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   onTap: _handleCreateSubNote,
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: pillBg,
-                      borderRadius: AppSpacing.roundedPill,
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TackIcon(TackIcons.add, size: 13, color: muted),
-                        const SizedBox(width: 5),
-                        Text(
-                          '+ Sub-note',
-                          style: AppTypography.caption(
-                            color: muted,
-                            weight: FontWeight.w600,
-                          ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TackIcon(TackIcons.add, size: 13, color: muted),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Sub-note',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption(
+                          color: muted,
+                          weight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -2743,7 +2967,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   minHeight: AppSpacing.minTouchTarget,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 6,
+                  ),
                   child: Row(
                     children: [
                       Text(

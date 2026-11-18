@@ -8,6 +8,7 @@ import '../../../core/theme/tack_icons.dart';
 import '../services/frontmatter_service.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/tack_toast.dart';
+import '../../../shared/widgets/tactile_ink_target.dart';
 
 /// Zero-clutter YAML Frontmatter Properties Bar.
 ///
@@ -36,9 +37,13 @@ class FrontmatterPropertiesBar extends StatelessWidget {
     final presets = FrontmatterService.statusPresets;
     final idx = currentStatus == null
         ? -1
-        : presets.indexWhere((p) => p.toLowerCase() == currentStatus.toLowerCase());
+        : presets.indexWhere(
+            (p) => p.toLowerCase() == currentStatus.toLowerCase(),
+          );
     final next = presets[(idx + 1) % presets.length];
-    onContentChanged(FrontmatterService.upsertProperty(rawContent, 'status', next));
+    onContentChanged(
+      FrontmatterService.upsertProperty(rawContent, 'status', next),
+    );
   }
 
   void _cyclePriority(String? currentPriority) {
@@ -46,9 +51,13 @@ class FrontmatterPropertiesBar extends StatelessWidget {
     final presets = FrontmatterService.priorityPresets;
     final idx = currentPriority == null
         ? -1
-        : presets.indexWhere((p) => p.toLowerCase() == currentPriority.toLowerCase());
+        : presets.indexWhere(
+            (p) => p.toLowerCase() == currentPriority.toLowerCase(),
+          );
     final next = presets[(idx + 1) % presets.length];
-    onContentChanged(FrontmatterService.upsertProperty(rawContent, 'priority', next));
+    onContentChanged(
+      FrontmatterService.upsertProperty(rawContent, 'priority', next),
+    );
   }
 
   static DateTime _clampDate(DateTime dt, DateTime min, DateTime max) {
@@ -96,39 +105,34 @@ class FrontmatterPropertiesBar extends StatelessWidget {
       if (!isEditingMode) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(top: 6),
-        child: InkWell(
+        child: TactileInkTarget(
+          color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
+          border: Border.all(color: chipBorder),
+          borderRadius: AppSpacing.roundedPill,
+          minHeight: AppSpacing.minTouchTarget,
+          semanticsLabel: 'Add properties',
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           onTap: () => FrontmatterEditorSheet.show(
             context,
             rawContent: rawContent,
             paletteId: paletteId,
             onContentChanged: onContentChanged,
           ),
-          borderRadius: AppSpacing.roundedPill,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
-              borderRadius: AppSpacing.roundedPill,
-              border: Border.all(color: chipBorder),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TackIcon(
-                  TackIcons.settings,
-                  size: 13,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TackIcon(TackIcons.settings, size: 13, color: accent),
+              const SizedBox(width: 5),
+              Text(
+                '+ Properties',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(
                   color: accent,
+                  weight: FontWeight.w600,
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  '+ Properties',
-                  style: AppTypography.caption(
-                    color: accent,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -234,11 +238,7 @@ class FrontmatterPropertiesBar extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: chips,
-      ),
+      child: Wrap(spacing: 6, runSpacing: 6, children: chips),
     );
   }
 }
@@ -267,39 +267,34 @@ class _PropertyPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final fg = textColor ??
-        (subtle ? tokens.textTertiary : tokens.textPrimary);
-    return InkWell(
-      onTap: onTap,
+    final fg = textColor ?? (subtle ? tokens.textTertiary : tokens.textPrimary);
+    return TactileInkTarget(
+      color: backgroundColor ?? tokens.surfacePrimary.withValues(alpha: 0.9),
+      border: Border.all(color: borderColor ?? tokens.borderSubtle),
       borderRadius: AppSpacing.roundedPill,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? tokens.surfacePrimary.withValues(alpha: 0.9),
-          borderRadius: AppSpacing.roundedPill,
-          border: Border.all(
-            color: borderColor ?? tokens.borderSubtle,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (iconWidget != null) ...[
-              iconWidget!,
-              const SizedBox(width: 6),
-            ] else if (icon != null) ...[
-              TackIcon(icon, size: 13, color: fg),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: AppTypography.caption(
-                color: fg,
-                weight: FontWeight.w700,
-              ),
-            ),
+      minHeight: AppSpacing.minTouchTarget,
+      semanticsLabel: label,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (iconWidget != null) ...[
+            iconWidget!,
+            const SizedBox(width: 6),
+          ] else if (icon != null) ...[
+            TackIcon(icon, size: 13, color: fg),
+            const SizedBox(width: 5),
           ],
-        ),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption(color: fg, weight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -383,8 +378,8 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
         _customFieldError = key.isEmpty && val.isEmpty
             ? 'Enter both a property key and value.'
             : (key.isEmpty
-                ? 'Enter a property key (e.g. aliases).'
-                : 'Enter a value for "$key".');
+                  ? 'Enter a property key (e.g. aliases).'
+                  : 'Enter a value for "$key".');
       });
       return;
     }
@@ -429,7 +424,9 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                         'Saved as portable --- YAML --- metadata at the top of your note.',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.caption(color: tokens.textSecondary),
+                        style: AppTypography.caption(
+                          color: tokens.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -482,11 +479,16 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
               children: FrontmatterService.statusPresets.map((preset) {
                 final selected =
                     _props['status']?.toLowerCase() == preset.toLowerCase();
-                return ChoiceChip(
-                  label: Text(preset),
-                  selected: selected,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  onSelected: (v) => _setProp('status', v ? preset : null),
+                return TactileFilterPill(
+                  label: preset,
+                  isSelected: selected,
+                  selectedColor: palette.resolveChipFill(isDark),
+                  unselectedColor: tokens.canvasSunken,
+                  selectedFg: accent,
+                  unselectedFg: tokens.textPrimary,
+                  selectedBorderColor: accent,
+                  unselectedBorderColor: tokens.borderSubtle,
+                  onTap: () => _setProp('status', selected ? null : preset),
                 );
               }).toList(),
             ),
@@ -505,11 +507,16 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
               children: FrontmatterService.priorityPresets.map((preset) {
                 final selected =
                     _props['priority']?.toLowerCase() == preset.toLowerCase();
-                return ChoiceChip(
-                  label: Text(preset),
-                  selected: selected,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  onSelected: (v) => _setProp('priority', v ? preset : null),
+                return TactileFilterPill(
+                  label: preset,
+                  isSelected: selected,
+                  selectedColor: palette.resolveChipFill(isDark),
+                  unselectedColor: tokens.canvasSunken,
+                  selectedFg: accent,
+                  unselectedFg: tokens.textPrimary,
+                  selectedBorderColor: accent,
+                  unselectedBorderColor: tokens.borderSubtle,
+                  onTap: () => _setProp('priority', selected ? null : preset),
                 );
               }).toList(),
             ),
@@ -566,8 +573,9 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                 ],
               ],
             ),
-            if (_props.entries
-                .any((e) => !{'status', 'priority', 'target_date'}.contains(e.key))) ...[
+            if (_props.entries.any(
+              (e) => !{'status', 'priority', 'target_date'}.contains(e.key),
+            )) ...[
               const SizedBox(height: 12),
               Text(
                 'CUSTOM FIELDS',
@@ -578,7 +586,10 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
               ),
               const SizedBox(height: 6),
               ..._props.entries
-                  .where((e) => !{'status', 'priority', 'target_date'}.contains(e.key))
+                  .where(
+                    (e) =>
+                        !{'status', 'priority', 'target_date'}.contains(e.key),
+                  )
                   .map(
                     (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -681,14 +692,20 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                IconButton.filledTonal(
-                  tooltip: 'Add custom property',
-                  constraints: const BoxConstraints(
-                    minWidth: AppSpacing.minTouchTarget,
-                    minHeight: AppSpacing.minTouchTarget,
+                Tooltip(
+                  message: 'Add custom property',
+                  child: TactileInkTarget(
+                    color: palette.resolveChipFill(isDark),
+                    border: Border.all(
+                      color: palette.resolveChipBorder(isDark),
+                    ),
+                    borderRadius: AppSpacing.roundedSm,
+                    width: AppSpacing.minTouchTarget,
+                    height: AppSpacing.minTouchTarget,
+                    semanticsLabel: 'Add custom property',
+                    onTap: _addCustomField,
+                    child: TackIcon(TackIcons.plus, size: 18, color: accent),
                   ),
-                  onPressed: _addCustomField,
-                  icon: const TackIcon(TackIcons.plus, size: 16),
                 ),
               ],
             ),
@@ -696,7 +713,7 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
               const SizedBox(height: 6),
               Text(
                 _customFieldError!,
-                style: AppTypography.caption(color: AppColors.error),
+                style: AppTypography.caption(color: tokens.stateDanger),
               ),
             ],
             const SizedBox(height: AppSpacing.s3),
@@ -714,4 +731,3 @@ class _FrontmatterEditorSheetState extends State<FrontmatterEditorSheet> {
     );
   }
 }
-

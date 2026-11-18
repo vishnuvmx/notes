@@ -55,8 +55,9 @@ class TaskReminderPayload {
 class TaskReminderService {
   TaskReminderService._();
 
-  static const MethodChannel _channel =
-      MethodChannel('com.notes.tacknotes/notifications');
+  static const MethodChannel _channel = MethodChannel(
+    'com.notes.tacknotes/notifications',
+  );
 
   /// Maximum pending alarms scheduled at once so Android AlarmManager stays well
   /// below OEM per-app alarm quota limits.
@@ -85,11 +86,7 @@ class TaskReminderService {
 
       final dueLabel = task.formatDueLabel(ref) ?? 'Due';
       final repeatLabel = task.recurrence?.label;
-      final subtitleParts = <String>[
-        task.noteTitle,
-        dueLabel,
-        if (repeatLabel != null) repeatLabel,
-      ];
+      final subtitleParts = <String>[task.noteTitle, dueLabel, ?repeatLabel];
 
       reminders.add(
         TaskReminderPayload(

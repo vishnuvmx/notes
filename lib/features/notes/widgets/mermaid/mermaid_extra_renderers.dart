@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -23,6 +24,57 @@ const List<String> _branchPaletteIds = [
 Color _branchAccentColor(int index, bool isDark) {
   final id = _branchPaletteIds[index % _branchPaletteIds.length];
   return AppColors.getPaletteById(id).resolveAccentColor(isDark);
+}
+
+/// Wraps a proportionally fitted Mermaid diagram canvas inside [InteractiveViewer]
+/// while keeping [TextScaler.noScaling] inside [FittedBox] so large system font
+/// scales do not clip fixed-size nodes, and disabling pan while unzoomed so
+/// scrolling notes vertically remains smooth.
+class MermaidZoomViewer extends StatelessWidget {
+  final TransformationController transformController;
+  final double displayWidth;
+  final double displayHeight;
+  final Widget child;
+
+  const MermaidZoomViewer({
+    super.key,
+    required this.transformController,
+    required this.displayWidth,
+    required this.displayHeight,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    return ValueListenableBuilder<Matrix4>(
+      valueListenable: transformController,
+      builder: (context, matrix, viewerChild) {
+        final isZoomed = matrix.getMaxScaleOnAxis() > 1.02;
+        return InteractiveViewer(
+          transformationController: transformController,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 1.0,
+          maxScale: 3.0,
+          panEnabled: isZoomed,
+          child: viewerChild!,
+        );
+      },
+      child: Center(
+        child: SizedBox(
+          width: displayWidth,
+          height: displayHeight,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: MediaQuery(
+              data: mediaQuery.copyWith(textScaler: TextScaler.noScaling),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // -------------------------------------------------------------
@@ -91,26 +143,18 @@ class MermaidErWidget extends StatelessWidget {
               Text(
                 diagram.title!,
                 style: AppTypography.titleSm(
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.lightTextPrimary,
                 ),
               ),
               const SizedBox(height: AppSpacing.s2),
             ],
-            InteractiveViewer(
-              transformationController: transformController,
-              boundaryMargin: const EdgeInsets.all(20),
-              minScale: 1.0,
-              maxScale: 3.0,
-              child: Center(
-                child: SizedBox(
-                  width: displayW,
-                  height: displayH,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: canvasContent,
-                  ),
-                ),
-              ),
+            MermaidZoomViewer(
+              transformController: transformController,
+              displayWidth: displayW,
+              displayHeight: displayH,
+              child: canvasContent,
             ),
           ],
         );
@@ -122,9 +166,15 @@ class MermaidErWidget extends StatelessWidget {
     final bg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final headBg = isDark ? AppColors.darkSunken : AppColors.lightSunken;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final primaryText = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final mutedText = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-    final entityDot = isDark ? AppColors.darkStateInfo : AppColors.lightStateInfo;
+    final primaryText = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.lightTextPrimary;
+    final mutedText = isDark
+        ? AppColors.darkTextMuted
+        : AppColors.lightTextMuted;
+    final entityDot = isDark
+        ? AppColors.darkStateInfo
+        : AppColors.lightStateInfo;
 
     return Container(
       decoration: ShapeDecoration(
@@ -213,7 +263,9 @@ class MermaidErWidget extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: AppTypography.fontFamily,
                                   fontSize: 10.5,
-                                  fontWeight: attr.keyType != null ? FontWeight.w700 : FontWeight.w500,
+                                  fontWeight: attr.keyType != null
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                   color: primaryText,
                                 ),
                               ),
@@ -244,11 +296,14 @@ class MermaidErWidget extends StatelessWidget {
   Widget _buildKeyBadge(String keyType, bool isDark) {
     final Color badgeColor;
     if (keyType.contains('PK')) {
-      badgeColor = isDark ? AppColors.darkStateWarning : AppColors.lightStateWarning;
+      badgeColor = isDark
+          ? AppColors.darkStateWarning
+          : AppColors.lightStateWarning;
     } else if (keyType.contains('FK')) {
       badgeColor = isDark ? AppColors.darkStateInfo : AppColors.lightStateInfo;
     } else {
-      badgeColor = AppColors.getPaletteById('lavender').resolveAccentColor(isDark);
+      badgeColor = AppColors.getPaletteById('lavender')
+          .resolveAccentColor(isDark);
     }
 
     return Container(
@@ -290,11 +345,16 @@ _ErLayoutResult _computeErLayout(ParsedMermaidDiagram diagram) {
   for (final e in entities) {
     int maxRowChars = e.displayName.length + 4;
     for (final a in e.attributes) {
-      final len = a.name.length + a.type.length + (a.keyType != null ? a.keyType!.length + 3 : 0);
+      final len =
+          a.name.length +
+          a.type.length +
+          (a.keyType != null ? a.keyType!.length + 3 : 0);
       if (len > maxRowChars) maxRowChars = len;
     }
     final w = math.max(152.0, math.min(240.0, maxRowChars * 6.5 + 36.0));
-    final attrHeight = e.attributes.isEmpty ? 26.0 : (e.attributes.length * 19.0 + 10.0);
+    final attrHeight = e.attributes.isEmpty
+        ? 26.0
+        : (e.attributes.length * 19.0 + 10.0);
     final h = 29.0 + attrHeight;
     sizes[e.name] = Size(w, h);
   }
@@ -371,7 +431,9 @@ class _ErRelationPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final lineColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final lineColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final linePaint = Paint()
       ..color = lineColor
       ..strokeWidth = 1.5
@@ -385,7 +447,9 @@ class _ErRelationPainter extends CustomPainter {
       final toPos = positions[rel.toEntity];
       final fromSz = cardSizes[rel.fromEntity];
       final toSz = cardSizes[rel.toEntity];
-      if (fromPos == null || toPos == null || fromSz == null || toSz == null) continue;
+      if (fromPos == null || toPos == null || fromSz == null || toSz == null) {
+        continue;
+      }
 
       final fromRect = fromPos & fromSz;
       final toRect = toPos & toSz;
@@ -403,15 +467,36 @@ class _ErRelationPainter extends CustomPainter {
         final loopPath = Path()
           ..moveTo(start.dx, start.dy)
           ..cubicTo(
-            start.dx + 36, start.dy - 14,
-            end.dx + 36, end.dy + 14,
-            end.dx, end.dy,
+            start.dx + 36,
+            start.dy - 14,
+            end.dx + 36,
+            end.dy + 14,
+            end.dx,
+            end.dy,
           );
         _drawStyledPath(canvas, loopPath, linePaint, rel.isNonIdentifying);
-        _drawCrowFoot(canvas, start, const Offset(1, 0), rel.leftCardinality, linePaint, isDark);
-        _drawCrowFoot(canvas, end, const Offset(1, 0), rel.rightCardinality, linePaint, isDark);
+        _drawCrowFoot(
+          canvas,
+          start,
+          const Offset(1, 0),
+          rel.leftCardinality,
+          linePaint,
+          isDark,
+        );
+        _drawCrowFoot(
+          canvas,
+          end,
+          const Offset(1, 0),
+          rel.rightCardinality,
+          linePaint,
+          isDark,
+        );
         if (rel.label.isNotEmpty) {
-          _drawLabelPill(canvas, Offset(start.dx + 28, fromRect.center.dy), rel.label);
+          _drawLabelPill(
+            canvas,
+            Offset(start.dx + 28, fromRect.center.dy),
+            rel.label,
+          );
         }
         continue;
       }
@@ -456,22 +541,42 @@ class _ErRelationPainter extends CustomPainter {
       if (startOutDir.dx != 0) {
         final ctrl = math.max(24.0, (end.dx - start.dx).abs() * 0.45);
         path.cubicTo(
-          start.dx + startOutDir.dx * ctrl, start.dy,
-          end.dx + endOutDir.dx * ctrl, end.dy,
-          end.dx, end.dy,
+          start.dx + startOutDir.dx * ctrl,
+          start.dy,
+          end.dx + endOutDir.dx * ctrl,
+          end.dy,
+          end.dx,
+          end.dy,
         );
       } else {
         final ctrl = math.max(24.0, (end.dy - start.dy).abs() * 0.45);
         path.cubicTo(
-          start.dx, start.dy + startOutDir.dy * ctrl,
-          end.dx, end.dy + endOutDir.dy * ctrl,
-          end.dx, end.dy,
+          start.dx,
+          start.dy + startOutDir.dy * ctrl,
+          end.dx,
+          end.dy + endOutDir.dy * ctrl,
+          end.dx,
+          end.dy,
         );
       }
 
       _drawStyledPath(canvas, path, linePaint, rel.isNonIdentifying);
-      _drawCrowFoot(canvas, start, startOutDir, rel.leftCardinality, linePaint, isDark);
-      _drawCrowFoot(canvas, end, endOutDir, rel.rightCardinality, linePaint, isDark);
+      _drawCrowFoot(
+        canvas,
+        start,
+        startOutDir,
+        rel.leftCardinality,
+        linePaint,
+        isDark,
+      );
+      _drawCrowFoot(
+        canvas,
+        end,
+        endOutDir,
+        rel.rightCardinality,
+        linePaint,
+        isDark,
+      );
 
       if (rel.label.isNotEmpty) {
         final mid = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
@@ -505,7 +610,10 @@ class _ErRelationPainter extends CustomPainter {
   ) {
     // outDir points AWAY from the entity card along the edge.
     final perp = Offset(-outDir.dy, outDir.dx);
-    final hasMany = cardinality.contains('{') || cardinality.contains('}') || cardinality.contains('+');
+    final hasMany =
+        cardinality.contains('{') ||
+        cardinality.contains('}') ||
+        cardinality.contains('+');
     final hasZero = cardinality.contains('o') || cardinality.contains('0');
     final hasOne = cardinality.contains('|') || cardinality.contains('1');
 
@@ -545,7 +653,9 @@ class _ErRelationPainter extends CustomPainter {
           fontFamily: AppTypography.fontFamily,
           fontSize: 9.5,
           fontWeight: FontWeight.w700,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          color: isDark
+              ? AppColors.darkTextPrimary
+              : AppColors.lightTextPrimary,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -570,7 +680,10 @@ class _ErRelationPainter extends CustomPainter {
         ..strokeWidth = 0.8
         ..style = PaintingStyle.stroke,
     );
-    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+    tp.paint(
+      canvas,
+      Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
+    );
   }
 
   @override
@@ -594,8 +707,18 @@ class MermaidGanttWidget extends StatelessWidget {
   });
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -622,23 +745,38 @@ class MermaidGanttWidget extends StatelessWidget {
       rows.add(_GanttRow.task(t));
     }
 
-    const double labelColWidth = 116.0;
-    const double headerHeight = 28.0;
-    const double sectionRowHeight = 24.0;
-    const double taskRowHeight = 32.0;
+    final textScale = MediaQuery.textScalerOf(context)
+        .scale(1.0)
+        .clamp(1.0, 1.8);
+    final double labelColWidth = (116.0 * textScale).clamp(116.0, 180.0);
+    final double headerHeight = 28.0 * textScale;
+    final double sectionRowHeight = 24.0 * textScale;
+    final double taskRowHeight = 32.0 * textScale;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availablePlotW = math.max(180.0, constraints.maxWidth - labelColWidth - 2);
-        final double dayPx = math.max(14.0, math.min(34.0, availablePlotW / totalDays));
+        final availablePlotW = math.max(
+          180.0,
+          constraints.maxWidth - labelColWidth - 2,
+        );
+        final double dayPx = math.max(
+          14.0,
+          math.min(34.0, availablePlotW / totalDays),
+        );
         final double chartW = math.max(availablePlotW, totalDays * dayPx);
         final int tickStep = totalDays <= 10
             ? 1
             : (totalDays <= 24 ? 3 : (totalDays <= 60 ? 7 : 14));
 
-        final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-        final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-        final textMuted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+        final borderColor = isDark
+            ? AppColors.darkBorder
+            : AppColors.lightBorder;
+        final textPrimary = isDark
+            ? AppColors.darkTextPrimary
+            : AppColors.lightTextPrimary;
+        final textMuted = isDark
+            ? AppColors.darkTextMuted
+            : AppColors.lightTextMuted;
         final accent = palette.resolveAccentColor(isDark);
 
         return Column(
@@ -666,7 +804,9 @@ class MermaidGanttWidget extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         padding: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+                          border: Border(
+                            bottom: BorderSide(color: borderColor, width: 1),
+                          ),
                         ),
                         child: Text(
                           'Task',
@@ -686,7 +826,9 @@ class MermaidGanttWidget extends StatelessWidget {
                             height: sectionRowHeight,
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.only(right: 8),
-                            color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
+                            color: accent.withValues(
+                              alpha: isDark ? 0.12 : 0.08,
+                            ),
                             child: Text(
                               r.sectionTitle!,
                               maxLines: 1,
@@ -728,7 +870,13 @@ class MermaidGanttWidget extends StatelessWidget {
                   ),
                 ),
 
-                Container(width: 1, height: headerHeight + _rowsHeight(rows, sectionRowHeight, taskRowHeight), color: borderColor),
+                Container(
+                  width: 1,
+                  height:
+                      headerHeight +
+                      _rowsHeight(rows, sectionRowHeight, taskRowHeight),
+                  color: borderColor,
+                ),
 
                 // Horizontal Scrollable Timeline Plot
                 Expanded(
@@ -748,7 +896,12 @@ class MermaidGanttWidget extends StatelessWidget {
                                 Positioned.fill(
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: borderColor,
+                                          width: 1,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -757,7 +910,9 @@ class MermaidGanttWidget extends StatelessWidget {
                                     left: math.min(d * dayPx, chartW - 44),
                                     top: 6,
                                     child: Text(
-                                      _formatShortDate(minStart.add(Duration(days: d))),
+                                      _formatShortDate(
+                                        minStart.add(Duration(days: d)),
+                                      ),
                                       style: TextStyle(
                                         fontFamily: AppTypography.fontFamily,
                                         fontSize: 9.5,
@@ -774,7 +929,9 @@ class MermaidGanttWidget extends StatelessWidget {
                             if (r.isSection)
                               Container(
                                 height: sectionRowHeight,
-                                color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
+                                color: accent.withValues(
+                                  alpha: isDark ? 0.12 : 0.08,
+                                ),
                               )
                             else
                               _buildTaskTrackRow(
@@ -822,15 +979,25 @@ class MermaidGanttWidget extends StatelessWidget {
     required Color borderColor,
     required Color accent,
   }) {
-    final startOffsetDays = math.max(0, task.startDate.difference(minStart).inDays);
-    final durationDays = math.max(1, task.endDate.difference(task.startDate).inDays);
+    final startOffsetDays = math.max(
+      0,
+      task.startDate.difference(minStart).inDays,
+    );
+    final durationDays = math.max(
+      1,
+      task.endDate.difference(task.startDate).inDays,
+    );
     final left = startOffsetDays * dayPx;
 
     Color barColor;
     if (task.isCrit) {
-      barColor = isDark ? AppColors.darkStateDanger : AppColors.lightStateDanger;
+      barColor = isDark
+          ? AppColors.darkStateDanger
+          : AppColors.lightStateDanger;
     } else if (task.isDone) {
-      barColor = isDark ? AppColors.darkStateSuccess : AppColors.lightStateSuccess;
+      barColor = isDark
+          ? AppColors.darkStateSuccess
+          : AppColors.lightStateSuccess;
     } else if (task.isActive) {
       barColor = isDark ? AppColors.darkStateInfo : AppColors.lightStateInfo;
     } else {
@@ -874,7 +1041,9 @@ class MermaidGanttWidget extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkStateWarning : AppColors.lightStateWarning,
+                    color: isDark
+                        ? AppColors.darkStateWarning
+                        : AppColors.lightStateWarning,
                     borderRadius: BorderRadius.circular(2),
                     border: Border.all(
                       color: isDark ? AppColors.darkSurface : Colors.white,
@@ -889,26 +1058,38 @@ class MermaidGanttWidget extends StatelessWidget {
               left: left + 1,
               width: math.max(14.0, durationDays * dayPx - 2),
               height: 18,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                decoration: BoxDecoration(
-                  color: barColor.withValues(alpha: task.isDone ? 0.55 : 0.88),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                alignment: Alignment.centerLeft,
-                child: durationDays * dayPx >= 32
-                    ? Text(
-                        '${durationDays}d',
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      )
-                    : null,
+              child: Builder(
+                builder: (context) {
+                  final fill = barColor.withValues(
+                    alpha: task.isDone ? 0.55 : 0.88,
+                  );
+                  final surface = isDark ? AppColors.darkSurface : Colors.white;
+                  final effectiveBg = Color.alphaBlend(fill, surface);
+                  final durationFg = effectiveBg.computeLuminance() > 0.45
+                      ? AppColors.lightTextPrimary
+                      : Colors.white;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: fill,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: durationDays * dayPx >= 32
+                        ? Text(
+                            '${durationDays}d',
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: durationFg,
+                            ),
+                          )
+                        : null,
+                  );
+                },
               ),
             ),
         ],
@@ -964,10 +1145,7 @@ class MermaidMindmapWidget extends StatelessWidget {
           width: totalW,
           height: totalH,
           child: CustomPaint(
-            painter: _MindmapBranchPainter(
-              edges: layout.edges,
-              isDark: isDark,
-            ),
+            painter: _MindmapBranchPainter(edges: layout.edges, isDark: isDark),
             child: Stack(
               children: [
                 for (final placed in layout.nodes)
@@ -983,21 +1161,11 @@ class MermaidMindmapWidget extends StatelessWidget {
           ),
         );
 
-        return InteractiveViewer(
-          transformationController: transformController,
-          boundaryMargin: const EdgeInsets.all(20),
-          minScale: 1.0,
-          maxScale: 3.0,
-          child: Center(
-            child: SizedBox(
-              width: displayW,
-              height: displayH,
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: canvasContent,
-              ),
-            ),
-          ),
+        return MermaidZoomViewer(
+          transformController: transformController,
+          displayWidth: displayW,
+          displayHeight: displayH,
+          child: canvasContent,
         );
       },
     );
@@ -1012,10 +1180,14 @@ class MermaidMindmapWidget extends StatelessWidget {
     final fg = isRoot
         ? (isDark ? AppColors.darkSurface : AppColors.lightSurface)
         : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
-    final border = isRoot ? color : color.withValues(alpha: isDark ? 0.55 : 0.45);
+    final border = isRoot
+        ? color
+        : color.withValues(alpha: isDark ? 0.55 : 0.45);
 
     final BorderRadius br;
-    if (isRoot || placed.node.shape == MermaidNodeShape.circle || placed.node.shape == MermaidNodeShape.pill) {
+    if (isRoot ||
+        placed.node.shape == MermaidNodeShape.circle ||
+        placed.node.shape == MermaidNodeShape.pill) {
       br = AppSpacing.roundedPill;
     } else if (placed.node.shape == MermaidNodeShape.process) {
       br = AppSpacing.roundedSm;
@@ -1042,7 +1214,9 @@ class MermaidMindmapWidget extends StatelessWidget {
         style: TextStyle(
           fontFamily: AppTypography.fontFamily,
           fontSize: isRoot ? 12.5 : (placed.node.depth == 1 ? 11.5 : 10.5),
-          fontWeight: isRoot || placed.node.depth == 1 ? FontWeight.w700 : FontWeight.w600,
+          fontWeight: isRoot || placed.node.depth == 1
+              ? FontWeight.w700
+              : FontWeight.w600,
           letterSpacing: -0.2,
           color: fg,
         ),
@@ -1110,7 +1284,10 @@ double _subtreeHeight(MermaidMindmapNode node, double rowSlotH) {
   return math.max(rowSlotH, total);
 }
 
-_MindmapLayoutResult _computeMindmapLayout(MermaidMindmapNode root, bool isDark) {
+_MindmapLayoutResult _computeMindmapLayout(
+  MermaidMindmapNode root,
+  bool isDark,
+) {
   const double rowSlotH = 38.0;
   const double hGap = 36.0;
 
@@ -1144,11 +1321,13 @@ _MindmapLayoutResult _computeMindmapLayout(MermaidMindmapNode root, bool isDark)
     width: rootSize.width,
     height: rootSize.height,
   );
-  placed.add(_PlacedMindmapNode(
-    node: root,
-    rect: rootRect,
-    branchColor: _branchAccentColor(2, isDark),
-  ));
+  placed.add(
+    _PlacedMindmapNode(
+      node: root,
+      rect: rootRect,
+      branchColor: _branchAccentColor(2, isDark),
+    ),
+  );
 
   void placeSide({
     required List<MermaidMindmapNode> branches,
@@ -1170,9 +1349,16 @@ _MindmapLayoutResult _computeMindmapLayout(MermaidMindmapNode root, bool isDark)
       final leftX = goesRight
           ? parentRect.right + hGap
           : parentRect.left - hGap - sz.width;
-      final rect = Rect.fromLTWH(leftX, centerY - sz.height / 2, sz.width, sz.height);
+      final rect = Rect.fromLTWH(
+        leftX,
+        centerY - sz.height / 2,
+        sz.width,
+        sz.height,
+      );
 
-      placed.add(_PlacedMindmapNode(node: node, rect: rect, branchColor: color));
+      placed.add(
+        _PlacedMindmapNode(node: node, rect: rect, branchColor: color),
+      );
 
       final parentPort = Offset(
         goesRight ? parentRect.right : parentRect.left,
@@ -1182,13 +1368,15 @@ _MindmapLayoutResult _computeMindmapLayout(MermaidMindmapNode root, bool isDark)
         goesRight ? rect.left : rect.right,
         rect.center.dy,
       );
-      edges.add(_MindmapEdge(
-        start: parentPort,
-        end: childPort,
-        color: color,
-        goesRight: goesRight,
-        depth: node.depth,
-      ));
+      edges.add(
+        _MindmapEdge(
+          start: parentPort,
+          end: childPort,
+          color: color,
+          goesRight: goesRight,
+          depth: node.depth,
+        ),
+      );
 
       double childY = startY;
       for (final c in node.children) {
@@ -1263,10 +1451,7 @@ class _MindmapBranchPainter extends CustomPainter {
   final List<_MindmapEdge> edges;
   final bool isDark;
 
-  _MindmapBranchPainter({
-    required this.edges,
-    required this.isDark,
-  });
+  _MindmapBranchPainter({required this.edges, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {

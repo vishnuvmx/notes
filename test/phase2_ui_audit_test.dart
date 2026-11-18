@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,7 +59,8 @@ class _MockWorkspaceRepo extends IWorkspaceRepository {
       _store.where((i) => !i.isTrash && !i.isArchived).toList();
 
   @override
-  Future<List<BaseWorkspaceItem>> getAllActiveItems() async => cachedActiveItems;
+  Future<List<BaseWorkspaceItem>> getAllActiveItems() async =>
+      cachedActiveItems;
 
   @override
   Future<List<BaseWorkspaceItem>> getItemsByType(ItemType? type) async {
@@ -79,11 +81,12 @@ class _MockWorkspaceRepo extends IWorkspaceRepository {
       _store.where((i) => i.isTrash).toList();
 
   @override
-  Future<List<BaseWorkspaceItem>> searchItems(String query, {ItemType? type}) async =>
-      cachedActiveItems
-          .where((i) =>
-              (type == null || i.type == type) && i.matchesQuery(query))
-          .toList();
+  Future<List<BaseWorkspaceItem>> searchItems(
+    String query, {
+    ItemType? type,
+  }) async => cachedActiveItems
+      .where((i) => (type == null || i.type == type) && i.matchesQuery(query))
+      .toList();
 
   @override
   Future<BaseWorkspaceItem?> getItemById(String id) async =>
@@ -124,97 +127,113 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('UI & UX Audit Verifications', () {
-    testWidgets('1. AppSearchField has a single container border and bare TextField input decoration', (tester) async {
-      String query = '';
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Center(
-              child: AppSearchField(
-                hintText: 'Search notes...',
-                onChanged: (val) => query = val,
-                onClear: () => query = '',
+    testWidgets(
+      '1. AppSearchField has a single container border and bare TextField input decoration',
+      (tester) async {
+        String query = '';
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Center(
+                child: AppSearchField(
+                  hintText: 'Search notes...',
+                  onChanged: (val) => query = val,
+                  onClear: () => query = '',
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Verify TextField exists and uses InputBorder.none to prevent nested border slop
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      expect(textField.decoration?.border, equals(InputBorder.none));
-      expect(textField.decoration?.focusedBorder, equals(InputBorder.none));
-      expect(textField.decoration?.enabledBorder, equals(InputBorder.none));
-      expect(textField.decoration?.filled, isFalse);
+        // Verify TextField exists and uses InputBorder.none to prevent nested border slop
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.decoration?.border, equals(InputBorder.none));
+        expect(textField.decoration?.focusedBorder, equals(InputBorder.none));
+        expect(textField.decoration?.enabledBorder, equals(InputBorder.none));
+        expect(textField.decoration?.filled, isFalse);
 
-      // Verify parent Container has the single canonical rounded border
-      final containerFinder = find.ancestor(
-        of: find.byType(TextField),
-        matching: find.byType(Container),
-      ).first;
-      final container = tester.widget<Container>(containerFinder);
-      final decoration = container.decoration as ShapeDecoration?;
-      final shape = decoration?.shape as SmoothRectangleBorder?;
-      expect(shape?.side, isNotNull);
+        // Verify parent Container has the single canonical rounded border
+        final containerFinder = find
+            .ancestor(
+              of: find.byType(TextField),
+              matching: find.byType(Container),
+            )
+            .first;
+        final container = tester.widget<Container>(containerFinder);
+        final decoration = container.decoration as ShapeDecoration?;
+        final shape = decoration?.shape as SmoothRectangleBorder?;
+        expect(shape?.side, isNotNull);
 
-      // Verify typing and clearing
-      await tester.enterText(find.byType(TextField), 'Flutter clean architecture');
-      await tester.pump();
-      expect(query, equals('Flutter clean architecture'));
+        // Verify typing and clearing
+        await tester.enterText(
+          find.byType(TextField),
+          'Flutter clean architecture',
+        );
+        await tester.pump();
+        expect(query, equals('Flutter clean architecture'));
 
-      // Clear button should be visible (using Semantics label)
-      final clearButtonFinder = find.bySemanticsLabel('Clear search text');
-      expect(clearButtonFinder, findsOneWidget);
+        // Clear button should be visible (using Semantics label)
+        final clearButtonFinder = find.bySemanticsLabel('Clear search text');
+        expect(clearButtonFinder, findsOneWidget);
 
-      await tester.tap(clearButtonFinder);
-      await tester.pump();
-      expect(query, equals(''));
-    });
+        await tester.tap(clearButtonFinder);
+        await tester.pump();
+        expect(query, equals(''));
+      },
+    );
 
-    testWidgets('2. AppBottomSheet renders as a floating island modal with 28dp rounded corners and no drag handle', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () {
-                  AppBottomSheet.show(
-                    context: ctx,
-                    builder: (sheetCtx) => const SizedBox(
-                      height: 180,
-                      child: Text('Sheet Content'),
-                    ),
-                  );
-                },
-                child: const Text('Open Sheet'),
+    testWidgets(
+      '2. AppBottomSheet renders as a floating island modal with 28dp rounded corners and no drag handle',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () {
+                    AppBottomSheet.show(
+                      context: ctx,
+                      builder: (sheetCtx) => const SizedBox(
+                        height: 180,
+                        child: Text('Sheet Content'),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Sheet'),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(ElevatedButton));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Sheet Content'), findsOneWidget);
+        expect(find.text('Sheet Content'), findsOneWidget);
 
-      // Verify no drag handle semantics widget is present per reference UI requirements
-      final handleFinder = find.bySemanticsLabel('Drag handle to dismiss');
-      expect(handleFinder, findsNothing);
+        // Verify no drag handle semantics widget is present per reference UI requirements
+        final handleFinder = find.bySemanticsLabel('Drag handle to dismiss');
+        expect(handleFinder, findsNothing);
 
-      // Verify floating modal card container has 28dp rounded corners and horizontal margin
-      final containerFinder = find.ancestor(
-        of: find.text('Sheet Content'),
-        matching: find.byType(Container),
-      ).first;
-      final container = tester.widget<Container>(containerFinder);
-      final decoration = container.decoration as ShapeDecoration?;
-      final shape = decoration?.shape as SmoothRectangleBorder?;
-      expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
-      expect(container.margin, equals(const EdgeInsets.symmetric(horizontal: AppSpacing.s4)));
-    });
+        // Verify floating modal card container has 28dp rounded corners and horizontal margin
+        final containerFinder = find
+            .ancestor(
+              of: find.text('Sheet Content'),
+              matching: find.byType(Container),
+            )
+            .first;
+        final container = tester.widget<Container>(containerFinder);
+        final decoration = container.decoration as ShapeDecoration?;
+        final shape = decoration?.shape as SmoothRectangleBorder?;
+        expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
+        expect(
+          container.margin,
+          equals(const EdgeInsets.symmetric(horizontal: AppSpacing.s4)),
+        );
+      },
+    );
 
     test('3. Table editor round-trip strips markdown asterisks and regenerates clean markdown', () {
       const rawMarkdown = '''
@@ -236,12 +255,17 @@ void main() {
       parsed.rows[0][1] = 'Verified';
       final reGenerated = MarkdownTableService.toMarkdown(parsed);
 
-      expect(reGenerated.contains('**'), isFalse, reason: 'Asterisks must not leak into generated cells');
+      expect(
+        reGenerated.contains('**'),
+        isFalse,
+        reason: 'Asterisks must not leak into generated cells',
+      );
       expect(reGenerated.contains('*Done*'), isFalse);
       expect(reGenerated.contains('Verified'), isTrue);
 
       // Verify replaceTableInDocument in-place replacement
-      final fullDoc = '''
+      final fullDoc =
+          '''
 # Notes
 
 $rawMarkdown
@@ -260,430 +284,506 @@ Footer text.
       expect(replacedDoc.contains('Footer text.'), isTrue);
     });
 
-    testWidgets('4. Navigation hierarchy: Edit mode -> Back -> Read mode -> Back -> Home', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspaceProvider = WorkspaceProvider(repo);
+    testWidgets(
+      '4. Navigation hierarchy: Edit mode -> Back -> Read mode -> Back -> Home',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspaceProvider = WorkspaceProvider(repo);
 
-      final existingNote = TextNote(
-        id: 'test-note-1',
-        title: 'Architecture Review',
-        content: '# Heading 1\nAuditing navigation patterns.',
-        folderName: 'All Notes',
-        tags: const ['#work'],
-        paletteId: 'peach',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      await workspaceProvider.saveItem(existingNote);
+        final existingNote = TextNote(
+          id: 'test-note-1',
+          title: 'Architecture Review',
+          content: '# Heading 1\nAuditing navigation patterns.',
+          folderName: 'All Notes',
+          tags: const ['#work'],
+          paletteId: 'peach',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await workspaceProvider.saveItem(existingNote);
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: Builder(
-              builder: (ctx) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(ctx).push(
-                        MaterialPageRoute(
-                          builder: (_) => NoteEditorScreen(item: existingNote),
-                        ),
-                      );
-                    },
-                    child: const Text('Open Note'),
-                  ),
-                ),
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(
+                value: workspaceProvider,
               ),
-            ),
-          ),
-        ),
-      );
-
-      // 1. Home screen: Tap 'Open Note'
-      await tester.tap(find.text('Open Note'));
-      await tester.pumpAndSettle();
-
-      // Note opens in Read Mode without any 'Saved' status pill
-      expect(find.byType(NoteEditorScreen), findsOneWidget);
-      expect(find.byTooltip('Edit Note'), findsOneWidget);
-      expect(find.byTooltip('Reader Mode'), findsNothing);
-      expect(find.text('Saved'), findsNothing);
-      expect(find.text('Saving...'), findsNothing);
-
-      // 2. Transition from Read Mode -> Edit Mode
-      await tester.tap(find.byTooltip('Edit Note'));
-      await tester.pumpAndSettle();
-
-      // Now in Edit Mode (reader switch button visible, still no 'Saved' pill)
-      expect(find.byTooltip('Reader Mode'), findsOneWidget);
-      expect(find.text('Saved'), findsNothing);
-      expect(find.text('Saving...'), findsNothing);
-
-      // 3. Press back while in Edit Mode
-      // Should transition to Read Mode instead of popping the screen
-      final backButton = find.byTooltip('Back');
-      expect(backButton, findsOneWidget);
-      await tester.tap(backButton);
-      await tester.pumpAndSettle();
-
-      // We should STILL be in NoteEditorScreen, but back in Read Mode!
-      expect(find.byType(NoteEditorScreen), findsOneWidget);
-      expect(find.byTooltip('Edit Note'), findsOneWidget);
-      expect(find.byTooltip('Reader Mode'), findsNothing);
-
-      // 4. Press back while in Read Mode
-      // Should now pop back to Home screen
-      await tester.tap(find.byTooltip('Back'));
-      await tester.pumpAndSettle();
-
-      // NoteEditorScreen is popped, Home screen is back
-      expect(find.byType(NoteEditorScreen), findsNothing);
-      expect(find.text('Open Note'), findsOneWidget);
-    });
-
-    testWidgets('5. Untouched blank draft discards and pops directly on Back (05 §2.2 D2)', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspaceProvider = WorkspaceProvider(repo);
-
-      final blankDraft = await workspaceProvider.createQuickItem(
-        title: 'Untitled Note',
-        content: '',
-        type: ItemType.note,
-        paletteId: 'amber',
-      );
-      expect(workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id), isTrue);
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: Builder(
-              builder: (ctx) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(ctx).push(
-                        MaterialPageRoute(
-                          builder: (_) => NoteEditorScreen(
-                            item: blankDraft,
-                            startInEditMode: true,
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: Builder(
+                builder: (ctx) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                NoteEditorScreen(item: existingNote),
                           ),
-                        ),
-                      );
-                    },
-                    child: const Text('New Blank Draft'),
+                        );
+                      },
+                      child: const Text('Open Note'),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('New Blank Draft'));
-      await tester.pumpAndSettle();
+        // 1. Home screen: Tap 'Open Note'
+        await tester.tap(find.text('Open Note'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(NoteEditorScreen), findsOneWidget);
+        // Note opens in Read Mode without any 'Saved' status pill
+        expect(find.byType(NoteEditorScreen), findsOneWidget);
+        expect(find.byTooltip('Edit Note'), findsOneWidget);
+        expect(find.byTooltip('Reader Mode'), findsNothing);
+        expect(find.text('Saved'), findsNothing);
+        expect(find.text('Saving...'), findsNothing);
 
-      // Press Back immediately without typing anything
-      await tester.tap(find.byTooltip('Back'));
-      await tester.pumpAndSettle();
+        // 2. Transition from Read Mode -> Edit Mode
+        await tester.tap(find.byTooltip('Edit Note'));
+        await tester.pumpAndSettle();
 
-      // Should pop directly back to caller and discard the untouched empty draft
-      expect(find.byType(NoteEditorScreen), findsNothing);
-      expect(find.text('New Blank Draft'), findsOneWidget);
-      expect(workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id), isFalse);
-    });
+        // Now in Edit Mode (reader switch button visible, still no 'Saved' pill)
+        expect(find.byTooltip('Reader Mode'), findsOneWidget);
+        expect(find.text('Saved'), findsNothing);
+        expect(find.text('Saving...'), findsNothing);
 
-    testWidgets('6. SmartBottomNavBar renders 5 icon-only Paper & Pin slots (Today, Library, Capture, Boards, Search)', (tester) async {
-      int tappedIndex = -1;
-      bool captureTapped = false;
+        // 3. Press back while in Edit Mode
+        // Should transition to Read Mode instead of popping the screen
+        final backButton = find.byTooltip('Back');
+        expect(backButton, findsOneWidget);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            bottomNavigationBar: SmartBottomNavBar(
-              currentIndex: 0,
-              inboxCount: 3,
-              onTap: (idx) => tappedIndex = idx,
-              onFabTap: () => captureTapped = true,
+        // We should STILL be in NoteEditorScreen, but back in Read Mode!
+        expect(find.byType(NoteEditorScreen), findsOneWidget);
+        expect(find.byTooltip('Edit Note'), findsOneWidget);
+        expect(find.byTooltip('Reader Mode'), findsNothing);
+
+        // 4. Press back while in Read Mode
+        // Should now pop back to Home screen
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+
+        // NoteEditorScreen is popped, Home screen is back
+        expect(find.byType(NoteEditorScreen), findsNothing);
+        expect(find.text('Open Note'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '5. Untouched blank draft discards and pops directly on Back (05 §2.2 D2)',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspaceProvider = WorkspaceProvider(repo);
+
+        final blankDraft = await workspaceProvider.createQuickItem(
+          title: 'Untitled Note',
+          content: '',
+          type: ItemType.note,
+          paletteId: 'amber',
+        );
+        expect(
+          workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id),
+          isTrue,
+        );
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(
+                value: workspaceProvider,
+              ),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: Builder(
+                builder: (ctx) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).push(
+                          MaterialPageRoute(
+                            builder: (_) => NoteEditorScreen(
+                              item: blankDraft,
+                              startInEditMode: true,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('New Blank Draft'),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // No visible text labels in bottom navigation dock
-      expect(find.text('Today'), findsNothing);
-      expect(find.text('Library'), findsNothing);
-      expect(find.text('Boards'), findsNothing);
-      expect(find.text('Search'), findsNothing);
+        await tester.tap(find.text('New Blank Draft'));
+        await tester.pumpAndSettle();
 
-      // Accessible semantics & slot keys are present
-      expect(find.bySemanticsLabel('Today'), findsOneWidget);
-      expect(find.bySemanticsLabel('Library'), findsOneWidget);
-      expect(find.bySemanticsLabel('Boards'), findsOneWidget);
-      expect(find.bySemanticsLabel('Search'), findsOneWidget);
+        expect(find.byType(NoteEditorScreen), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('nav_item_1')));
-      await tester.pump();
-      expect(tappedIndex, 1);
+        // Press Back immediately without typing anything
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey('nav_capture_fab')));
-      await tester.pump();
-      expect(captureTapped, isTrue);
+        // Should pop directly back to caller and discard the untouched empty draft
+        expect(find.byType(NoteEditorScreen), findsNothing);
+        expect(find.text('New Blank Draft'), findsOneWidget);
+        expect(
+          workspaceProvider.libraryNotes.any((n) => n.id == blankDraft.id),
+          isFalse,
+        );
+      },
+    );
 
-      // Verify the background pill fill smoothly glides across the dock when index changes
-      final pillFinder = find.descendant(
-        of: find.descendant(
-          of: find.byType(SmartBottomNavBar),
-          matching: find.byType(SlideTransition),
-        ),
-        matching: find.byType(DecoratedBox),
-      );
-      final startX = tester.getTopLeft(pillFinder).dx;
+    testWidgets(
+      '6. SmartBottomNavBar renders 5 icon-only Paper & Pin slots (Today, Library, Capture, Boards, Search)',
+      (tester) async {
+        int tappedIndex = -1;
+        bool captureTapped = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            bottomNavigationBar: SmartBottomNavBar(
-              currentIndex: 4, // Last slot (Search)
-              inboxCount: 3,
-              onTap: (idx) => tappedIndex = idx,
-              onFabTap: () => captureTapped = true,
-            ),
-          ),
-        ),
-      );
-
-      // Midway through the 300ms glide, indicator should be strictly between start and end
-      await tester.pump(const Duration(milliseconds: 120));
-      final midX = tester.getTopLeft(pillFinder).dx;
-      await tester.pumpAndSettle();
-      final endX = tester.getTopLeft(pillFinder).dx;
-
-      expect(midX, greaterThan(startX + 10));
-      expect(midX, lessThan(endX - 10));
-    });
-
-    testWidgets('7. ProfileSettingsScreen switches between tabs with IndexedStack, clipBehavior, and clean TabBar', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspaceProvider = WorkspaceProvider(repo);
-      final themeProvider = ThemeProvider();
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: workspaceProvider),
-            ChangeNotifierProvider.value(value: themeProvider),
-          ],
-          child: MaterialApp(
+        await tester.pumpWidget(
+          MaterialApp(
             theme: AppTheme.lightTheme,
-            home: const ProfileSettingsScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // TabBar must have NoSplash and transparent overlay
-      final tabBarFinder = find.byType(TabBar);
-      expect(tabBarFinder, findsOneWidget);
-      final tabBar = tester.widget<TabBar>(tabBarFinder);
-      expect(tabBar.splashFactory, equals(NoSplash.splashFactory));
-
-      // Uses IndexedStack (not TabBarView which creates sliding shadow bounding box glitches)
-      expect(find.byType(IndexedStack), findsOneWidget);
-      expect(find.byType(TabBarView), findsNothing);
-
-      // Initially shows clean simplified Profile & Settings labels without subheadings/subtitles
-      expect(
-        find.descendant(
-          of: find.byType(ListTile),
-          matching: find.text('Trash'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Carry forward unfinished tasks'), findsOneWidget);
-      expect(find.text('All files'), findsOneWidget);
-      expect(find.text('Export backup'), findsOneWidget);
-      expect(find.text('Restore backup'), findsOneWidget);
-      expect(find.text('About & Privacy'), findsOneWidget);
-
-      expect(find.text('On-device JSON store'), findsNothing);
-      expect(find.text('Trash & Deleted Items'), findsNothing);
-      expect(find.text('Appearance'), findsNothing);
-      expect(find.text('Today & Daily Note'), findsNothing);
-      expect(find.text('Local Storage & Backup'), findsNothing);
-      expect(find.text('About'), findsNothing);
-      expect(find.text('Restore or permanently delete items'), findsNothing);
-
-      // Tapping Dark theme updates ThemeProvider synchronously and animates SlidingPillTrack cleanly
-      await tester.tap(find.text('Dark'));
-      await tester.pump();
-      expect(themeProvider.themeMode, ThemeMode.dark);
-      await tester.pumpAndSettle();
-
-      // Switch to What's New tab
-      await tester.tap(find.text("What's New"));
-      await tester.pumpAndSettle();
-
-      // IndexedStack index updated to 1, showing What's New content
-      final indexedStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
-      expect(indexedStack.index, 1);
-      expect(find.text('v2.0.0  •  MAJOR UPDATE'), findsOneWidget);
-    });
-
-    testWidgets('8. NeoNoteCard does not render body content inside preview on home screen', (tester) async {
-      final now = DateTime.now();
-      final note = TextNote(
-        id: 'test_note_1',
-        title: 'Project Architecture',
-        content: 'Detailed hidden body content that should never appear on the home preview card.',
-        tags: const ['design'],
-        paletteId: 'peach',
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Center(
-              child: NeoNoteCard(
-                item: note,
-                onTap: () {},
+            home: Scaffold(
+              bottomNavigationBar: SmartBottomNavBar(
+                currentIndex: 0,
+                inboxCount: 3,
+                onTap: (idx) => tappedIndex = idx,
+                onFabTap: () => captureTapped = true,
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
 
-      // Title and Tag must be visible
-      expect(find.text('Project Architecture'), findsOneWidget);
-      expect(find.text('#design'), findsOneWidget);
+        // No visible text labels in bottom navigation dock
+        expect(find.text('Today'), findsNothing);
+        expect(find.text('Library'), findsNothing);
+        expect(find.text('Boards'), findsNothing);
+        expect(find.text('Search'), findsNothing);
 
-      // Body text snippet MUST NOT be present
-      expect(find.textContaining('Detailed hidden body content'), findsNothing);
-    });
+        // Accessible semantics & slot keys are present
+        expect(find.bySemanticsLabel('Today'), findsOneWidget);
+        expect(find.bySemanticsLabel('Library'), findsOneWidget);
+        expect(find.bySemanticsLabel('Boards'), findsOneWidget);
+        expect(find.bySemanticsLabel('Search'), findsOneWidget);
 
-    testWidgets('9. ZOrderColumn renders children in reverse paint order for unclipped drop shadows', (tester) async {
-      bool firstTapped = false;
-      bool secondTapped = false;
+        await tester.tap(find.byKey(const ValueKey('nav_item_1')));
+        await tester.pump();
+        expect(tappedIndex, 1);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: ZOrderColumn(
-              children: [
-                GestureDetector(
-                  onTap: () => firstTapped = true,
-                  child: Container(
-                    height: 100,
-                    width: 200,
-                    color: Colors.blue,
-                    child: const Text('Top Card'),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => secondTapped = true,
-                  child: Container(
-                    height: 100,
-                    width: 200,
-                    color: Colors.green,
-                    child: const Text('Bottom Card'),
-                  ),
-                ),
-              ],
-            ),
+        await tester.tap(find.byKey(const ValueKey('nav_capture_fab')));
+        await tester.pump();
+        expect(captureTapped, isTrue);
+
+        // Verify the background pill fill smoothly glides across the dock when index changes
+        final pillFinder = find.descendant(
+          of: find.descendant(
+            of: find.byType(SmartBottomNavBar),
+            matching: find.byType(SlideTransition),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+          matching: find.byType(DecoratedBox),
+        );
+        final startX = tester.getTopLeft(pillFinder).dx;
 
-      expect(find.text('Top Card'), findsOneWidget);
-      expect(find.text('Bottom Card'), findsOneWidget);
-
-      await tester.tap(find.text('Top Card'));
-      await tester.pump();
-      expect(firstTapped, isTrue);
-
-      await tester.tap(find.text('Bottom Card'));
-      await tester.pump();
-      expect(secondTapped, isTrue);
-    });
-
-    testWidgets('10. AppFloatingDialog renders custom island card with 28dp radius and pill actions', (tester) async {
-      bool confirmed = false;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () async {
-                  confirmed = await AppFloatingDialog.confirm(
-                    context: ctx,
-                    title: 'Delete Note?',
-                    message: 'This note will be moved to trash.',
-                    confirmLabel: 'Move to Trash',
-                    isDestructive: true,
-                  );
-                },
-                child: const Text('Open Dialog'),
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              bottomNavigationBar: SmartBottomNavBar(
+                currentIndex: 4, // Last slot (Search)
+                inboxCount: 3,
+                onTap: (idx) => tappedIndex = idx,
+                onFabTap: () => captureTapped = true,
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
+        // Midway through the 300ms glide, indicator should be strictly between start and end
+        await tester.pump(const Duration(milliseconds: 120));
+        final midX = tester.getTopLeft(pillFinder).dx;
+        await tester.pumpAndSettle();
+        final endX = tester.getTopLeft(pillFinder).dx;
 
-      expect(find.text('Delete Note?'), findsOneWidget);
-      expect(find.text('This note will be moved to trash.'), findsOneWidget);
-      expect(find.text('Move to Trash'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
+        expect(midX, greaterThan(startX + 10));
+        expect(midX, lessThan(endX - 10));
+      },
+    );
 
-      // Verify custom floating island card with 28dp rounded corners
-      final cardFinder = find.ancestor(
-        of: find.text('Delete Note?'),
-        matching: find.byType(Container),
-      ).first;
-      final card = tester.widget<Container>(cardFinder);
-      final decoration = card.decoration as ShapeDecoration?;
-      final shape = decoration?.shape as SmoothRectangleBorder?;
-      expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
+    testWidgets(
+      '7. ProfileSettingsScreen switches between tabs with IndexedStack, clipBehavior, and clean TabBar',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspaceProvider = WorkspaceProvider(repo);
+        final themeProvider = ThemeProvider();
 
-      // Tap Confirm
-      await tester.tap(find.text('Move to Trash'));
-      await tester.pumpAndSettle();
-      expect(confirmed, isTrue);
-    });
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: workspaceProvider),
+              ChangeNotifierProvider.value(value: themeProvider),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const ProfileSettingsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // TabBar must have NoSplash and transparent overlay
+        final tabBarFinder = find.byType(TabBar);
+        expect(tabBarFinder, findsOneWidget);
+        final tabBar = tester.widget<TabBar>(tabBarFinder);
+        expect(tabBar.splashFactory, equals(NoSplash.splashFactory));
+
+        // Uses IndexedStack (not TabBarView which creates sliding shadow bounding box glitches)
+        expect(find.byType(IndexedStack), findsOneWidget);
+        expect(find.byType(TabBarView), findsNothing);
+
+        // Initially shows clean simplified Profile & Settings labels without subheadings/subtitles
+        expect(
+          find.descendant(
+            of: find.byType(ListTile),
+            matching: find.text('Trash'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Carry forward unfinished tasks'), findsOneWidget);
+        expect(find.text('All files'), findsOneWidget);
+        expect(find.text('Export backup'), findsOneWidget);
+        expect(find.text('Restore backup'), findsOneWidget);
+        expect(find.text('About & Privacy'), findsOneWidget);
+
+        expect(find.text('On-device JSON store'), findsNothing);
+        expect(find.text('Trash & Deleted Items'), findsNothing);
+        expect(find.text('Appearance'), findsNothing);
+        expect(find.text('Today & Daily Note'), findsNothing);
+        expect(find.text('Local Storage & Backup'), findsNothing);
+        expect(find.text('About'), findsNothing);
+        expect(find.text('Restore or permanently delete items'), findsNothing);
+
+        // Tapping Dark theme updates ThemeProvider synchronously and animates SlidingPillTrack cleanly
+        await tester.tap(find.text('Dark'));
+        await tester.pump();
+        expect(themeProvider.themeMode, ThemeMode.dark);
+        await tester.pumpAndSettle();
+
+        // Switch to What's New tab
+        await tester.tap(find.text("What's New"));
+        await tester.pumpAndSettle();
+
+        // IndexedStack index updated to 1, showing What's New content
+        final indexedStack = tester.widget<IndexedStack>(
+          find.byType(IndexedStack),
+        );
+        expect(indexedStack.index, 1);
+        expect(find.text('v2.0.0  •  MAJOR UPDATE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '8. NeoNoteCard does not render body content inside preview on home screen',
+      (tester) async {
+        final now = DateTime.now();
+        final note = TextNote(
+          id: 'test_note_1',
+          title: 'Project Architecture',
+          content: 'Detailed hidden body content that should never appear on the home preview card.',
+          tags: const ['design'],
+          paletteId: 'peach',
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Center(
+                child: NeoNoteCard(item: note, onTap: () {}),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Title and Tag must be visible
+        expect(find.text('Project Architecture'), findsOneWidget);
+        expect(find.text('#design'), findsOneWidget);
+
+        // Body text snippet MUST NOT be present
+        expect(
+          find.textContaining('Detailed hidden body content'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      '9. ZOrderColumn renders children in reverse paint order for unclipped drop shadows',
+      (tester) async {
+        bool firstTapped = false;
+        bool secondTapped = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: ZOrderColumn(
+                children: [
+                  GestureDetector(
+                    onTap: () => firstTapped = true,
+                    child: Container(
+                      height: 100,
+                      width: 200,
+                      color: Colors.blue,
+                      child: const Text('Top Card'),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => secondTapped = true,
+                    child: Container(
+                      height: 100,
+                      width: 200,
+                      color: Colors.green,
+                      child: const Text('Bottom Card'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Top Card'), findsOneWidget);
+        expect(find.text('Bottom Card'), findsOneWidget);
+
+        await tester.tap(find.text('Top Card'));
+        await tester.pump();
+        expect(firstTapped, isTrue);
+
+        await tester.tap(find.text('Bottom Card'));
+        await tester.pump();
+        expect(secondTapped, isTrue);
+      },
+    );
+
+    testWidgets(
+      '10. AppFloatingDialog renders custom island card with 28dp radius and pill actions',
+      (tester) async {
+        bool confirmed = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () async {
+                    confirmed = await AppFloatingDialog.confirm(
+                      context: ctx,
+                      title: 'Delete Note?',
+                      message: 'This note will be moved to trash.',
+                      confirmLabel: 'Move to Trash',
+                      isDestructive: true,
+                    );
+                  },
+                  child: const Text('Open Dialog'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(ElevatedButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Delete Note?'), findsOneWidget);
+        expect(find.text('This note will be moved to trash.'), findsOneWidget);
+        expect(find.text('Move to Trash'), findsOneWidget);
+        expect(find.text('Cancel'), findsOneWidget);
+
+        // Verify custom floating island card with 28dp rounded corners
+        final cardFinder = find
+            .ancestor(
+              of: find.text('Delete Note?'),
+              matching: find.byType(Container),
+            )
+            .first;
+        final card = tester.widget<Container>(cardFinder);
+        final decoration = card.decoration as ShapeDecoration?;
+        final shape = decoration?.shape as SmoothRectangleBorder?;
+        expect(shape?.borderRadius, equals(AppSpacing.roundedModal));
+
+        // Tap Confirm
+        await tester.tap(find.text('Move to Trash'));
+        await tester.pumpAndSettle();
+        expect(confirmed, isTrue);
+      },
+    );
 
     test('11. WhiteboardCanvasScreen.computeDensestClusterBounds picks dense cluster over outliers', () {
       const nodes = [
         // Isolated distant outliers
-        CanvasNode(id: 'out1', text: 'Outlier 1', shapeType: CanvasNodeType.process, x: 900, y: 900),
-        CanvasNode(id: 'out2', text: 'Outlier 2', shapeType: CanvasNodeType.process, x: 5200, y: 4900),
+        CanvasNode(
+          id: 'out1',
+          text: 'Outlier 1',
+          shapeType: CanvasNodeType.process,
+          x: 900,
+          y: 900,
+        ),
+        CanvasNode(
+          id: 'out2',
+          text: 'Outlier 2',
+          shapeType: CanvasNodeType.process,
+          x: 5200,
+          y: 4900,
+        ),
         // Dense cluster of 4 connected nodes around (3600, 3200)
-        CanvasNode(id: 'c1', text: 'Core 1', shapeType: CanvasNodeType.process, x: 3500, y: 3100),
-        CanvasNode(id: 'c2', text: 'Core 2', shapeType: CanvasNodeType.process, x: 3720, y: 3120),
-        CanvasNode(id: 'c3', text: 'Core 3', shapeType: CanvasNodeType.decision, x: 3560, y: 3320),
-        CanvasNode(id: 'c4', text: 'Core 4', shapeType: CanvasNodeType.sticky, x: 3760, y: 3340),
+        CanvasNode(
+          id: 'c1',
+          text: 'Core 1',
+          shapeType: CanvasNodeType.process,
+          x: 3500,
+          y: 3100,
+        ),
+        CanvasNode(
+          id: 'c2',
+          text: 'Core 2',
+          shapeType: CanvasNodeType.process,
+          x: 3720,
+          y: 3120,
+        ),
+        CanvasNode(
+          id: 'c3',
+          text: 'Core 3',
+          shapeType: CanvasNodeType.decision,
+          x: 3560,
+          y: 3320,
+        ),
+        CanvasNode(
+          id: 'c4',
+          text: 'Core 4',
+          shapeType: CanvasNodeType.sticky,
+          x: 3760,
+          y: 3340,
+        ),
       ];
       const edges = [
         CanvasEdge(id: 'e1', fromNodeId: 'c1', toNodeId: 'c2'),
@@ -702,69 +802,102 @@ Footer text.
       expect(bounds.bottom, lessThanOrEqualTo(3500));
     });
 
-    testWidgets('12. WhiteboardCanvasScreen hides Whiteboard subtitle & chevron and opens on densest cluster', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspaceProvider = WorkspaceProvider(repo);
-      final now = DateTime.now();
+    testWidgets(
+      '12. WhiteboardCanvasScreen hides Whiteboard subtitle & chevron and opens on densest cluster',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspaceProvider = WorkspaceProvider(repo);
+        final now = DateTime.now();
 
-      final board = WhiteboardCanvasItem(
-        id: 'wb_dense_open',
-        title: 'Roadmap Architecture',
-        createdAt: now,
-        updatedAt: now,
-        paletteId: 'cyan',
-        // Stale random pan offset far away from the dense cluster
-        panOffset: const Offset(100, 100),
-        zoomScale: 0.4,
-        nodes: const [
-          CanvasNode(id: 'far', text: 'Far Node', shapeType: CanvasNodeType.process, x: 900, y: 900),
-          CanvasNode(id: 'd1', text: 'Hub A', shapeType: CanvasNodeType.process, x: 3600, y: 3100),
-          CanvasNode(id: 'd2', text: 'Hub B', shapeType: CanvasNodeType.process, x: 3820, y: 3100),
-          CanvasNode(id: 'd3', text: 'Hub C', shapeType: CanvasNodeType.process, x: 3710, y: 3290),
-        ],
-        edges: const [
-          CanvasEdge(id: 'e1', fromNodeId: 'd1', toNodeId: 'd2'),
-          CanvasEdge(id: 'e2', fromNodeId: 'd2', toNodeId: 'd3'),
-        ],
-      );
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaceProvider),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+        final board = WhiteboardCanvasItem(
+          id: 'wb_dense_open',
+          title: 'Roadmap Architecture',
+          createdAt: now,
+          updatedAt: now,
+          paletteId: 'cyan',
+          // Stale random pan offset far away from the dense cluster
+          panOffset: const Offset(100, 100),
+          zoomScale: 0.4,
+          nodes: const [
+            CanvasNode(
+              id: 'far',
+              text: 'Far Node',
+              shapeType: CanvasNodeType.process,
+              x: 900,
+              y: 900,
+            ),
+            CanvasNode(
+              id: 'd1',
+              text: 'Hub A',
+              shapeType: CanvasNodeType.process,
+              x: 3600,
+              y: 3100,
+            ),
+            CanvasNode(
+              id: 'd2',
+              text: 'Hub B',
+              shapeType: CanvasNodeType.process,
+              x: 3820,
+              y: 3100,
+            ),
+            CanvasNode(
+              id: 'd3',
+              text: 'Hub C',
+              shapeType: CanvasNodeType.process,
+              x: 3710,
+              y: 3290,
+            ),
           ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: WhiteboardCanvasScreen(item: board),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+          edges: const [
+            CanvasEdge(id: 'e1', fromNodeId: 'd1', toNodeId: 'd2'),
+            CanvasEdge(id: 'e2', fromNodeId: 'd2', toNodeId: 'd3'),
+          ],
+        );
 
-      // Board title renders without 'Whiteboard' subtitle or down arrow
-      expect(find.text('Roadmap Architecture'), findsOneWidget);
-      expect(find.text('Whiteboard'), findsNothing);
-      final appBarFinder = find.byType(AppBar);
-      expect(
-        find.descendant(
-          of: appBarFinder,
-          matching: find.byWidgetPredicate(
-            (w) => w is TackIcon && w.icon == TackIcons.chevronDown,
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(
+                value: workspaceProvider,
+              ),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: WhiteboardCanvasScreen(item: board),
+            ),
           ),
-        ),
-        findsNothing,
-      );
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-      // InteractiveViewer camera should be focused near the dense cluster (around 3700, 3200)
-      final viewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
-      final viewportCenter = viewer.transformationController!.toScene(
-        const Offset(400, 260),
-      );
-      expect(viewportCenter.dx, greaterThan(3200));
-      expect(viewportCenter.dy, greaterThan(2700));
-    });
+        // Board title renders without 'Whiteboard' subtitle or down arrow
+        expect(find.text('Roadmap Architecture'), findsOneWidget);
+        expect(find.text('Whiteboard'), findsNothing);
+        final appBarFinder = find.byType(AppBar);
+        expect(
+          find.descendant(
+            of: appBarFinder,
+            matching: find.byWidgetPredicate(
+              (w) => w is TackIcon && w.icon == TackIcons.chevronDown,
+            ),
+          ),
+          findsNothing,
+        );
+
+        // InteractiveViewer camera should be focused near the dense cluster (around 3700, 3200)
+        final viewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final viewportCenter = viewer.transformationController!.toScene(
+          const Offset(400, 260),
+        );
+        expect(viewportCenter.dx, greaterThan(3200));
+        expect(viewportCenter.dy, greaterThan(2700));
+      },
+    );
 
     test('13. SmoothRectangleBorder produces strictly convex smooth squircle boundary', () {
       const rect = Rect.fromLTWH(0, 0, 360, 240);
@@ -780,445 +913,511 @@ Footer text.
       // Verify curve never overshoots straight edges anywhere near top-left corner
       final metric = outer.computeMetrics().first;
       for (int i = 0; i <= 100; i++) {
-        final pos = metric.getTangentForOffset(metric.length * (i / 100.0))!.position;
+        final pos = metric
+            .getTangentForOffset(metric.length * (i / 100.0))!
+            .position;
         expect(pos.dx, inInclusiveRange(-0.01, rect.width + 0.01));
         expect(pos.dy, inInclusiveRange(-0.01, rect.height + 0.01));
       }
     });
 
-    testWidgets('14. Sort modal clears 28dp corners, aligns title with rows, and paints clean foreground border', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspace = WorkspaceProvider(repo)..setBottomNavIndex(3);
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: const HomeScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const ValueKey('header_sort_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sort items'), findsOneWidget);
-      expect(find.text('Recently updated (Pinned first)'), findsOneWidget);
-
-      // Modal shell uses MaterialType.transparency + foregroundDecoration for border
-      final sheetContainer = tester.widget<Container>(
-        find.ancestor(
-          of: find.text('Sort items'),
-          matching: find.byWidgetPredicate(
-            (w) =>
-                w is Container &&
-                w.decoration is ShapeDecoration &&
-                (w.decoration as ShapeDecoration).shape is SmoothRectangleBorder,
-          ),
-        ).first,
-      );
-      expect(sheetContainer.foregroundDecoration, isA<ShapeDecoration>());
-      final sheetMaterial = tester.widget<Material>(
-        find.descendant(
-          of: find.byWidgetPredicate((w) => identical(w, sheetContainer)),
-          matching: find.byType(Material),
-        ).first,
-      );
-      expect(sheetMaterial.type, equals(MaterialType.transparency));
-
-      // 'Sort items' header stays well clear of 28dp top-left curve and aligns with option labels
-      final sheetRect = tester.getRect(find.byWidgetPredicate((w) => identical(w, sheetContainer)));
-      final headerRect = tester.getRect(find.text('Sort items'));
-      final optionRect = tester.getRect(find.text('Recently updated (Pinned first)'));
-      expect(headerRect.top - sheetRect.top, greaterThanOrEqualTo(22.0));
-      expect(headerRect.left - sheetRect.left, greaterThanOrEqualTo(22.0));
-      expect((headerRect.left - optionRect.left).abs(), lessThanOrEqualTo(1.0));
-    });
-
-    testWidgets('15. Library filter bar scrolls away cleanly with grid and clips within viewport', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final now = DateTime(2026, 11, 15, 9, 0);
-      for (var i = 0; i < 16; i++) {
-        await repo.saveItem(
-          TextNote(
-            id: 'lib_$i',
-            title: 'Note $i',
-            content: '#work Item $i',
-            paletteId: 'slate',
-            tags: const ['work'],
-            createdAt: now.subtract(Duration(minutes: i)),
-            updatedAt: now.subtract(Duration(minutes: i)),
+    testWidgets(
+      '14. Sort modal clears 28dp corners, aligns title with rows, and paints clean foreground border',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspace = WorkspaceProvider(repo)..setBottomNavIndex(3);
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const HomeScreen(),
+            ),
           ),
         );
-      }
-      final workspace = WorkspaceProvider(repo);
-      await workspace.loadItems();
-      workspace.setBottomNavIndex(1); // Library
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: const HomeScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('header_sort_button')));
+        await tester.pumpAndSettle();
 
-      final scrollFinder = find.byKey(const ValueKey('library_custom_scroll'));
-      expect(scrollFinder, findsOneWidget);
-      final customScroll = tester.widget<CustomScrollView>(scrollFinder);
-      expect(customScroll.clipBehavior, isNot(equals(Clip.none)));
+        expect(find.text('Sort items'), findsOneWidget);
+        expect(find.text('Recently updated (Pinned first)'), findsOneWidget);
 
-      // Initially at top: filter chips are visible inside viewport.
-      final initialFilterTop = tester.getTopLeft(find.text('All Notes')).dy;
-      final scrollTop = tester.getTopLeft(scrollFinder).dy;
-      expect(initialFilterTop, greaterThanOrEqualTo(scrollTop));
+        // Modal shell uses MaterialType.transparency + foregroundDecoration for border
+        final sheetContainer = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('Sort items'),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is Container &&
+                      w.decoration is ShapeDecoration &&
+                      (w.decoration as ShapeDecoration).shape
+                          is SmoothRectangleBorder,
+                ),
+              )
+              .first,
+        );
+        expect(sheetContainer.foregroundDecoration, isA<ShapeDecoration>());
+        final sheetMaterial = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byWidgetPredicate((w) => identical(w, sheetContainer)),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(sheetMaterial.type, equals(MaterialType.transparency));
 
-      // Scroll down strongly -> filter bar slides out of view above the viewport.
-      await tester.drag(scrollFinder, const Offset(0, -450));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<Scrollable>(find.descendant(of: scrollFinder, matching: find.byType(Scrollable)).first),
-        isNotNull,
-      );
-      expect(find.text('All Notes'), findsNothing);
+        // 'Sort items' header stays well clear of 28dp top-left curve and aligns with option labels
+        final sheetRect = tester.getRect(
+          find.byWidgetPredicate((w) => identical(w, sheetContainer)),
+        );
+        final headerRect = tester.getRect(find.text('Sort items'));
+        final optionRect = tester.getRect(
+          find.text('Recently updated (Pinned first)'),
+        );
+        expect(headerRect.top - sheetRect.top, greaterThanOrEqualTo(22.0));
+        expect(headerRect.left - sheetRect.left, greaterThanOrEqualTo(22.0));
+        expect(
+          (headerRect.left - optionRect.left).abs(),
+          lessThanOrEqualTo(1.0),
+        );
+      },
+    );
 
-      // Scroll back to top -> filter bar returns cleanly.
-      await tester.drag(scrollFinder, const Offset(0, 600));
-      await tester.pumpAndSettle();
-      expect(find.text('All Notes'), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('library_filter_bar')),
-          matching: find.text('#work'),
-        ),
-        findsOneWidget,
-      );
+    testWidgets(
+      '15. Library filter bar scrolls away cleanly with grid and clips within viewport',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final now = DateTime(2026, 11, 15, 9, 0);
+        for (var i = 0; i < 16; i++) {
+          await repo.saveItem(
+            TextNote(
+              id: 'lib_$i',
+              title: 'Note $i',
+              content: '#work Item $i',
+              paletteId: 'slate',
+              tags: const ['work'],
+              createdAt: now.subtract(Duration(minutes: i)),
+              updatedAt: now.subtract(Duration(minutes: i)),
+            ),
+          );
+        }
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+        workspace.setBottomNavIndex(1); // Library
 
-      // Standalone ResponsiveCardGrid does not disable viewport clipping.
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: ResponsiveCardGrid(
-              crossAxisCount: 2,
-              itemCount: 2,
-              itemBuilder: (_, i) => Text('Item $i'),
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const HomeScreen(),
             ),
           ),
-        ),
-      );
-      final standaloneScroll = tester.widget<SingleChildScrollView>(
-        find.byType(SingleChildScrollView),
-      );
-      expect(standaloneScroll.clipBehavior, equals(Clip.hardEdge));
-    });
+        );
+        await tester.pumpAndSettle();
 
-    testWidgets('16. AboutTackScreen includes Privacy & Legal tab with local-first & permissions coverage', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: const AboutTackScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
+        final scrollFinder = find.byKey(
+          const ValueKey('library_custom_scroll'),
+        );
+        expect(scrollFinder, findsOneWidget);
+        final customScroll = tester.widget<CustomScrollView>(scrollFinder);
+        expect(customScroll.clipBehavior, isNot(equals(Clip.none)));
 
-      expect(find.text('Architecture'), findsOneWidget);
-      expect(find.text('Privacy & Legal'), findsOneWidget);
-      expect(find.text('Open Source'), findsOneWidget);
+        // Initially at top: filter chips are visible inside viewport.
+        final initialFilterTop = tester.getTopLeft(find.text('All Notes')).dy;
+        final scrollTop = tester.getTopLeft(scrollFinder).dy;
+        expect(initialFilterTop, greaterThanOrEqualTo(scrollTop));
 
-      await tester.tap(find.text('Privacy & Legal'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Local-First Storage & Zero Telemetry'), findsOneWidget);
-      expect(find.textContaining('AlarmManager'), findsOneWidget);
-    });
-
-    testWidgets('17. ProfileSettingsScreen Restore Backup validates inline and preserves input on invalid JSON/schema', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final workspace = WorkspaceProvider(repo);
-      await workspace.loadItems();
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: const ProfileSettingsScreen(),
+        // Scroll down strongly -> filter bar slides out of view above the viewport.
+        await tester.drag(scrollFinder, const Offset(0, -450));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<Scrollable>(
+            find
+                .descendant(of: scrollFinder, matching: find.byType(Scrollable))
+                .first,
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+          isNotNull,
+        );
+        expect(find.text('All Notes'), findsNothing);
 
-      await tester.scrollUntilVisible(
-        find.text('Restore backup'),
-        200,
-        scrollable: find.descendant(
-          of: find.byType(ListView).first,
-          matching: find.byType(Scrollable),
-        ),
-      );
-      await tester.ensureVisible(find.text('Restore backup'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Restore backup'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Restore Backup'), findsOneWidget);
-      final fieldFinder = find.byType(TextField);
-      expect(fieldFinder, findsOneWidget);
-
-      await tester.enterText(fieldFinder, '{"foo":"bar"}');
-      await tester.pump();
-      expect(find.text('Not a recognized Tack backup schema'), findsOneWidget);
-      expect(tester.widget<TextField>(fieldFinder).controller?.text, '{"foo":"bar"}');
-
-      await tester.enterText(fieldFinder, 'invalid json{');
-      await tester.pump();
-      expect(find.text('Invalid JSON format'), findsOneWidget);
-      expect(tester.widget<TextField>(fieldFinder).controller?.text, 'invalid json{');
-    });
-
-    testWidgets('18. EmptyStateWidget renders custom actionIcon and invokes action callback', (tester) async {
-      var tapped = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: EmptyStateWidget(
-              icon: TackIcons.search,
-              title: 'Nothing found',
-              subtitle: 'Try clearing your active filters.',
-              actionLabel: 'Clear filters',
-              actionIcon: TackIcons.close,
-              onAction: () => tapped = true,
-            ),
+        // Scroll back to top -> filter bar returns cleanly.
+        await tester.drag(scrollFinder, const Offset(0, 600));
+        await tester.pumpAndSettle();
+        expect(find.text('All Notes'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('library_filter_bar')),
+            matching: find.text('#work'),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+          findsOneWidget,
+        );
 
-      expect(find.text('Nothing found'), findsOneWidget);
-      expect(find.text('Clear filters'), findsOneWidget);
-      expect(
-        find.byWidgetPredicate(
-          (w) => w is TackIcon && w.icon == TackIcons.close,
-        ),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('Clear filters'));
-      await tester.pump();
-      expect(tapped, isTrue);
-    });
-
-    testWidgets('19. KnowledgeGraphScreen strips # when opening a tag node and switches to Library', (tester) async {
-      final repo = _MockWorkspaceRepo();
-      final now = DateTime(2026, 11, 15, 10, 0);
-      await repo.saveItem(
-        TextNote(
-          id: 'tag-note-1',
-          title: 'Design Spec',
-          content: 'Specs #design',
-          paletteId: 'slate',
-          tags: const ['design'],
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      final workspace = WorkspaceProvider(repo);
-      await workspace.loadItems();
-      workspace.setBottomNavIndex(0);
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
-            ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
-          ],
-          child: MaterialApp(
+        // Standalone ResponsiveCardGrid does not disable viewport clipping.
+        await tester.pumpWidget(
+          MaterialApp(
             theme: AppTheme.lightTheme,
             home: Scaffold(
-              body: Builder(
-                builder: (context) => Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const KnowledgeGraphScreen(
-                            focusItemId: 'tag:#design',
+              body: ResponsiveCardGrid(
+                crossAxisCount: 2,
+                itemCount: 2,
+                itemBuilder: (_, i) => Text('Item $i'),
+              ),
+            ),
+          ),
+        );
+        final standaloneScroll = tester.widget<SingleChildScrollView>(
+          find.byType(SingleChildScrollView),
+        );
+        expect(standaloneScroll.clipBehavior, equals(Clip.hardEdge));
+      },
+    );
+
+    testWidgets(
+      '16. AboutTackScreen includes Privacy & Legal tab with local-first & permissions coverage',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const AboutTackScreen(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Architecture'), findsOneWidget);
+        expect(find.text('Privacy & Legal'), findsOneWidget);
+        expect(find.text('Open Source'), findsOneWidget);
+
+        await tester.tap(find.text('Privacy & Legal'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Local-First Storage & Zero Telemetry'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('AlarmManager'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '17. ProfileSettingsScreen Restore Backup validates inline and preserves input on invalid JSON/schema',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: const ProfileSettingsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.scrollUntilVisible(
+          find.text('Restore backup'),
+          200,
+          scrollable: find.descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.ensureVisible(find.text('Restore backup'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Restore backup'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Restore Backup'), findsOneWidget);
+        final fieldFinder = find.byType(TextField);
+        expect(fieldFinder, findsOneWidget);
+
+        await tester.enterText(fieldFinder, '{"foo":"bar"}');
+        await tester.pump();
+        expect(
+          find.text('Not a recognized Tack backup schema'),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<TextField>(fieldFinder).controller?.text,
+          '{"foo":"bar"}',
+        );
+
+        await tester.enterText(fieldFinder, 'invalid json{');
+        await tester.pump();
+        expect(find.text('Invalid JSON format'), findsOneWidget);
+        expect(
+          tester.widget<TextField>(fieldFinder).controller?.text,
+          'invalid json{',
+        );
+      },
+    );
+
+    testWidgets(
+      '18. EmptyStateWidget renders custom actionIcon and invokes action callback',
+      (tester) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: EmptyStateWidget(
+                icon: TackIcons.search,
+                title: 'Nothing found',
+                subtitle: 'Try clearing your active filters.',
+                actionLabel: 'Clear filters',
+                actionIcon: TackIcons.close,
+                onAction: () => tapped = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nothing found'), findsOneWidget);
+        expect(find.text('Clear filters'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is TackIcon && w.icon == TackIcons.close,
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Clear filters'));
+        await tester.pump();
+        expect(tapped, isTrue);
+      },
+    );
+
+    testWidgets(
+      '19. KnowledgeGraphScreen strips # when opening a tag node and switches to Library',
+      (tester) async {
+        final repo = _MockWorkspaceRepo();
+        final now = DateTime(2026, 11, 15, 10, 0);
+        await repo.saveItem(
+          TextNote(
+            id: 'tag-note-1',
+            title: 'Design Spec',
+            content: 'Specs #design',
+            paletteId: 'slate',
+            tags: const ['design'],
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+        workspace.setBottomNavIndex(0);
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const KnowledgeGraphScreen(
+                              focusItemId: 'tag:#design',
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    child: const Text('Push Graph'),
+                        );
+                      },
+                      child: const Text('Push Graph'),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Push Graph'));
-      await tester.pumpAndSettle();
+        );
+        await tester.tap(find.text('Push Graph'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('#design'), findsOneWidget);
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+        expect(find.text('#design'), findsOneWidget);
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
 
-      expect(workspace.selectedTag, 'design');
-      expect(workspace.bottomNavIndex, 1);
-      expect(find.text('Push Graph'), findsOneWidget);
-    });
+        expect(workspace.selectedTag, 'design');
+        expect(workspace.bottomNavIndex, 1);
+        expect(find.text('Push Graph'), findsOneWidget);
+      },
+    );
 
-    testWidgets('20. AppFloatingDialog.prompt returns entered text and disposes controller cleanly', (tester) async {
-      String? promptResult;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => Center(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    promptResult = await AppFloatingDialog.prompt(
-                      context: context,
-                      title: 'Rename Section',
-                      hintText: 'Section name',
-                      initialValue: 'Draft',
-                    );
-                  },
-                  child: const Text('Prompt'),
+    testWidgets(
+      '20. AppFloatingDialog.prompt returns entered text and disposes controller cleanly',
+      (tester) async {
+        String? promptResult;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      promptResult = await AppFloatingDialog.prompt(
+                        context: context,
+                        title: 'Rename Section',
+                        hintText: 'Section name',
+                        initialValue: 'Draft',
+                      );
+                    },
+                    child: const Text('Prompt'),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Prompt'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Prompt'));
+        await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), 'Architecture');
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.enterText(find.byType(TextField), 'Architecture');
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 500));
 
-      expect(promptResult, 'Architecture');
-      expect(tester.takeException(), isNull);
-    });
+        expect(promptResult, 'Architecture');
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-    testWidgets('13. 120fps optimizations: composited SlidingPillTrack & RepaintBoundary IndexedStack tabs', (tester) async {
-      // SlidingPillTrack uses SlideTransition + RepaintBoundary (never AnimatedAlign relayouts)
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Center(
-              child: SlidingPillTrack(
-                itemCount: 3,
-                selectedIndex: 0,
-                trackColor: Colors.grey.shade200,
-                indicatorColor: Colors.black,
-                children: const [
-                  Center(child: Text('System')),
-                  Center(child: Text('Light')),
-                  Center(child: Text('Dark')),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(AnimatedAlign), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byType(SlidingPillTrack),
-          matching: find.byType(SlideTransition),
-        ),
-        findsOneWidget,
-      );
-
-      // Re-pump with new selectedIndex transitions pill smoothly via SlideTransition
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: Center(
-              child: SlidingPillTrack(
-                itemCount: 3,
-                selectedIndex: 2,
-                trackColor: Colors.grey.shade200,
-                indicatorColor: Colors.black,
-                children: const [
-                  Center(child: Text('System')),
-                  Center(child: Text('Light')),
-                  Center(child: Text('Dark')),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-      final slideTransition = tester.widget<SlideTransition>(
-        find.descendant(
-          of: find.byType(SlidingPillTrack),
-          matching: find.byType(SlideTransition),
-        ),
-      );
-      expect(slideTransition.position.value.dx, greaterThan(0.0));
-      expect(slideTransition.position.value.dx, lessThan(2.0));
-      await tester.pumpAndSettle();
-      expect(slideTransition.position.value.dx, closeTo(2.0, 0.001));
-
-      // HomeScreen isolates IndexedStack tabs in RepaintBoundary without full-screen FadeTransition
-      final repo = _MockWorkspaceRepo();
-      final workspaceProvider = WorkspaceProvider(repo);
-      final themeProvider = ThemeProvider();
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: workspaceProvider),
-            ChangeNotifierProvider.value(value: themeProvider),
-          ],
-          child: MaterialApp(
+    testWidgets(
+      '13. 120fps optimizations: composited SlidingPillTrack & RepaintBoundary IndexedStack tabs',
+      (tester) async {
+        // SlidingPillTrack uses SlideTransition + RepaintBoundary (never AnimatedAlign relayouts)
+        await tester.pumpWidget(
+          MaterialApp(
             theme: AppTheme.lightTheme,
-            themeAnimationDuration: Duration.zero,
-            home: const HomeScreen(),
+            home: Scaffold(
+              body: Center(
+                child: SlidingPillTrack(
+                  itemCount: 3,
+                  selectedIndex: 0,
+                  trackColor: Colors.grey.shade200,
+                  indicatorColor: Colors.black,
+                  children: const [
+                    Center(child: Text('System')),
+                    Center(child: Text('Light')),
+                    Center(child: Text('Dark')),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
 
-      final indexedStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
-      expect(indexedStack.children.length, 4);
-      for (final child in indexedStack.children) {
-        expect(child, isA<RepaintBoundary>());
-      }
-      expect(
-        find.descendant(
-          of: find.byType(Scaffold),
-          matching: find.ancestor(
-            of: find.byType(IndexedStack),
-            matching: find.byType(FadeTransition),
+        expect(find.byType(AnimatedAlign), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(SlidingPillTrack),
+            matching: find.byType(SlideTransition),
           ),
-        ),
-        findsNothing,
-      );
-    });
+          findsOneWidget,
+        );
+
+        // Re-pump with new selectedIndex transitions pill smoothly via SlideTransition
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Center(
+                child: SlidingPillTrack(
+                  itemCount: 3,
+                  selectedIndex: 2,
+                  trackColor: Colors.grey.shade200,
+                  indicatorColor: Colors.black,
+                  children: const [
+                    Center(child: Text('System')),
+                    Center(child: Text('Light')),
+                    Center(child: Text('Dark')),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        final slideTransition = tester.widget<SlideTransition>(
+          find.descendant(
+            of: find.byType(SlidingPillTrack),
+            matching: find.byType(SlideTransition),
+          ),
+        );
+        expect(slideTransition.position.value.dx, greaterThan(0.0));
+        expect(slideTransition.position.value.dx, lessThan(2.0));
+        await tester.pumpAndSettle();
+        expect(slideTransition.position.value.dx, closeTo(2.0, 0.001));
+
+        // HomeScreen isolates IndexedStack tabs in RepaintBoundary without full-screen FadeTransition
+        final repo = _MockWorkspaceRepo();
+        final workspaceProvider = WorkspaceProvider(repo);
+        final themeProvider = ThemeProvider();
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: workspaceProvider),
+              ChangeNotifierProvider.value(value: themeProvider),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              themeAnimationDuration: Duration.zero,
+              home: const HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final indexedStack = tester.widget<IndexedStack>(
+          find.byType(IndexedStack),
+        );
+        expect(indexedStack.children.length, 4);
+        for (final child in indexedStack.children) {
+          expect(child, isA<RepaintBoundary>());
+        }
+        expect(
+          find.descendant(
+            of: find.byType(Scaffold),
+            matching: find.ancestor(
+              of: find.byType(IndexedStack),
+              matching: find.byType(FadeTransition),
+            ),
+          ),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets(
       '21. Fade-out transitions use responsive exit curves and composited RepaintBoundary without Opacity saveLayers',
@@ -1233,7 +1432,8 @@ Footer text.
                   onPressed: () {
                     Navigator.of(ctx).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const Scaffold(body: Text('Second Page')),
+                        builder: (_) =>
+                            const Scaffold(body: Text('Second Page')),
                       ),
                     );
                   },
@@ -1257,7 +1457,10 @@ Footer text.
           matching: find.byType(FadeTransition),
         );
         expect(poppedFadeFinder, findsOneWidget);
-        expect(tester.widget<FadeTransition>(poppedFadeFinder).opacity.value, lessThan(0.45));
+        expect(
+          tester.widget<FadeTransition>(poppedFadeFinder).opacity.value,
+          lessThan(0.45),
+        );
         expect(
           find.descendant(
             of: poppedFadeFinder,
@@ -1268,7 +1471,10 @@ Footer text.
 
         // After +145ms (220ms elapsed, >72% fade interval), outgoing page reaches 0.0 cleanly
         await tester.pump(const Duration(milliseconds: 145));
-        expect(tester.widget<FadeTransition>(poppedFadeFinder).opacity.value, equals(0.0));
+        expect(
+          tester.widget<FadeTransition>(poppedFadeFinder).opacity.value,
+          equals(0.0),
+        );
         await tester.pumpAndSettle();
 
         // B. AppFloatingDialog uses TackAnimatedTransition (ScaleTransition + FadeTransition), never raw Opacity
@@ -1324,7 +1530,10 @@ Footer text.
           of: dialogTransitionFinder,
           matching: find.byType(FadeTransition),
         );
-        expect(tester.widget<FadeTransition>(dialogFadeFinder).opacity.value, lessThan(0.45));
+        expect(
+          tester.widget<FadeTransition>(dialogFadeFinder).opacity.value,
+          lessThan(0.45),
+        );
         await tester.pumpAndSettle();
 
         // C. SmartBottomNavBar uses alpha-tinted TackIcon color instead of Opacity saveLayer
@@ -1360,7 +1569,8 @@ Footer text.
           TextNote(
             id: 'note-1',
             title: 'Weekly Focus',
-            content: '# Focus\nShip dark mode & search polish.\n- [ ] Test layout',
+            content:
+                '# Focus\nShip dark mode & search polish.\n- [ ] Test layout',
             folderName: 'All Notes',
             paletteId: 'amber',
             createdAt: DateTime(2026, 11, 18),
@@ -1425,7 +1635,9 @@ Footer text.
         );
 
         // Bottom nav renders transparently with extendBody enabled (no cut-off strip)
-        final homeScaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+        final homeScaffold = tester.widget<Scaffold>(
+          find.byType(Scaffold).first,
+        );
         expect(homeScaffold.extendBody, isTrue);
         expect(
           tester.widget<SmartBottomNavBar>(find.byType(SmartBottomNavBar)),
@@ -1557,7 +1769,12 @@ Footer text.
           of: find.text('Slide Up Modal'),
           matching: find.byType(SlideTransition),
         );
-        expect(tester.widget<SlideTransition>(modalSlide).position.value.dy, greaterThan(0.0));
+        expect(
+          tester
+              .widgetList<SlideTransition>(modalSlide)
+              .any((s) => s.position.value.dy > 0.0),
+          isTrue,
+        );
         await tester.pumpAndSettle();
       },
     );
@@ -1579,14 +1796,18 @@ Footer text.
 
         final openTasks = OpenTasksService.extractTasks([note]);
         expect(openTasks.length, 3);
-        expect(openTasks.any((t) => t.recurrence == TaskRecurrence.daily), isTrue);
+        expect(
+          openTasks.any((t) => t.recurrence == TaskRecurrence.daily),
+          isTrue,
+        );
         expect(openTasks.every((t) => !t.isOverdue()), isTrue);
 
-        final mermaidMatch = RegExp(
-          r'```mermaid\n([\s\S]*?)```',
-        ).firstMatch(note.content);
+        final mermaidMatch = RegExp(r'```mermaid\n([\s\S]*?)```')
+            .firstMatch(note.content);
         expect(mermaidMatch, isNotNull);
-        final parsedMermaid = MermaidDiagramParser.parse(mermaidMatch!.group(1)!);
+        final parsedMermaid = MermaidDiagramParser.parse(
+          mermaidMatch!.group(1)!,
+        );
         expect(parsedMermaid.isValid, isTrue);
         expect(parsedMermaid.nodes.length, 5);
 
@@ -1611,7 +1832,10 @@ Footer text.
         final imageNode = board.nodes.firstWhere(
           (n) => n.shapeType == CanvasNodeType.image,
         );
-        expect(imageNode.imagePath, 'assets/images/onboarding/slide3_connected_ideas.jpg');
+        expect(
+          imageNode.imagePath,
+          'assets/images/onboarding/slide3_connected_ideas.jpg',
+        );
 
         final specNode = board.nodes.firstWhere(
           (n) => n.shapeType == CanvasNodeType.specCard,
@@ -1647,7 +1871,11 @@ Footer text.
           edges: board.edges,
         )!;
         for (final node in board.nodes) {
-          expect(cluster.contains(node.center), isTrue, reason: '${node.id} outside cluster');
+          expect(
+            cluster.contains(node.center),
+            isTrue,
+            reason: '${node.id} outside cluster',
+          );
         }
 
         // 3. Render starter Note view with live WorkspaceProvider and asset images
@@ -1707,82 +1935,86 @@ Footer text.
         expect(find.text('Tack Complete Guide'), findsWidgets);
         expect(find.text('Open ↗'), findsOneWidget);
         final boardImages = tester.widgetList<Image>(find.byType(Image));
-        expect(
-          boardImages.any((img) => img.image is AssetImage),
-          isTrue,
-        );
+        expect(boardImages.any((img) => img.image is AssetImage), isTrue);
       },
     );
 
-    test(
-      '25. LocalStorageWorkspaceRepository upgrades untouched v1 starter items cleanly without overwriting user edits',
-      () async {
-        // Case A: Untouched legacy v1 starter items upgrade to v2
-        final now = DateTime.now();
-        final oldNote = TextNote(
-          id: MockInitialData.welcomeNoteId,
-          title: 'How Tack Works',
-          content: '# Tack in 30 seconds\n\nLegacy content',
-          createdAt: now,
-          updatedAt: now,
-          paletteId: 'amber',
-        );
-        final oldBoard = WhiteboardCanvasItem(
-          id: MockInitialData.starterBoardId,
-          title: 'Capture to Clarity (Board)',
-          createdAt: now,
-          updatedAt: now,
-          paletteId: 'cyan',
-          nodes: List.generate(
-            5,
-            (idx) => CanvasNode(
-              id: idx == 0 ? 'n_idea' : 'n_$idx',
-              text: 'Node $idx',
-              shapeType: CanvasNodeType.process,
-              x: 3000,
-              y: 3000,
-            ),
+    test('25. LocalStorageWorkspaceRepository upgrades untouched v1 starter items cleanly without overwriting user edits', () async {
+      // Case A: Untouched legacy v1 starter items upgrade to v2
+      final now = DateTime.now();
+      final oldNote = TextNote(
+        id: MockInitialData.welcomeNoteId,
+        title: 'How Tack Works',
+        content: '# Tack in 30 seconds\n\nLegacy content',
+        createdAt: now,
+        updatedAt: now,
+        paletteId: 'amber',
+      );
+      final oldBoard = WhiteboardCanvasItem(
+        id: MockInitialData.starterBoardId,
+        title: 'Capture to Clarity (Board)',
+        createdAt: now,
+        updatedAt: now,
+        paletteId: 'cyan',
+        nodes: List.generate(
+          5,
+          (idx) => CanvasNode(
+            id: idx == 0 ? 'n_idea' : 'n_$idx',
+            text: 'Node $idx',
+            shapeType: CanvasNodeType.process,
+            x: 3000,
+            y: 3000,
           ),
-        );
+        ),
+      );
 
-        SharedPreferences.setMockInitialValues({
-          'tack_workspace_items_v2':
-              jsonEncode([oldNote.toJson(), oldBoard.toJson()]),
-        });
+      SharedPreferences.setMockInitialValues({
+        'tack_workspace_items_v2': jsonEncode([
+          oldNote.toJson(),
+          oldBoard.toJson(),
+        ]),
+      });
 
-        final repoUpgrade = LocalStorageWorkspaceRepository();
-        final upgraded = await repoUpgrade.getAllActiveItems();
-        final upgradedNote = upgraded.whereType<TextNote>().first;
-        final upgradedBoard = upgraded.whereType<WhiteboardCanvasItem>().first;
-        expect(upgradedNote.title, 'Tack Complete Guide');
-        expect(
-          upgradedNote.content.contains('assets/images/onboarding/slide1_tactile_grid.jpg'),
-          isTrue,
-        );
-        expect(upgradedBoard.title, 'Capture to Clarity');
-        expect(upgradedBoard.nodes.length, 11);
+      final repoUpgrade = LocalStorageWorkspaceRepository();
+      final upgraded = await repoUpgrade.getAllActiveItems();
+      final upgradedNote = upgraded.whereType<TextNote>().first;
+      final upgradedBoard = upgraded.whereType<WhiteboardCanvasItem>().first;
+      expect(upgradedNote.title, 'Tack Complete Guide');
+      expect(
+        upgradedNote.content.contains(
+          'assets/images/onboarding/slide1_tactile_grid.jpg',
+        ),
+        isTrue,
+      );
+      expect(upgradedBoard.title, 'Capture to Clarity');
+      expect(upgradedBoard.nodes.length, 11);
 
-        // Case B: User-customized starter note is NEVER overwritten
-        final editedNote = oldNote.copyWith(
-          title: 'My Custom Title',
-          content: '# My own personal notes',
-        );
-        SharedPreferences.setMockInitialValues({
-          'tack_workspace_items_v2': jsonEncode([editedNote.toJson()]),
-        });
+      // Case B: User-customized starter note is NEVER overwritten
+      final editedNote = oldNote.copyWith(
+        title: 'My Custom Title',
+        content: '# My own personal notes',
+      );
+      SharedPreferences.setMockInitialValues({
+        'tack_workspace_items_v2': jsonEncode([editedNote.toJson()]),
+      });
 
-        final repoPreserved = LocalStorageWorkspaceRepository();
-        final preserved = await repoPreserved.getAllActiveItems();
-        expect(preserved.single.title, 'My Custom Title');
-        expect((preserved.single as TextNote).content, '# My own personal notes');
-      },
-    );
+      final repoPreserved = LocalStorageWorkspaceRepository();
+      final preserved = await repoPreserved.getAllActiveItems();
+      expect(preserved.single.title, 'My Custom Title');
+      expect((preserved.single as TextNote).content, '# My own personal notes');
+    });
 
     testWidgets(
       '26. DocumentOutlineSheet opens near top and Inline [TOC] scrolls target heading cleanly to top of viewport',
       (WidgetTester tester) async {
-        final fillerTop = List.generate(18, (i) => 'Intro paragraph line $i.\n').join('\n');
-        final fillerBottom = List.generate(28, (i) => 'Trailing paragraph line $i.\n').join('\n');
+        final fillerTop = List.generate(
+          18,
+          (i) => 'Intro paragraph line $i.\n',
+        ).join('\n');
+        final fillerBottom = List.generate(
+          28,
+          (i) => 'Trailing paragraph line $i.\n',
+        ).join('\n');
         final longNote = TextNote(
           id: 'toc_motion_note',
           title: 'TOC Precision Test',
@@ -1907,7 +2139,10 @@ Footer text.
           matching: find.byType(SlideTransition),
         );
         expect(completedSlide, findsWidgets);
-        final offset = tester.widget<SlideTransition>(completedSlide.first).position.value;
+        final offset = tester
+            .widget<SlideTransition>(completedSlide.first)
+            .position
+            .value;
         expect(offset.dx, greaterThan(0.0));
         expect(offset.dy, equals(0.0));
         await tester.pumpAndSettle();
@@ -1919,7 +2154,8 @@ Footer text.
         final guideCard = find.descendant(
           of: find.byType(TodayScreen),
           matching: find.byWidgetPredicate(
-            (w) => w is NeoNoteCard && w.item.id == MockInitialData.welcomeNoteId,
+            (w) =>
+                w is NeoNoteCard && w.item.id == MockInitialData.welcomeNoteId,
           ),
         );
         await tester.ensureVisible(guideCard);
@@ -2015,18 +2251,21 @@ Footer text.
     testWidgets(
       '29. Unified DM Sans typography & clean editorial left-ruled InlineTocCard',
       (WidgetTester tester) async {
-        expect(AppTypography.displayFontFamily, equals(AppTypography.fontFamily));
+        expect(
+          AppTypography.displayFontFamily,
+          equals(AppTypography.fontFamily),
+        );
         expect(AppTypography.serifFontFamily, equals(AppTypography.fontFamily));
         expect(AppTypography.display().fontFamily, startsWith('DMSans'));
         expect(AppTypography.serifItalic().fontFamily, startsWith('DMSans'));
         expect(AppTypography.titleLg().fontFamily, startsWith('DMSans'));
         expect(AppTypography.bodySm().fontFamily, startsWith('DMSans'));
         expect(AppTypography.caption().fontFamily, startsWith('DMSans'));
-        expect(AppTypography.display().fontFamily, isNot(contains('Newsreader')));
         expect(
-          AppTypography.mono().fontFamily,
-          startsWith('JetBrainsMono'),
+          AppTypography.display().fontFamily,
+          isNot(contains('Newsreader')),
         );
+        expect(AppTypography.mono().fontFamily, startsWith('JetBrainsMono'));
 
         final lavender = AppColors.getPaletteById('lavender');
         await tester.pumpWidget(
@@ -2049,14 +2288,19 @@ Footer text.
         expect(find.text('Main Title'), findsOneWidget);
         expect(find.text('Sub Section'), findsOneWidget);
 
-        // Verify left accent bar uses Lavender darker variant (no puffy 16dp rounded card)
-        final clip = tester.widget<ClipRRect>(
+        // Verify left accent bar uses Lavender darker variant with clipped 4dp Material (no puffy 16dp rounded card)
+        final tocMaterial = tester.widget<Material>(
           find.descendant(
             of: find.byType(InlineTocCard),
-            matching: find.byType(ClipRRect),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is Material &&
+                  w.borderRadius == BorderRadius.circular(4) &&
+                  w.color != null,
+            ),
           ),
         );
-        expect(clip.borderRadius, BorderRadius.circular(4));
+        expect(tocMaterial.clipBehavior, equals(Clip.antiAlias));
 
         final leftRuleFinder = find.descendant(
           of: find.byType(InlineTocCard),
@@ -2134,14 +2378,25 @@ Footer text.
 
         // Assert initial Peach canvas & darker-variant tags/frontmatter/embed
         var scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-        expect(scaffold.backgroundColor, equals(peach.resolveNoteCanvas(false)));
+        expect(
+          scaffold.backgroundColor,
+          equals(peach.resolveNoteCanvas(false)),
+        );
 
-        var guideChip = tester.widget<Chip>(find.widgetWithText(Chip, '#guide'));
-        expect(guideChip.labelStyle?.color, equals(peach.resolveAccentColor(false)));
+        var guideChip = tester.widget<Chip>(
+          find.widgetWithText(Chip, '#guide'),
+        );
+        expect(
+          guideChip.labelStyle?.color,
+          equals(peach.resolveAccentColor(false)),
+        );
         expect(guideChip.backgroundColor, equals(peach.resolveChipFill(false)));
 
         var approvedText = tester.widget<Text>(find.text('Approved'));
-        expect(approvedText.style?.color, equals(peach.resolveAccentColor(false)));
+        expect(
+          approvedText.style?.color,
+          equals(peach.resolveAccentColor(false)),
+        );
 
         var lowText = tester.widget<Text>(find.text('Low'));
         expect(lowText.style?.color, equals(peach.resolveAccentColor(false)));
@@ -2149,7 +2404,10 @@ Footer text.
         final embedCardFinder = find.byType(WorkspaceEmbedCard);
         expect(embedCardFinder, findsOneWidget);
         var openBoardText = tester.widget<Text>(find.text('Open Board →'));
-        expect(openBoardText.style?.color, equals(peach.resolveAccentColor(false)));
+        expect(
+          openBoardText.style?.color,
+          equals(peach.resolveAccentColor(false)),
+        );
 
         // Switch palette to Lavender Mist via Overflow Menu -> Color Palette
         await tester.tap(find.byTooltip('More options'));
@@ -2164,20 +2422,38 @@ Footer text.
 
         // Assert canvas, tags, frontmatter pills, and embed card updated to Lavender Mist
         scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-        expect(scaffold.backgroundColor, equals(lavender.resolveNoteCanvas(false)));
+        expect(
+          scaffold.backgroundColor,
+          equals(lavender.resolveNoteCanvas(false)),
+        );
 
         guideChip = tester.widget<Chip>(find.widgetWithText(Chip, '#guide'));
-        expect(guideChip.labelStyle?.color, equals(lavender.resolveAccentColor(false)));
-        expect(guideChip.backgroundColor, equals(lavender.resolveChipFill(false)));
+        expect(
+          guideChip.labelStyle?.color,
+          equals(lavender.resolveAccentColor(false)),
+        );
+        expect(
+          guideChip.backgroundColor,
+          equals(lavender.resolveChipFill(false)),
+        );
 
         approvedText = tester.widget<Text>(find.text('Approved'));
-        expect(approvedText.style?.color, equals(lavender.resolveAccentColor(false)));
+        expect(
+          approvedText.style?.color,
+          equals(lavender.resolveAccentColor(false)),
+        );
 
         lowText = tester.widget<Text>(find.text('Low'));
-        expect(lowText.style?.color, equals(lavender.resolveAccentColor(false)));
+        expect(
+          lowText.style?.color,
+          equals(lavender.resolveAccentColor(false)),
+        );
 
         openBoardText = tester.widget<Text>(find.text('Open Board →'));
-        expect(openBoardText.style?.color, equals(lavender.resolveAccentColor(false)));
+        expect(
+          openBoardText.style?.color,
+          equals(lavender.resolveAccentColor(false)),
+        );
       },
     );
 
@@ -2223,14 +2499,18 @@ Footer text.
         final clippedMat = tester.widget<Material>(clippedMaterialFinder);
 
         // Outer target meets 48dp accessibility minimum; ink stays strictly <= pill bounds
-        expect(outerSize.height, greaterThanOrEqualTo(AppSpacing.minTouchTarget));
+        expect(
+          outerSize.height,
+          greaterThanOrEqualTo(AppSpacing.minTouchTarget),
+        );
         expect(pillSize.height, lessThan(outerSize.height));
         expect(inkSize.height, lessThanOrEqualTo(pillSize.height));
         expect(inkSize.width, lessThanOrEqualTo(pillSize.width));
         expect(clippedMat.clipBehavior, equals(Clip.antiAlias));
 
         // Tapping in the top 3dp margin (inside 48dp hit zone, outside ~36dp pill) still fires onTap
-        final topEdgeHit = tester.getTopLeft(targetFinder) + Offset(outerSize.width / 2, 2);
+        final topEdgeHit =
+            tester.getTopLeft(targetFinder) + Offset(outerSize.width / 2, 2);
         await tester.tapAt(topEdgeHit);
         await tester.pumpAndSettle();
         expect(taps, equals(1));
@@ -2251,7 +2531,10 @@ Footer text.
           ),
           findsWidgets,
         );
-        final connectedPill = find.widgetWithText(TactileFilterPill, 'Connected Specs');
+        final connectedPill = find.widgetWithText(
+          TactileFilterPill,
+          'Connected Specs',
+        );
         final connectedInk = find.descendant(
           of: connectedPill,
           matching: find.byType(InkWell),
@@ -2264,6 +2547,274 @@ Footer text.
           tester.getSize(connectedInk).height,
           lessThanOrEqualTo(tester.getSize(connectedVisual).height),
         );
+      },
+    );
+
+    testWidgets(
+      '32. Dark SnackBar actionTextColor & dark-mode pastel checklist tick meet accessible contrast',
+      (WidgetTester tester) async {
+        double contrastRatio(Color a, Color b) {
+          final l1 = a.computeLuminance();
+          final l2 = b.computeLuminance();
+          final bright = l1 > l2 ? l1 : l2;
+          final dark = l1 > l2 ? l2 : l1;
+          return (bright + 0.05) / (dark + 0.05);
+        }
+
+        final darkSnack = AppTheme.darkTheme.snackBarTheme;
+        expect(
+          contrastRatio(darkSnack.actionTextColor!, darkSnack.backgroundColor!),
+          greaterThanOrEqualTo(4.5),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const Scaffold(
+              body: RichNoteContentView(
+                content: '- [x] Checked lime task',
+                paletteId: 'lime',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final limeFill = AppColors.getPaletteById('lime')
+            .resolveBulletColor(true);
+        final checkIcon = tester.widget<TackIcon>(
+          find.byWidgetPredicate(
+            (w) => w is TackIcon && w.icon == TackIcons.check,
+          ),
+        );
+        expect(
+          contrastRatio(checkIcon.color!, limeFill),
+          greaterThanOrEqualTo(4.5),
+        );
+      },
+    );
+
+    testWidgets(
+      '33. TackRoutes.heroImageShuttle interpolates forward push and reverse pop cleanly',
+      (WidgetTester tester) async {
+        final anim = AnimationController(
+          vsync: const TestVSync(),
+          duration: const Duration(milliseconds: 300),
+        );
+        addTearDown(anim.dispose);
+
+        final flightConfig = ValueNotifier<(HeroFlightDirection, double)?>(
+          null,
+        );
+        addTearDown(flightConfig.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const Hero(
+                    tag: 'img-from',
+                    child: SizedBox(width: 40, height: 40),
+                  ),
+                  const Hero(
+                    tag: 'img-to',
+                    child: SizedBox(width: 40, height: 40),
+                  ),
+                  Expanded(
+                    child:
+                        ValueListenableBuilder<(HeroFlightDirection, double)?>(
+                          valueListenable: flightConfig,
+                          builder: (ctx, cfg, _) {
+                            if (cfg == null) return const SizedBox.shrink();
+                            anim.value = cfg.$2;
+                            final fromHeroCtx = tester.element(
+                              find.byWidgetPredicate(
+                                (w) => w is Hero && w.tag == 'img-from',
+                              ),
+                            );
+                            final toHeroCtx = tester.element(
+                              find.byWidgetPredicate(
+                                (w) => w is Hero && w.tag == 'img-to',
+                              ),
+                            );
+                            return TackRoutes.heroImageShuttle(
+                              ctx,
+                              anim,
+                              cfg.$1,
+                              fromHeroCtx,
+                              toHeroCtx,
+                            );
+                          },
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        flightConfig.value = (HeroFlightDirection.push, 0.0);
+        await tester.pump();
+        expect(
+          tester.widget<ClipRRect>(find.byType(ClipRRect)).borderRadius,
+          BorderRadius.circular(AppSpacing.radiusMd),
+        );
+
+        flightConfig.value = (HeroFlightDirection.push, 1.0);
+        await tester.pump();
+        expect(
+          tester.widget<ClipRRect>(find.byType(ClipRRect)).borderRadius,
+          BorderRadius.zero,
+        );
+
+        flightConfig.value = (HeroFlightDirection.pop, 0.0);
+        await tester.pump();
+        expect(
+          tester.widget<ClipRRect>(find.byType(ClipRRect)).borderRadius,
+          BorderRadius.circular(AppSpacing.radiusMd),
+        );
+      },
+    );
+
+    testWidgets(
+      '34. Read mode empty placeholder enters Edit mode without outer SelectionArea trap & Slash sheet syncs tab ink',
+      (WidgetTester tester) async {
+        final repo = _MockWorkspaceRepo();
+        final note = TextNote(
+          id: 'empty-read-note',
+          title: 'Empty Read Note',
+          content: '',
+          paletteId: 'peach',
+          createdAt: DateTime(2026, 11, 18),
+          updatedAt: DateTime(2026, 11, 18),
+        );
+        await repo.saveItem(note);
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: NoteEditorScreen(item: note, startInEditMode: false),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('No content yet. Switch to edit mode to write...'),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.text('No content yet. Switch to edit mode to write...'),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Reader Mode'), findsOneWidget);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: SlashAndBlockActionsSheet(
+                currentBlockKind: BlockKind.paragraph,
+                startOnTurnIntoTab: false,
+                onInsertCommand: (_) {},
+                onTurnInto: (_) {},
+                onMoveUp: () {},
+                onMoveDown: () {},
+                onDuplicateBlock: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AnimatedDefaultTextStyle), findsAtLeastNWidgets(2));
+        await tester.tap(find.text('Transform'));
+        await tester.pump(const Duration(milliseconds: 110));
+        await tester.pumpAndSettle();
+        expect(find.text('Transform block'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '35. WhiteboardCanvasScreen keeps Spec Card readable in light mode & enforces bottom popup mutual exclusion',
+      (WidgetTester tester) async {
+        final repo = _MockWorkspaceRepo();
+        final board = WhiteboardCanvasItem(
+          id: 'wb-audit-test',
+          title: 'Audit Board',
+          paletteId: 'lime',
+          createdAt: DateTime(2026, 11, 18),
+          updatedAt: DateTime(2026, 11, 18),
+          nodes: [
+            CanvasNode(
+              id: 'spec-1',
+              x: 2800,
+              y: 2800,
+              width: 200,
+              height: 120,
+              text: 'API Spec\nVerify light contrast',
+              shapeType: CanvasNodeType.specCard,
+              paletteId: 'lime',
+            ),
+          ],
+          edges: const [],
+        );
+        await repo.saveItem(board);
+        final workspace = WorkspaceProvider(repo);
+        await workspace.loadItems();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WorkspaceProvider>.value(value: workspace),
+              ChangeNotifierProvider<ThemeProvider>(
+                create: (_) => ThemeProvider(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: WhiteboardCanvasScreen(item: board),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final promoteText = tester.widget<Text>(find.text('+ Note'));
+        expect(
+          promoteText.style?.color,
+          equals(AppColors.getPaletteById('lime').resolveAccentColor(false)),
+        );
+
+        await tester.tap(find.byTooltip('Add Flowchart Shape'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('shapes_menu_popup')), findsOneWidget);
+        expect(find.byKey(const ValueKey('grid_opacity_popup')), findsNothing);
+
+        await tester.tap(find.byTooltip('Grid Opacity'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('grid_opacity_popup')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('shapes_menu_popup')), findsNothing);
+
+        await tester.tap(find.byTooltip('Show Minimap'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('minimap_radar_popup')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('grid_opacity_popup')), findsNothing);
       },
     );
   });

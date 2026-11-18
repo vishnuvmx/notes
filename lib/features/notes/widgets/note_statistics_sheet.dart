@@ -10,10 +10,7 @@ import '../../../shared/widgets/app_bottom_sheet.dart';
 class NoteStatisticsSheet extends StatelessWidget {
   final String content;
 
-  const NoteStatisticsSheet({
-    super.key,
-    required this.content,
-  });
+  const NoteStatisticsSheet({super.key, required this.content});
 
   /// Displays the NoteStatisticsSheet modally.
   static Future<void> show(BuildContext context, {required String content}) {
@@ -27,16 +24,21 @@ class NoteStatisticsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final words = content.trim().isEmpty ? 0 : content.trim().split(RegExp(r'\s+')).length;
+    final words = content.trim().isEmpty
+        ? 0
+        : content.trim().split(RegExp(r'\s+')).length;
     final chars = content.length;
     final charsNoSpaces = content.replaceAll(RegExp(r'\s'), '').length;
-    final paragraphs = content.split('\n').where((l) => l.trim().isNotEmpty).length;
+    final paragraphs = content
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .length;
     final readTime = words == 0 ? 0 : ((words / 180).ceil()).clamp(1, 60);
 
     final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
     final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: AppSpacing.modalSheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -139,7 +141,9 @@ class NoteStatisticsSheet extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.caption(
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+              color: isDark
+                  ? AppColors.darkTextMuted
+                  : AppColors.lightTextMuted,
             ),
           ),
           const SizedBox(height: 3),

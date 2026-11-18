@@ -15,7 +15,8 @@ class DocumentOutlineSheet extends StatefulWidget {
   final String content;
   final String paletteId;
   final int? currentLineIndex;
-  final ValueChanged<({int level, String title, int lineIndex})> onSelectHeading;
+  final ValueChanged<({int level, String title, int lineIndex})>
+  onSelectHeading;
 
   const DocumentOutlineSheet({
     super.key,
@@ -32,10 +33,12 @@ class DocumentOutlineSheet extends StatefulWidget {
     required String content,
     required String paletteId,
     int? currentLineIndex,
-    required ValueChanged<({int level, String title, int lineIndex})> onSelectHeading,
+    required ValueChanged<({int level, String title, int lineIndex})>
+    onSelectHeading,
   }) {
     final tokens = context.tokens;
-    final topInset = MediaQuery.paddingOf(context).top + AppSpacing.appBarHeight + 6;
+    final topInset =
+        MediaQuery.paddingOf(context).top + AppSpacing.appBarHeight + 6;
     return showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -146,8 +149,10 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
     final filtered = _filter.trim().isEmpty
         ? allHeadings
         : allHeadings
-            .where((h) => h.title.toLowerCase().contains(_filter.toLowerCase()))
-            .toList();
+              .where(
+                (h) => h.title.toLowerCase().contains(_filter.toLowerCase()),
+              )
+              .toList();
 
     return Padding(
       padding: AppSpacing.modalSheetPadding,
@@ -169,7 +174,10 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
                   borderRadius: AppSpacing.roundedPill,
@@ -263,73 +271,86 @@ class _DocumentOutlineSheetState extends State<DocumentOutlineSheet> {
                   itemCount: filtered.length,
                   itemBuilder: (ctx, i) {
                     final h = filtered[i];
-                    final isCurrent = activeIdx >= 0 &&
+                    final isCurrent =
+                        activeIdx >= 0 &&
                         allHeadings[activeIdx].lineIndex == h.lineIndex;
                     final indent = ((h.level - minLevel).clamp(0, 4)) * 16.0;
-                    return InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.of(context).pop();
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          widget.onSelectHeading(h);
-                        });
-                      },
-                      borderRadius: AppSpacing.roundedSm,
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minHeight: 40,
-                        ),
-                        margin: const EdgeInsets.symmetric(vertical: 2),
-                        padding: EdgeInsets.fromLTRB(10 + indent, 8, 10, 8),
-                        decoration: BoxDecoration(
-                          color: isCurrent
-                              ? palette.resolveChipFill(tokens.isDark)
-                              : Colors.transparent,
-                          borderRadius: AppSpacing.roundedXs,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: palette.resolveChipFill(tokens.isDark),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'H${h.level}',
-                                style: AppTypography.caption(
-                                  color: accent,
-                                  weight: FontWeight.w700,
-                                ),
-                              ),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Material(
+                        color: isCurrent
+                            ? palette.resolveChipFill(tokens.isDark)
+                            : Colors.transparent,
+                        borderRadius: AppSpacing.roundedSm,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.of(context).pop();
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              widget.onSelectHeading(h);
+                            });
+                          },
+                          borderRadius: AppSpacing.roundedSm,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minHeight: AppSpacing.minTouchTarget,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                h.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: h.level == 1
-                                    ? AppTypography.body(
-                                        color: isCurrent
-                                            ? accent
-                                            : tokens.textPrimary,
-                                        weight: FontWeight.w700,
-                                      )
-                                    : AppTypography.bodySm(
-                                        color: isCurrent
-                                            ? accent
-                                            : tokens.textPrimary,
-                                        weight: h.level <= 2 || isCurrent
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                10 + indent,
+                                10,
+                                10,
+                                10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: palette.resolveChipFill(
+                                        tokens.isDark,
                                       ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'H${h.level}',
+                                      style: AppTypography.caption(
+                                        color: accent,
+                                        weight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      h.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: h.level == 1
+                                          ? AppTypography.body(
+                                              color: isCurrent
+                                                  ? accent
+                                                  : tokens.textPrimary,
+                                              weight: FontWeight.w700,
+                                            )
+                                          : AppTypography.bodySm(
+                                              color: isCurrent
+                                                  ? accent
+                                                  : tokens.textPrimary,
+                                              weight: h.level <= 2 || isCurrent
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                            ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     );
@@ -371,32 +392,36 @@ class _InlineTocCardState extends State<InlineTocCard> {
     final headings = WikiLinkService.extractHeadings(widget.content);
     if (headings.isEmpty) return const SizedBox.shrink();
 
-    final minLevel = headings.map((h) => h.level).reduce((a, b) => a < b ? a : b);
+    final minLevel = headings
+        .map((h) => h.level)
+        .reduce((a, b) => a < b ? a : b);
 
     final tokens = context.tokens;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ClipRRect(
+      child: Material(
+        color: accent.withValues(alpha: isDark ? 0.09 : 0.045),
         borderRadius: BorderRadius.circular(4),
-        child: Container(
-          color: accent.withValues(alpha: isDark ? 0.09 : 0.045),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 2.5, color: accent),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      InkWell(
-                        onTap: () => setState(() => _expanded = !_expanded),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(4),
-                          bottomRight: Radius.circular(4),
-                        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 2.5, color: accent),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(4),
+                        bottomRight: Radius.circular(4),
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 40),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 10, 7),
+                          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
                           child: Row(
                             children: [
                               TackIcon(
@@ -409,7 +434,7 @@ class _InlineTocCardState extends State<InlineTocCard> {
                                 child: Text(
                                   'CONTENTS',
                                   style: AppTypography.caption(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     color: accent,
                                     weight: FontWeight.w700,
                                   ).copyWith(letterSpacing: 0.7),
@@ -429,90 +454,111 @@ class _InlineTocCardState extends State<InlineTocCard> {
                           ),
                         ),
                       ),
-                      if (_expanded)
-                        Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          color: accent.withValues(alpha: isDark ? 0.16 : 0.12),
-                        ),
-                      AnimatedCrossFade(
-                        firstChild: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 5, 10, 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: headings.map((h) {
-                              final depth = (h.level - minLevel).clamp(0, 3);
-                              final indent = depth * 12.0;
-                              final isTopLevel = depth == 0;
-                              return InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  widget.onJumpToLine?.call(h.lineIndex);
-                                },
-                                borderRadius: BorderRadius.circular(4),
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    indent,
-                                    5,
-                                    4,
-                                    5,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: isTopLevel ? 7 : 4,
-                                        height: isTopLevel ? 1.8 : 1.4,
-                                        decoration: BoxDecoration(
-                                          color: isTopLevel
-                                              ? accent
-                                              : accent.withValues(alpha: 0.55),
-                                          borderRadius:
-                                              BorderRadius.circular(1),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          h.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppTypography.bodySm(
-                                            fontSize: isTopLevel ? 13.5 : 13,
-                                            color: isTopLevel
-                                                ? tokens.textPrimary
-                                                : tokens.textSecondary,
-                                            weight: isTopLevel
-                                                ? FontWeight.w600
-                                                : FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                    ),
+                    AnimatedCrossFade(
+                      firstChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(horizontal: 12),
+                            color: accent.withValues(
+                              alpha: isDark ? 0.16 : 0.12,
+                            ),
                           ),
-                        ),
-                        secondChild:
-                            const SizedBox(width: double.infinity, height: 0),
-                        crossFadeState: _expanded
-                            ? CrossFadeState.showFirst
-                            : CrossFadeState.showSecond,
-                        sizeCurve: Curves.easeOutCubic,
-                        firstCurve: Curves.easeOutCubic,
-                        secondCurve: Curves.easeInCubic,
-                        duration: const Duration(milliseconds: 200),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 5, 10, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: headings.map((h) {
+                                final depth = (h.level - minLevel).clamp(0, 3);
+                                final indent = depth * 12.0;
+                                final isTopLevel = depth == 0;
+                                return Material(
+                                  type: MaterialType.transparency,
+                                  borderRadius: BorderRadius.circular(4),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      widget.onJumpToLine?.call(h.lineIndex);
+                                    },
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        minHeight: 36,
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          indent,
+                                          6,
+                                          4,
+                                          6,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: isTopLevel ? 7 : 4,
+                                              height: isTopLevel ? 1.8 : 1.4,
+                                              decoration: BoxDecoration(
+                                                color: isTopLevel
+                                                    ? accent
+                                                    : accent.withValues(
+                                                        alpha: 0.55,
+                                                      ),
+                                                borderRadius:
+                                                    BorderRadius.circular(1),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                h.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTypography.bodySm(
+                                                  fontSize: isTopLevel
+                                                      ? 13.5
+                                                      : 13,
+                                                  color: isTopLevel
+                                                      ? tokens.textPrimary
+                                                      : tokens.textSecondary,
+                                                  weight: isTopLevel
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                      secondChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
+                      ),
+                      crossFadeState: _expanded
+                          ? CrossFadeState.showFirst
+                          : CrossFadeState.showSecond,
+                      sizeCurve: Curves.easeOutCubic,
+                      firstCurve: Curves.easeOutCubic,
+                      secondCurve: Curves.easeInCubic,
+                      duration: const Duration(milliseconds: 200),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
-

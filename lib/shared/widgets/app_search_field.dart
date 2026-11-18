@@ -143,10 +143,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
     final fieldShape = SmoothRectangleBorder(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       smoothness: AppSpacing.defaultSmoothing,
-      side: BorderSide(
-        color: borderColor,
-        width: _isFocused ? 1.5 : 1.0,
-      ),
+      side: BorderSide(color: borderColor, width: _isFocused ? 1.5 : 1.0),
     );
 
     return AnimatedContainer(
@@ -154,10 +151,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
       curve: AppSpacing.curveStandard,
       margin: widget.margin,
       constraints: BoxConstraints(minHeight: widget.height),
-      decoration: ShapeDecoration(
-        color: bgColor,
-        shape: fieldShape,
-      ),
+      decoration: ShapeDecoration(color: bgColor, shape: fieldShape),
       child: Material(
         type: MaterialType.transparency,
         shape: fieldShape,
@@ -167,11 +161,15 @@ class _AppSearchFieldState extends State<AppSearchField> {
             const SizedBox(width: AppSpacing.s3),
             widget.leading ??
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s1,
+                  ),
                   child: TackIcon(
                     TackIcons.search,
                     size: 18,
-                    color: _isFocused ? tokens.textPrimary : tokens.textTertiary,
+                    color: _isFocused
+                        ? tokens.textPrimary
+                        : tokens.textTertiary,
                   ),
                 ),
             const SizedBox(width: AppSpacing.s2),
@@ -196,19 +194,25 @@ class _AppSearchFieldState extends State<AppSearchField> {
               ),
             ),
             if (_hasText)
-              IconButton(
-                tooltip: 'Clear search text',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: AppSpacing.minTouchTarget,
-                  minHeight: AppSpacing.minTouchTarget,
+              Semantics(
+                button: true,
+                label: 'Clear search text',
+                onTap: _handleClear,
+                excludeSemantics: true,
+                child: IconButton(
+                  tooltip: 'Clear search text',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  icon: TackIcon(
+                    TackIcons.close,
+                    size: 16,
+                    color: tokens.textTertiary,
+                  ),
+                  onPressed: _handleClear,
                 ),
-                icon: TackIcon(
-                  TackIcons.close,
-                  size: 16,
-                  color: tokens.textTertiary,
-                ),
-                onPressed: _handleClear,
               )
             else
               const SizedBox(width: AppSpacing.s3),

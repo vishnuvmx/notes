@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -48,11 +49,7 @@ class MermaidCompletionBar extends StatelessWidget {
       snippet: ' -->|Yes| ',
       tooltip: 'Arrow with Label',
     ),
-    MermaidCompletionItem(
-      label: '---',
-      snippet: ' --- ',
-      tooltip: 'Open Link',
-    ),
+    MermaidCompletionItem(label: '---', snippet: ' --- ', tooltip: 'Open Link'),
     MermaidCompletionItem(
       label: '-.->',
       snippet: ' -.-> ',
@@ -139,124 +136,137 @@ class MermaidCompletionBar extends StatelessWidget {
     ),
     MermaidCompletionItem(
       label: 'erDiagram',
-      snippet:
-          'erDiagram\n    USER ||--o{ NOTE : writes\n    USER {\n        string id PK\n        string name\n    }\n    NOTE {\n        string id PK\n        string userId FK\n    }\n',
+      snippet: 'erDiagram\n    USER ||--o{ NOTE : writes\n    USER {\n        string id PK\n        string name\n    }\n    NOTE {\n        string id PK\n        string userId FK\n    }\n',
       tooltip: 'ER Diagram Template',
     ),
     MermaidCompletionItem(
       label: 'gantt',
-      snippet:
-          'gantt\n    title Project Plan\n    section Phase 1\n    Design :done, t1, 2026-01-01, 3d\n    Build :active, t2, after t1, 5d\n',
+      snippet: 'gantt\n    title Project Plan\n    section Phase 1\n    Design :done, t1, 2026-01-01, 3d\n    Build :active, t2, after t1, 5d\n',
       tooltip: 'Gantt Chart Template',
     ),
     MermaidCompletionItem(
       label: 'mindmap',
-      snippet:
-          'mindmap\n  root((Central Idea))\n    Branch A\n      Leaf 1\n      Leaf 2\n    Branch B\n',
+      snippet: 'mindmap\n  root((Central Idea))\n    Branch A\n      Leaf 1\n      Leaf 2\n    Branch B\n',
       tooltip: 'Mindmap Template',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final bgColor = isDark ? const Color(0xFF1E212B) : const Color(0xFFF1F5F9);
-    final borderColor = isDark ? const Color(0xFF333B4F) : const Color(0xFFCBD5E1);
+    final tokens = context.tokens;
+    final isDark = tokens.isDark;
+    final cyanAccent = AppColors.getPaletteById('cyan')
+        .resolveAccentColor(isDark);
+    final amberAccent = AppColors.getPaletteById('amber')
+        .resolveAccentColor(isDark);
 
     return Container(
-      height: 42,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 3,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: tokens.canvasSunken,
+        borderRadius: AppSpacing.roundedSm,
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+        boxShadow: AppSpacing.elev1(isDark),
       ),
       child: Row(
         children: [
           // Mermaid indicator pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.accentCyan.withValues(alpha: isDark ? 0.25 : 0.15),
+              color: cyanAccent.withValues(alpha: isDark ? 0.22 : 0.14),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const TackIcon(
-                  TackIcons.flow,
-                  size: 13,
-                  color: AppColors.accentCyan,
-                ),
+                TackIcon(TackIcons.flow, size: 13, color: cyanAccent),
                 const SizedBox(width: 4),
                 Text(
                   'MERMAID',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                    color: isDark ? AppColors.accentCyan : const Color(0xFF0E7490),
-                  ),
+                  style: AppTypography.caption(
+                    fontSize: 12,
+                    weight: FontWeight.w800,
+                    color: cyanAccent,
+                  ).copyWith(letterSpacing: 0.3),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 6),
-          VerticalDivider(width: 1, thickness: 1, color: borderColor),
+          SizedBox(
+            height: 22,
+            child: VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: tokens.borderSubtle,
+            ),
+          ),
           const SizedBox(width: 6),
 
           // Horizontal scrollable completion chips
           Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: completions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 5),
-              itemBuilder: (context, index) {
-                final item = completions[index];
-                return Tooltip(
-                  message: item.tooltip ?? item.label,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      onInsertSnippet(item.snippet);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF293041) : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF3B4660) : const Color(0xFFE2E8F0),
-                          width: 0.8,
+            child: SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: completions.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, index) {
+                  final item = completions[index];
+                  return Center(
+                    child: Tooltip(
+                      message: item.tooltip ?? item.label,
+                      child: Material(
+                        color: tokens.surfacePrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: tokens.borderSubtle,
+                            width: 0.8,
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        item.label,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            onInsertSnippet(item.snippet);
+                          },
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minWidth: AppSpacing.minTouchTarget,
+                              minHeight: 36,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              child: Center(
+                                widthFactor: 1,
+                                child: Text(
+                                  item.label,
+                                  style: AppTypography.caption(
+                                    fontSize: 12,
+                                    weight: FontWeight.w700,
+                                    color: tokens.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
 
@@ -265,9 +275,16 @@ class MermaidCompletionBar extends StatelessWidget {
             Tooltip(
               message: 'Diagram Templates',
               child: IconButton(
-                icon: const TackIcon(TackIcons.sparkles, size: 16, color: AppColors.accentAmber),
+                icon: TackIcon(
+                  TackIcons.sparkles,
+                  size: 18,
+                  color: amberAccent,
+                ),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                constraints: const BoxConstraints(
+                  minWidth: AppSpacing.minTouchTarget,
+                  minHeight: AppSpacing.minTouchTarget,
+                ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   onOpenTemplates?.call();

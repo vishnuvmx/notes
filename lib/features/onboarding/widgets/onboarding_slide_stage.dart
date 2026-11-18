@@ -24,10 +24,7 @@ class OnboardingSlideData {
 class OnboardingSlideStage extends StatelessWidget {
   final OnboardingSlideData slide;
 
-  const OnboardingSlideStage({
-    super.key,
-    required this.slide,
-  });
+  const OnboardingSlideStage({super.key, required this.slide});
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +38,7 @@ class OnboardingSlideStage extends StatelessWidget {
           shape: SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedXl,
             smoothness: AppSpacing.defaultSmoothing,
-            side: BorderSide(
-              color: tokens.borderSubtle,
-              width: 1,
-            ),
+            side: BorderSide(color: tokens.borderSubtle, width: 1),
           ),
         ),
         clipBehavior: Clip.antiAlias,

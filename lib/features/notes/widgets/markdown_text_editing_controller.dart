@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/app_colors.dart';
 import 'code_syntax_highlighter.dart';
 
@@ -30,8 +31,9 @@ class MarkdownTextEditingController extends TextEditingController {
   );
   static final RegExp _hashRegex = RegExp(r'#[a-zA-Z0-9_-]+');
   static final RegExp _wordCharRegex = RegExp(r'[A-Za-z0-9_]');
-  static final RegExp _lineFootnoteDefRegex =
-      RegExp(r'^(\s*)(\[\^[^\[\]\s\n]+\]:)(.*)$');
+  static final RegExp _lineFootnoteDefRegex = RegExp(
+    r'^(\s*)(\[\^[^\[\]\s\n]+\]:)(.*)$',
+  );
   static final RegExp _lineDefMarkerRegex = RegExp(r'^(\s{0,3}:)(\s+.*)$');
 
   @override
@@ -79,51 +81,63 @@ class MarkdownTextEditingController extends TextEditingController {
           final innerCode = matchedText.substring(firstNewline + 1, lastFence);
           final closing = matchedText.substring(lastFence);
 
-          spans.add(TextSpan(
-            text: header,
-            style: GoogleFonts.jetBrainsMono(
-              textStyle: style,
-              fontWeight: FontWeight.w700,
-              color: palette.resolveCodeAccent(isDark),
+          spans.add(
+            TextSpan(
+              text: header,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
             ),
-          ));
-          spans.addAll(CodeSyntaxHighlighter.highlight(
-            innerCode,
-            isDark: isDark,
-            language: fenceLang,
-            baseStyle: GoogleFonts.jetBrainsMono(
-              textStyle: style,
-              fontSize: (style?.fontSize ?? 14) * 0.92,
-              color: isDark ? const Color(0xFFABB2BF) : const Color(0xFF2E3440),
+          );
+          spans.addAll(
+            CodeSyntaxHighlighter.highlight(
+              innerCode,
+              isDark: isDark,
+              language: fenceLang,
+              baseStyle: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontSize: (style?.fontSize ?? 14) * 0.92,
+                color: isDark
+                    ? const Color(0xFFABB2BF)
+                    : const Color(0xFF2E3440),
+              ),
             ),
-          ));
-          spans.add(TextSpan(
-            text: closing,
-            style: GoogleFonts.jetBrainsMono(
-              textStyle: style,
-              fontWeight: FontWeight.w700,
-              color: palette.resolveCodeAccent(isDark),
+          );
+          spans.add(
+            TextSpan(
+              text: closing,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
             ),
-          ));
+          );
         } else {
-          spans.add(TextSpan(
+          spans.add(
+            TextSpan(
+              text: matchedText,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: style,
+                fontWeight: FontWeight.w700,
+                color: palette.resolveCodeAccent(isDark),
+              ),
+            ),
+          );
+        }
+      } else {
+        spans.add(
+          TextSpan(
             text: matchedText,
             style: GoogleFonts.jetBrainsMono(
               textStyle: style,
               fontWeight: FontWeight.w700,
               color: palette.resolveCodeAccent(isDark),
             ),
-          ));
-        }
-      } else {
-        spans.add(TextSpan(
-          text: matchedText,
-          style: GoogleFonts.jetBrainsMono(
-            textStyle: style,
-            fontWeight: FontWeight.w700,
-            color: palette.resolveCodeAccent(isDark),
           ),
-        ));
+        );
       }
 
       lastMatchEnd = match.end;
@@ -165,16 +179,18 @@ class MarkdownTextEditingController extends TextEditingController {
         if (leading.isNotEmpty) {
           out.add(TextSpan(text: leading, style: baseStyle));
         }
-        out.add(TextSpan(
-          text: token,
-          style: baseStyle?.copyWith(
-            color: palette.resolveAccentColor(isDark),
-            fontWeight: FontWeight.w700,
-            backgroundColor: palette
-                .resolveAccentColor(isDark)
-                .withValues(alpha: isDark ? 0.16 : 0.10),
+        out.add(
+          TextSpan(
+            text: token,
+            style: baseStyle?.copyWith(
+              color: palette.resolveAccentColor(isDark),
+              fontWeight: FontWeight.w700,
+              backgroundColor: palette
+                  .resolveAccentColor(isDark)
+                  .withValues(alpha: isDark ? 0.16 : 0.10),
+            ),
           ),
-        ));
+        );
         if (rest.isNotEmpty) {
           _appendInlineSpans(
             rest,
@@ -190,13 +206,15 @@ class MarkdownTextEditingController extends TextEditingController {
         if (defMarker != null) {
           final marker = defMarker.group(1)!;
           final rest = defMarker.group(2)!;
-          out.add(TextSpan(
-            text: marker,
-            style: baseStyle?.copyWith(
-              color: palette.resolveAccentColor(isDark),
-              fontWeight: FontWeight.w800,
+          out.add(
+            TextSpan(
+              text: marker,
+              style: baseStyle?.copyWith(
+                color: palette.resolveAccentColor(isDark),
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ));
+          );
           _appendInlineSpans(
             rest,
             baseStyle,
@@ -259,21 +277,24 @@ class MarkdownTextEditingController extends TextEditingController {
         if (closeIdx > i + 1) {
           flush();
           out.add(TextSpan(text: '`', style: delimiterStyle));
-          out.add(TextSpan(
-            text: text.substring(i + 1, closeIdx),
-            style: GoogleFonts.jetBrainsMono(
-              textStyle: currentStyle,
-              fontSize: (currentStyle?.fontSize ?? 14) * 0.92,
-              fontWeight: currentStyle?.fontWeight == FontWeight.bold ||
-                      currentStyle?.fontWeight == FontWeight.w800
-                  ? FontWeight.w700
-                  : FontWeight.w600,
-              fontStyle: currentStyle?.fontStyle,
-              decoration: currentStyle?.decoration,
-              backgroundColor: palette.resolveInlineCodeBg(isDark),
-              color: palette.resolveInlineCodeText(isDark),
+          out.add(
+            TextSpan(
+              text: text.substring(i + 1, closeIdx),
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: currentStyle,
+                fontSize: (currentStyle?.fontSize ?? 14) * 0.92,
+                fontWeight:
+                    currentStyle?.fontWeight == FontWeight.bold ||
+                        currentStyle?.fontWeight == FontWeight.w800
+                    ? FontWeight.w700
+                    : FontWeight.w600,
+                fontStyle: currentStyle?.fontStyle,
+                decoration: currentStyle?.decoration,
+                backgroundColor: palette.resolveInlineCodeBg(isDark),
+                color: palette.resolveInlineCodeText(isDark),
+              ),
             ),
-          ));
+          );
           out.add(TextSpan(text: '`', style: delimiterStyle));
           i = closeIdx + 1;
           continue;
@@ -287,17 +308,24 @@ class MarkdownTextEditingController extends TextEditingController {
           flush();
           final matched = m.group(0)!;
           final openLen = matched.startsWith('![[') ? 3 : 2;
-          out.add(TextSpan(text: matched.substring(0, openLen), style: delimiterStyle));
-          out.add(TextSpan(
-            text: matched.substring(openLen, matched.length - 2),
-            style: currentStyle?.copyWith(
-              color: palette.resolveAccentColor(isDark),
-              fontWeight: FontWeight.w700,
-              backgroundColor: palette
-                  .resolveAccentColor(isDark)
-                  .withValues(alpha: isDark ? 0.14 : 0.10),
+          out.add(
+            TextSpan(
+              text: matched.substring(0, openLen),
+              style: delimiterStyle,
             ),
-          ));
+          );
+          out.add(
+            TextSpan(
+              text: matched.substring(openLen, matched.length - 2),
+              style: currentStyle?.copyWith(
+                color: palette.resolveAccentColor(isDark),
+                fontWeight: FontWeight.w700,
+                backgroundColor: palette
+                    .resolveAccentColor(isDark)
+                    .withValues(alpha: isDark ? 0.14 : 0.10),
+              ),
+            ),
+          );
           out.add(TextSpan(text: ']]', style: delimiterStyle));
           i = m.end;
           continue;
@@ -314,21 +342,25 @@ class MarkdownTextEditingController extends TextEditingController {
           final altText = matched.substring(2, midIndex);
           final urlText = matched.substring(midIndex + 2, matched.length - 1);
           out.add(TextSpan(text: '![', style: delimiterStyle));
-          out.add(TextSpan(
-            text: altText,
-            style: currentStyle?.copyWith(
-              color: isDark ? AppColors.pastelLimeLight : AppColors.pastelLimeDark,
-              fontStyle: FontStyle.italic,
+          out.add(
+            TextSpan(
+              text: altText,
+              style: currentStyle?.copyWith(
+                color: palette.resolveAccentColor(isDark),
+                fontStyle: FontStyle.italic,
+              ),
             ),
-          ));
+          );
           out.add(TextSpan(text: '](', style: delimiterStyle));
-          out.add(TextSpan(
-            text: urlText,
-            style: currentStyle?.copyWith(
-              color: delimiterStyle?.color,
-              fontSize: (currentStyle.fontSize ?? 14) * 0.9,
+          out.add(
+            TextSpan(
+              text: urlText,
+              style: currentStyle?.copyWith(
+                color: delimiterStyle?.color,
+                fontSize: (currentStyle.fontSize ?? 14) * 0.9,
+              ),
             ),
-          ));
+          );
           out.add(TextSpan(text: ')', style: delimiterStyle));
           i = m.end;
           continue;
@@ -345,17 +377,29 @@ class MarkdownTextEditingController extends TextEditingController {
           final id = matched.substring(2, matched.length - 1);
           final accent = palette.resolveAccentColor(isDark);
           final fnBg = accent.withValues(alpha: isDark ? 0.16 : 0.10);
-          out.add(TextSpan(text: '[^', style: delimiterStyle?.copyWith(backgroundColor: fnBg)));
-          out.add(TextSpan(
-            text: id,
-            style: currentStyle?.copyWith(
-              color: accent,
-              fontWeight: FontWeight.w700,
-              fontSize: (currentStyle.fontSize ?? 14) * 0.86,
-              backgroundColor: fnBg,
+          out.add(
+            TextSpan(
+              text: '[^',
+              style: delimiterStyle?.copyWith(backgroundColor: fnBg),
             ),
-          ));
-          out.add(TextSpan(text: ']', style: delimiterStyle?.copyWith(backgroundColor: fnBg)));
+          );
+          out.add(
+            TextSpan(
+              text: id,
+              style: currentStyle?.copyWith(
+                color: accent,
+                fontWeight: FontWeight.w700,
+                fontSize: (currentStyle.fontSize ?? 14) * 0.86,
+                backgroundColor: fnBg,
+              ),
+            ),
+          );
+          out.add(
+            TextSpan(
+              text: ']',
+              style: delimiterStyle?.copyWith(backgroundColor: fnBg),
+            ),
+          );
           i = fn.end;
           continue;
         }
@@ -384,13 +428,15 @@ class MarkdownTextEditingController extends TextEditingController {
             depth: depth + 1,
           );
           out.add(TextSpan(text: '](', style: delimiterStyle));
-          out.add(TextSpan(
-            text: link.url,
-            style: currentStyle?.copyWith(
-              color: delimiterStyle?.color,
-              fontSize: (currentStyle.fontSize ?? 14) * 0.9,
+          out.add(
+            TextSpan(
+              text: link.url,
+              style: currentStyle?.copyWith(
+                color: delimiterStyle?.color,
+                fontSize: (currentStyle.fontSize ?? 14) * 0.9,
+              ),
             ),
-          ));
+          );
           out.add(TextSpan(text: ')', style: delimiterStyle));
           i = link.endIndex;
           continue;
@@ -411,7 +457,10 @@ class MarkdownTextEditingController extends TextEditingController {
             if (tag == 'u') {
               _appendInlineSpans(
                 inner,
-                _mergeStyle(currentStyle, addDecoration: TextDecoration.underline),
+                _mergeStyle(
+                  currentStyle,
+                  addDecoration: TextDecoration.underline,
+                ),
                 delimiterStyle,
                 palette,
                 isDark,
@@ -447,7 +496,10 @@ class MarkdownTextEditingController extends TextEditingController {
           flush();
           final innerText = text.substring(i + 2, endIdx);
           final colonIdx = innerText.indexOf(':');
-          Color highlightBg = AppColors.getHighlightColor(_paletteId, isDark: isDark);
+          Color highlightBg = AppColors.getHighlightColor(
+            _paletteId,
+            isDark: isDark,
+          );
           if (colonIdx > 0 && colonIdx < 15) {
             final prefix = innerText.substring(0, colonIdx).toLowerCase();
             if (AppColors.presetPalettes.any((p) => p.id == prefix)) {
@@ -596,7 +648,10 @@ class MarkdownTextEditingController extends TextEditingController {
           out.add(TextSpan(text: '~~', style: delimiterStyle));
           _appendInlineSpans(
             text.substring(i + 2, endIdx),
-            _mergeStyle(currentStyle, addDecoration: TextDecoration.lineThrough),
+            _mergeStyle(
+              currentStyle,
+              addDecoration: TextDecoration.lineThrough,
+            ),
             delimiterStyle,
             palette,
             isDark,
@@ -728,26 +783,35 @@ class MarkdownTextEditingController extends TextEditingController {
           final matchedText = hashMatch.group(0)!;
           final hexColor = AppColors.tryParseHexColor(matchedText);
           if (hexColor != null) {
-            final luminance = hexColor.computeLuminance();
-            final textColor =
-                luminance > 0.55 ? const Color(0xFF191A23) : Colors.white;
-            out.add(TextSpan(
-              text: matchedText,
-              style: GoogleFonts.jetBrainsMono(
-                textStyle: currentStyle,
-                backgroundColor: hexColor.withValues(alpha: 0.5),
-                color: textColor,
-                fontWeight: FontWeight.w700,
+            final tint = hexColor.withValues(alpha: 0.5);
+            final canvasBg = isDark
+                ? AppColors.darkCanvas
+                : AppColors.lightCanvas;
+            final blended = Color.alphaBlend(tint, canvasBg);
+            final textColor = blended.computeLuminance() > 0.45
+                ? AppColors.lightTextPrimary
+                : Colors.white;
+            out.add(
+              TextSpan(
+                text: matchedText,
+                style: GoogleFonts.jetBrainsMono(
+                  textStyle: currentStyle,
+                  backgroundColor: tint,
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ));
+            );
           } else {
-            out.add(TextSpan(
-              text: matchedText,
-              style: currentStyle?.copyWith(
-                color: palette.resolveAccentColor(isDark),
-                fontWeight: FontWeight.w700,
+            out.add(
+              TextSpan(
+                text: matchedText,
+                style: currentStyle?.copyWith(
+                  color: palette.resolveAccentColor(isDark),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ));
+            );
           }
           i = hashMatch.end;
           continue;
@@ -786,8 +850,9 @@ class MarkdownTextEditingController extends TextEditingController {
           mergedDecoration,
         addDecoration,
       ];
-      mergedDecoration =
-          list.length == 1 ? list.first : TextDecoration.combine(list);
+      mergedDecoration = list.length == 1
+          ? list.first
+          : TextDecoration.combine(list);
     }
 
     return base.copyWith(
@@ -822,7 +887,8 @@ class MarkdownTextEditingController extends TextEditingController {
       if (ch == 10 || ch == 13) return null;
       if (ch == 96) {
         final closeTick = text.indexOf('`', k + 1);
-        if (closeTick != -1 && !text.substring(k + 1, closeTick).contains('\n')) {
+        if (closeTick != -1 &&
+            !text.substring(k + 1, closeTick).contains('\n')) {
           k = closeTick + 1;
           continue;
         }
@@ -864,7 +930,8 @@ class MarkdownTextEditingController extends TextEditingController {
 
       if (ch == 96) {
         final closeTick = text.indexOf('`', j + 1);
-        if (closeTick != -1 && !text.substring(j + 1, closeTick).contains('\n')) {
+        if (closeTick != -1 &&
+            !text.substring(j + 1, closeTick).contains('\n')) {
           j = closeTick + 1;
           continue;
         }
@@ -877,7 +944,8 @@ class MarkdownTextEditingController extends TextEditingController {
             (allowNestedMarker == '__' && text.startsWith('___', j));
         if (!isTripleEdge) {
           final innerClose = text.indexOf(allowNestedMarker, j + nl);
-          if (innerClose != -1 && !text.substring(j + nl, innerClose).contains('\n')) {
+          if (innerClose != -1 &&
+              !text.substring(j + nl, innerClose).contains('\n')) {
             j = innerClose + nl;
             continue;
           }
@@ -896,7 +964,9 @@ class MarkdownTextEditingController extends TextEditingController {
         continue;
       }
 
-      if (text.startsWith(marker, j) && j > start && !_isWhitespace(text, j - 1)) {
+      if (text.startsWith(marker, j) &&
+          j > start &&
+          !_isWhitespace(text, j - 1)) {
         if (allowNestedSingleStar &&
             marker == '**' &&
             openSingleStar &&

@@ -45,6 +45,7 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
   late CurvedAnimation _curvedAnimation;
   late Animation<Offset> _slideAnimation;
   late int _currentIndex;
+  bool _isRtl = false;
 
   @override
   void initState() {
@@ -60,11 +61,28 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
       curve: widget.curve,
     );
     _slideAnimation = AlwaysStoppedAnimation<Offset>(
-      Offset(_currentIndex.toDouble(), 0),
+      Offset(_signedDx(_currentIndex.toDouble()), 0),
     );
   }
 
+  double _signedDx(double dx) => _isRtl ? -dx : dx;
+
   int _safeIndex(int index, int count) => index.clamp(0, count - 1);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextRtl = Directionality.of(context) == TextDirection.rtl;
+    if (nextRtl != _isRtl) {
+      final prevEnd = _signedDx(_currentIndex.toDouble());
+      _isRtl = nextRtl;
+      final nextEnd = _signedDx(_currentIndex.toDouble());
+      _slideAnimation = Tween<Offset>(
+        begin: Offset(prevEnd, 0),
+        end: Offset(nextEnd, 0),
+      ).animate(_curvedAnimation);
+    }
+  }
 
   @override
   void didUpdateWidget(covariant SlidingPillTrack oldWidget) {
@@ -82,14 +100,16 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
 
     final nextIndex = _safeIndex(widget.selectedIndex, widget.itemCount);
     if (nextIndex != _currentIndex || oldWidget.itemCount != widget.itemCount) {
+      final minDx = _isRtl ? -(widget.itemCount - 1).toDouble() : 0.0;
+      final maxDx = _isRtl ? 0.0 : (widget.itemCount - 1).toDouble();
       final fromOffset = Offset(
-        _slideAnimation.value.dx.clamp(0.0, (widget.itemCount - 1).toDouble()),
+        _slideAnimation.value.dx.clamp(minDx, maxDx),
         0,
       );
       _currentIndex = nextIndex;
       _slideAnimation = Tween<Offset>(
         begin: fromOffset,
-        end: Offset(nextIndex.toDouble(), 0),
+        end: Offset(_signedDx(nextIndex.toDouble()), 0),
       ).animate(_curvedAnimation);
       _controller.forward(from: 0.0);
     }
@@ -104,7 +124,6 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return RepaintBoundary(
       child: Container(
         height: widget.height,
@@ -123,17 +142,8 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
                 child: FractionallySizedBox(
                   widthFactor: 1 / widget.itemCount,
                   heightFactor: 1,
-                  child: AnimatedBuilder(
-                    animation: _slideAnimation,
-                    builder: (context, child) {
-                      final dx = isRtl
-                          ? -_slideAnimation.value.dx
-                          : _slideAnimation.value.dx;
-                      return SlideTransition(
-                        position: AlwaysStoppedAnimation<Offset>(Offset(dx, 0)),
-                        child: child,
-                      );
-                    },
+                  child: SlideTransition(
+                    position: _slideAnimation,
                     child: RepaintBoundary(
                       child: DecoratedBox(
                         decoration: BoxDecoration(

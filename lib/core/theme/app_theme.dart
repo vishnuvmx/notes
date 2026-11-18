@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'app_colors.dart';
 import 'app_typography.dart';
 import 'app_spacing.dart';
@@ -15,9 +16,7 @@ class AppTheme {
       useMaterial3: true,
       platform: TargetPlatform.android,
       splashFactory: InkRipple.splashFactory,
-      extensions: const <ThemeExtension<dynamic>>[
-        TackTokens.light,
-      ],
+      extensions: const <ThemeExtension<dynamic>>[TackTokens.light],
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _TackFadePageTransitionsBuilder(),
@@ -78,55 +77,97 @@ class AppTheme {
           backgroundColor: AppColors.lightActionPrimary,
           foregroundColor: AppColors.lightCanvas,
           elevation: 0,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.lightCanvas, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.lightCanvas,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.lightTextPrimary,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          side: const BorderSide(color: AppColors.lightBorderStrong, width: 1.0),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          side: const BorderSide(
+            color: AppColors.lightBorderStrong,
+            width: 1.0,
+          ),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.lightTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.lightTextPrimary,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.lightTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.lightSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         border: const OutlineInputBorder(
           borderRadius: AppSpacing.roundedSm,
-          borderSide: BorderSide(color: AppColors.lightBorderStrong, width: 1.0),
+          borderSide: BorderSide(
+            color: AppColors.lightBorderStrong,
+            width: 1.0,
+          ),
         ),
         enabledBorder: const OutlineInputBorder(
           borderRadius: AppSpacing.roundedSm,
-          borderSide: BorderSide(color: AppColors.lightBorderStrong, width: 1.0),
+          borderSide: BorderSide(
+            color: AppColors.lightBorderStrong,
+            width: 1.0,
+          ),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppSpacing.roundedSm,
-          borderSide: BorderSide(color: AppColors.lightActionPrimary, width: 2.0),
+          borderSide: BorderSide(
+            color: AppColors.lightActionPrimary,
+            width: 2.0,
+          ),
         ),
         hintStyle: AppTypography.body(color: AppColors.lightTextTertiary),
       ),
@@ -181,9 +222,7 @@ class AppTheme {
       useMaterial3: true,
       platform: TargetPlatform.android,
       splashFactory: InkRipple.splashFactory,
-      extensions: const <ThemeExtension<dynamic>>[
-        TackTokens.dark,
-      ],
+      extensions: const <ThemeExtension<dynamic>>[TackTokens.dark],
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _TackFadePageTransitionsBuilder(),
@@ -244,44 +283,74 @@ class AppTheme {
           backgroundColor: AppColors.darkActionPrimary,
           foregroundColor: AppColors.darkCanvas,
           elevation: 0,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.darkCanvas, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.darkCanvas,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.darkTextPrimary,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           side: const BorderSide(color: AppColors.darkBorderStrong, width: 1.0),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.darkTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.darkTextPrimary,
-          minimumSize: const Size(AppSpacing.minTouchTarget, AppSpacing.minTouchTarget),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          minimumSize: const Size(
+            AppSpacing.minTouchTarget,
+            AppSpacing.minTouchTarget,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           shape: const SmoothRectangleBorder(
             borderRadius: AppSpacing.roundedSm,
             smoothness: 0.60,
           ),
-          textStyle: AppTypography.label(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            color: AppColors.darkTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         border: const OutlineInputBorder(
           borderRadius: AppSpacing.roundedSm,
           borderSide: BorderSide(color: AppColors.darkBorderStrong, width: 1.0),
@@ -292,7 +361,10 @@ class AppTheme {
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppSpacing.roundedSm,
-          borderSide: BorderSide(color: AppColors.darkActionPrimary, width: 2.0),
+          borderSide: BorderSide(
+            color: AppColors.darkActionPrimary,
+            width: 2.0,
+          ),
         ),
         hintStyle: AppTypography.body(color: AppColors.darkTextTertiary),
       ),
@@ -336,7 +408,7 @@ class AppTheme {
         contentTextStyle: AppTypography.bodySm(color: AppColors.darkCanvas),
         shape: AppSpacing.smoothSm(),
         elevation: 4,
-        actionTextColor: AppColors.lightAccentPinText,
+        actionTextColor: AppColors.lightStateDanger,
       ),
     );
   }
@@ -425,7 +497,8 @@ class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
   @override
   void didUpdateWidget(covariant TackAnimatedTransition oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final configChanged = oldWidget.animation != widget.animation ||
+    final configChanged =
+        oldWidget.animation != widget.animation ||
         oldWidget.fadeCurve != widget.fadeCurve ||
         oldWidget.fadeReverseCurve != widget.fadeReverseCurve ||
         oldWidget.motionCurve != widget.motionCurve ||
@@ -453,7 +526,8 @@ class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
       return;
     }
 
-    final useSeparateMotion = widget.motionCurve != widget.fadeCurve ||
+    final useSeparateMotion =
+        widget.motionCurve != widget.fadeCurve ||
         widget.motionReverseCurve != widget.fadeReverseCurve;
     final motionBase = useSeparateMotion
         ? (_motionAnimation = CurvedAnimation(
@@ -472,10 +546,7 @@ class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
 
     _scaleAnimation = widget.scaleBegin == null
         ? null
-        : Tween<double>(
-            begin: widget.scaleBegin,
-            end: 1.0,
-          ).animate(motionBase);
+        : Tween<double>(begin: widget.scaleBegin, end: 1.0).animate(motionBase);
   }
 
   void _disposeAnimations() {
@@ -499,16 +570,10 @@ class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
       child: RepaintBoundary(child: widget.child),
     );
     if (_slideAnimation != null) {
-      current = SlideTransition(
-        position: _slideAnimation!,
-        child: current,
-      );
+      current = SlideTransition(position: _slideAnimation!, child: current);
     }
     if (_scaleAnimation != null) {
-      current = ScaleTransition(
-        scale: _scaleAnimation!,
-        child: current,
-      );
+      current = ScaleTransition(scale: _scaleAnimation!, child: current);
     }
     return current;
   }
@@ -533,9 +598,6 @@ class AppInputDecorations {
   );
 
   static InputDecoration bareWithHint(String hint, {TextStyle? hintStyle}) {
-    return bare.copyWith(
-      hintText: hint,
-      hintStyle: hintStyle,
-    );
+    return bare.copyWith(hintText: hint, hintStyle: hintStyle);
   }
 }

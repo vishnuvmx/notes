@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -33,7 +34,12 @@ class TackToast {
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(side: BorderSide.none),
-        margin: EdgeInsets.fromLTRB(AppSpacing.s6, 0, AppSpacing.s6, bottomMargin),
+        margin: EdgeInsets.fromLTRB(
+          AppSpacing.s6,
+          0,
+          AppSpacing.s6,
+          bottomMargin,
+        ),
         padding: EdgeInsets.zero,
         duration: duration,
         content: Center(
@@ -42,10 +48,7 @@ class TackToast {
             decoration: BoxDecoration(
               color: tokens.surfacePrimary,
               borderRadius: AppSpacing.roundedPill,
-              border: Border.all(
-                color: tokens.borderSubtle,
-                width: 1.2,
-              ),
+              border: Border.all(color: tokens.borderSubtle, width: 1.2),
               boxShadow: AppSpacing.elevModal(isDark),
             ),
             child: Row(
@@ -56,8 +59,9 @@ class TackToast {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: (iconColor ?? tokens.textPrimary)
-                          .withValues(alpha: 0.12),
+                      color: (iconColor ?? tokens.textPrimary).withValues(
+                        alpha: 0.12,
+                      ),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -93,10 +97,11 @@ class TackToast {
                       horizontal: AppSpacing.s3,
                       vertical: 6,
                     ),
-                    splashColor: (isDark
-                            ? AppColors.pastelAmberLight
-                            : tokens.actionPrimaryFg)
-                        .withValues(alpha: 0.16),
+                    splashColor:
+                        (isDark
+                                ? AppColors.pastelAmberLight
+                                : tokens.actionPrimaryFg)
+                            .withValues(alpha: 0.16),
                     onTap: () {
                       messenger.hideCurrentSnackBar();
                       onAction();
