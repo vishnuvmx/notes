@@ -48,6 +48,7 @@ class OnboardingSlideStage extends StatelessWidget {
             Image.asset(
               slide.imageAsset,
               fit: BoxFit.cover,
+              cacheWidth: 1080,
               filterQuality: FilterQuality.medium,
             ),
             if (tokens.isDark)

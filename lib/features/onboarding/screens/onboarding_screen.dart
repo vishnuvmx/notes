@@ -87,8 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   bool _precached = false;
 
-  bool get _isLastSlide =>
-      _currentPage >= OnboardingScreen.slides.length - 1;
+  bool get _isLastSlide => _currentPage >= OnboardingScreen.slides.length - 1;
 
   @override
   void didChangeDependencies() {
@@ -166,6 +165,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               'icon.png',
                               width: 24,
                               height: 24,
+                              cacheWidth: 96,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s2),
@@ -243,9 +243,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            for (int i = 0;
-                                i < OnboardingScreen.slides.length;
-                                i++)
+                            for (
+                              int i = 0;
+                              i < OnboardingScreen.slides.length;
+                              i++
+                            )
                               _PagerDot(
                                 index: i,
                                 isActive: i == _currentPage,
@@ -326,19 +328,16 @@ class _OnboardingSlidePage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(1.0);
-        final compactHeight = constraints.maxHeight < 460 ||
+        final compactHeight =
+            constraints.maxHeight < 460 ||
             constraints.maxWidth < 350 ||
             scale > 1.15;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: OnboardingSlideStage(slide: slide),
-            ),
-            SizedBox(
-              height: compactHeight ? AppSpacing.s4 : AppSpacing.s6,
-            ),
+            Expanded(child: OnboardingSlideStage(slide: slide)),
+            SizedBox(height: compactHeight ? AppSpacing.s4 : AppSpacing.s6),
             Text(
               slide.title,
               style: AppTypography.titleLg(
@@ -358,14 +357,14 @@ class _OnboardingSlidePage extends StatelessWidget {
                       text: span.text,
                       style: span.highlight
                           ? (compactHeight
-                              ? AppTypography.bodySm(
-                                  color: tokens.textPrimary,
-                                  weight: FontWeight.w600,
-                                )
-                              : AppTypography.body(
-                                  color: tokens.textPrimary,
-                                  weight: FontWeight.w600,
-                                ))
+                                ? AppTypography.bodySm(
+                                    color: tokens.textPrimary,
+                                    weight: FontWeight.w600,
+                                  )
+                                : AppTypography.body(
+                                    color: tokens.textPrimary,
+                                    weight: FontWeight.w600,
+                                  ))
                           : null,
                     ),
                 ],

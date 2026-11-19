@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../core/services/task_reminder_service.dart';
 import '../data/i_workspace_repo.dart';
 import '../models/base_item.dart';
@@ -14,11 +16,7 @@ import '../../features/notes/services/frontmatter_service.dart';
 import '../../features/tasks/services/open_tasks_service.dart';
 import '../../features/notes/services/wiki_link_service.dart';
 
-enum HomeSortMode {
-  newestFirst,
-  oldestFirst,
-  alphabetical,
-}
+enum HomeSortMode { newestFirst, oldestFirst, alphabetical }
 
 /// Centralized state manager for Tack workspace items.
 /// Maintains an unfiltered master list (`_allActiveItems`) separate from filtered
@@ -59,8 +57,60 @@ class WorkspaceProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _carryForwardTasksEnabled = true;
 
+  /// Monotonically incremented whenever state changes so UI & derived caches
+  /// can invalidate in O(1) without re-scanning all workspace items.
+  int _revision = 0;
+  int get revision => _revision;
+
+  List<BaseWorkspaceItem>? _cachedAllActiveItems;
+  List<BaseWorkspaceItem>? _cachedItems;
+  List<BaseWorkspaceItem>? _cachedLibraryNotes;
+  List<BaseWorkspaceItem>? _cachedInboxItems;
+  List<WhiteboardCanvasItem>? _cachedBoardItems;
+  List<BaseWorkspaceItem>? _cachedPinnedItems;
+  List<DerivedTaskItem>? _cachedOpenTasks;
+  bool _worthRevisitingComputed = false;
+  TextNote? _cachedWorthRevisitingNote;
+  List<BaseWorkspaceItem>? _cachedTrashItems;
+  List<BaseWorkspaceItem>? _cachedArchivedItems;
+  List<BaseWorkspaceItem>? _cachedFavoriteItems;
+  List<String>? _cachedFolders;
+  List<String>? _cachedUserFolders;
+  List<String>? _cachedAvailableTags;
+  Map<String, BaseWorkspaceItem>? _cachedItemsById;
+  final Map<String, List<BaseWorkspaceItem>> _cachedChildItemsByParent = {};
+
+  void _invalidateDerivedCaches() {
+    _revision++;
+    _cachedAllActiveItems = null;
+    _cachedItems = null;
+    _cachedLibraryNotes = null;
+    _cachedInboxItems = null;
+    _cachedBoardItems = null;
+    _cachedPinnedItems = null;
+    _cachedOpenTasks = null;
+    _worthRevisitingComputed = false;
+    _cachedWorthRevisitingNote = null;
+    _cachedTrashItems = null;
+    _cachedArchivedItems = null;
+    _cachedFavoriteItems = null;
+    _cachedFolders = null;
+    _cachedUserFolders = null;
+    _cachedAvailableTags = null;
+    _cachedItemsById = null;
+    _cachedChildItemsByParent.clear();
+  }
+
+  @override
+  void notifyListeners() {
+    _invalidateDerivedCaches();
+    super.notifyListeners();
+  }
+
   WorkspaceProvider(this._repository) {
-    _allActiveItems = List<BaseWorkspaceItem>.from(_repository.cachedActiveItems);
+    _allActiveItems = List<BaseWorkspaceItem>.from(
+      _repository.cachedActiveItems,
+    );
     _loadPrefsAndItems();
   }
 
@@ -89,7 +139,8 @@ class WorkspaceProvider extends ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   /// Unfiltered active items across the entire workspace.
-  List<BaseWorkspaceItem> get allActiveItems => List.unmodifiable(_allActiveItems);
+  List<BaseWorkspaceItem> get allActiveItems => _cachedAllActiveItems ??=
+      List<BaseWorkspaceItem>.unmodifiable(_allActiveItems);
 
   /// Alias for `allActiveItems` used by graph, backlinks, and wiki-link resolution.
   List<BaseWorkspaceItem> get rawItems => allActiveItems;
@@ -100,6 +151,9 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Filtered & sorted items matching current Library/Home filters.
   List<BaseWorkspaceItem> get items {
+    final cached = _cachedItems;
+    if (cached != null) return cached;
+
     var filtered = _allActiveItems.where((item) {
       if (_selectedCategory != null && item.type != _selectedCategory) {
         return false;
@@ -111,18 +165,18 @@ class WorkspaceProvider extends ChangeNotifier {
     }).toList();
 
     if (_selectedFolder != 'All Notes') {
+      final folderLower = _selectedFolder.toLowerCase();
       filtered = filtered.where((item) {
         final effectiveFolder = resolveEffectiveFolder(item);
-        return effectiveFolder?.toLowerCase() == _selectedFolder.toLowerCase();
+        return effectiveFolder?.toLowerCase() == folderLower;
       }).toList();
     }
 
     if (_selectedTag != null && _selectedTag!.isNotEmpty) {
+      final tagLower = _selectedTag!.toLowerCase();
       filtered = filtered.where((item) {
         if (item is TextNote) {
-          return item.tags.any(
-            (t) => t.toLowerCase() == _selectedTag!.toLowerCase(),
-          );
+          return item.tags.any((t) => t.toLowerCase() == tagLower);
         }
         return false;
       }).toList();
@@ -133,11 +187,14 @@ class WorkspaceProvider extends ChangeNotifier {
     }
 
     _sortItemsList(filtered);
-    return List.unmodifiable(filtered);
+    return _cachedItems = List<BaseWorkspaceItem>.unmodifiable(filtered);
   }
 
   /// Non-inbox notes & legacy stickies/clips for the Library grid (`05` §2.1).
   List<BaseWorkspaceItem> get libraryNotes {
+    final cached = _cachedLibraryNotes;
+    if (cached != null) return cached;
+
     var filtered = _allActiveItems.where((item) {
       if (item.isInbox) return false;
       if (item.type == ItemType.whiteboard) return false;
@@ -148,18 +205,18 @@ class WorkspaceProvider extends ChangeNotifier {
     }).toList();
 
     if (_selectedFolder != 'All Notes') {
+      final folderLower = _selectedFolder.toLowerCase();
       filtered = filtered.where((item) {
         final effectiveFolder = resolveEffectiveFolder(item);
-        return effectiveFolder?.toLowerCase() == _selectedFolder.toLowerCase();
+        return effectiveFolder?.toLowerCase() == folderLower;
       }).toList();
     }
 
     if (_selectedTag != null && _selectedTag!.isNotEmpty) {
+      final tagLower = _selectedTag!.toLowerCase();
       filtered = filtered.where((item) {
         if (item is TextNote) {
-          return item.tags.any(
-            (t) => t.toLowerCase() == _selectedTag!.toLowerCase(),
-          );
+          return item.tags.any((t) => t.toLowerCase() == tagLower);
         }
         return false;
       }).toList();
@@ -170,71 +227,98 @@ class WorkspaceProvider extends ChangeNotifier {
     }
 
     _sortItemsList(filtered);
-    return List.unmodifiable(filtered);
+    return _cachedLibraryNotes = List<BaseWorkspaceItem>.unmodifiable(filtered);
   }
 
   /// Unsorted captures waiting in the Inbox (`04` F1, `05` §4).
   List<BaseWorkspaceItem> get inboxItems {
+    final cached = _cachedInboxItems;
+    if (cached != null) return cached;
+
     final list = _allActiveItems.where((i) => i.isInbox && !i.isTrash).toList();
     list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return List.unmodifiable(list);
+    return _cachedInboxItems = List<BaseWorkspaceItem>.unmodifiable(list);
   }
 
   /// Visual Boards (`WhiteboardCanvasItem`s) for the Boards tab (`05` §2.1).
   List<WhiteboardCanvasItem> get boardItems {
+    final cached = _cachedBoardItems;
+    if (cached != null) return cached;
+
     final list = _allActiveItems
         .whereType<WhiteboardCanvasItem>()
         .where((b) => !b.isTrash)
         .toList();
     _sortItemsList(list);
-    return List.unmodifiable(list);
+    return _cachedBoardItems = List<WhiteboardCanvasItem>.unmodifiable(list);
   }
 
   /// Pinned notes & boards (`isFavorite == true && !isInbox`).
   List<BaseWorkspaceItem> get pinnedItems {
+    final cached = _cachedPinnedItems;
+    if (cached != null) return cached;
+
     final list = _allActiveItems
         .where((i) => i.isFavorite && !i.isInbox && !i.isTrash)
         .toList();
     list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return List.unmodifiable(list);
+    return _cachedPinnedItems = List<BaseWorkspaceItem>.unmodifiable(list);
   }
 
   /// Open `- [ ]` tasks derived across all active notes (`04` F3).
   List<DerivedTaskItem> get openTasks =>
-      OpenTasksService.extractTasks(_allActiveItems, includeCompleted: false);
+      _cachedOpenTasks ??= List<DerivedTaskItem>.unmodifiable(
+        OpenTasksService.extractTasks(_allActiveItems, includeCompleted: false),
+      );
 
   /// Single "Worth revisiting" note card (`04` F13): an older note (>7 days or
   /// least recently updated non-daily note) to resurface on Today.
   TextNote? get worthRevisitingNote {
+    if (_worthRevisitingComputed) return _cachedWorthRevisitingNote;
+    _worthRevisitingComputed = true;
+
     final now = DateTime.now();
     final candidates = _allActiveItems
         .whereType<TextNote>()
-        .where((n) =>
-            !n.isInbox &&
-            !n.isTrash &&
-            !n.title.startsWith('Daily Note • ') &&
-            n.content.trim().isNotEmpty)
+        .where(
+          (n) =>
+              !n.isInbox &&
+              !n.isTrash &&
+              !n.title.startsWith('Daily Note • ') &&
+              n.content.trim().isNotEmpty,
+        )
         .toList();
-    if (candidates.isEmpty) return null;
+    if (candidates.isEmpty) {
+      _cachedWorthRevisitingNote = null;
+      return null;
+    }
 
     final olderThanWeek = candidates
         .where((n) => now.difference(n.updatedAt).inDays >= 7)
         .toList();
     if (olderThanWeek.isNotEmpty) {
       final daySeed = now.year * 1000 + now.month * 31 + now.day;
-      return olderThanWeek[daySeed % olderThanWeek.length];
+      _cachedWorthRevisitingNote =
+          olderThanWeek[daySeed % olderThanWeek.length];
+      return _cachedWorthRevisitingNote;
     }
+    _cachedWorthRevisitingNote = null;
     return null;
   }
 
-  List<BaseWorkspaceItem> get trashItems => List.unmodifiable(_trashItems);
-  List<BaseWorkspaceItem> get archivedItems => List.unmodifiable(_archivedItems);
+  List<BaseWorkspaceItem> get trashItems =>
+      _cachedTrashItems ??= List<BaseWorkspaceItem>.unmodifiable(_trashItems);
+  List<BaseWorkspaceItem> get archivedItems => _cachedArchivedItems ??=
+      List<BaseWorkspaceItem>.unmodifiable(_archivedItems);
   List<BaseWorkspaceItem> get favoriteItems =>
-      _allActiveItems.where((i) => i.isFavorite).toList();
+      _cachedFavoriteItems ??= List<BaseWorkspaceItem>.unmodifiable(
+        _allActiveItems.where((i) => i.isFavorite),
+      );
 
-  List<String> get folders => List.unmodifiable(_folders);
-  List<String> get userFolders =>
-      _folders.where((f) => f != 'All Notes').toList();
+  List<String> get folders =>
+      _cachedFolders ??= List<String>.unmodifiable(_folders);
+  List<String> get userFolders => _cachedUserFolders ??=
+      List<String>.unmodifiable(_folders.where((f) => f != 'All Notes'));
 
   String get searchQuery => _searchQuery;
   ItemType? get selectedCategory => _selectedCategory;
@@ -249,6 +333,9 @@ class WorkspaceProvider extends ChangeNotifier {
   /// Dynamically extracts all unique tags across all active TextNotes.
   /// No longer seeds fake `#Fitness` tags when unused (`03` §7 P2).
   List<String> get availableTags {
+    final cached = _cachedAvailableTags;
+    if (cached != null) return cached;
+
     final Set<String> tagSet = {};
     for (final item in _allActiveItems) {
       if (item is TextNote && !item.isInbox) {
@@ -261,13 +348,14 @@ class WorkspaceProvider extends ChangeNotifier {
     }
     final sorted = tagSet.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return sorted;
+    return _cachedAvailableTags = List<String>.unmodifiable(sorted);
   }
 
   void _sortItemsList(List<BaseWorkspaceItem> list) {
     list.sort((a, b) {
       // Pinned items float to top in newestFirst mode
-      if (_sortMode == HomeSortMode.newestFirst && a.isFavorite != b.isFavorite) {
+      if (_sortMode == HomeSortMode.newestFirst &&
+          a.isFavorite != b.isFavorite) {
         return a.isFavorite ? -1 : 1;
       }
       switch (_sortMode) {
@@ -302,11 +390,17 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Returns direct sub-notes (`parentId == parentItemId`) for an item.
   List<BaseWorkspaceItem> getChildItems(String parentItemId) {
-    final children = _allActiveItems
-        .where((i) => !i.isTrash && !i.isArchived && i.parentId == parentItemId)
-        .toList();
-    children.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-    return children;
+    return _cachedChildItemsByParent.putIfAbsent(parentItemId, () {
+      final children = _allActiveItems
+          .where(
+            (i) => !i.isTrash && !i.isArchived && i.parentId == parentItemId,
+          )
+          .toList();
+      children.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+      return List<BaseWorkspaceItem>.unmodifiable(children);
+    });
   }
 
   /// Returns the ancestor chain `[root, ..., immediateParent]` for breadcrumb navigation.
@@ -325,16 +419,21 @@ class WorkspaceProvider extends ChangeNotifier {
   }
 
   BaseWorkspaceItem? getItemByIdSync(String id) {
-    for (final item in _allActiveItems) {
-      if (item.id == id) return item;
+    var index = _cachedItemsById;
+    if (index == null) {
+      index = <String, BaseWorkspaceItem>{};
+      for (final item in _trashItems) {
+        index[item.id] = item;
+      }
+      for (final item in _archivedItems) {
+        index[item.id] = item;
+      }
+      for (final item in _allActiveItems) {
+        index[item.id] = item;
+      }
+      _cachedItemsById = index;
     }
-    for (final item in _archivedItems) {
-      if (item.id == id) return item;
-    }
-    for (final item in _trashItems) {
-      if (item.id == id) return item;
-    }
-    return null;
+    return index[id];
   }
 
   // ---------------------------------------------------------------------------
@@ -400,17 +499,11 @@ class WorkspaceProvider extends ChangeNotifier {
     if (cleanFolder != null && cleanFolder.isNotEmpty) {
       await addFolder(cleanFolder);
       await saveItem(
-        existing.copyWith(
-          folderName: cleanFolder,
-          updatedAt: DateTime.now(),
-        ),
+        existing.copyWith(folderName: cleanFolder, updatedAt: DateTime.now()),
       );
     } else {
       await saveItem(
-        existing.copyWith(
-          clearFolder: true,
-          updatedAt: DateTime.now(),
-        ),
+        existing.copyWith(clearFolder: true, updatedAt: DateTime.now()),
       );
     }
   }
@@ -437,7 +530,8 @@ class WorkspaceProvider extends ChangeNotifier {
 
   Future<void> addFolder(String folderName) async {
     final cleaned = folderName.trim();
-    if (cleaned.isEmpty || _folders.any((f) => f.toLowerCase() == cleaned.toLowerCase())) {
+    if (cleaned.isEmpty ||
+        _folders.any((f) => f.toLowerCase() == cleaned.toLowerCase())) {
       return;
     }
     _folders.add(cleaned);
@@ -518,10 +612,7 @@ class WorkspaceProvider extends ChangeNotifier {
               .toSet()
               .toList();
           await _repository.saveItem(
-            other.copyWith(
-              content: rewritten,
-              links: updatedLinks,
-            ),
+            other.copyWith(content: rewritten, links: updatedLinks),
           );
         }
       }
@@ -534,11 +625,7 @@ class WorkspaceProvider extends ChangeNotifier {
     DerivedTaskItem task, {
     DateTime? now,
   }) async {
-    return completeTaskLineByIndex(
-      task.noteId,
-      task.lineIndex,
-      now: now,
-    );
+    return completeTaskLineByIndex(task.noteId, task.lineIndex, now: now);
   }
 
   /// Toggles/advances checklist line [lineIndex] inside [noteId].
@@ -601,10 +688,7 @@ class WorkspaceProvider extends ChangeNotifier {
       );
       if (updatedBody != null) {
         await saveItem(
-          item.copyWith(
-            content: updatedBody,
-            updatedAt: DateTime.now(),
-          ),
+          item.copyWith(content: updatedBody, updatedAt: DateTime.now()),
         );
       }
     } else if (item is StickyNote) {
@@ -617,10 +701,7 @@ class WorkspaceProvider extends ChangeNotifier {
       );
       if (updatedBody != null) {
         await saveItem(
-          item.copyWith(
-            content: updatedBody,
-            updatedAt: DateTime.now(),
-          ),
+          item.copyWith(content: updatedBody, updatedAt: DateTime.now()),
         );
       }
     }
@@ -635,12 +716,18 @@ class WorkspaceProvider extends ChangeNotifier {
   }) async {
     final now = DateTime.now();
     final cleaned = text.trim();
-    final firstLine = cleaned.split('\n').first.replaceAll(RegExp(r'^#+\s*'), '').trim();
+    final firstLine = cleaned
+        .split('\n')
+        .first
+        .replaceAll(RegExp(r'^#+\s*'), '')
+        .trim();
     final resolvedTitle = (title != null && title.trim().isNotEmpty)
         ? title.trim()
         : (firstLine.isNotEmpty
-            ? (firstLine.length > 48 ? '${firstLine.substring(0, 48)}…' : firstLine)
-            : 'Quick Capture');
+              ? (firstLine.length > 48
+                    ? '${firstLine.substring(0, 48)}…'
+                    : firstLine)
+              : 'Quick Capture');
 
     final tagMatches = RegExp(r'#(\w+)').allMatches(cleaned);
     final tags = tagMatches.map((m) => m.group(1)!).toSet().toList();
@@ -696,7 +783,10 @@ class WorkspaceProvider extends ChangeNotifier {
 
   /// Triage action 2: Appends an Inbox item's content to an existing target note
   /// and removes the Inbox capture.
-  Future<void> appendInboxItemToNote(String inboxId, String targetNoteId) async {
+  Future<void> appendInboxItemToNote(
+    String inboxId,
+    String targetNoteId,
+  ) async {
     final inboxItem = getItemByIdSync(inboxId);
     final target = getItemByIdSync(targetNoteId);
     if (inboxItem == null || target is! TextNote) return;
@@ -713,12 +803,10 @@ class WorkspaceProvider extends ChangeNotifier {
     }
 
     final separator = target.content.trim().isEmpty ? '' : '\n\n';
-    final updatedContent = '${target.content.trimRight()}$separator$textToAppend';
+    final updatedContent =
+        '${target.content.trimRight()}$separator$textToAppend';
     await saveItem(
-      target.copyWith(
-        content: updatedContent,
-        updatedAt: DateTime.now(),
-      ),
+      target.copyWith(content: updatedContent, updatedAt: DateTime.now()),
     );
     await deletePermanently(inboxId);
   }
@@ -742,12 +830,10 @@ class WorkspaceProvider extends ChangeNotifier {
     taskText = taskText.replaceFirst(RegExp(r'^[-*]\s*\[[ xX]\]\s*'), '');
 
     final todaysNote = await openOrCreateTodaysNote();
-    final updatedContent = '${todaysNote.content.trimRight()}\n- [ ] $taskText\n';
+    final updatedContent =
+        '${todaysNote.content.trimRight()}\n- [ ] $taskText\n';
     await saveItem(
-      todaysNote.copyWith(
-        content: updatedContent,
-        updatedAt: DateTime.now(),
-      ),
+      todaysNote.copyWith(content: updatedContent, updatedAt: DateTime.now()),
     );
     await deletePermanently(inboxId);
   }
@@ -911,10 +997,13 @@ class WorkspaceProvider extends ChangeNotifier {
     List<String>? tags,
     bool isInbox = false,
   }) async {
-    final bodyContent = (content != null && content.isNotEmpty) ? content : extraContent;
+    final bodyContent = (content != null && content.isNotEmpty)
+        ? content
+        : extraContent;
     final now = DateTime.now();
     final id = _nextId(type.name);
-    final resolvedFolder = folderName ??
+    final resolvedFolder =
+        folderName ??
         (parentId != null
             ? resolveEffectiveFolder(
                 getItemByIdSync(parentId) ??
@@ -1044,7 +1133,8 @@ class WorkspaceProvider extends ChangeNotifier {
       }
     }
 
-    final carriedForwardTasks = _carryForwardTasksEnabled && previousDaily != null
+    final carriedForwardTasks =
+        _carryForwardTasksEnabled && previousDaily != null
         ? _extractUnfinishedTasks(previousDaily.content)
         : <String>[];
 

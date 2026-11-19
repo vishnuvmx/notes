@@ -93,6 +93,64 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   int? _dismissedWikiTriggerOffset;
 
+  static final RegExp _checklistTotalRegex = RegExp(r'\[[ xX]\]');
+  static final RegExp _checklistDoneRegex = RegExp(r'\[[xX]\]');
+
+  // Cached document metrics & workspace projections so 120Hz typing never
+  // rescans the full workspace or reallocates regexes/strings on every frame.
+  String? _metricsCachedContent;
+  int _cachedLetterCount = 0;
+  int _cachedWordCount = 0;
+  int _cachedReadTime = 0;
+  int _cachedTotalChecklists = 0;
+  int _cachedCompletedChecklists = 0;
+  bool _cachedHasHeadings = false;
+
+  int _backlinksCachedRevision = -1;
+  String? _backlinksCachedTitle;
+  ({List<BacklinkEntry> linked, List<BacklinkEntry> unlinked})
+  _cachedBacklinks = (linked: const [], unlinked: const []);
+
+  int _breadcrumbsCachedRevision = -1;
+  String? _breadcrumbsCachedParentId;
+  List<BaseWorkspaceItem> _cachedBreadcrumbs = const [];
+
+  void _ensureContentMetrics(String content) {
+    if (_metricsCachedContent == content) return;
+    _metricsCachedContent = content;
+
+    int letters = 0;
+    int words = 0;
+    bool inWord = false;
+    for (int i = 0; i < content.length; i++) {
+      final code = content.codeUnitAt(i);
+      final isWs =
+          code == 0x20 ||
+          code == 0x09 ||
+          code == 0x0A ||
+          code == 0x0D ||
+          code == 0x0C ||
+          code == 0x0B ||
+          code == 0xA0;
+      if (isWs) {
+        inWord = false;
+      } else {
+        letters++;
+        if (!inWord) {
+          words++;
+          inWord = true;
+        }
+      }
+    }
+
+    _cachedLetterCount = letters;
+    _cachedWordCount = words;
+    _cachedReadTime = words == 0 ? 0 : ((words / 180).ceil()).clamp(1, 60);
+    _cachedTotalChecklists = _checklistTotalRegex.allMatches(content).length;
+    _cachedCompletedChecklists = _checklistDoneRegex.allMatches(content).length;
+    _cachedHasHeadings = WikiLinkService.extractHeadings(content).isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1915,16 +1973,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final backgroundColor = palette.resolveNoteCanvas(isDark);
 
     final content = _contentController.text;
-    final letterCount = content.replaceAll(RegExp(r'\s'), '').length;
-    final wordCount = content.trim().isEmpty
-        ? 0
-        : content.trim().split(RegExp(r'\s+')).length;
-    final readTime = wordCount == 0
-        ? 0
-        : ((wordCount / 180).ceil()).clamp(1, 60);
-
-    final totalChecklists = RegExp(r'\[[ xX]\]').allMatches(content).length;
-    final completedChecklists = RegExp(r'\[[xX]\]').allMatches(content).length;
+    _ensureContentMetrics(content);
+    final letterCount = _cachedLetterCount;
+    final wordCount = _cachedWordCount;
+    final readTime = _cachedReadTime;
+    final totalChecklists = _cachedTotalChecklists;
+    final completedChecklists = _cachedCompletedChecklists;
     final allChecklistsCompleted =
         totalChecklists > 0 && completedChecklists == totalChecklists;
 
@@ -1944,37 +1998,35 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         ? WikiLinkService.detectActiveSlashTrigger(content, cursorOffset)
         : null;
 
-    final currentSnapshot = (widget.item is TextNote)
-        ? (widget.item as TextNote).copyWith(
-            title: _titleController.text.trim().isEmpty
-                ? widget.item.title
-                : _titleController.text.trim(),
-            content: content,
-            folderName: _folderName,
-            clearFolder: _folderName == null,
-            parentId: _parentId,
-            clearParent: _parentId == null,
-            iconEmoji: _iconEmoji,
-            clearIcon: _iconEmoji == null,
-          )
-        : widget.item.copyWith(
-            title: _titleController.text.trim().isEmpty
-                ? widget.item.title
-                : _titleController.text.trim(),
-            folderName: _folderName,
-            clearFolder: _folderName == null,
-            parentId: _parentId,
-            clearParent: _parentId == null,
-            iconEmoji: _iconEmoji,
-            clearIcon: _iconEmoji == null,
-          );
-    final breadcrumbs = workspace.getBreadcrumbChain(currentSnapshot);
+    final effectiveTitle = _titleController.text.trim().isEmpty
+        ? widget.item.title
+        : _titleController.text.trim();
+
+    if (_breadcrumbsCachedRevision != workspace.revision ||
+        _breadcrumbsCachedParentId != _parentId) {
+      _breadcrumbsCachedRevision = workspace.revision;
+      _breadcrumbsCachedParentId = _parentId;
+      final parentRef = widget.item.copyWith(
+        parentId: _parentId,
+        clearParent: _parentId == null,
+      );
+      _cachedBreadcrumbs = workspace.getBreadcrumbChain(parentRef);
+    }
+    final breadcrumbs = _cachedBreadcrumbs;
     final childItems = workspace.getChildItems(widget.item.id);
-    final backlinks = WikiLinkService.computeBacklinks(
-      currentItem: currentSnapshot,
-      allItems: workspace.rawItems,
-    );
-    final hasHeadings = WikiLinkService.extractHeadings(content).isNotEmpty;
+
+    if (_backlinksCachedRevision != workspace.revision ||
+        _backlinksCachedTitle != effectiveTitle) {
+      _backlinksCachedRevision = workspace.revision;
+      _backlinksCachedTitle = effectiveTitle;
+      final titleSnapshot = widget.item.copyWith(title: effectiveTitle);
+      _cachedBacklinks = WikiLinkService.computeBacklinks(
+        currentItem: titleSnapshot,
+        allItems: workspace.rawItems,
+      );
+    }
+    final backlinks = _cachedBacklinks;
+    final hasHeadings = _cachedHasHeadings;
 
     return PopScope(
       canPop: !_isEditingMode,

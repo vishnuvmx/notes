@@ -61,8 +61,7 @@ class _EmptyMockRepo extends IWorkspaceRepository {
   Future<List<BaseWorkspaceItem>> searchItems(
     String query, {
     ItemType? type,
-  }) async =>
-      const [];
+  }) async => const [];
 }
 
 Widget _wrapRoot({
@@ -79,9 +78,7 @@ Widget _wrapRoot({
     ],
     child: MaterialApp(
       theme: theme ?? AppTheme.lightTheme,
-      home: TackRootNavigator(
-        initialShowOnboarding: initialShowOnboarding,
-      ),
+      home: TackRootNavigator(initialShowOnboarding: initialShowOnboarding),
     ),
   );
   if (mediaQuery != null) {
@@ -96,17 +93,20 @@ void main() {
   });
 
   group('OnboardingService persistence', () {
-    test('defaults to uncompleted on fresh install and persists markCompleted', () async {
-      expect(await OnboardingService.shouldShowOnboarding(), isTrue);
-      expect(await OnboardingService.hasCompleted(), isFalse);
+    test(
+      'defaults to uncompleted on fresh install and persists markCompleted',
+      () async {
+        expect(await OnboardingService.shouldShowOnboarding(), isTrue);
+        expect(await OnboardingService.hasCompleted(), isFalse);
 
-      await OnboardingService.markCompleted();
-      expect(await OnboardingService.hasCompleted(), isTrue);
-      expect(await OnboardingService.shouldShowOnboarding(), isFalse);
+        await OnboardingService.markCompleted();
+        expect(await OnboardingService.hasCompleted(), isTrue);
+        expect(await OnboardingService.shouldShowOnboarding(), isFalse);
 
-      await OnboardingService.reset();
-      expect(await OnboardingService.shouldShowOnboarding(), isTrue);
-    });
+        await OnboardingService.reset();
+        expect(await OnboardingService.shouldShowOnboarding(), isTrue);
+      },
+    );
   });
 
   group('OnboardingScreen flow & responsiveness', () {
@@ -118,26 +118,40 @@ void main() {
 
         expect(find.byType(OnboardingScreen), findsOneWidget);
         expect(find.byType(HomeScreen), findsNothing);
-        expect(find.text('Notes & stickies,\nwith a tactile twist'), findsOneWidget);
+        expect(
+          find.text('Notes & stickies,\nwith a tactile twist'),
+          findsOneWidget,
+        );
         expect(find.text('Skip'), findsOneWidget);
 
         // Verify touch targets >= 48dp
-        final skipSize = tester.getSize(find.byKey(const ValueKey('onboarding_skip')));
-        expect(skipSize.height, greaterThanOrEqualTo(AppSpacing.minTouchTarget));
-        final ctaSize = tester.getSize(find.byKey(const ValueKey('onboarding_primary_cta')));
+        final skipSize = tester.getSize(
+          find.byKey(const ValueKey('onboarding_skip')),
+        );
+        expect(
+          skipSize.height,
+          greaterThanOrEqualTo(AppSpacing.minTouchTarget),
+        );
+        final ctaSize = tester.getSize(
+          find.byKey(const ValueKey('onboarding_primary_cta')),
+        );
         expect(ctaSize.height, greaterThanOrEqualTo(AppSpacing.minTouchTarget));
 
         // Slide 1 -> Slide 2 (uses floating_cloud_meadows.jpg hero)
         await tester.tap(find.byKey(const ValueKey('onboarding_primary_cta')));
         await tester.pumpAndSettle();
-        expect(find.text('All your ideas,\nweightlessly organized'), findsOneWidget);
-        final cloudImageFinder = find.byWidgetPredicate(
-          (w) =>
-              w is Image &&
-              w.image is AssetImage &&
-              (w.image as AssetImage).assetName ==
-                  OnboardingScreen.cloudMeadowsAsset,
+        expect(
+          find.text('All your ideas,\nweightlessly organized'),
+          findsOneWidget,
         );
+        final cloudImageFinder = find.byWidgetPredicate((w) {
+          if (w is! Image) return false;
+          final provider = w.image is ResizeImage
+              ? (w.image as ResizeImage).imageProvider
+              : w.image;
+          return provider is AssetImage &&
+              provider.assetName == OnboardingScreen.cloudMeadowsAsset;
+        });
         expect(cloudImageFinder, findsOneWidget);
 
         // Slide 2 -> Slide 3
@@ -203,7 +217,9 @@ void main() {
         expect(tester.takeException(), isNull);
 
         for (int i = 0; i < 3; i++) {
-          await tester.tap(find.byKey(const ValueKey('onboarding_primary_cta')));
+          await tester.tap(
+            find.byKey(const ValueKey('onboarding_primary_cta')),
+          );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         }

@@ -1910,11 +1910,14 @@ Footer text.
 
         expect(find.text('Edit Table'), findsOneWidget);
         expect(find.text('Capture to Clarity'), findsWidgets);
-        // 2 block asset images + 1 inline asset thumbnail
+        // 2 block asset images + 1 inline asset thumbnail (bounded via ResizeImage)
         final noteImages = tester.widgetList<Image>(find.byType(Image));
         expect(noteImages.length, 3);
         for (final img in noteImages) {
-          expect(img.image, isA<AssetImage>());
+          final provider = img.image is ResizeImage
+              ? (img.image as ResizeImage).imageProvider
+              : img.image;
+          expect(provider, isA<AssetImage>());
         }
 
         // 4. Render starter Board screen with bundled asset node & linked SpecCard
@@ -1935,7 +1938,15 @@ Footer text.
         expect(find.text('Tack Complete Guide'), findsWidgets);
         expect(find.text('Open ↗'), findsOneWidget);
         final boardImages = tester.widgetList<Image>(find.byType(Image));
-        expect(boardImages.any((img) => img.image is AssetImage), isTrue);
+        expect(
+          boardImages.any((img) {
+            final provider = img.image is ResizeImage
+                ? (img.image as ResizeImage).imageProvider
+                : img.image;
+            return provider is AssetImage;
+          }),
+          isTrue,
+        );
       },
     );
 

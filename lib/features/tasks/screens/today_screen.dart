@@ -35,12 +35,10 @@ enum _TodayTaskTab { todo, completed }
 /// 3. **Pinned** items grid (Notes & Boards)
 /// 4. **Worth Revisiting** resurfacing note card
 class TodayScreen extends StatefulWidget {
-  final void Function(BaseWorkspaceItem item, {bool startInEditMode}) onOpenItem;
+  final void Function(BaseWorkspaceItem item, {bool startInEditMode})
+  onOpenItem;
 
-  const TodayScreen({
-    super.key,
-    required this.onOpenItem,
-  });
+  const TodayScreen({super.key, required this.onOpenItem});
 
   @override
   State<TodayScreen> createState() => _TodayScreenState();
@@ -127,8 +125,7 @@ class _TodayScreenState extends State<TodayScreen> {
                       _TodaysDailyNoteCard(
                         now: now,
                         existingDaily: existingDaily,
-                        carryForwardEnabled:
-                            workspace.carryForwardTasksEnabled,
+                        carryForwardEnabled: workspace.carryForwardTasksEnabled,
                         dateLabel: DateFormatter.formatOrdinalDate(now),
                         onTap: () => _openDailyNote(workspace, existingDaily),
                       ),
@@ -148,9 +145,8 @@ class _TodayScreenState extends State<TodayScreen> {
                         openTasks: openTasks,
                         completedTasks: completedTasks,
                         showAllTasks: _showAllTasks,
-                        onToggleShowAll: () => setState(
-                          () => _showAllTasks = !_showAllTasks,
-                        ),
+                        onToggleShowAll: () =>
+                            setState(() => _showAllTasks = !_showAllTasks),
                         collapsedGroups: _collapsedGroups,
                         onToggleGroup: (groupId) {
                           HapticFeedback.selectionClick();
@@ -220,14 +216,12 @@ class _TodayScreenState extends State<TodayScreen> {
                             );
                             if (selection.dueAt != null && context.mounted) {
                               final status =
-                                  await PinnedNotificationService
-                                      .getPermissionStatus();
+                                  await PinnedNotificationService.getPermissionStatus();
                               if (!status.canScheduleExactAlarms &&
                                   context.mounted) {
                                 TackToast.show(
                                   context,
-                                  message:
-                                      'Reminder saved (allow exact alarms for on-time alerts)',
+                                  message: 'Reminder saved (allow exact alarms for on-time alerts)',
                                   icon: TackIcons.notification,
                                   iconColor: tokens.accentPin,
                                   actionLabel: 'Settings',
@@ -310,7 +304,8 @@ class _TodayScreenState extends State<TodayScreen> {
                         return BoardGridCard(
                           key: ValueKey('today_pin_${item.id}'),
                           board: item,
-                          openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                          openBuilder: (_) =>
+                              buildWorkspaceItemDetailScreen(item),
                           onPeek: (openDetail) => CardPeekSheet.show(
                             context: context,
                             item: item,
@@ -321,7 +316,8 @@ class _TodayScreenState extends State<TodayScreen> {
                       return NeoNoteCard(
                         key: ValueKey('today_pin_${item.id}'),
                         item: item,
-                        openBuilder: (_) => buildWorkspaceItemDetailScreen(item),
+                        openBuilder: (_) =>
+                            buildWorkspaceItemDetailScreen(item),
                         onPeek: (openDetail) => CardPeekSheet.show(
                           context: context,
                           item: item,
@@ -405,125 +401,125 @@ class _TodaysDailyNoteCard extends StatelessWidget {
     final dayNum = now.day.toString().padLeft(2, '0');
 
     Widget buildDailyBody(VoidCallback handleTap) => Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: const ValueKey('today_daily_note_card'),
-            onTap: handleTap,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.s4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      color: Colors.transparent,
+      child: InkWell(
+        key: const ValueKey('today_daily_note_card'),
+        onTap: handleTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Joi-Style Date Header Row (`09 •` + right date)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 1. Joi-Style Date Header Row (`09 •` + right date)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        dayNum,
-                        style: AppTypography.titleLg(
-                          color: tokens.textPrimary,
-                          fontSize: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: tokens.accentPin,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        dateLabel.toUpperCase(),
-                        style: AppTypography.caption(
-                          fontSize: 12,
-                          weight: FontWeight.w600,
-                          color: tokens.textTertiary,
-                        ).copyWith(letterSpacing: 0.4),
-                      ),
-                    ],
+                  Text(
+                    dayNum,
+                    style: AppTypography.titleLg(
+                      color: tokens.textPrimary,
+                      fontSize: 28,
+                    ),
                   ),
-
-                  const SizedBox(height: AppSpacing.s3),
-
-                  // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
-                  Ink(
-                    padding: const EdgeInsets.all(AppSpacing.s3),
+                  const SizedBox(width: 5),
+                  Container(
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
-                      color: softTint,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Container(
-                            width: 3.5,
-                            decoration: BoxDecoration(
-                              color: accentColor,
-                              borderRadius: AppSpacing.roundedPill,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.s3),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Today's Daily Note",
-                                  style: AppTypography.titleSm(
-                                    color: tokens.textPrimary,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  hasNote &&
-                                          summary.isNotEmpty &&
-                                          summary != 'Empty note'
-                                      ? summary
-                                      : (carryForwardEnabled
-                                          ? 'Tap to start today’s note — open tasks carry forward automatically.'
-                                          : 'Tap to start today’s note.'),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.bodySm(
-                                    color: accentColor.withValues(alpha: 0.85),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.s2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.14),
-                            borderRadius: AppSpacing.roundedPill,
-                          ),
-                          child: Text(
-                            hasNote ? 'Open' : 'Start',
-                            style: AppTypography.caption(
-                              color: accentColor,
-                              weight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                      color: tokens.accentPin,
+                      shape: BoxShape.circle,
                     ),
                   ),
+                  const Spacer(),
+                  Text(
+                    dateLabel.toUpperCase(),
+                    style: AppTypography.caption(
+                      fontSize: 12,
+                      weight: FontWeight.w600,
+                      color: tokens.textTertiary,
+                    ).copyWith(letterSpacing: 0.4),
                   ),
                 ],
               ),
-            ),
+
+              const SizedBox(height: AppSpacing.s3),
+
+              // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
+              Ink(
+                padding: const EdgeInsets.all(AppSpacing.s3),
+                decoration: BoxDecoration(
+                  color: softTint,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        width: 3.5,
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Today's Daily Note",
+                              style: AppTypography.titleSm(
+                                color: tokens.textPrimary,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              hasNote &&
+                                      summary.isNotEmpty &&
+                                      summary != 'Empty note'
+                                  ? summary
+                                  : (carryForwardEnabled
+                                        ? 'Tap to start today’s note — open tasks carry forward automatically.'
+                                        : 'Tap to start today’s note.'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySm(
+                                color: accentColor.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.14),
+                          borderRadius: AppSpacing.roundedPill,
+                        ),
+                        child: Text(
+                          hasNote ? 'Open' : 'Start',
+                          style: AppTypography.caption(
+                            color: accentColor,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
 
     const cardShape = SmoothRectangleBorder(
       borderRadius: AppSpacing.roundedLg,
@@ -604,94 +600,89 @@ class _SegmentedTasksCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.s4),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed`)
-          SlidingPillTrack(
-            itemCount: 2,
-            selectedIndex: activeTab.index,
-            trackColor: tokens.canvasSunken,
-            indicatorColor: tokens.actionPrimary,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildSegmentPill(
-                tokens: tokens,
-                tab: _TodayTaskTab.todo,
-                icon: TackIcons.taskOpen,
-                label: 'To do',
-                count: openTasks.length,
+              // 1. Gliding Black-Pill Segmented Control Bar (`To do` · `Completed`)
+              SlidingPillTrack(
+                itemCount: 2,
+                selectedIndex: activeTab.index,
+                trackColor: tokens.canvasSunken,
+                indicatorColor: tokens.actionPrimary,
+                children: [
+                  _buildSegmentPill(
+                    tokens: tokens,
+                    tab: _TodayTaskTab.todo,
+                    icon: TackIcons.taskOpen,
+                    label: 'To do',
+                    count: openTasks.length,
+                  ),
+                  _buildSegmentPill(
+                    tokens: tokens,
+                    tab: _TodayTaskTab.completed,
+                    icon: TackIcons.check,
+                    label: 'Completed',
+                    count: completedTasks.length,
+                  ),
+                ],
               ),
-              _buildSegmentPill(
-                tokens: tokens,
-                tab: _TodayTaskTab.completed,
-                icon: TackIcons.check,
-                label: 'Completed',
-                count: completedTasks.length,
+
+              const SizedBox(height: AppSpacing.s4),
+
+              // 2. Top-Anchored Directional Switcher + Smooth 120Hz Size Interpolation
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                reverseDuration: const Duration(milliseconds: 180),
+                curve: AppSpacing.silky120Hz,
+                alignment: Alignment.topCenter,
+                clipBehavior: Clip.hardEdge,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  reverseDuration: const Duration(milliseconds: 140),
+                  switchInCurve: AppSpacing.silky120Hz,
+                  switchOutCurve: Curves.easeInCubic,
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    alignment: Alignment.topCenter,
+                    children: [...previousChildren, ?currentChild],
+                  ),
+                  transitionBuilder: (child, animation) {
+                    final isTodo =
+                        child.key == const ValueKey(_TodayTaskTab.todo);
+                    final slide = Tween<Offset>(
+                      begin: Offset(isTodo ? -0.045 : 0.045, 0),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slide,
+                        child: RepaintBoundary(child: child),
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(activeTab),
+                    child: activeTab == _TodayTaskTab.todo
+                        ? _buildGroupedTaskList(
+                            context,
+                            tokens,
+                            openTasks,
+                            emptyMessage: "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
+                            emptyActionLabel: "Open Today's Note",
+                            onEmptyAction: onOpenDailyNote,
+                          )
+                        : _buildGroupedTaskList(
+                            context,
+                            tokens,
+                            completedTasks,
+                            emptyMessage: 'No completed tasks yet today.',
+                          ),
+                  ),
+                ),
               ),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.s4),
-
-          // 2. Top-Anchored Directional Switcher + Smooth Size Interpolation
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            reverseDuration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.hardEdge,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              reverseDuration: const Duration(milliseconds: 160),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              layoutBuilder: (currentChild, previousChildren) => Stack(
-                alignment: Alignment.topCenter,
-                children: [
-                  ...previousChildren,
-                  ?currentChild,
-                ],
-              ),
-              transitionBuilder: (child, animation) {
-                final isTodo = child.key == const ValueKey(_TodayTaskTab.todo);
-                final slide = Tween<Offset>(
-                  begin: Offset(isTodo ? -0.06 : 0.06, 0),
-                  end: Offset.zero,
-                ).animate(animation);
-                return RepaintBoundary(
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: slide,
-                      child: child,
-                    ),
-                  ),
-                );
-              },
-              child: KeyedSubtree(
-                key: ValueKey(activeTab),
-                child: activeTab == _TodayTaskTab.todo
-                    ? _buildGroupedTaskList(
-                        context,
-                        tokens,
-                        openTasks,
-                        emptyMessage:
-                            "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
-                        emptyActionLabel: "Open Today's Note",
-                        onEmptyAction: onOpenDailyNote,
-                      )
-                    : _buildGroupedTaskList(
-                        context,
-                        tokens,
-                        completedTasks,
-                        emptyMessage: 'No completed tasks yet today.',
-                      ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
-    ),
-    ),
     );
   }
 
@@ -734,8 +725,7 @@ class _SegmentedTasksCard extends StatelessWidget {
               style: style,
               child: Builder(
                 builder: (ctx) {
-                  final animatedFg =
-                      DefaultTextStyle.of(ctx).style.color ?? fg;
+                  final animatedFg = DefaultTextStyle.of(ctx).style.color ?? fg;
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -780,10 +770,9 @@ class _SegmentedTasksCard extends StatelessWidget {
     final overdueCount = activeTab == _TodayTaskTab.todo
         ? tasks.where((t) => !t.isDone && t.isOverdue(now)).length
         : 0;
-    final visibleTasks =
-        (showAllTasks || tasks.length <= previewLimit)
-            ? tasks
-            : tasks.take(previewLimit).toList();
+    final visibleTasks = (showAllTasks || tasks.length <= previewLimit)
+        ? tasks
+        : tasks.take(previewLimit).toList();
 
     // Group tasks by source noteId so identically-titled notes remain separate.
     final grouped = <String, List<DerivedTaskItem>>{};
@@ -878,8 +867,7 @@ class _SegmentedTasksCard extends StatelessWidget {
                     horizontal: AppSpacing.s2,
                   ),
                 ),
-                onPressed: () =>
-                    onOpenSourceNote(entry.value.first.noteId),
+                onPressed: () => onOpenSourceNote(entry.value.first.noteId),
                 child: Text(
                   'Open note',
                   style: AppTypography.caption(
@@ -895,8 +883,9 @@ class _SegmentedTasksCard extends StatelessWidget {
               _TaskRow(
                 task: task,
                 onToggle: () => onToggleTask(task),
-                onEditReminder:
-                    !task.isDone ? () => onEditReminder(task) : null,
+                onEditReminder: !task.isDone
+                    ? () => onEditReminder(task)
+                    : null,
                 onOpenSource: () => onOpenSourceNote(task.noteId),
               ),
           const SizedBox(height: AppSpacing.s2),
@@ -908,9 +897,7 @@ class _SegmentedTasksCard extends StatelessWidget {
             ),
             onPressed: onToggleShowAll,
             child: Text(
-              showAllTasks
-                  ? 'Show fewer'
-                  : 'Show all ${tasks.length} tasks',
+              showAllTasks ? 'Show fewer' : 'Show all ${tasks.length} tasks',
             ),
           ),
       ],
@@ -979,136 +966,139 @@ class _TaskRow extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color:
-                        task.isDone ? tokens.actionPrimary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: task.isDone
-                          ? tokens.actionPrimary
-                          : tokens.borderStrong,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: task.isDone
-                      ? Center(
-                          child: TackIcon(
-                            TackIcons.check,
-                            size: 13,
-                            color: tokens.actionPrimaryFg,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.text,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body(
+                      // Square outlined checkbox (radius 5dp per 11-reference-ui-style.md §4)
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
                           color: task.isDone
-                              ? tokens.textTertiary
-                              : tokens.textPrimary,
-                        ).copyWith(
-                          decoration:
-                              task.isDone ? TextDecoration.lineThrough : null,
+                              ? tokens.actionPrimary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: task.isDone
+                                ? tokens.actionPrimary
+                                : tokens.borderStrong,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: task.isDone
+                            ? Center(
+                                child: TackIcon(
+                                  TackIcons.check,
+                                  size: 13,
+                                  color: tokens.actionPrimaryFg,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      if (!task.isDone &&
-                          (dueLabel != null || repeatLabel != null)) ...[
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (dueLabel != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: dueBg,
-                                  borderRadius: AppSpacing.roundedPill,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TackIcon(
-                                      TackIcons.notification,
-                                      size: 11,
-                                      color: dueFg,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      dueLabel,
-                                      style: AppTypography.caption(
-                                        color: dueFg,
-                                        weight: FontWeight.w600,
+                            Text(
+                              task.text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  AppTypography.body(
+                                    color: task.isDone
+                                        ? tokens.textTertiary
+                                        : tokens.textPrimary,
+                                  ).copyWith(
+                                    decoration: task.isDone
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                            ),
+                            if (!task.isDone &&
+                                (dueLabel != null || repeatLabel != null)) ...[
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  if (dueLabel != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: dueBg,
+                                        borderRadius: AppSpacing.roundedPill,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TackIcon(
+                                            TackIcons.notification,
+                                            size: 11,
+                                            color: dueFg,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            dueLabel,
+                                            style: AppTypography.caption(
+                                              color: dueFg,
+                                              weight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            if (repeatLabel != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: tokens.canvasSunken,
-                                  borderRadius: AppSpacing.roundedPill,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TackIcon(
-                                      TackIcons.refresh,
-                                      size: 11,
-                                      color: tokens.textSecondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      repeatLabel,
-                                      style: AppTypography.caption(
-                                        color: tokens.textSecondary,
-                                        weight: FontWeight.w500,
+                                  if (repeatLabel != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: tokens.canvasSunken,
+                                        borderRadius: AppSpacing.roundedPill,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TackIcon(
+                                            TackIcons.refresh,
+                                            size: 11,
+                                            color: tokens.textSecondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            repeatLabel,
+                                            style: AppTypography.caption(
+                                              color: tokens.textSecondary,
+                                              weight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
+                            ],
                           ],
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    ),
-    ),
         if (onEditReminder != null)
           IconButton(
             onPressed: onEditReminder,
@@ -1132,9 +1122,7 @@ class _TaskRow extends StatelessWidget {
 class _WorthRevisitingCard extends StatelessWidget {
   final TextNote note;
 
-  const _WorthRevisitingCard({
-    required this.note,
-  });
+  const _WorthRevisitingCard({required this.note});
 
   @override
   Widget build(BuildContext context) {
@@ -1215,23 +1203,23 @@ class _WorthRevisitingCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                            Text(
-                              note.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.titleSm(
-                                color: tokens.textPrimary,
+                              Text(
+                                note.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleSm(
+                                  color: tokens.textPrimary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              note.getSummary(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodySm(
-                                color: tokens.textSecondary,
+                              const SizedBox(height: 2),
+                              Text(
+                                note.getSummary(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodySm(
+                                  color: tokens.textSecondary,
+                                ),
                               ),
-                            ),
                             ],
                           ),
                         ),
@@ -1300,10 +1288,7 @@ Widget buildWorkspaceItemDetailScreen(
   if (item is WhiteboardCanvasItem) {
     return WhiteboardCanvasScreen(item: item);
   }
-  return NoteEditorScreen(
-    item: item,
-    startInEditMode: startInEditMode,
-  );
+  return NoteEditorScreen(item: item, startInEditMode: startInEditMode);
 }
 
 /// Helper to navigate to the right screen for any [BaseWorkspaceItem] without fade-out lag.

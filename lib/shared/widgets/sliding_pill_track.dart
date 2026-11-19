@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../core/theme/app_spacing.dart';
 
 /// Shared pill-shaped segmented track with a single continuous gliding indicator
-/// pill, matching the smooth sliding feel of `SettingsScreen`'s `TabBar`.
-///
-/// Using one animated pill inside a `Stack` avoids the jarring two-pill
-/// cross-fade blink that occurs when each segment animates its own background.
+/// pill driven by a critically-damped 120Hz [SpringSimulation] so rapid taps
+/// preserve velocity and settle with zero overshoot or cross-fade flicker.
 class SlidingPillTrack extends StatefulWidget {
   final int itemCount;
   final int selectedIndex;
@@ -32,7 +31,7 @@ class SlidingPillTrack extends StatefulWidget {
     this.height,
     this.padding = const EdgeInsets.all(4),
     this.duration = const Duration(milliseconds: 220),
-    this.curve = Curves.easeOutCubic,
+    this.curve = AppSpacing.silky120Hz,
   }) : assert(itemCount > 0 && children.length == itemCount);
 
   @override
@@ -41,8 +40,14 @@ class SlidingPillTrack extends StatefulWidget {
 
 class _SlidingPillTrackState extends State<SlidingPillTrack>
     with SingleTickerProviderStateMixin {
+  /// Critically-damped spring (ζ ≈ 1.0): responsive 120Hz glide, zero bounce.
+  static const SpringDescription _glideSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 520.0,
+    damping: 46.0,
+  );
+
   late final AnimationController _controller;
-  late CurvedAnimation _curvedAnimation;
   late Animation<Offset> _slideAnimation;
   late int _currentIndex;
   bool _isRtl = false;
@@ -51,73 +56,60 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
   void initState() {
     super.initState();
     _currentIndex = _safeIndex(widget.selectedIndex, widget.itemCount);
-    _controller = AnimationController(
+    _controller = AnimationController.unbounded(
       vsync: this,
-      duration: widget.duration,
-      value: 1.0,
+      value: _signedDx(_currentIndex.toDouble()),
     );
-    _curvedAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: widget.curve,
-    );
-    _slideAnimation = AlwaysStoppedAnimation<Offset>(
-      Offset(_signedDx(_currentIndex.toDouble()), 0),
-    );
+    _slideAnimation = _OffsetXAnimation(_controller);
   }
 
   double _signedDx(double dx) => _isRtl ? -dx : dx;
 
   int _safeIndex(int index, int count) => index.clamp(0, count - 1);
 
+  void _animateToIndex(int nextIndex) {
+    final target = _signedDx(nextIndex.toDouble());
+    final current = _controller.value;
+    if ((current - target).abs() < 0.0005 &&
+        _controller.velocity.abs() < 0.01) {
+      _controller.value = target;
+      return;
+    }
+    final simulation = SpringSimulation(
+      _glideSpring,
+      current,
+      target,
+      _controller.velocity,
+      tolerance: const Tolerance(distance: 0.0005, velocity: 0.005),
+    );
+    _controller.animateWith(simulation);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final nextRtl = Directionality.of(context) == TextDirection.rtl;
     if (nextRtl != _isRtl) {
-      final prevEnd = _signedDx(_currentIndex.toDouble());
       _isRtl = nextRtl;
-      final nextEnd = _signedDx(_currentIndex.toDouble());
-      _slideAnimation = Tween<Offset>(
-        begin: Offset(prevEnd, 0),
-        end: Offset(nextEnd, 0),
-      ).animate(_curvedAnimation);
+      _controller.value = _signedDx(_currentIndex.toDouble());
     }
   }
 
   @override
   void didUpdateWidget(covariant SlidingPillTrack oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.duration != widget.duration) {
-      _controller.duration = widget.duration;
-    }
-    if (oldWidget.curve != widget.curve) {
-      _curvedAnimation.dispose();
-      _curvedAnimation = CurvedAnimation(
-        parent: _controller,
-        curve: widget.curve,
-      );
-    }
-
     final nextIndex = _safeIndex(widget.selectedIndex, widget.itemCount);
     if (nextIndex != _currentIndex || oldWidget.itemCount != widget.itemCount) {
       final minDx = _isRtl ? -(widget.itemCount - 1).toDouble() : 0.0;
       final maxDx = _isRtl ? 0.0 : (widget.itemCount - 1).toDouble();
-      final fromOffset = Offset(
-        _slideAnimation.value.dx.clamp(minDx, maxDx),
-        0,
-      );
+      _controller.value = _controller.value.clamp(minDx, maxDx);
       _currentIndex = nextIndex;
-      _slideAnimation = Tween<Offset>(
-        begin: fromOffset,
-        end: Offset(_signedDx(nextIndex.toDouble()), 0),
-      ).animate(_curvedAnimation);
-      _controller.forward(from: 0.0);
+      _animateToIndex(nextIndex);
     }
   }
 
   @override
   void dispose() {
-    _curvedAnimation.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -167,4 +159,17 @@ class _SlidingPillTrackState extends State<SlidingPillTrack>
       ),
     );
   }
+}
+
+/// Zero-allocation [Animation<Offset>] mapping a scalar X controller directly
+/// into `Offset(x, 0)` for GPU-composited [SlideTransition].
+class _OffsetXAnimation extends Animation<Offset>
+    with AnimationWithParentMixin<double> {
+  @override
+  final Animation<double> parent;
+
+  _OffsetXAnimation(this.parent);
+
+  @override
+  Offset get value => Offset(parent.value, 0.0);
 }

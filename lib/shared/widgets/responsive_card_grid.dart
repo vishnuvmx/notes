@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_spacing.dart';
 import 'z_order_column.dart';
 
@@ -30,13 +31,12 @@ class ResponsiveCardGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final columns = _buildColumns(context);
     if (shrinkWrap) {
-      return Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: columns,
-      );
+      return Padding(padding: padding ?? EdgeInsets.zero, child: columns);
     }
     return SingleChildScrollView(
-      physics: physics ?? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics:
+          physics ??
+          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: padding,
       child: columns,
     );
@@ -44,14 +44,19 @@ class ResponsiveCardGrid extends StatelessWidget {
 
   Widget _buildColumns(BuildContext context) {
     final colCount = crossAxisCount.clamp(1, 6);
-    final List<List<Widget>> columnChildren = List.generate(colCount, (_) => []);
+    final List<List<Widget>> columnChildren = List.generate(
+      colCount,
+      (_) => [],
+    );
 
     for (var i = 0; i < itemCount; i++) {
       final colIndex = i % colCount;
       if (columnChildren[colIndex].isNotEmpty) {
         columnChildren[colIndex].add(SizedBox(height: mainAxisSpacing));
       }
-      columnChildren[colIndex].add(RepaintBoundary(child: itemBuilder(context, i)));
+      columnChildren[colIndex].add(
+        RepaintBoundary(child: itemBuilder(context, i)),
+      );
     }
 
     return Row(
@@ -72,7 +77,8 @@ class ResponsiveCardGrid extends StatelessWidget {
   }
 }
 
-/// Sliver variant of [ResponsiveCardGrid] for use inside [CustomScrollView].
+/// Lazy Sliver variant of [ResponsiveCardGrid] for use inside [CustomScrollView].
+/// Builds only visible rows via [SliverList.builder] so large libraries scroll at 120fps.
 class SliverResponsiveCardGrid extends StatelessWidget {
   final int crossAxisCount;
   final int itemCount;
@@ -91,16 +97,34 @@ class SliverResponsiveCardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: ResponsiveCardGrid(
-        crossAxisCount: crossAxisCount,
-        itemCount: itemCount,
-        itemBuilder: itemBuilder,
-        mainAxisSpacing: mainAxisSpacing,
-        crossAxisSpacing: crossAxisSpacing,
-        shrinkWrap: true,
-      ),
+    final colCount = crossAxisCount.clamp(1, 6);
+    final rowCount = (itemCount + colCount - 1) ~/ colCount;
+    if (rowCount == 0) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverList.builder(
+      itemCount: rowCount,
+      itemBuilder: (context, rowIndex) {
+        final start = rowIndex * colCount;
+        final isLastRow = rowIndex == rowCount - 1;
+        return Padding(
+          padding: EdgeInsets.only(bottom: isLastRow ? 0 : mainAxisSpacing),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var c = 0; c < colCount; c++) ...[
+                if (c > 0) SizedBox(width: crossAxisSpacing),
+                Expanded(
+                  child: (start + c < itemCount)
+                      ? RepaintBoundary(child: itemBuilder(context, start + c))
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
-

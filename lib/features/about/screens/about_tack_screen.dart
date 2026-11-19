@@ -72,7 +72,9 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         bottom: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.readMaxWidth,
+            ),
             child: Column(
               children: [
                 // Header Hero Card
@@ -84,171 +86,175 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                     vertical: AppSpacing.s2,
                   ),
                   child: Container(
-              clipBehavior: Clip.antiAlias,
-              padding: const EdgeInsets.all(AppSpacing.s5),
-              decoration: ShapeDecoration(
-                color: tokens.surfacePrimary,
-                shape: SmoothRectangleBorder(
-                  borderRadius: AppSpacing.roundedLg,
-                  smoothness: AppSpacing.defaultSmoothing,
-                ),
-                shadows: AppSpacing.elev1(tokens.isDark),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
+                    clipBehavior: Clip.antiAlias,
+                    padding: const EdgeInsets.all(AppSpacing.s5),
                     decoration: ShapeDecoration(
-                      color: tokens.canvasSunken,
+                      color: tokens.surfacePrimary,
                       shape: SmoothRectangleBorder(
-                        borderRadius: AppSpacing.roundedMd,
+                        borderRadius: AppSpacing.roundedLg,
                         smoothness: AppSpacing.defaultSmoothing,
                       ),
+                      shadows: AppSpacing.elev1(tokens.isDark),
                     ),
-                    child: Center(
-                      child: Image.asset(
-                        'icon.png',
-                        width: 34,
-                        height: 34,
-                        errorBuilder: (context, error, stackTrace) => TackIcon(
-                          TackIcons.notes,
-                          size: 28,
-                          color: tokens.accentPin,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Tack',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.titleLg(
-                                  color: tokens.textPrimary,
-                                ),
-                              ),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: ShapeDecoration(
+                            color: tokens.canvasSunken,
+                            shape: SmoothRectangleBorder(
+                              borderRadius: AppSpacing.roundedMd,
+                              smoothness: AppSpacing.defaultSmoothing,
                             ),
-                            const SizedBox(width: AppSpacing.s2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.s2,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: tokens.actionPrimary,
-                                borderRadius: AppSpacing.roundedPill,
-                              ),
-                              child: Text(
-                                'v2.0.0',
-                                style: AppTypography.caption(
-                                  color: tokens.actionPrimaryFg,
-                                  weight: FontWeight.w600,
-                                ),
-                              ),
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              'icon.png',
+                              width: 34,
+                              height: 34,
+                              cacheWidth: 128,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  TackIcon(
+                                    TackIcons.notes,
+                                    size: 28,
+                                    color: tokens.accentPin,
+                                  ),
                             ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Soft Monochrome Notes, Tasks & Visual Boards',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.serifItalic(
-                            color: tokens.textSecondary,
-                            fontSize: 15,
+                        const SizedBox(width: AppSpacing.s4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'Tack',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.titleLg(
+                                        color: tokens.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.s2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.s2,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: tokens.actionPrimary,
+                                      borderRadius: AppSpacing.roundedPill,
+                                    ),
+                                    child: Text(
+                                      'v2.0.0',
+                                      style: AppTypography.caption(
+                                        color: tokens.actionPrimaryFg,
+                                        weight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Soft Monochrome Notes, Tasks & Visual Boards',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.serifItalic(
+                                  color: tokens.textSecondary,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                ),
 
-          const SizedBox(height: AppSpacing.s2),
+                const SizedBox(height: AppSpacing.s2),
 
-          // Black-Pill Segmented Tab Selector
-          Container(
-            margin: EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenGutter(
-                MediaQuery.sizeOf(context).width,
-              ),
-            ),
-            padding: const EdgeInsets.all(AppSpacing.s2),
-            decoration: BoxDecoration(
-              color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedPill,
-            ),
-            child: TabBar(
-              controller: _tabController,
-              onTap: (_) => HapticFeedback.selectionClick(),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              splashFactory: NoSplash.splashFactory,
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
-              splashBorderRadius: AppSpacing.roundedPill,
-              labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
-              indicator: BoxDecoration(
-                color: tokens.actionPrimary,
-                borderRadius: AppSpacing.roundedPill,
-              ),
-              labelColor: tokens.actionPrimaryFg,
-              unselectedLabelColor: tokens.textSecondary,
-              labelStyle: AppTypography.label(
-                color: tokens.actionPrimaryFg,
-                weight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: AppTypography.label(
-                color: tokens.textSecondary,
-                weight: FontWeight.w500,
-              ),
-              tabs: const [
-                Tab(
-                  height: AppSpacing.minTouchTarget,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Architecture'),
+                // Black-Pill Segmented Tab Selector
+                Container(
+                  margin: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenGutter(
+                      MediaQuery.sizeOf(context).width,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.s2),
+                  decoration: BoxDecoration(
+                    color: tokens.canvasSunken,
+                    borderRadius: AppSpacing.roundedPill,
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    onTap: (_) => HapticFeedback.selectionClick(),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    splashFactory: NoSplash.splashFactory,
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
+                    splashBorderRadius: AppSpacing.roundedPill,
+                    labelPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s2,
+                    ),
+                    indicator: BoxDecoration(
+                      color: tokens.actionPrimary,
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    labelColor: tokens.actionPrimaryFg,
+                    unselectedLabelColor: tokens.textSecondary,
+                    labelStyle: AppTypography.label(
+                      color: tokens.actionPrimaryFg,
+                      weight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: AppTypography.label(
+                      color: tokens.textSecondary,
+                      weight: FontWeight.w500,
+                    ),
+                    tabs: const [
+                      Tab(
+                        height: AppSpacing.minTouchTarget,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Architecture'),
+                        ),
+                      ),
+                      Tab(
+                        height: AppSpacing.minTouchTarget,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Privacy & Legal'),
+                        ),
+                      ),
+                      Tab(
+                        height: AppSpacing.minTouchTarget,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Open Source'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Tab(
-                  height: AppSpacing.minTouchTarget,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Privacy & Legal'),
+
+                const SizedBox(height: AppSpacing.s2),
+
+                Expanded(
+                  child: IndexedStack(
+                    index: _tabController.index,
+                    children: [
+                      _buildStackJourneyTab(tokens),
+                      _buildPrivacyLegalTab(tokens),
+                      _buildOpenSourceTab(tokens),
+                    ],
                   ),
                 ),
-                Tab(
-                  height: AppSpacing.minTouchTarget,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Open Source'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.s2),
-
-          Expanded(
-            child: IndexedStack(
-              index: _tabController.index,
-              children: [
-                _buildStackJourneyTab(tokens),
-                _buildPrivacyLegalTab(tokens),
-                _buildOpenSourceTab(tokens),
-              ],
-            ),
-          ),
               ],
             ),
           ),
@@ -326,9 +332,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         AppSpacing.s7 + bottomInset,
       ),
       physics: const BouncingScrollPhysics(),
-      children: [
-        ...stages.map((stage) => _buildStageCard(stage, tokens)),
-      ],
+      children: [...stages.map((stage) => _buildStageCard(stage, tokens))],
     );
   }
 
@@ -586,7 +590,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         author: 'Flutter Community',
         version: '^13.3.0',
         license: 'BSD-3-Clause',
-        role: 'Android platform sharing intents for backups, notes, and exports.',
+        role:
+            'Android platform sharing intents for backups, notes, and exports.',
       ),
       const _OssPackage(
         name: 'path_provider',
@@ -614,7 +619,8 @@ class _AboutTackScreenState extends State<AboutTackScreen>
         author: 'Flutter Team',
         version: '^6.3.2 / ^2.1.4',
         license: 'BSD-3-Clause / Zlib',
-        role: 'External URL launching and 2D matrix transforms for whiteboards.',
+        role:
+            'External URL launching and 2D matrix transforms for whiteboards.',
       ),
     ];
 

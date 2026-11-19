@@ -534,18 +534,18 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
 
           const SizedBox(height: AppSpacing.s4),
 
-          // 3. Smooth Mode Content
+          // 3. Smooth 120Hz Mode Content
           Flexible(
             child: AnimatedSize(
               duration: const Duration(milliseconds: 220),
               reverseDuration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
+              curve: AppSpacing.silky120Hz,
               alignment: Alignment.topCenter,
               clipBehavior: Clip.hardEdge,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 reverseDuration: const Duration(milliseconds: 140),
-                switchInCurve: Curves.easeOutCubic,
+                switchInCurve: AppSpacing.silky120Hz,
                 switchOutCurve: Curves.easeInCubic,
                 layoutBuilder: (currentChild, previousChildren) => Stack(
                   alignment: Alignment.topCenter,
@@ -554,13 +554,14 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 transitionBuilder: (child, animation) {
                   final isInsert = child.key == const ValueKey('sheet_insert');
                   final slide = Tween<Offset>(
-                    begin: Offset(isInsert ? -0.05 : 0.05, 0),
+                    begin: Offset(isInsert ? -0.045 : 0.045, 0),
                     end: Offset.zero,
                   ).animate(animation);
-                  return RepaintBoundary(
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: slide,
+                      child: RepaintBoundary(child: child),
                     ),
                   );
                 },

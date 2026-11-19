@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/tack_icons.dart';
 import '../services/wiki_link_service.dart';
@@ -89,27 +90,13 @@ class DocumentOutlineSheet extends StatefulWidget {
           ),
         );
       },
-      transitionBuilder: (_, animation, _, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, -0.04),
-              end: Offset.zero,
-            ).animate(curved),
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
-              alignment: Alignment.topRight,
-              child: child,
-            ),
-          ),
-        );
-      },
+      transitionBuilder: (_, animation, _, child) => TackAnimatedTransition(
+        animation: animation,
+        slideBegin: const Offset(0, -0.04),
+        scaleBegin: 0.94,
+        scaleAlignment: Alignment.topRight,
+        child: child,
+      ),
     );
   }
 

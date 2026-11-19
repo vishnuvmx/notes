@@ -443,13 +443,13 @@ class TackAnimatedTransition extends StatefulWidget {
     super.key,
     required this.animation,
     required this.child,
-    this.fadeCurve = Curves.easeOutCubic,
+    this.fadeCurve = AppSpacing.silky120Hz,
     this.fadeReverseCurve = const Interval(
       0.28,
       1.0,
       curve: Curves.easeInCubic,
     ),
-    this.motionCurve = Curves.easeOutCubic,
+    this.motionCurve = AppSpacing.silky120Hz,
     this.motionReverseCurve = const Interval(
       0.28,
       1.0,
@@ -457,6 +457,7 @@ class TackAnimatedTransition extends StatefulWidget {
     ),
     this.slideBegin,
     this.scaleBegin,
+    this.scaleAlignment = Alignment.center,
   });
 
   final Animation<double> animation;
@@ -467,6 +468,7 @@ class TackAnimatedTransition extends StatefulWidget {
   final Curve motionReverseCurve;
   final Offset? slideBegin;
   final double? scaleBegin;
+  final Alignment scaleAlignment;
 
   /// Shared [AnimatedSwitcher] transition builder that isolates the fading
   /// subtree in a [RepaintBoundary] so complex children do not re-rasterize
@@ -573,7 +575,11 @@ class _TackAnimatedTransitionState extends State<TackAnimatedTransition> {
       current = SlideTransition(position: _slideAnimation!, child: current);
     }
     if (_scaleAnimation != null) {
-      current = ScaleTransition(scale: _scaleAnimation!, child: current);
+      current = ScaleTransition(
+        scale: _scaleAnimation!,
+        alignment: widget.scaleAlignment,
+        child: current,
+      );
     }
     return current;
   }

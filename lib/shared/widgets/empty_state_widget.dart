@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -61,6 +62,7 @@ class EmptyStateWidget extends StatelessWidget {
                     child: Image.asset(
                       'icon.png',
                       fit: BoxFit.contain,
+                      cacheWidth: 256,
                       errorBuilder: (_, _, _) => Container(
                         color: tokens.canvasSunken,
                         child: Center(
@@ -83,11 +85,7 @@ class EmptyStateWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: TackIcon(
-                      icon,
-                      size: 36,
-                      color: tokens.accentPin,
-                    ),
+                    child: TackIcon(icon, size: 36, color: tokens.accentPin),
                   ),
                 ),
               const SizedBox(height: AppSpacing.s5),

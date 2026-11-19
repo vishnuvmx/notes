@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -3289,21 +3290,25 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                         child: Stack(
                           children: [
                             Positioned.fill(
-                              child: CustomPaint(
-                                painter: _CanvasGridPainter(
-                                  showGrid: _showGrid,
-                                  isDark: isDark,
-                                  opacity: _gridOpacity,
+                              child: RepaintBoundary(
+                                child: CustomPaint(
+                                  painter: _CanvasGridPainter(
+                                    showGrid: _showGrid,
+                                    isDark: isDark,
+                                    opacity: _gridOpacity,
+                                  ),
                                 ),
                               ),
                             ),
                             Positioned.fill(
-                              child: CustomPaint(
-                                painter: _CanvasEdgesPainter(
-                                  nodes: _nodes,
-                                  edges: _edges,
-                                  selectedEdgeId: _selectedEdgeId,
-                                  isDark: isDark,
+                              child: RepaintBoundary(
+                                child: CustomPaint(
+                                  painter: _CanvasEdgesPainter(
+                                    nodes: _nodes,
+                                    edges: _edges,
+                                    selectedEdgeId: _selectedEdgeId,
+                                    isDark: isDark,
+                                  ),
                                 ),
                               ),
                             ),
@@ -3707,18 +3712,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
       top: (connectorCenter.dy - 32).clamp(8.0, _canvasSize - 40.0),
       child: FractionalTranslation(
         translation: const Offset(-0.5, -0.5),
-        child: TweenAnimationBuilder<double>(
+        child: _PopInBadge(
           key: ValueKey('edge_capsule_${edge.id}'),
-          tween: Tween(begin: 0.0, end: 1.0),
           duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              alignment: Alignment.center,
-              child: Opacity(opacity: scale.clamp(0.0, 1.0), child: child),
-            );
-          },
           child: Material(
             color: Colors.transparent,
             child: Container(
@@ -4905,18 +4901,9 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
       top: capsuleTop,
       child: FractionalTranslation(
         translation: const Offset(-0.5, 0.0),
-        child: TweenAnimationBuilder<double>(
+        child: _PopInBadge(
           key: ValueKey('node_capsule_${node.id}'),
-          tween: Tween(begin: 0.0, end: 1.0),
           duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutBack,
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              alignment: Alignment.center,
-              child: Opacity(opacity: scale.clamp(0.0, 1.0), child: child),
-            );
-          },
           child: Material(
             color: Colors.transparent,
             child: Container(
@@ -5342,16 +5329,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
+    return _PopInBadge(
       duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutBack,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(opacity: scale.clamp(0.0, 1.0), child: child),
-        );
-      },
       child: Semantics(
         button: true,
         label: tooltip,
@@ -5609,17 +5588,20 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
         );
         Widget imgWidget;
         if (rawImagePath != null && rawImagePath.isNotEmpty) {
+          final cacheWidth = (node.width * 2).round().clamp(256, 1280);
           final assetPath = _resolveNodeAssetPath(rawImagePath);
           if (assetPath != null) {
             imgWidget = Image.asset(
               assetPath,
               fit: BoxFit.cover,
+              cacheWidth: cacheWidth,
               errorBuilder: (_, _, _) => imgFallback(),
             );
           } else {
             imgWidget = Image.file(
               File(rawImagePath),
               fit: BoxFit.cover,
+              cacheWidth: cacheWidth,
               errorBuilder: (_, _, _) => imgFallback(),
             );
           }
@@ -5689,9 +5671,11 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
         break;
 
       case CanvasNodeType.specCard:
-        final workspace = context.watch<WorkspaceProvider>();
-        final linkedItem = node.linkedNoteId != null
-            ? workspace.getItemById(node.linkedNoteId!)
+        final linkedId = node.linkedNoteId;
+        final linkedItem = linkedId != null
+            ? context.select<WorkspaceProvider, BaseWorkspaceItem?>(
+                (w) => w.getItemByIdSync(linkedId),
+              )
             : null;
         final isLinked = linkedItem != null && !linkedItem.isTrash;
 
@@ -5717,14 +5701,8 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
           rawForTasks = node.text;
         }
 
-        final totalTasks = RegExp(
-          r'^\s*[-*]\s+\[[ xX]\]',
-          multiLine: true,
-        ).allMatches(rawForTasks).length;
-        final doneTasks = RegExp(
-          r'^\s*[-*]\s+\[[xX]\]',
-          multiLine: true,
-        ).allMatches(rawForTasks).length;
+        final totalTasks = _specTaskTotalRegex.allMatches(rawForTasks).length;
+        final doneTasks = _specTaskDoneRegex.allMatches(rawForTasks).length;
 
         shapeContent = Container(
           width: node.width,
@@ -6112,16 +6090,95 @@ class _ParallelogramPainter extends CustomPainter {
 }
 
 /// Canvas Grid Painter with Dynamic Dot Opacity
+final RegExp _specTaskTotalRegex = RegExp(
+  r'^\s*[-*]\s+\[[ xX]\]',
+  multiLine: true,
+);
+final RegExp _specTaskDoneRegex = RegExp(
+  r'^\s*[-*]\s+\[[xX]\]',
+  multiLine: true,
+);
+
+/// Compositor-friendly pop-in animation using [FadeTransition] + [ScaleTransition]
+/// so canvas capsules and branch handles animate at 120Hz with zero GPU `saveLayer`s.
+class _PopInBadge extends StatefulWidget {
+  final Duration duration;
+  final Widget child;
+
+  const _PopInBadge({super.key, required this.duration, required this.child});
+
+  @override
+  State<_PopInBadge> createState() => _PopInBadgeState();
+}
+
+class _PopInBadgeState extends State<_PopInBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: ScaleTransition(
+        scale: _scale,
+        alignment: Alignment.center,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 class _CanvasGridPainter extends CustomPainter {
   final bool showGrid;
   final bool isDark;
   final double opacity;
+
+  static Size? _cachedSize;
+  static Float32List? _cachedRawPoints;
 
   _CanvasGridPainter({
     required this.showGrid,
     required this.isDark,
     this.opacity = 0.18,
   });
+
+  static Float32List _rawPointsForSize(Size size) {
+    if (_cachedSize == size && _cachedRawPoints != null) {
+      return _cachedRawPoints!;
+    }
+    const spacing = 28.0;
+    final cols = (size.width / spacing).floor() + 1;
+    final rows = (size.height / spacing).floor() + 1;
+    final raw = Float32List(cols * rows * 2);
+    int idx = 0;
+    for (int c = 0; c < cols; c++) {
+      final x = c * spacing;
+      for (int r = 0; r < rows; r++) {
+        raw[idx++] = x;
+        raw[idx++] = r * spacing;
+      }
+    }
+    _cachedSize = size;
+    _cachedRawPoints = raw;
+    return raw;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -6133,14 +6190,11 @@ class _CanvasGridPainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
-    const spacing = 28.0;
-    final points = <Offset>[];
-    for (double x = 0; x <= size.width; x += spacing) {
-      for (double y = 0; y <= size.height; y += spacing) {
-        points.add(Offset(x, y));
-      }
-    }
-    canvas.drawPoints(ui.PointMode.points, points, dotPaint);
+    canvas.drawRawPoints(
+      ui.PointMode.points,
+      _rawPointsForSize(size),
+      dotPaint,
+    );
   }
 
   @override
@@ -6227,34 +6281,34 @@ class _CanvasEdgesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (edges.isEmpty) return;
+
+    final nodeById = <String, CanvasNode>{for (final n in nodes) n.id: n};
+
+    final normalColor = isDark
+        ? const Color(0xFFCBD5E1)
+        : const Color(0xFF334155);
+    final selectedColor = isDark
+        ? AppColors.darkAccentPin
+        : AppColors.lightAccentPin;
+
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final arrowPaint = Paint()..style = PaintingStyle.fill;
+
     for (final edge in edges) {
-      final isSelected = edge.id == selectedEdgeId;
-
-      final lineColor = isSelected
-          ? (isDark ? AppColors.darkAccentPin : AppColors.lightAccentPin)
-          : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155));
-
-      final linePaint = Paint()
-        ..color = lineColor
-        ..strokeWidth = isSelected ? 3.0 : 2.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-
-      final arrowPaint = Paint()
-        ..color = lineColor
-        ..style = PaintingStyle.fill;
-
-      final from = nodes.cast<CanvasNode?>().firstWhere(
-        (n) => n?.id == edge.fromNodeId,
-        orElse: () => null,
-      );
-      final to = nodes.cast<CanvasNode?>().firstWhere(
-        (n) => n?.id == edge.toNodeId,
-        orElse: () => null,
-      );
-
+      final from = nodeById[edge.fromNodeId];
+      final to = nodeById[edge.toNodeId];
       if (from == null || to == null) continue;
+
+      final isSelected = edge.id == selectedEdgeId;
+      final lineColor = isSelected ? selectedColor : normalColor;
+      linePaint
+        ..color = lineColor
+        ..strokeWidth = isSelected ? 3.0 : 2.0;
+      arrowPaint.color = lineColor;
 
       Offset start = from.bottomPort;
       Offset end = to.topPort;

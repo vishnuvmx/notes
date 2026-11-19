@@ -13,7 +13,7 @@ import '../../core/theme/app_spacing.dart';
 class TackCardOpenContainer extends StatelessWidget {
   final WidgetBuilder openBuilder;
   final Widget Function(BuildContext context, VoidCallback openContainer)
-      closedBuilder;
+  closedBuilder;
   final ShapeBorder? closedShape;
   final Color? closedColor;
   final Color? openColor;
@@ -28,7 +28,7 @@ class TackCardOpenContainer extends StatelessWidget {
     this.closedColor,
     this.openColor,
     this.closedShadows,
-    this.transitionDuration = const Duration(milliseconds: 380),
+    this.transitionDuration = const Duration(milliseconds: 300),
   });
 
   @override
@@ -36,7 +36,8 @@ class TackCardOpenContainer extends StatelessWidget {
     final tokens = context.tokens;
     final resolvedClosedColor = closedColor ?? tokens.surfacePrimary;
     final resolvedOpenColor = openColor ?? tokens.canvasPrimary;
-    final resolvedShape = closedShape ??
+    final resolvedShape =
+        closedShape ??
         SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
           smoothness: AppSpacing.defaultSmoothing,
@@ -60,7 +61,7 @@ class TackCardOpenContainer extends StatelessWidget {
       closedShadows: closedShadows ?? AppSpacing.elev1(tokens.isDark),
       openShadows: const [],
       closedBuilder: closedBuilder,
-      openBuilder: (context, _) => openBuilder(context),
+      openBuilder: (context, _) => RepaintBoundary(child: openBuilder(context)),
     );
   }
 }

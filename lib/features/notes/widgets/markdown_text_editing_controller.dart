@@ -8,6 +8,11 @@ import 'code_syntax_highlighter.dart';
 /// underline, highlights, and tags inside any editor or input TextField.
 class MarkdownTextEditingController extends TextEditingController {
   String? _paletteId;
+  String? _cachedText;
+  bool? _cachedIsDark;
+  String? _cachedPaletteId;
+  TextStyle? _cachedBaseStyle;
+  TextSpan? _cachedSpan;
 
   MarkdownTextEditingController({super.text, String? paletteId}) {
     _paletteId = paletteId;
@@ -17,6 +22,7 @@ class MarkdownTextEditingController extends TextEditingController {
   set paletteId(String? val) {
     if (_paletteId != val) {
       _paletteId = val;
+      _cachedSpan = null;
       notifyListeners();
     }
   }
@@ -44,11 +50,20 @@ class MarkdownTextEditingController extends TextEditingController {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final palette = AppColors.getPaletteById(_paletteId);
     final text = this.text;
     if (text.isEmpty) {
       return TextSpan(text: '', style: style);
     }
+
+    if (_cachedSpan != null &&
+        _cachedText == text &&
+        _cachedIsDark == isDark &&
+        _cachedPaletteId == _paletteId &&
+        _cachedBaseStyle == style) {
+      return _cachedSpan!;
+    }
+
+    final palette = AppColors.getPaletteById(_paletteId);
 
     final spans = <TextSpan>[];
     final delimiterStyle = style?.copyWith(
@@ -154,7 +169,13 @@ class MarkdownTextEditingController extends TextEditingController {
       );
     }
 
-    return TextSpan(children: spans, style: style);
+    final built = TextSpan(children: spans, style: style);
+    _cachedText = text;
+    _cachedIsDark = isDark;
+    _cachedPaletteId = _paletteId;
+    _cachedBaseStyle = style;
+    _cachedSpan = built;
+    return built;
   }
 
   void _appendBlockAndInlineSpans(

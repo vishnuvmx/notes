@@ -18,8 +18,8 @@ class TackRoutes {
 
   static Route<T> sharedAxisHorizontal<T>(Widget page) {
     return PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 210),
+      transitionDuration: const Duration(milliseconds: 260),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (_, _, _) => page,
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         return _SecondaryAxisMotion(
@@ -27,7 +27,7 @@ class TackRoutes {
           endOffset: const Offset(-0.08, 0),
           child: TackAnimatedTransition(
             animation: animation,
-            slideBegin: const Offset(0.16, 0),
+            slideBegin: const Offset(0.14, 0),
             child: child,
           ),
         );
@@ -37,8 +37,8 @@ class TackRoutes {
 
   static Route<T> slideUp<T>(Widget page) {
     return PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 300),
-      reverseTransitionDuration: const Duration(milliseconds: 210),
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (_, _, _) => page,
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         return _SecondaryAxisMotion(
@@ -46,7 +46,7 @@ class TackRoutes {
           endOffset: const Offset(0, -0.025),
           child: TackAnimatedTransition(
             animation: animation,
-            slideBegin: const Offset(0, 0.12),
+            slideBegin: const Offset(0, 0.10),
             child: child,
           ),
         );
@@ -67,9 +67,9 @@ class TackRoutes {
 
     return AnimatedBuilder(
       animation: animation,
-      child: targetHero.child,
+      child: RepaintBoundary(child: targetHero.child),
       builder: (_, child) {
-        final t = Curves.easeOutCubic.transform(animation.value);
+        final t = AppSpacing.silky120Hz.transform(animation.value);
         final radius = BorderRadius.lerp(
           BorderRadius.circular(AppSpacing.radiusMd),
           BorderRadius.zero,
@@ -124,7 +124,7 @@ class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
   void _initCurve() {
     _curved = CurvedAnimation(
       parent: widget.secondaryAnimation,
-      curve: Curves.easeOutCubic,
+      curve: AppSpacing.silky120Hz,
       reverseCurve: Curves.easeInCubic,
     );
     _offsetAnim = widget.endOffset == Offset.zero
@@ -146,7 +146,7 @@ class _SecondaryAxisMotionState extends State<_SecondaryAxisMotion> {
     if (_offsetAnim != null) {
       return SlideTransition(
         position: _offsetAnim!,
-        child: widget.child,
+        child: RepaintBoundary(child: widget.child),
       );
     }
     return widget.child;

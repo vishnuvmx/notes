@@ -3692,10 +3692,12 @@ void _openImageLightbox(
 
 /// Resolves network URLs, bundled Flutter assets (`assets/...` or `asset:...`),
 /// and local filesystem image paths into a single widget with uniform error fallback.
+/// Uses bounded `cacheWidth` and avoids synchronous `File.existsSync()` on the UI thread.
 Widget _buildResolvedMarkdownImage(
   String cleanUrl, {
   BoxFit fit = BoxFit.contain,
   double? height,
+  int? cacheWidth = 1280,
   required Widget fallback,
   ImageLoadingBuilder? loadingBuilder,
 }) {
@@ -3703,6 +3705,7 @@ Widget _buildResolvedMarkdownImage(
     return Image.network(
       cleanUrl,
       height: height,
+      cacheWidth: cacheWidth,
       fit: fit,
       loadingBuilder: loadingBuilder,
       errorBuilder: (_, _, _) => fallback,
@@ -3715,20 +3718,19 @@ Widget _buildResolvedMarkdownImage(
     return Image.asset(
       assetPath,
       height: height,
+      cacheWidth: cacheWidth,
       fit: fit,
       errorBuilder: (_, _, _) => fallback,
     );
   }
-  if (!kIsWeb) {
-    final file = File(cleanUrl);
-    if (file.existsSync()) {
-      return Image.file(
-        file,
-        height: height,
-        fit: fit,
-        errorBuilder: (_, _, _) => fallback,
-      );
-    }
+  if (!kIsWeb && cleanUrl.isNotEmpty) {
+    return Image.file(
+      File(cleanUrl),
+      height: height,
+      cacheWidth: cacheWidth,
+      fit: fit,
+      errorBuilder: (_, _, _) => fallback,
+    );
   }
   return fallback;
 }

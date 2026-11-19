@@ -23,12 +23,12 @@ class AppSpacing {
   static const double s11 = 64.0;
 
   // Backwards-compatible named spacing tokens
-  static const double xs = s2;   // 4dp
-  static const double sm = s3;   // 8dp
-  static const double md = s4;   // 12dp
-  static const double lg = s5;   // 16dp
-  static const double xl = s7;   // 24dp
-  static const double xxl = s8;  // 32dp
+  static const double xs = s2; // 4dp
+  static const double sm = s3; // 8dp
+  static const double md = s4; // 12dp
+  static const double lg = s5; // 16dp
+  static const double xl = s7; // 24dp
+  static const double xxl = s8; // 32dp
   static const double xxxl = s10; // 48dp
 
   // ================= Layout & Touch Metrics (07-design-system.md §4.2) =================
@@ -107,15 +107,30 @@ class AppSpacing {
   /// `radius/pill` — 999dp (tags, floating nav bar, and the Capture button)
   static const double radiusPill = 999.0;
 
-  static const BorderRadius roundedXs = BorderRadius.all(Radius.circular(radiusXs));
-  static const BorderRadius roundedSm = BorderRadius.all(Radius.circular(radiusSm));
-  static const BorderRadius roundedMd = BorderRadius.all(Radius.circular(radiusMd));
-  static const BorderRadius roundedLg = BorderRadius.all(Radius.circular(radiusLg));
-  static const BorderRadius roundedModal = BorderRadius.all(Radius.circular(radiusModal));
-  static const BorderRadius roundedXl = BorderRadius.all(Radius.circular(radiusXl));
-  static const BorderRadius roundedPill = BorderRadius.all(Radius.circular(radiusPill));
-  static const BorderRadius sheetTopRadius =
-      BorderRadius.all(Radius.circular(radiusModal));
+  static const BorderRadius roundedXs = BorderRadius.all(
+    Radius.circular(radiusXs),
+  );
+  static const BorderRadius roundedSm = BorderRadius.all(
+    Radius.circular(radiusSm),
+  );
+  static const BorderRadius roundedMd = BorderRadius.all(
+    Radius.circular(radiusMd),
+  );
+  static const BorderRadius roundedLg = BorderRadius.all(
+    Radius.circular(radiusLg),
+  );
+  static const BorderRadius roundedModal = BorderRadius.all(
+    Radius.circular(radiusModal),
+  );
+  static const BorderRadius roundedXl = BorderRadius.all(
+    Radius.circular(radiusXl),
+  );
+  static const BorderRadius roundedPill = BorderRadius.all(
+    Radius.circular(radiusPill),
+  );
+  static const BorderRadius sheetTopRadius = BorderRadius.all(
+    Radius.circular(radiusModal),
+  );
 
   /// Standardized interior padding for 28dp floating modal sheets so titles and
   /// controls stay generously clear of the squircle corner curvature.
@@ -135,36 +150,31 @@ class AppSpacing {
     BorderRadius radius, {
     double smoothness = defaultSmoothing,
     BorderSide side = BorderSide.none,
-  }) =>
-      SmoothRectangleBorder(
-        borderRadius: radius,
-        smoothness: smoothness,
-        side: side,
-      );
+  }) => SmoothRectangleBorder(
+    borderRadius: radius,
+    smoothness: smoothness,
+    side: side,
+  );
 
   static SmoothRectangleBorder smoothSm({
     double smoothness = defaultSmoothing,
     BorderSide side = BorderSide.none,
-  }) =>
-      smoothBorder(roundedSm, smoothness: smoothness, side: side);
+  }) => smoothBorder(roundedSm, smoothness: smoothness, side: side);
 
   static SmoothRectangleBorder smoothMd({
     double smoothness = defaultSmoothing,
     BorderSide side = BorderSide.none,
-  }) =>
-      smoothBorder(roundedMd, smoothness: smoothness, side: side);
+  }) => smoothBorder(roundedMd, smoothness: smoothness, side: side);
 
   static SmoothRectangleBorder smoothLg({
     double smoothness = defaultSmoothing,
     BorderSide side = BorderSide.none,
-  }) =>
-      smoothBorder(roundedLg, smoothness: smoothness, side: side);
+  }) => smoothBorder(roundedLg, smoothness: smoothness, side: side);
 
   static SmoothRectangleBorder smoothModal({
     double smoothness = defaultSmoothing,
     BorderSide side = BorderSide.none,
-  }) =>
-      smoothBorder(roundedModal, smoothness: smoothness, side: side);
+  }) => smoothBorder(roundedModal, smoothness: smoothness, side: side);
 
   /// Creates a [ShapeDecoration] with 60% corner smoothing and optional soft shadow.
   static ShapeDecoration smoothDecoration({
@@ -173,16 +183,15 @@ class AppSpacing {
     double smoothness = defaultSmoothing,
     List<BoxShadow> shadows = const [],
     BorderSide side = BorderSide.none,
-  }) =>
-      ShapeDecoration(
-        color: color,
-        shadows: shadows,
-        shape: SmoothRectangleBorder(
-          borderRadius: borderRadius,
-          smoothness: smoothness,
-          side: side,
-        ),
-      );
+  }) => ShapeDecoration(
+    color: color,
+    shadows: shadows,
+    shape: SmoothRectangleBorder(
+      borderRadius: borderRadius,
+      smoothness: smoothness,
+      side: side,
+    ),
+  );
 
   // ================= Elevation & Scrim (11-reference-ui-style.md §4) =================
   /// `elev/0` — Flat content separated by 1dp hairlines (no shadow).
@@ -191,33 +200,33 @@ class AppSpacing {
   /// `elev/1` — Soft diffused shadow on white cards floating over #F3F4F6 canvas (blur 14, y 3, alpha 0.04-0.05).
   /// Sized specifically to prevent GPU offscreen buffer bounding-box clipping artifacts on Android.
   static List<BoxShadow> elev1([bool isDark = false]) => [
-        BoxShadow(
-          color: isDark ? const Color(0x38000000) : const Color(0x0C000000),
-          blurRadius: 14,
-          offset: const Offset(0, 3),
-          spreadRadius: 0,
-        ),
-      ];
+    BoxShadow(
+      color: isDark ? const Color(0x38000000) : const Color(0x0C000000),
+      blurRadius: 14,
+      offset: const Offset(0, 3),
+      spreadRadius: 0,
+    ),
+  ];
 
   /// `elev/2` — Bottom sheets, floating nav pill, dialogs (blur 20, y 6, alpha 0.08-0.10).
   static List<BoxShadow> elev2([bool isDark = false]) => [
-        BoxShadow(
-          color: isDark ? const Color(0x4D000000) : const Color(0x14000000),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
-          spreadRadius: 0,
-        ),
-      ];
+    BoxShadow(
+      color: isDark ? const Color(0x4D000000) : const Color(0x14000000),
+      blurRadius: 20,
+      offset: const Offset(0, 6),
+      spreadRadius: 0,
+    ),
+  ];
 
   /// `elev/modal` — Floating island modals and custom dialogs (blur 28, y 10, alpha 0.12-0.40).
   static List<BoxShadow> elevModal([bool isDark = false]) => [
-        BoxShadow(
-          color: isDark ? const Color(0x66000000) : const Color(0x1F000000),
-          blurRadius: 28,
-          offset: const Offset(0, 10),
-          spreadRadius: 0,
-        ),
-      ];
+    BoxShadow(
+      color: isDark ? const Color(0x66000000) : const Color(0x1F000000),
+      blurRadius: 28,
+      offset: const Offset(0, 10),
+      spreadRadius: 0,
+    ),
+  ];
 
   /// `scrim` — Dark, semi-transparent dimmed background (0x99000000 = 60% black) per reference UI.
   static const Color scrim = Color(0x99000000);
@@ -245,8 +254,11 @@ class AppSpacing {
   static const Duration mediumAnim = Duration(milliseconds: 250);
   static const Duration slowAnim = Duration(milliseconds: 250);
 
-  /// Single canonical easing curve (`easeOutCubic`; no bounce/spring).
-  static const Curve smoothCurve = Curves.easeOutCubic;
+  /// Canonical 120Hz deceleration curve (zero overshoot, ultra-smooth settle).
+  static const Curve silky120Hz = Cubic(0.22, 1.0, 0.36, 1.0);
+
+  /// Single canonical easing curve (`silky120Hz`; zero bounce/overshoot).
+  static const Curve smoothCurve = silky120Hz;
   static const Curve curveStandard = smoothCurve;
-  static const Curve bouncyCurve = Curves.easeOutCubic;
+  static const Curve bouncyCurve = silky120Hz;
 }

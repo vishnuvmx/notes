@@ -153,6 +153,11 @@ class MainActivity : FlutterActivity() {
         handleIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        enableHighRefreshRate()
+    }
+
     private fun enableHighRefreshRate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val activeDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -168,10 +173,20 @@ class MainActivity : FlutterActivity() {
                         it.physicalHeight == currentMode.physicalHeight
                 }
                 .maxByOrNull { it.refreshRate }
-            if (bestMode != null && bestMode.modeId != currentMode.modeId) {
+            if (bestMode != null) {
                 val params = window.attributes
-                params.preferredDisplayModeId = bestMode.modeId
-                window.attributes = params
+                var changed = false
+                if (params.preferredDisplayModeId != bestMode.modeId) {
+                    params.preferredDisplayModeId = bestMode.modeId
+                    changed = true
+                }
+                if (params.preferredRefreshRate != bestMode.refreshRate) {
+                    params.preferredRefreshRate = bestMode.refreshRate
+                    changed = true
+                }
+                if (changed) {
+                    window.attributes = params
+                }
             }
         }
     }

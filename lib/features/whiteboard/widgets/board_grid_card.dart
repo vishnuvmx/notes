@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -160,12 +161,14 @@ class _BoardGridCardState extends State<BoardGridCard> {
                         width: 0.8,
                       ),
                     ),
-                    child: CustomPaint(
-                      painter: _BoardMiniThumbnailPainter(
-                        nodes: widget.board.nodes,
-                        edges: widget.board.edges,
-                        tokens: tokens,
-                        accentBandColor: bandColor,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _BoardMiniThumbnailPainter(
+                          nodes: widget.board.nodes,
+                          edges: widget.board.edges,
+                          tokens: tokens,
+                          accentBandColor: bandColor,
+                        ),
                       ),
                     ),
                   ),
@@ -185,10 +188,10 @@ class _BoardGridCardState extends State<BoardGridCard> {
     final bandColor = palette.resolveCardColor(tokens.isDark);
     final displayTitle =
         (widget.board.iconEmoji != null && widget.board.iconEmoji!.isNotEmpty)
-            ? '${widget.board.iconEmoji} ${widget.board.title}'
-            : (widget.board.title.trim().isEmpty
-                ? 'Untitled Board'
-                : widget.board.title);
+        ? '${widget.board.iconEmoji} ${widget.board.title}'
+        : (widget.board.title.trim().isEmpty
+              ? 'Untitled Board'
+              : widget.board.title);
 
     final cardShape = SmoothRectangleBorder(
       borderRadius: AppSpacing.roundedMd,
@@ -289,8 +292,9 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
     const pad = 12.0;
     final availW = math.max(size.width - pad * 2, 20.0);
     final availH = math.max(size.height - pad * 2, 20.0);
-    final scale =
-        math.min(availW / contentW, availH / contentH).clamp(0.06, 0.42);
+    final scale = math
+        .min(availW / contentW, availH / contentH)
+        .clamp(0.06, 0.42);
 
     final scaledW = contentW * scale;
     final scaledH = contentH * scale;
@@ -361,8 +365,7 @@ class _BoardMiniThumbnailPainter extends CustomPainter {
           canvas.drawCircle(rect.center, r, strokePaint);
           break;
         default:
-          final rrect =
-              RRect.fromRectAndRadius(rect, const Radius.circular(3));
+          final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
           canvas.drawRRect(rrect, fillPaint);
           canvas.drawRRect(rrect, strokePaint);
           break;
