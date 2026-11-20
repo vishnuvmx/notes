@@ -1,20 +1,5 @@
 # Session Log
 
-### [2026-11-18 06:49:59] Checkpoint
-- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Reported the `429 Too Many Requests` (`RESOURCE_EXHAUSTED`) quota error from `generate_image...
-- **Model**: gemini-4-hydrogen-tiered-high
-- **Modified**: lib/core/theme/app_theme.dart, lib/core/theme/tack_icons.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/markdown_table_editor_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, pubspec.lock, pubspec.yaml, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart, assets/images/onboarding/floating_cloud_meadows.jpg, docs/design/onboarding-references/01-floating-cloud-meadows.jpg, docs/design/onboarding-references/02-soft-lavender-narrative-panels.jpg, docs/design/onboarding-references/03-clear-horizon-meadow-ocean.jpg, docs/design/onboarding-references/04-soft-3d-clay-icons.png, docs/design/onboarding-references/05-diecut-sticker-icons-paper-grid.jpg, docs/design/onboarding-references/06-risograph-grain-botanicals-dark.jpg
-
-### [2026-11-18 06:50:01] Checkpoint
-- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Reported the `429 RESOURCE_EXHAUSTED` quota/capacity error to the parent agent via `send_mes...
-- **Model**: gemini-4-hydrogen-tiered-high
-- **Modified**: lib/core/theme/app_theme.dart, lib/core/theme/tack_icons.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/markdown_table_editor_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, pubspec.lock, pubspec.yaml, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart, assets/images/onboarding/floating_cloud_meadows.jpg, docs/design/onboarding-references/01-floating-cloud-meadows.jpg, docs/design/onboarding-references/02-soft-lavender-narrative-panels.jpg, docs/design/onboarding-references/03-clear-horizon-meadow-ocean.jpg, docs/design/onboarding-references/04-soft-3d-clay-icons.png, docs/design/onboarding-references/05-diecut-sticker-icons-paper-grid.jpg, docs/design/onboarding-references/06-risograph-grain-botanicals-dark.jpg
-
-### [2026-11-18 06:50:17] Checkpoint
-- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Done—generated the 1:1 onboarding hero illustration and sent the artifact path and notes to ...
-- **Model**: gemini-4-hydrogen-tiered-high
-- **Modified**: lib/core/theme/app_theme.dart, lib/core/theme/tack_icons.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/markdown_table_editor_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, pubspec.lock, pubspec.yaml, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart, assets/images/onboarding/floating_cloud_meadows.jpg, docs/design/onboarding-references/01-floating-cloud-meadows.jpg, docs/design/onboarding-references/02-soft-lavender-narrative-panels.jpg, docs/design/onboarding-references/03-clear-horizon-meadow-ocean.jpg, docs/design/onboarding-references/04-soft-3d-clay-icons.png, docs/design/onboarding-references/05-diecut-sticker-icons-paper-grid.jpg, docs/design/onboarding-references/06-risograph-grain-botanicals-dark.jpg
-
 ### [2026-11-18 06:50:40] Checkpoint
 - **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Slide 1 custom illustration (`slide1_tactile_grid.jpg`) looks great and is saved in `assets/...
 - **Model**: gemini-4-hydrogen-xhigh
@@ -240,3 +225,18 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "Make all the animations you did yesterday 120 fps smoother please.." — All of yesterday's animations have been tuned for silky **120Hz** compositing, zero per-fram...
 - **Model**: gemini-4-neon-medium
 - **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/core/routing/tack_routes.dart, lib/core/theme/app_spacing.dart, lib/core/theme/app_theme.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/tack_card_open_container.dart
+
+### [2026-11-19 11:43:49] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Im going to use Google AI Studio for this project. Add custom instructions for your pro..." — I created AI_STUDIO_INSTRUCTIONS.md at the root of your project with ready-to-paste **System...
+- **Model**: gemini-4-neon-medium
+- **Modified**: AI_STUDIO_INSTRUCTIONS.md
+
+### [2026-11-20 12:42:13] Checkpoint
+- **Summary**: [gemini-3.8-flash-medium] Chat: "npm i @vishnuvmx/recall-memory got a v0.5.0. update to it." — Checking the current recall package installation and updating to `@vishnuvmx/recall-memory@0...
+- **Model**: gemini-3.8-flash-medium
+- **Modified**: AI_STUDIO_INSTRUCTIONS.md, package-lock.json, package.json
+
+### [2026-11-20 12:43:33] Checkpoint
+- **Summary**: [gemini-3.8-flash-medium] Chat: "npm i @vishnuvmx/recall-memory got a v0.5.0. update to it." — `@vishnuvmx/recall-memory` has been updated to **`v0.5.0`** across both global and workspace...
+- **Model**: gemini-3.8-flash-medium
+- **Modified**: AI_STUDIO_INSTRUCTIONS.md, package-lock.json, package.json

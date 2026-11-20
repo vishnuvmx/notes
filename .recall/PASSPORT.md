@@ -6,7 +6,8 @@
 ## 1. Identity & Tech Stack
 - **Project**: `notes`
 - **Purpose**: Tack Tactile Note-Taking, Flowchart Whiteboards, Sticky Notes & Clipboard Management for Android Built with Flutter & Dart
-- **Stack**: Flutter / Dart
+- **Stack**: Node.js · Flutter / Dart
+- **Runtime Dependencies**: `@vishnuvmx/recall-memory`
 
 ## 3. Non-Volatile Rules, Decisions & Invariants
 - **[decision] Locked Product & Navigation Rules**: Notes view in Tack is GRID ONLY (no list-view mode or toggle anywhere). No redundant buttons on the same screen. Note navigation follows ... _(mem_001)_
@@ -31,6 +32,6 @@
 - `lib/core/services/pinned_notification_service.dart`: `PinnedNotificationService`
 - `lib/core/services/process_text_service.dart`: `IncomingTextData`, `ProcessTextService`
 - `lib/core/services/task_reminder_service.dart`: `TaskReminderPayload`, `TaskReminderService`
-- `lib/core/theme/app_colors.dart`: `AppColors`, `TackColorPalette`
-- _... (87 more modules — query `recall where <name>`)_
+
+> _[Passport capped at 4200 chars. Use `recall context` or `recall where` for details.]_
 <!-- recall:passport:end -->

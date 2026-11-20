@@ -523,9 +523,9 @@ When modifying UI components, reuse tokens from:
 |-- .gitignore
 |-- .metadata
 |-- AGENTS.md
+|-- AI_STUDIO_INSTRUCTIONS.md
 |-- analysis_options.yaml
 |-- AUDIT.md
-|-- CONTRIBUTING.md
-\-- ... (7 more files)
+\-- ... (8 more files)
 ```
 <!-- recall:project-map:end -->
