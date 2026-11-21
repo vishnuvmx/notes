@@ -3754,6 +3754,7 @@ class _ImageLightboxViewer extends StatelessWidget {
     final imageWidget = _buildResolvedMarkdownImage(
       cleanUrl,
       fit: BoxFit.contain,
+      cacheWidth: 2048,
       loadingBuilder: (_, child, progress) {
         if (progress == null) return child;
         return const Center(
@@ -3771,82 +3772,110 @@ class _ImageLightboxViewer extends StatelessWidget {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Interactive Pinch & Zoom Image Area
-            Center(
+      backgroundColor: Colors.black.withValues(alpha: 0.96),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Full-viewport Interactive Pinch & Zoom Area (no inner clip cutout)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => Navigator.of(context).pop(),
               child: InteractiveViewer(
-                minScale: 0.5,
+                clipBehavior: Clip.none,
+                minScale: 0.8,
                 maxScale: 4.5,
-                boundaryMargin: const EdgeInsets.all(60),
-                child: heroTag != null
-                    ? Hero(
-                        tag: heroTag!,
-                        flightShuttleBuilder: TackRoutes.heroImageShuttle,
-                        child: imageWidget,
-                      )
-                    : imageWidget,
+                boundaryMargin: const EdgeInsets.all(double.infinity),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xl,
+                    ),
+                    child: heroTag != null
+                        ? Hero(
+                            tag: heroTag!,
+                            flightShuttleBuilder: TackRoutes.heroImageShuttle,
+                            child: imageWidget,
+                          )
+                        : imageWidget,
+                  ),
+                ),
               ),
             ),
+          ),
 
-            // Top action bar
-            Positioned(
-              top: 8,
-              left: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  // Close button
-                  IconButton(
-                    icon: const TackIcon(
-                      TackIcons.close,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black45,
-                      shape: const CircleBorder(),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
-                  if (alt.isNotEmpty && alt != 'Image')
-                    Expanded(
-                      child: Text(
-                        alt,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                  if (isNetwork)
+          // Top action bar (safe below status bar)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.s2,
+                ),
+                child: Row(
+                  children: [
+                    // Close button
                     IconButton(
                       icon: const TackIcon(
-                        TackIcons.externalLink,
+                        TackIcons.close,
                         color: Colors.white,
                         size: 22,
                       ),
-                      tooltip: 'Open in browser',
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.black45,
+                        backgroundColor: Colors.black54,
+                        minimumSize: const Size(
+                          AppSpacing.minTouchTarget,
+                          AppSpacing.minTouchTarget,
+                        ),
                         shape: const CircleBorder(),
                       ),
-                      onPressed: () =>
-                          UrlLauncherHelper.openUrl(context, cleanUrl),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                ],
+                    const SizedBox(width: 12),
+                    if (alt.isNotEmpty && alt != 'Image')
+                      Expanded(
+                        child: Text(
+                          alt,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.label(
+                            color: Colors.white,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    if (isNetwork)
+                      IconButton(
+                        icon: const TackIcon(
+                          TackIcons.externalLink,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        tooltip: 'Open in browser',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black54,
+                          minimumSize: const Size(
+                            AppSpacing.minTouchTarget,
+                            AppSpacing.minTouchTarget,
+                          ),
+                          shape: const CircleBorder(),
+                        ),
+                        onPressed: () =>
+                            UrlLauncherHelper.openUrl(context, cleanUrl),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -3938,14 +3967,14 @@ class _TaskMetaBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TackIcon(icon, size: 11, color: color),
+          TackIcon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            style: AppTypography.caption(
               color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
+              fontSize: 11.5,
+              weight: FontWeight.w400,
             ),
           ),
         ],

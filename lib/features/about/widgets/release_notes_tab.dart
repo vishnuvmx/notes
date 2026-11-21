@@ -207,11 +207,11 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
               ZOrderColumn(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Hero Release Card (v2.0.0)
+                  // 1. Clean Editorial Release Header (no badge spam)
                   _buildHeroReleaseBanner(tokens),
                   const SizedBox(height: AppSpacing.s4),
 
-                  // 2. Interactive Category Filter Pills (Soft Monochrome Segmented Pills)
+                  // 2. Category Filter Pills
                   SingleChildScrollView(
                     clipBehavior: Clip.hardEdge,
                     scrollDirection: Axis.horizontal,
@@ -224,7 +224,8 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                             label: cat.label,
                             semanticsLabel: '${cat.label} category filter',
                             isSelected: selected,
-                            onTap: () => setState(() => _selectedCategory = cat),
+                            onTap: () =>
+                                setState(() => _selectedCategory = cat),
                           ),
                         );
                       }).toList(),
@@ -232,12 +233,12 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                   ),
                   const SizedBox(height: AppSpacing.s4),
 
-                  // 3. Major Feature Cards
-                  ...filtered.map((entry) => _buildReleaseCard(entry, tokens)),
+                  // 3. Clean Hairline-Divided Changelog List
+                  _buildChangelogSurface(filtered, tokens),
 
-                  const SizedBox(height: AppSpacing.s3),
+                  const SizedBox(height: AppSpacing.s4),
 
-                  // 4. Previous Milestone Card (v1.0.0)
+                  // 4. Previous Milestone Footnote (v1.0.0)
                   _buildPreviousVersionCard(tokens),
                 ],
               ),
@@ -249,225 +250,135 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
   }
 
   Widget _buildHeroReleaseBanner(TackTokens tokens) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.all(AppSpacing.s5),
-      decoration: ShapeDecoration(
-        color: tokens.surfacePrimary,
-        shape: SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedLg,
-          smoothness: AppSpacing.defaultSmoothing,
-        ),
-        shadows: AppSpacing.elev1(tokens.isDark),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: Wrap(
-              spacing: AppSpacing.s2,
-              runSpacing: AppSpacing.s2,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s3,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.actionPrimary,
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Text(
-                    'v2.0.0  •  MAJOR UPDATE',
-                    style: AppTypography.caption(
-                      color: tokens.actionPrimaryFg,
-                      weight: FontWeight.w700,
-                    ),
-                  ),
+          Row(
+            children: [
+              Text(
+                'v2.0.0',
+                style: AppTypography.mono(
+                  fontSize: 12,
+                  weight: FontWeight.w700,
+                  color: tokens.textPrimary,
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s3,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.canvasSunken,
-                    borderRadius: AppSpacing.roundedPill,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TackIcon(
-                        TackIcons.lock,
-                        size: 12,
-                        color: tokens.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '100% Local-First',
-                        style: AppTypography.caption(
-                          color: tokens.textSecondary,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
+                child: Text(
+                  '·',
+                  style: AppTypography.caption(color: tokens.textTertiary),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s4),
-          Text(
-            'Soft Monochrome Desk, Connected Specs & Knowledge Graph',
-            style: AppTypography.title(color: tokens.textPrimary),
+              ),
+              Text(
+                'Local-First Workspace',
+                style: AppTypography.caption(
+                  color: tokens.textSecondary,
+                  weight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.s2),
           Text(
-            'Designed for tactile Android speed—bringing your daily note, inbox triage, structured specs, and infinite boards together offline without accounts or cloud lock-in.',
-            style: AppTypography.bodySm(color: tokens.textSecondary),
+            'Connected Specs, Daily Desk & Knowledge Graph',
+            style: AppTypography.titleLg(
+              color: tokens.textPrimary,
+              fontSize: 22,
+            ),
           ),
-          const SizedBox(height: AppSpacing.s4),
-          Wrap(
-            spacing: AppSpacing.s2,
-            runSpacing: AppSpacing.s2,
-            children: [
-              _buildMetricChip('Soft Monochrome UI', 'coral', tokens),
-              _buildMetricChip('2-Way Board ↔ Spec Sync', 'peach', tokens),
-              _buildMetricChip('1-Tap Daily & Inbox', 'amber', tokens),
-            ],
+          const SizedBox(height: AppSpacing.s2),
+          Text(
+            'Daily note carry-forward, inbox triage, structured specs, and infinite boards—100% offline with zero accounts or lock-in.',
+            style: AppTypography.bodySm(color: tokens.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricChip(String text, String paletteId, TackTokens tokens) {
-    final palette = AppColors.getPaletteById(paletteId);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: palette.resolveSoftBackground(tokens.isDark),
-        borderRadius: AppSpacing.roundedPill,
-      ),
-      child: Text(
-        text,
-        style: AppTypography.caption(
-          color: palette.resolveAccentColor(tokens.isDark),
-          weight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReleaseCard(_ReleaseEntry entry, TackTokens tokens) {
-    final palette = AppColors.getPaletteById(entry.paletteId);
-    final accent = palette.resolveAccentColor(tokens.isDark);
-    final softBg = palette.resolveSoftBackground(tokens.isDark);
-
+  Widget _buildChangelogSurface(
+    List<_ReleaseEntry> entries,
+    TackTokens tokens,
+  ) {
     return Container(
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: AppSpacing.s3),
-      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
         shape: SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
           smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
         ),
-        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < entries.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: AppSpacing.s4,
+                endIndent: AppSpacing.s4,
+                color: tokens.borderSubtle,
+              ),
+            _buildReleaseRow(entries[i], tokens),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReleaseRow(_ReleaseEntry entry, TackTokens tokens) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: softBg,
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-                child: Text(
-                  entry.badge,
-                  style: AppTypography.caption(
-                    color: accent,
-                    weight: FontWeight.w600,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: tokens.canvasSunken,
+              borderRadius: AppSpacing.roundedSm,
+            ),
+            child: Center(
+              child: TackIcon(entry.icon, size: 17, color: tokens.textPrimary),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.title,
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    fontSize: 15,
                   ),
                 ),
-              ),
-              if (entry.syntaxHint != null) ...[
-                const SizedBox(width: AppSpacing.s2),
-                Expanded(
-                  child: Text(
+                const SizedBox(height: 4),
+                Text(
+                  entry.summary,
+                  style: AppTypography.bodySm(color: tokens.textSecondary),
+                ),
+                if (entry.syntaxHint != null) ...[
+                  const SizedBox(height: AppSpacing.s2),
+                  Text(
                     entry.syntaxHint!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: AppTypography.caption(
-                      weight: FontWeight.w600,
+                    style: AppTypography.mono(
+                      fontSize: 11.5,
                       color: tokens.textTertiary,
                     ),
                   ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s3),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: ShapeDecoration(
-              color: softBg,
-              shape: SmoothRectangleBorder(
-                borderRadius: AppSpacing.roundedSm,
-                smoothness: AppSpacing.defaultSmoothing,
-              ),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 3.5,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: AppSpacing.roundedPill,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.s3),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            TackIcon(entry.icon, size: 17, color: accent),
-                            const SizedBox(width: AppSpacing.s2),
-                            Expanded(
-                              child: Text(
-                                entry.title,
-                                style: AppTypography.titleSm(
-                                  color: tokens.textPrimary,
-                                  fontSize: 15.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          entry.summary,
-                          style: AppTypography.bodySm(
-                            color: tokens.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ],
@@ -484,37 +395,31 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
         shape: SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
           smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
         ),
-        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: tokens.canvasSunken,
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-                child: Text(
-                  'v1.0.0',
-                  style: AppTypography.caption(
-                    color: tokens.textSecondary,
-                    weight: FontWeight.w600,
-                  ),
+              Text(
+                'v1.0.0',
+                style: AppTypography.mono(
+                  fontSize: 12,
+                  weight: FontWeight.w600,
+                  color: tokens.textSecondary,
                 ),
               ),
               const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: Text(
-                  'Initial Tactile Workspace Foundation',
-                  maxLines: 2,
+                  'Initial Workspace Foundation',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.titleSm(
                     color: tokens.textPrimary,
-                    fontSize: 15,
+                    fontSize: 14.5,
                   ),
                 ),
               ),
@@ -522,7 +427,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
           ),
           const SizedBox(height: 6),
           Text(
-            '8 curated object palettes, infinite flowchart whiteboard canvas, inline Mermaid diagram renderer, smart capture deduplication, and offline JSON/PDF/PNG export.',
+            '8 curated palettes, infinite flowchart whiteboard canvas, inline Mermaid diagrams, smart capture deduplication, and offline JSON/PDF/PNG export.',
             style: AppTypography.bodySm(color: tokens.textSecondary),
           ),
         ],

@@ -122,9 +122,11 @@ class SmartBottomNavBar extends StatelessWidget {
           child: InkWell(
             key: ValueKey('nav_item_${item.index}'),
             customBorder: const StadiumBorder(),
-            splashColor: tokens.textPrimary.withValues(alpha: 0.08),
-            highlightColor: tokens.textPrimary.withValues(alpha: 0.05),
-            hoverColor: tokens.textPrimary.withValues(alpha: 0.04),
+            splashFactory: NoSplash.splashFactory,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            focusColor: Colors.transparent,
             onTap: () {
               HapticFeedback.selectionClick();
               onTap(item.index);

@@ -34,7 +34,6 @@ import '../widgets/document_outline_sheet.dart';
 import '../../../shared/widgets/ios_menu_button.dart';
 import '../widgets/note_statistics_sheet.dart';
 import '../widgets/slash_command_sheet.dart';
-import '../widgets/frontmatter_properties_bar.dart';
 import '../widgets/markdown_text_editing_controller.dart';
 import '../widgets/rich_note_content_view.dart';
 import '../widgets/smart_markdown_formatter.dart';
@@ -2047,7 +2046,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           centerTitle: false,
           titleSpacing: AppSpacing.md,
           title: IconButton(
-            icon: TackIcon(TackIcons.back, size: 22, color: accent),
+            icon: TackIcon(TackIcons.back, size: 22, color: tokens.textPrimary),
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             onPressed: _handleBackPress,
@@ -2056,7 +2055,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           actions: [
             if (hasHeadings)
               IconButton(
-                icon: TackIcon(TackIcons.nestedList, size: 20, color: accent),
+                icon: TackIcon(
+                  TackIcons.nestedList,
+                  size: 20,
+                  color: tokens.textPrimary,
+                ),
                 tooltip: 'Document Outline',
                 onPressed: () {
                   HapticFeedback.selectionClick();
@@ -2069,7 +2072,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               icon: TackIcon(
                 _isEditingMode ? TackIcons.eyeSvg : TackIcons.editSvg,
                 size: 20,
-                color: accent,
+                color: tokens.textPrimary,
               ),
               tooltip: _isEditingMode ? 'Reader Mode' : 'Edit Note',
               onPressed: () {
@@ -2084,8 +2087,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               child: IosThreeDotMenu<String>(
                 size: AppSpacing.minTouchTarget,
                 icon: TackIcons.more,
-                iconColor: accent,
-                buttonBackgroundColor: accent,
+                iconColor: tokens.textPrimary,
+                buttonBackgroundColor: tokens.textPrimary,
                 onSelected: (val) async {
                   if (val == 'palette') {
                     HapticFeedback.lightImpact();
@@ -2565,17 +2568,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             ],
                           ),
 
-                          // Structured YAML Frontmatter Properties Bar
-                          FrontmatterPropertiesBar(
-                            rawContent: _contentController.text,
-                            paletteId: _paletteId,
-                            isEditingMode: _isEditingMode,
-                            onContentChanged: (updatedContent) {
-                              _contentController.text = updatedContent;
-                              _saveNote();
-                              setState(() {});
-                            },
-                          ),
                           const SizedBox(height: AppSpacing.lg),
 
                           // Body Content (Editing TextField vs Interactive Rich Preview)
@@ -2754,14 +2746,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   horizontal: AppSpacing.lg,
                 ),
                 decoration: BoxDecoration(
-                  color: palette.resolveNoteFooterBg(isDark),
+                  color: tokens.surfacePrimary,
                   border: Border(
-                    top: BorderSide(
-                      color: palette
-                          .resolveChipBorder(isDark)
-                          .withValues(alpha: 0.7),
-                      width: 1,
-                    ),
+                    top: BorderSide(color: tokens.borderSubtle, width: 1),
                   ),
                 ),
                 child: Center(

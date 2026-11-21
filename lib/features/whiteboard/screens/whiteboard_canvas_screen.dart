@@ -3124,86 +3124,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
           backgroundColor: isDark
               ? AppColors.darkBackground
               : const Color(0xFFFAFBFD),
-          appBar: AppBar(
-            backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-            leading: IconButton(
-              icon: const TackIcon(TackIcons.back, size: 22),
-              tooltip: 'Back',
-              onPressed: _handleWhiteboardBack,
-            ),
-            title: Text(
-              widget.item.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            actions: [
-              // Undo Button (Disabled when stack is empty)
-              IconButton(
-                icon: TackIcon(
-                  TackIcons.undoSvg,
-                  size: 20,
-                  color: _history.canUndo
-                      ? (isDark ? Colors.white : AppColors.lightTextPrimary)
-                      : (isDark
-                            ? AppColors.darkTextMuted
-                            : AppColors.lightTextMuted),
-                ),
-                onPressed: _history.canUndo ? _handleUndo : null,
-                tooltip: 'Undo',
-              ),
-
-              // Redo Button (Disabled when stack is empty)
-              IconButton(
-                icon: TackIcon(
-                  TackIcons.redoSvg,
-                  size: 20,
-                  color: _history.canRedo
-                      ? (isDark ? Colors.white : AppColors.lightTextPrimary)
-                      : (isDark
-                            ? AppColors.darkTextMuted
-                            : AppColors.lightTextMuted),
-                ),
-                onPressed: _history.canRedo ? _handleRedo : null,
-                tooltip: 'Redo',
-              ),
-
-              // Export & Share Button
-              Padding(
-                padding: const EdgeInsets.only(
-                  right: AppSpacing.md,
-                  left: AppSpacing.xs,
-                ),
-                child: ElevatedButton(
-                  onPressed: _isExporting ? null : _showExportBottomSheet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.tokens.actionPrimary,
-                    foregroundColor: context.tokens.actionPrimaryFg,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    minimumSize: const Size(72, AppSpacing.minTouchTarget),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                  ),
-                  child: _isExporting
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              context.tokens.actionPrimaryFg,
-                            ),
-                          ),
-                        )
-                      : const Text('Export'),
-                ),
-              ),
-            ],
-          ),
           body: Stack(
             children: [
               // Infinite/Bounded Interactive Canvas with Multi-Touch Arbiter
@@ -3338,10 +3258,18 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                 ),
               ),
 
+              // Floating Spatial Canvas Top HUD (Figma / Freeform pill capsules)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildTopFloatingHud(isDark),
+              ),
+
               // Top Contextual Tool Banner / Empty-Canvas CTA
               if (_connectingFromNodeId != null)
                 Positioned(
-                  top: 16,
+                  top: MediaQuery.paddingOf(context).top + 70,
                   left: AppSpacing.md,
                   right: AppSpacing.md,
                   child: Builder(
@@ -3410,7 +3338,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                   _activeTool == 'text' ||
                   _activeTool == 'pan')
                 Positioned(
-                  top: 16,
+                  top: MediaQuery.paddingOf(context).top + 70,
                   left: AppSpacing.md,
                   right: AppSpacing.md,
                   child: Center(
@@ -4172,6 +4100,173 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
     }
   }
 
+  Widget _buildTopFloatingHud(bool isDark) {
+    final tokens = context.tokens;
+    final capsuleDecoration = BoxDecoration(
+      color: tokens.surfacePrimary,
+      borderRadius: AppSpacing.roundedPill,
+      border: Border.all(color: tokens.borderSubtle, width: 1),
+      boxShadow: AppSpacing.elev1(isDark),
+    );
+
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        key: const ValueKey('whiteboard_floating_hud'),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.s2,
+          AppSpacing.md,
+          0,
+        ),
+        child: Row(
+          children: [
+            // Left floating identity pill: Back + Board Title
+            Flexible(
+              child: Container(
+                height: AppSpacing.minTouchTarget,
+                decoration: capsuleDecoration,
+                padding: const EdgeInsets.only(left: 4, right: 16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: 'Back',
+                      child: TactileInkTarget(
+                        useCircleShape: true,
+                        semanticsLabel: 'Back',
+                        minWidth: 40,
+                        minHeight: 40,
+                        width: 40,
+                        height: 40,
+                        triggerHaptics: true,
+                        onTap: _handleWhiteboardBack,
+                        child: TackIcon(
+                          TackIcons.back,
+                          size: 20,
+                          color: tokens.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 18,
+                      margin: const EdgeInsets.only(left: 2, right: 10),
+                      color: tokens.borderSubtle,
+                    ),
+                    Flexible(
+                      child: Text(
+                        widget.item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleSm(
+                          color: tokens.textPrimary,
+                          fontSize: 14.5,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(width: AppSpacing.s2),
+
+            // Right floating action pill: Undo · Redo · Export
+            Container(
+              height: AppSpacing.minTouchTarget,
+              decoration: capsuleDecoration,
+              padding: const EdgeInsets.only(left: 4, right: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: 'Undo',
+                    child: TactileInkTarget(
+                      useCircleShape: true,
+                      semanticsLabel: 'Undo',
+                      minWidth: 40,
+                      minHeight: 40,
+                      width: 40,
+                      height: 40,
+                      triggerHaptics: _history.canUndo,
+                      onTap: _history.canUndo ? _handleUndo : null,
+                      child: TackIcon(
+                        TackIcons.undoSvg,
+                        size: 18,
+                        color: _history.canUndo
+                            ? tokens.textPrimary
+                            : tokens.textTertiary.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Redo',
+                    child: TactileInkTarget(
+                      useCircleShape: true,
+                      semanticsLabel: 'Redo',
+                      minWidth: 40,
+                      minHeight: 40,
+                      width: 40,
+                      height: 40,
+                      triggerHaptics: _history.canRedo,
+                      onTap: _history.canRedo ? _handleRedo : null,
+                      child: TackIcon(
+                        TackIcons.redoSvg,
+                        size: 18,
+                        color: _history.canRedo
+                            ? tokens.textPrimary
+                            : tokens.textTertiary.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Semantics(
+                    button: true,
+                    label: 'Export',
+                    child: Material(
+                      color: tokens.actionPrimary,
+                      shape: const StadiumBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: _isExporting ? null : _showExportBottomSheet,
+                        customBorder: const StadiumBorder(),
+                        child: Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          alignment: Alignment.center,
+                          child: _isExporting
+                              ? SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.0,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      tokens.actionPrimaryFg,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Export',
+                                  style: AppTypography.caption(
+                                    color: tokens.actionPrimaryFg,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDockToolButton({
     required String id,
     required dynamic icon,
@@ -4187,7 +4282,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: TactileInkTarget(
-          borderRadius: BorderRadius.circular(10),
+          useCircleShape: true,
           semanticsLabel: tooltip,
           isSelected: isSelected,
           minWidth: AppSpacing.minTouchTarget,

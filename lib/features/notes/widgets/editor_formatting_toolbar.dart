@@ -100,10 +100,7 @@ class EditorFormattingToolbar extends StatelessWidget {
       label: 'Bold',
       action: 'bold',
       display: 'B',
-      customStyle: TextStyle(
-        fontWeight: FontWeight.w800,
-        fontSize: 15,
-      ),
+      customStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
     ),
     TextToolbarItem(
       label: 'Italic',
@@ -129,10 +126,7 @@ class EditorFormattingToolbar extends StatelessWidget {
       label: 'Highlight',
       action: 'highlight',
       display: 'HL',
-      customStyle: TextStyle(
-        fontWeight: FontWeight.w800,
-        fontSize: 11,
-      ),
+      customStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
     ),
     DividerToolbarItem(),
     IconToolbarItem(
@@ -145,16 +139,8 @@ class EditorFormattingToolbar extends StatelessWidget {
       action: 'numbered',
       icon: TackIcons.numberedList,
     ),
-    IconToolbarItem(
-      label: 'Quote',
-      action: 'quote',
-      icon: TackIcons.quote,
-    ),
-    IconToolbarItem(
-      label: 'Table',
-      action: 'table',
-      icon: TackIcons.table,
-    ),
+    IconToolbarItem(label: 'Quote', action: 'quote', icon: TackIcons.quote),
+    IconToolbarItem(label: 'Table', action: 'table', icon: TackIcons.table),
     IconToolbarItem(
       label: 'Diagram / Flowchart',
       action: 'diagram',
@@ -165,11 +151,7 @@ class EditorFormattingToolbar extends StatelessWidget {
       action: 'alert',
       icon: TackIcons.alert,
     ),
-    IconToolbarItem(
-      label: 'Image',
-      action: 'image',
-      icon: TackIcons.imageSvg,
-    ),
+    IconToolbarItem(label: 'Image', action: 'image', icon: TackIcons.imageSvg),
   ];
 
   @override
@@ -177,14 +159,13 @@ class EditorFormattingToolbar extends StatelessWidget {
     final tokens = context.tokens;
     final palette = AppColors.getPaletteById(paletteId);
     final accent = palette.resolveAccentColor(tokens.isDark);
+    final fg = tokens.textPrimary;
 
     return Container(
       height: AppSpacing.minTouchTarget,
       decoration: BoxDecoration(
-        color: palette.resolveNoteFooterBg(tokens.isDark),
-        border: Border(
-          top: BorderSide(color: palette.resolveChipBorder(tokens.isDark), width: 1),
-        ),
+        color: tokens.surfacePrimary,
+        border: Border(top: BorderSide(color: tokens.borderSubtle, width: 1)),
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -201,7 +182,7 @@ class EditorFormattingToolbar extends StatelessWidget {
                 horizontal: AppSpacing.s1,
                 vertical: 14,
               ),
-              color: palette.resolveChipBorder(tokens.isDark),
+              color: tokens.borderSubtle,
             );
           }
 
@@ -219,43 +200,36 @@ class EditorFormattingToolbar extends StatelessWidget {
                 height: 34,
                 triggerHaptics: true,
                 color: isPrimaryCommand
-                    ? palette.resolveChipFill(tokens.isDark)
+                    ? tokens.canvasSunken
                     : (isHighlight
-                        ? (tokens.isDark
-                            ? accent.withValues(alpha: 0.24)
-                            : palette.lightColor.withValues(alpha: 0.65))
-                        : null),
+                          ? (tokens.isDark
+                                ? accent.withValues(alpha: 0.24)
+                                : palette.lightColor.withValues(alpha: 0.65))
+                          : null),
                 border: isPrimaryCommand
-                    ? Border.all(
-                        color: palette.resolveChipBorder(tokens.isDark),
-                        width: 1,
-                      )
+                    ? Border.all(color: tokens.borderSubtle, width: 1)
                     : null,
-                splashColor: accent.withValues(alpha: 0.14),
-                highlightColor: accent.withValues(alpha: 0.08),
-                hoverColor: accent.withValues(alpha: 0.06),
+                splashColor: fg.withValues(alpha: 0.10),
+                highlightColor: fg.withValues(alpha: 0.06),
+                hoverColor: fg.withValues(alpha: 0.05),
                 onTap: () => onFormatAction?.call(item.action),
                 child: switch (item) {
                   IconToolbarItem iconItem => TackIcon(
-                      iconItem.icon,
-                      size: 19,
-                      color: accent,
-                    ),
+                    iconItem.icon,
+                    size: 19,
+                    color: fg,
+                  ),
                   TextToolbarItem textItem => Text(
-                      textItem.display,
-                      style: (textItem.customStyle ??
-                              AppTypography.label(
-                                color: accent,
-                              ))
-                          .copyWith(
-                        fontFamily: AppTypography.fontFamily,
-                        color: isHighlight
-                            ? (tokens.isDark
-                                ? accent
-                                : AppColors.lightTextPrimary)
-                            : accent,
-                      ),
-                    ),
+                    textItem.display,
+                    style:
+                        (textItem.customStyle ?? AppTypography.label(color: fg))
+                            .copyWith(
+                              fontFamily: AppTypography.fontFamily,
+                              color: isHighlight
+                                  ? (tokens.isDark ? accent : fg)
+                                  : fg,
+                            ),
+                  ),
                   DividerToolbarItem() => const SizedBox.shrink(),
                 },
               ),

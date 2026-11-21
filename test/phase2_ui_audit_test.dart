@@ -592,7 +592,11 @@ Footer text.
           find.byType(IndexedStack),
         );
         expect(indexedStack.index, 1);
-        expect(find.text('v2.0.0  •  MAJOR UPDATE'), findsOneWidget);
+        expect(find.text('v2.0.0'), findsOneWidget);
+        expect(
+          find.text('Connected Specs, Daily Desk & Knowledge Graph'),
+          findsOneWidget,
+        );
       },
     );
 
@@ -873,13 +877,14 @@ Footer text.
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        // Board title renders without 'Whiteboard' subtitle or down arrow
+        // Board title renders in floating HUD without 'Whiteboard' subtitle or down arrow
         expect(find.text('Roadmap Architecture'), findsOneWidget);
         expect(find.text('Whiteboard'), findsNothing);
-        final appBarFinder = find.byType(AppBar);
+        final hudFinder = find.byKey(const ValueKey('whiteboard_floating_hud'));
+        expect(hudFinder, findsOneWidget);
         expect(
           find.descendant(
-            of: appBarFinder,
+            of: hudFinder,
             matching: find.byWidgetPredicate(
               (w) => w is TackIcon && w.icon == TackIcons.chevronDown,
             ),
@@ -2403,14 +2408,9 @@ Footer text.
         );
         expect(guideChip.backgroundColor, equals(peach.resolveChipFill(false)));
 
-        var approvedText = tester.widget<Text>(find.text('Approved'));
-        expect(
-          approvedText.style?.color,
-          equals(peach.resolveAccentColor(false)),
-        );
-
-        var lowText = tester.widget<Text>(find.text('Low'));
-        expect(lowText.style?.color, equals(peach.resolveAccentColor(false)));
+        // Frontmatter properties bar is removed from notes workspace
+        expect(find.text('Approved'), findsNothing);
+        expect(find.text('Low'), findsNothing);
 
         final embedCardFinder = find.byType(WorkspaceEmbedCard);
         expect(embedCardFinder, findsOneWidget);
@@ -2446,18 +2446,6 @@ Footer text.
         expect(
           guideChip.backgroundColor,
           equals(lavender.resolveChipFill(false)),
-        );
-
-        approvedText = tester.widget<Text>(find.text('Approved'));
-        expect(
-          approvedText.style?.color,
-          equals(lavender.resolveAccentColor(false)),
-        );
-
-        lowText = tester.widget<Text>(find.text('Low'));
-        expect(
-          lowText.style?.color,
-          equals(lavender.resolveAccentColor(false)),
         );
 
         openBoardText = tester.widget<Text>(find.text('Open Board →'));

@@ -204,9 +204,7 @@ class _SearchCommandScreenState extends State<SearchCommandScreen> {
               ),
               Expanded(
                 child: ListView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
+                  physics: const ClampingScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(
                     gutter,
                     AppSpacing.s2,

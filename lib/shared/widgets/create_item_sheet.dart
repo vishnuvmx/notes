@@ -8,10 +8,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/tack_icons.dart';
 import '../models/base_item.dart';
-import '../../features/notes/services/note_template_service.dart';
 import '../providers/workspace_provider.dart';
 import 'app_bottom_sheet.dart';
-import 'color_swatch_picker.dart';
 import 'tactile_ink_target.dart';
 import 'tack_toast.dart';
 
@@ -19,9 +17,9 @@ import 'tack_toast.dart';
 ///
 /// Designed for 1-tap capture without form friction:
 /// 1. Auto-focused multiline text field (`body-lg`)
-/// 2. Primary action: **Save to Inbox** (returns `null` after saving to Inbox and showing toast)
+/// 2. Primary action: **Save to Inbox** (or **New blank note** when empty)
 /// 3. Secondary action: **Open as note** (returns the created `TextNote` to open in Editor)
-/// 4. Quiet bottom row: `Template…` · `New board` · `Paste clipboard`
+/// 4. Quiet bottom row: `New board` · `Paste clipboard`
 class CreateItemSheet extends StatefulWidget {
   final ItemType? defaultType;
 
@@ -49,10 +47,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
   String _selectedPaletteId = 'amber';
   String? _selectedFolder;
-  bool _showTemplatesAndColor = false;
   bool _isSubmitting = false;
-  List<NoteTemplate> _templates = NoteTemplateService.builtInTemplates;
-  String _selectedTemplateId = 'blank';
 
   @override
   void initState() {
@@ -64,7 +59,6 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
       _selectedPaletteId = 'cyan';
     }
 
-    _loadTemplates();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final activeFolder = context.read<WorkspaceProvider>().selectedFolder;
@@ -74,25 +68,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     });
   }
 
-  Future<void> _loadTemplates() async {
-    final loaded = await NoteTemplateService.loadAllTemplates();
-    if (mounted) {
-      setState(() => _templates = loaded);
-    }
-  }
-
   @override
   void dispose() {
     _captureController.dispose();
     _captureFocusNode.dispose();
     super.dispose();
-  }
-
-  NoteTemplate get _activeTemplate {
-    return _templates.firstWhere(
-      (t) => t.id == _selectedTemplateId,
-      orElse: () => NoteTemplateService.builtInTemplates.first,
-    );
   }
 
   Future<void> _handleSaveToInbox() async {
@@ -138,28 +118,11 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
     final tokens = context.tokens;
     final raw = _captureController.text.trim();
     final workspace = context.read<WorkspaceProvider>();
-    final tpl = _activeTemplate;
-    final now = DateTime.now();
 
     String resolvedTitle;
     String resolvedBody;
 
-    if (tpl.id != 'blank') {
-      final firstLine = raw.isEmpty
-          ? tpl.name
-          : raw.split('\n').first.replaceAll(RegExp(r'^#+\s*'), '').trim();
-      resolvedTitle = NoteTemplateService.expandTokens(
-        tpl.titlePattern,
-        customTitle: firstLine.isEmpty ? tpl.name : firstLine,
-        now: now,
-      );
-      final expandedTpl = NoteTemplateService.expandTokens(
-        tpl.bodyTemplate,
-        customTitle: resolvedTitle,
-        now: now,
-      );
-      resolvedBody = raw.isNotEmpty ? '$expandedTpl\n$raw\n' : expandedTpl;
-    } else if (raw.isEmpty) {
+    if (raw.isEmpty) {
       resolvedTitle = 'Untitled Note';
       resolvedBody = '';
     } else {
@@ -182,7 +145,6 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
         paletteId: _selectedPaletteId,
         extraContent: resolvedBody,
         folderName: _selectedFolder,
-        iconEmoji: tpl.id == 'blank' ? null : tpl.iconEmoji,
         isInbox: false,
       );
       if (!mounted) return;
@@ -291,9 +253,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
               const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: Text(
-                  _selectedTemplateId == 'blank'
-                      ? 'Quick Capture'
-                      : 'Template · ${_activeTemplate.name}',
+                  'Quick Capture',
                   style: AppTypography.titleSm(color: tokens.textPrimary),
                 ),
               ),
@@ -372,16 +332,16 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
             const SizedBox(height: AppSpacing.s2),
           ],
 
-          // Auto-focused capture input field (`body-lg`, single clean container)
+          // Auto-focused capture input field (concentric 16dp smooth squircle)
           Container(
             constraints: const BoxConstraints(minHeight: 96, maxHeight: 180),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.s4,
               vertical: AppSpacing.s3,
             ),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedMd,
+              shape: AppSpacing.smoothMd(),
             ),
             child: TextField(
               key: const ValueKey('capture_sheet_input'),
@@ -401,62 +361,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
             ),
           ),
 
-          // Expandable Template & Color Band drawer
-          AnimatedSize(
-            duration: AppSpacing.durationFast,
-            curve: AppSpacing.curveStandard,
-            alignment: Alignment.topCenter,
-            child: !_showTemplatesAndColor
-                ? const SizedBox.shrink()
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: AppSpacing.s4),
-                      Text(
-                        'Color band',
-                        style: AppTypography.label(color: tokens.textSecondary),
-                      ),
-                      const SizedBox(height: AppSpacing.s1),
-                      ColorSwatchPicker(
-                        selectedPaletteId: _selectedPaletteId,
-                        onPaletteSelected: (id) =>
-                            setState(() => _selectedPaletteId = id),
-                      ),
-                      const SizedBox(height: AppSpacing.s3),
-                      Text(
-                        'Templates',
-                        style: AppTypography.label(color: tokens.textSecondary),
-                      ),
-                      const SizedBox(height: AppSpacing.s2),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (
-                                int idx = 0;
-                                idx < _templates.length;
-                                idx++
-                              ) ...[
-                                if (idx > 0)
-                                  const SizedBox(width: AppSpacing.s2),
-                                _buildTemplateCard(
-                                  tpl: _templates[idx],
-                                  tokens: tokens,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-
           const SizedBox(height: AppSpacing.s4),
 
-          // Primary & Secondary Actions (`Save to Inbox` / `Open as note`)
+          // Primary & Secondary Actions (matching 16dp concentric smooth squircle)
           Row(
             children: [
               Expanded(
@@ -469,6 +376,9 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.s3,
                       vertical: AppSpacing.s2,
+                    ),
+                    shape: AppSpacing.smoothMd(
+                      side: BorderSide(color: tokens.borderSubtle, width: 1),
                     ),
                   ),
                   onPressed: _isSubmitting ? null : _handleOpenAsNote,
@@ -492,6 +402,7 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
                       horizontal: AppSpacing.s3,
                       vertical: AppSpacing.s2,
                     ),
+                    shape: AppSpacing.smoothMd(),
                   ),
                   onPressed: _isSubmitting
                       ? null
@@ -522,24 +433,12 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
 
           const SizedBox(height: AppSpacing.s2),
 
-          // Quiet bottom action row (`Template…` · `New board` · `Paste clipboard`)
+          // Quiet bottom action row (`New board` · `Paste clipboard`)
           Wrap(
             alignment: WrapAlignment.spaceEvenly,
-            spacing: AppSpacing.s1,
+            spacing: AppSpacing.s2,
             runSpacing: AppSpacing.s1,
             children: [
-              _QuietCaptureOption(
-                icon: TackIcons.sparkles,
-                label: _showTemplatesAndColor ? 'Hide options' : 'Template…',
-                isActive:
-                    _showTemplatesAndColor || _selectedTemplateId != 'blank',
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(
-                    () => _showTemplatesAndColor = !_showTemplatesAndColor,
-                  );
-                },
-              ),
               _QuietCaptureOption(
                 icon: TackIcons.boards,
                 label: 'New board',
@@ -556,125 +455,27 @@ class _CreateItemSheetState extends State<CreateItemSheet> {
       ),
     );
   }
-
-  Widget _buildTemplateCard({
-    required NoteTemplate tpl,
-    required TackTokens tokens,
-  }) {
-    final selected = tpl.id == _selectedTemplateId;
-    final cardShape = AppSpacing.smoothSm(
-      side: BorderSide(
-        color: selected ? tokens.borderFocus : tokens.borderSubtle,
-        width: selected ? 1.5 : 1.0,
-      ),
-    );
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '${tpl.name}. ${tpl.subtitle}',
-      onTap: _isSubmitting
-          ? null
-          : () {
-              HapticFeedback.selectionClick();
-              setState(() {
-                _selectedTemplateId = tpl.id;
-                _selectedPaletteId = AppColors.normalizePaletteId(
-                  tpl.paletteId,
-                );
-              });
-            },
-      excludeSemantics: true,
-      child: AnimatedContainer(
-        duration: AppSpacing.durationFast,
-        curve: AppSpacing.curveStandard,
-        width: 152,
-        constraints: const BoxConstraints(minHeight: 84),
-        decoration: ShapeDecoration(
-          color: selected ? tokens.canvasSunken : tokens.surfacePrimary,
-          shape: cardShape,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          shape: cardShape,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            customBorder: cardShape,
-            onTap: _isSubmitting
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    setState(() {
-                      _selectedTemplateId = tpl.id;
-                      _selectedPaletteId = AppColors.normalizePaletteId(
-                        tpl.paletteId,
-                      );
-                    });
-                  },
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.s3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        tpl.iconEmoji,
-                        style: AppTypography.bodySm(color: tokens.textPrimary),
-                      ),
-                      const SizedBox(width: AppSpacing.s1),
-                      Expanded(
-                        child: Text(
-                          tpl.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.label(
-                            color: tokens.textPrimary,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.s2),
-                  Text(
-                    tpl.subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(color: tokens.textTertiary),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _QuietCaptureOption extends StatelessWidget {
   final dynamic icon;
   final String label;
   final VoidCallback? onTap;
-  final bool isActive;
 
   const _QuietCaptureOption({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.isActive = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final fg = isActive ? tokens.textPrimary : tokens.textSecondary;
+    final fg = tokens.textSecondary;
 
     return Semantics(
       button: true,
       enabled: onTap != null,
-      selected: isActive,
       label: label,
       child: InkWell(
         onTap: onTap,
@@ -698,7 +499,7 @@ class _QuietCaptureOption extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.label(
                       color: fg,
-                      weight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      weight: FontWeight.w500,
                     ),
                   ),
                 ),

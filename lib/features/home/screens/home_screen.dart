@@ -387,9 +387,7 @@ class _LibraryView extends StatelessWidget {
       bottom: false,
       child: CustomScrollView(
         key: const ValueKey('library_custom_scroll'),
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
+        physics: const ClampingScrollPhysics(),
         slivers: [
           // Single-row Filter Bar: Folder pill · Pinned chip · Real #tag chips.
           // Lives inside the scroll view so it slides away while browsing and
@@ -551,9 +549,7 @@ class _BoardsView extends StatelessWidget {
       top: false,
       bottom: false,
       child: ResponsiveCardGrid(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
+        physics: const ClampingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           gutter,
           AppSpacing.s2,

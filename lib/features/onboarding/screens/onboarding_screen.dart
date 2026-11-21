@@ -30,51 +30,22 @@ class OnboardingScreen extends StatefulWidget {
     OnboardingSlideData(
       imageAsset: 'assets/images/onboarding/slide1_tactile_grid.jpg',
       title: 'Notes & stickies,\nwith a tactile twist',
-      bodySpans: [
-        (text: 'Jot ', highlight: false),
-        (text: 'markdown notes', highlight: true),
-        (text: ', pin colorful ', highlight: false),
-        (text: 'sticky cards', highlight: true),
-        (text: ', and track daily tasks in one clean grid.', highlight: false),
-      ],
+      description: 'Markdown notes and daily tasks in one calm grid.',
     ),
     OnboardingSlideData(
       imageAsset: cloudMeadowsAsset,
       title: 'All your ideas,\nweightlessly organized',
-      showFloatingTileDock: true,
-      bodySpans: [
-        (text: 'Bring ', highlight: false),
-        (text: 'Notes', highlight: true),
-        (text: ', ', highlight: false),
-        (text: 'Stickies', highlight: true),
-        (text: ', visual ', highlight: false),
-        (text: 'Whiteboards', highlight: true),
-        (text: ', and saved clips together without clutter.', highlight: false),
-      ],
+      description: 'Notes, boards, and clips together without clutter.',
     ),
     OnboardingSlideData(
       imageAsset: 'assets/images/onboarding/slide3_connected_ideas.jpg',
       title: '#Tags and\n[[WikiLinks]]',
-      bodySpans: [
-        (text: 'Connect thoughts with ', highlight: false),
-        (text: '[[WikiLinks]]', highlight: true),
-        (text: ' and ', highlight: false),
-        (text: '#tags', highlight: true),
-        (text: ' and explore links in your ', highlight: false),
-        (text: 'Knowledge Graph', highlight: true),
-        (text: '.', highlight: false),
-      ],
+      description: 'Link thoughts and explore them on a live graph.',
     ),
     OnboardingSlideData(
       imageAsset: 'assets/images/onboarding/slide4_local_sanctuary.jpg',
       title: 'Everything in\nyour control',
-      bodySpans: [
-        (text: 'All notes stay saved ', highlight: false),
-        (text: 'locally on device', highlight: true),
-        (text: '—with offline ', highlight: false),
-        (text: 'JSON & Markdown', highlight: true),
-        (text: ' export anytime.', highlight: false),
-      ],
+      description: 'Saved offline on device with instant export.',
     ),
   ];
 
@@ -218,18 +189,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                     const SizedBox(height: AppSpacing.s2),
 
-                    // 2. Swipeable Slide Pages (Hero Stage + Editorial Copy)
+                    // 2. Swipeable Slide Pages (Uniform-Size Hero Stage + Editorial Copy)
                     Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: OnboardingScreen.slides.length,
-                        onPageChanged: (idx) {
-                          setState(() => _currentPage = idx);
-                        },
-                        itemBuilder: (context, index) {
-                          final slide = OnboardingScreen.slides[index];
-                          return _OnboardingSlidePage(slide: slide);
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final scale = MediaQuery.textScalerOf(context)
+                              .scale(1.0);
+                          final compactHeight =
+                              constraints.maxHeight < 460 ||
+                              constraints.maxWidth < 350 ||
+                              scale > 1.15;
+                          final stageHeight =
+                              (constraints.maxHeight *
+                                      (compactHeight ? 0.50 : 0.58))
+                                  .clamp(200.0, 440.0);
+
+                          return PageView.builder(
+                            controller: _pageController,
+                            physics: const ClampingScrollPhysics(),
+                            itemCount: OnboardingScreen.slides.length,
+                            onPageChanged: (idx) {
+                              setState(() => _currentPage = idx);
+                            },
+                            itemBuilder: (context, index) {
+                              final slide = OnboardingScreen.slides[index];
+                              return _OnboardingSlidePage(
+                                slide: slide,
+                                stageHeight: stageHeight,
+                                compactHeight: compactHeight,
+                              );
+                            },
+                          );
                         },
                       ),
                     ),
@@ -318,61 +308,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingSlidePage extends StatelessWidget {
   final OnboardingSlideData slide;
+  final double stageHeight;
+  final bool compactHeight;
 
-  const _OnboardingSlidePage({required this.slide});
+  const _OnboardingSlidePage({
+    required this.slide,
+    required this.stageHeight,
+    required this.compactHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scale = MediaQuery.textScalerOf(context).scale(1.0);
-        final compactHeight =
-            constraints.maxHeight < 460 ||
-            constraints.maxWidth < 350 ||
-            scale > 1.15;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: OnboardingSlideStage(slide: slide)),
-            SizedBox(height: compactHeight ? AppSpacing.s4 : AppSpacing.s6),
-            Text(
-              slide.title,
-              style: AppTypography.titleLg(
-                color: tokens.textPrimary,
-                fontSize: compactHeight ? 24 : 28,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: stageHeight,
+          child: OnboardingSlideStage(slide: slide),
+        ),
+        SizedBox(height: compactHeight ? AppSpacing.s4 : AppSpacing.s5),
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  slide.title,
+                  style: AppTypography.titleLg(
+                    color: tokens.textPrimary,
+                    fontSize: compactHeight ? 24 : 28,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s2),
+                Text(
+                  slide.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: compactHeight
+                      ? AppTypography.bodySm(color: tokens.textSecondary)
+                      : AppTypography.body(color: tokens.textSecondary),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.s2),
-            Text.rich(
-              TextSpan(
-                style: compactHeight
-                    ? AppTypography.bodySm(color: tokens.textSecondary)
-                    : AppTypography.body(color: tokens.textSecondary),
-                children: [
-                  for (final span in slide.bodySpans)
-                    TextSpan(
-                      text: span.text,
-                      style: span.highlight
-                          ? (compactHeight
-                                ? AppTypography.bodySm(
-                                    color: tokens.textPrimary,
-                                    weight: FontWeight.w600,
-                                  )
-                                : AppTypography.body(
-                                    color: tokens.textPrimary,
-                                    weight: FontWeight.w600,
-                                  ))
-                          : null,
-                    ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }

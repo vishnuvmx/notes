@@ -34,9 +34,7 @@ class ResponsiveCardGrid extends StatelessWidget {
       return Padding(padding: padding ?? EdgeInsets.zero, child: columns);
     }
     return SingleChildScrollView(
-      physics:
-          physics ??
-          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics: physics ?? const ClampingScrollPhysics(),
       padding: padding,
       child: columns,
     );

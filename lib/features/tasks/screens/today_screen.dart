@@ -106,9 +106,7 @@ class _TodayScreenState extends State<TodayScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
           child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
+            physics: const ClampingScrollPhysics(),
             slivers: [
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
@@ -393,9 +391,6 @@ class _TodaysDailyNoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final palette = AppColors.getPaletteById('coral');
-    final softTint = palette.resolveSoftBackground(tokens.isDark);
-    final accentColor = palette.resolveAccentColor(tokens.isDark);
     final hasNote = existingDaily != null;
     final summary = hasNote ? existingDaily!.getSummary() : '';
     final dayNum = now.day.toString().padLeft(2, '0');
@@ -442,78 +437,69 @@ class _TodaysDailyNoteCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: AppSpacing.s3),
+              Divider(
+                height: AppSpacing.s5,
+                thickness: 1,
+                color: tokens.borderSubtle,
+              ),
 
-              // 2. Regent-Style Tinted Inner Block with 3.5dp Leading Bar & Action Pill
-              Ink(
-                padding: const EdgeInsets.all(AppSpacing.s3),
-                decoration: BoxDecoration(
-                  color: softTint,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        width: 3.5,
-                        decoration: BoxDecoration(
-                          color: accentColor,
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.s3),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Today's Daily Note",
-                              style: AppTypography.titleSm(
-                                color: tokens.textPrimary,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              hasNote &&
-                                      summary.isNotEmpty &&
-                                      summary != 'Empty note'
-                                  ? summary
-                                  : (carryForwardEnabled
-                                        ? 'Tap to start today’s note — open tasks carry forward automatically.'
-                                        : 'Tap to start today’s note.'),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodySm(
-                                color: accentColor.withValues(alpha: 0.85),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.s2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.14),
-                          borderRadius: AppSpacing.roundedPill,
-                        ),
-                        child: Text(
-                          hasNote ? 'Open' : 'Start',
-                          style: AppTypography.caption(
-                            color: accentColor,
-                            weight: FontWeight.w700,
+              // 2. Clean Editorial Daily Note Row (no nested tinted box, no stretched pill)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Today's Daily Note",
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            fontSize: 16,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(
+                          hasNote &&
+                                  summary.isNotEmpty &&
+                                  summary != 'Empty note'
+                              ? summary
+                              : (carryForwardEnabled
+                                    ? 'Open tasks carry forward automatically.'
+                                    : 'Tap to start today’s note.'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSpacing.s3),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: hasNote
+                          ? tokens.canvasSunken
+                          : tokens.actionPrimary,
+                      borderRadius: AppSpacing.roundedPill,
+                    ),
+                    child: Text(
+                      hasNote ? 'Open' : 'Start',
+                      style: AppTypography.caption(
+                        color: hasNote
+                            ? tokens.textPrimary
+                            : tokens.actionPrimaryFg,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -521,9 +507,10 @@ class _TodaysDailyNoteCard extends StatelessWidget {
       ),
     );
 
-    const cardShape = SmoothRectangleBorder(
+    final cardShape = SmoothRectangleBorder(
       borderRadius: AppSpacing.roundedLg,
       smoothness: 0.60,
+      side: BorderSide(color: tokens.borderSubtle, width: 1),
     );
 
     if (existingDaily != null) {
@@ -1043,7 +1030,7 @@ class _TaskRow extends StatelessWidget {
                                         children: [
                                           TackIcon(
                                             TackIcons.notification,
-                                            size: 11,
+                                            size: 12,
                                             color: dueFg,
                                           ),
                                           const SizedBox(width: 4),
@@ -1051,7 +1038,8 @@ class _TaskRow extends StatelessWidget {
                                             dueLabel,
                                             style: AppTypography.caption(
                                               color: dueFg,
-                                              weight: FontWeight.w600,
+                                              fontSize: 11.5,
+                                              weight: FontWeight.w400,
                                             ),
                                           ),
                                         ],
@@ -1072,7 +1060,7 @@ class _TaskRow extends StatelessWidget {
                                         children: [
                                           TackIcon(
                                             TackIcons.refresh,
-                                            size: 11,
+                                            size: 12,
                                             color: tokens.textSecondary,
                                           ),
                                           const SizedBox(width: 4),
@@ -1080,7 +1068,8 @@ class _TaskRow extends StatelessWidget {
                                             repeatLabel,
                                             style: AppTypography.caption(
                                               color: tokens.textSecondary,
-                                              weight: FontWeight.w500,
+                                              fontSize: 11.5,
+                                              weight: FontWeight.w400,
                                             ),
                                           ),
                                         ],

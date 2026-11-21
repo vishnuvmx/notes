@@ -15,3 +15,4 @@ Local log of memory operations. Git history is authoritative when available.
 - 2026-11-18 remember mem_011 "Contextual page transitions via TackRoutes and image Hero flights"
 - 2026-11-18 remember mem_012 "Starter showcase note/board & bundled asset image support"
 - 2026-11-18 remember mem_013 "Container Transform, TOC jump precision, and To-Do switcher polish"
+- 2026-11-21 remember mem_014 "InteractiveViewer was wrapped inside Center("

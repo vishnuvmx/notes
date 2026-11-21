@@ -145,6 +145,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
       smoothness: AppSpacing.defaultSmoothing,
       side: BorderSide(color: borderColor, width: _isFocused ? 1.5 : 1.0),
     );
+    final clipShape = fieldShape.copyWith(side: BorderSide.none);
 
     return AnimatedContainer(
       duration: AppSpacing.durationFast,
@@ -154,7 +155,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
       decoration: ShapeDecoration(color: bgColor, shape: fieldShape),
       child: Material(
         type: MaterialType.transparency,
-        shape: fieldShape,
+        shape: clipShape,
         clipBehavior: Clip.antiAlias,
         child: Row(
           children: [

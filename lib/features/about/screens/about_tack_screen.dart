@@ -77,7 +77,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
             ),
             child: Column(
               children: [
-                // Header Hero Card
+                // Compact Editorial App Identity Header
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenGutter(
@@ -87,43 +87,43 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                   ),
                   child: Container(
                     clipBehavior: Clip.antiAlias,
-                    padding: const EdgeInsets.all(AppSpacing.s5),
+                    padding: const EdgeInsets.all(AppSpacing.s4),
                     decoration: ShapeDecoration(
                       color: tokens.surfacePrimary,
                       shape: SmoothRectangleBorder(
-                        borderRadius: AppSpacing.roundedLg,
+                        borderRadius: AppSpacing.roundedMd,
                         smoothness: AppSpacing.defaultSmoothing,
+                        side: BorderSide(color: tokens.borderSubtle, width: 1),
                       ),
-                      shadows: AppSpacing.elev1(tokens.isDark),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 56,
-                          height: 56,
+                          width: 48,
+                          height: 48,
                           decoration: ShapeDecoration(
                             color: tokens.canvasSunken,
                             shape: SmoothRectangleBorder(
-                              borderRadius: AppSpacing.roundedMd,
+                              borderRadius: AppSpacing.roundedSm,
                               smoothness: AppSpacing.defaultSmoothing,
                             ),
                           ),
                           child: Center(
                             child: Image.asset(
                               'icon.png',
-                              width: 34,
-                              height: 34,
+                              width: 30,
+                              height: 30,
                               cacheWidth: 128,
                               errorBuilder: (context, error, stackTrace) =>
                                   TackIcon(
                                     TackIcons.notes,
-                                    size: 28,
+                                    size: 24,
                                     color: tokens.accentPin,
                                   ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.s4),
+                        const SizedBox(width: AppSpacing.s3),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,37 +137,28 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTypography.titleLg(
                                         color: tokens.textPrimary,
+                                        fontSize: 20,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: AppSpacing.s2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.s2,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: tokens.actionPrimary,
-                                      borderRadius: AppSpacing.roundedPill,
-                                    ),
-                                    child: Text(
-                                      'v2.0.0',
-                                      style: AppTypography.caption(
-                                        color: tokens.actionPrimaryFg,
-                                        weight: FontWeight.w600,
-                                      ),
+                                  Text(
+                                    'v2.0.0',
+                                    style: AppTypography.mono(
+                                      fontSize: 12,
+                                      weight: FontWeight.w600,
+                                      color: tokens.textTertiary,
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Soft Monochrome Notes, Tasks & Visual Boards',
+                                'Offline-first notes, tasks & visual boards',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTypography.serifItalic(
+                                style: AppTypography.bodySm(
                                   color: tokens.textSecondary,
-                                  fontSize: 15,
                                 ),
                               ),
                             ],
@@ -180,14 +171,14 @@ class _AboutTackScreenState extends State<AboutTackScreen>
 
                 const SizedBox(height: AppSpacing.s2),
 
-                // Black-Pill Segmented Tab Selector
+                // Segmented Tab Selector
                 Container(
                   margin: EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenGutter(
                       MediaQuery.sizeOf(context).width,
                     ),
                   ),
-                  padding: const EdgeInsets.all(AppSpacing.s2),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: tokens.canvasSunken,
                     borderRadius: AppSpacing.roundedPill,
@@ -219,21 +210,21 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                     ),
                     tabs: const [
                       Tab(
-                        height: AppSpacing.minTouchTarget,
+                        height: 40,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text('Architecture'),
                         ),
                       ),
                       Tab(
-                        height: AppSpacing.minTouchTarget,
+                        height: 40,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text('Privacy & Legal'),
                         ),
                       ),
                       Tab(
-                        height: AppSpacing.minTouchTarget,
+                        height: 40,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text('Open Source'),
@@ -243,7 +234,7 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                   ),
                 ),
 
-                const SizedBox(height: AppSpacing.s2),
+                const SizedBox(height: AppSpacing.s3),
 
                 Expanded(
                   child: IndexedStack(
@@ -327,101 +318,94 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     return ListView(
       padding: EdgeInsets.fromLTRB(
         gutter,
-        AppSpacing.s3,
+        AppSpacing.s1,
         gutter,
         AppSpacing.s7 + bottomInset,
       ),
-      physics: const BouncingScrollPhysics(),
-      children: [...stages.map((stage) => _buildStageCard(stage, tokens))],
+      physics: const ClampingScrollPhysics(),
+      children: [
+        _buildGroupedSurface(
+          tokens: tokens,
+          children: [
+            for (int i = 0; i < stages.length; i++)
+              _buildStageRow(i + 1, stages[i], tokens),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildStageCard(_JourneyStage stage, TackTokens tokens) {
-    final palette = AppColors.getPaletteById(stage.paletteId);
-    final accent = palette.resolveAccentColor(tokens.isDark);
-    final softBg = palette.resolveSoftBackground(tokens.isDark);
-
+  Widget _buildGroupedSurface({
+    required TackTokens tokens,
+    required List<Widget> children,
+  }) {
     return Container(
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: AppSpacing.s3),
-      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: ShapeDecoration(
         color: tokens.surfacePrimary,
         shape: SmoothRectangleBorder(
           borderRadius: AppSpacing.roundedMd,
           smoothness: AppSpacing.defaultSmoothing,
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
         ),
-        shadows: AppSpacing.elev1(tokens.isDark),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: AppSpacing.s4,
+                endIndent: AppSpacing.s4,
+                color: tokens.borderSubtle,
+              ),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageRow(int number, _JourneyStage stage, TackTokens tokens) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                stage.phase.toUpperCase(),
-                style: AppTypography.caption(
+          SizedBox(
+            width: 28,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                number.toString().padLeft(2, '0'),
+                style: AppTypography.mono(
                   fontSize: 12,
                   weight: FontWeight.w600,
                   color: tokens.textTertiary,
-                ).copyWith(letterSpacing: 0.4),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: softBg,
-                  borderRadius: AppSpacing.roundedPill,
                 ),
-                child: TackIcon(stage.icon, size: 14, color: accent),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s2),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: ShapeDecoration(
-              color: softBg,
-              shape: SmoothRectangleBorder(
-                borderRadius: AppSpacing.roundedSm,
-                smoothness: AppSpacing.defaultSmoothing,
               ),
             ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 3.5,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: AppSpacing.roundedPill,
-                    ),
+          ),
+          const SizedBox(width: AppSpacing.s2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stage.title,
+                  style: AppTypography.titleSm(
+                    color: tokens.textPrimary,
+                    fontSize: 15,
                   ),
-                  const SizedBox(width: AppSpacing.s3),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          stage.title,
-                          style: AppTypography.titleSm(
-                            color: tokens.textPrimary,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          stage.description,
-                          style: AppTypography.bodySm(
-                            color: tokens.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  stage.description,
+                  style: AppTypography.bodySm(color: tokens.textSecondary),
+                ),
+              ],
             ),
           ),
         ],
@@ -436,7 +420,6 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     final policies = [
       (
         icon: TackIcons.lock,
-        paletteId: 'cyan',
         title: 'Local-First Storage & Zero Telemetry',
         body:
             'Tack stores all notes, tasks, folders, whiteboards, and preferences exclusively in your '
@@ -444,7 +427,6 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       ),
       (
         icon: TackIcons.shield,
-        paletteId: 'lime',
         title: 'Android Cloud Backup Disabled',
         body:
             'Automatic OS cloud backup is disabled in the app manifest (allowBackup=false) so private workspace '
@@ -452,7 +434,6 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       ),
       (
         icon: TackIcons.notification,
-        paletteId: 'amber',
         title: 'Notifications & Task Reminders',
         body:
             'Notification and exact-alarm permissions are requested only when you schedule a task reminder '
@@ -460,7 +441,6 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       ),
       (
         icon: TackIcons.photo,
-        paletteId: 'peach',
         title: 'Photos, Camera & Clipboard Access',
         body:
             'Images are copied into internal app storage only when picked or captured by you. Clipboard text is '
@@ -468,7 +448,6 @@ class _AboutTackScreenState extends State<AboutTackScreen>
       ),
       (
         icon: TackIcons.info,
-        paletteId: 'slate',
         title: 'Software Notice & Data Responsibility',
         body:
             'Tack Notes (v2.0.0) is provided as local productivity software without warranty. Because there is no '
@@ -479,65 +458,63 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     return ListView(
       padding: EdgeInsets.fromLTRB(
         gutter,
-        AppSpacing.s3,
+        AppSpacing.s1,
         gutter,
         AppSpacing.s7 + bottomInset,
       ),
-      physics: const BouncingScrollPhysics(),
-      children: policies.map((item) {
-        final palette = AppColors.getPaletteById(item.paletteId);
-        final accent = palette.resolveAccentColor(tokens.isDark);
-        final softBg = palette.resolveSoftBackground(tokens.isDark);
-        return Container(
-          clipBehavior: Clip.antiAlias,
-          margin: const EdgeInsets.only(bottom: AppSpacing.s3),
-          padding: const EdgeInsets.all(AppSpacing.s4),
-          decoration: ShapeDecoration(
-            color: tokens.surfacePrimary,
-            shape: SmoothRectangleBorder(
-              borderRadius: AppSpacing.roundedMd,
-              smoothness: AppSpacing.defaultSmoothing,
-            ),
-            shadows: AppSpacing.elev1(tokens.isDark),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: softBg,
-                  borderRadius: AppSpacing.roundedSm,
-                ),
-                child: Center(
-                  child: TackIcon(item.icon, size: 18, color: accent),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: AppTypography.titleSm(
+      physics: const ClampingScrollPhysics(),
+      children: [
+        _buildGroupedSurface(
+          tokens: tokens,
+          children: policies.map((item) {
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.s4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: tokens.canvasSunken,
+                      borderRadius: AppSpacing.roundedSm,
+                    ),
+                    child: Center(
+                      child: TackIcon(
+                        item.icon,
+                        size: 17,
                         color: tokens.textPrimary,
-                        fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s1),
-                    Text(
-                      item.body,
-                      style: AppTypography.bodySm(color: tokens.textSecondary),
+                  ),
+                  const SizedBox(width: AppSpacing.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.body,
+                          style: AppTypography.bodySm(
+                            color: tokens.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -630,14 +607,19 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     return ListView(
       padding: EdgeInsets.fromLTRB(
         gutter,
-        AppSpacing.s3,
+        AppSpacing.s1,
         gutter,
         AppSpacing.s7 + bottomInset,
       ),
-      physics: const BouncingScrollPhysics(),
+      physics: const ClampingScrollPhysics(),
       children: [
-        ...packages.map((pkg) => _buildPackageCard(pkg, tokens)),
-        const SizedBox(height: AppSpacing.s2),
+        _buildGroupedSurface(
+          tokens: tokens,
+          children: packages
+              .map((pkg) => _buildPackageRow(pkg, tokens))
+              .toList(),
+        ),
+        const SizedBox(height: AppSpacing.s4),
         OutlinedButton(
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(AppSpacing.minTouchTarget),
@@ -665,19 +647,9 @@ class _AboutTackScreenState extends State<AboutTackScreen>
     );
   }
 
-  Widget _buildPackageCard(_OssPackage pkg, TackTokens tokens) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: AppSpacing.s3),
+  Widget _buildPackageRow(_OssPackage pkg, TackTokens tokens) {
+    return Padding(
       padding: const EdgeInsets.all(AppSpacing.s4),
-      decoration: ShapeDecoration(
-        color: tokens.surfacePrimary,
-        shape: SmoothRectangleBorder(
-          borderRadius: AppSpacing.roundedMd,
-          smoothness: AppSpacing.defaultSmoothing,
-        ),
-        shadows: AppSpacing.elev1(tokens.isDark),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -696,28 +668,18 @@ class _AboutTackScreenState extends State<AboutTackScreen>
                 ),
               ),
               const SizedBox(width: AppSpacing.s2),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s2,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: tokens.canvasSunken,
-                  borderRadius: AppSpacing.roundedPill,
-                ),
-                child: Text(
-                  pkg.license,
-                  style: AppTypography.caption(
-                    color: tokens.textSecondary,
-                    weight: FontWeight.w600,
-                  ),
+              Text(
+                pkg.license,
+                style: AppTypography.mono(
+                  fontSize: 11.5,
+                  color: tokens.textTertiary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           Text(
-            '${pkg.author}  •  ${pkg.version}',
+            '${pkg.author} · ${pkg.version}',
             style: AppTypography.caption(color: tokens.textTertiary),
           ),
           const SizedBox(height: 6),

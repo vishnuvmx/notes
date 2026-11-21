@@ -85,6 +85,7 @@ class TackApp extends StatelessWidget {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const _TackScrollBehavior(),
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeProv.themeMode,
@@ -106,4 +107,20 @@ class TackApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Clamped scroll behavior with zero blank overscroll bounce or stretch glow.
+class _TackScrollBehavior extends MaterialScrollBehavior {
+  const _TackScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => child;
 }

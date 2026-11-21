@@ -1,134 +1,5 @@
 # Session Log
 
-### [2026-11-18 06:50:40] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Slide 1 custom illustration (`slide1_tactile_grid.jpg`) looks great and is saved in `assets/...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 06:51:05] Checkpoint
-- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Generated the 1:1 Slide 3 illustration (`C:\Users\vmxvi\.gemini\antigravity\brain\e882d2f9-9...
-- **Model**: gemini-4-hydrogen-tiered-high
-
-### [2026-11-18 06:51:35] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Slide 3 custom illustration (`slide3_connected_ideas.jpg`) looks great and is saved in `asse...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: assets/images/onboarding/slide3_connected_ideas.jpg
-
-### [2026-11-18 06:51:57] Checkpoint
-- **Summary**: [gemini-4-hydrogen-tiered-high] Chat response: Generated `slide4_local_sanctuary_1794984700793.jpg` in the artifact directory and sent the ...
-- **Model**: gemini-4-hydrogen-tiered-high
-- **Modified**: assets/images/onboarding/slide3_connected_ideas.jpg
-
-### [2026-11-18 06:59:08] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "You can make use of the @[d:\edita-android\notes\docs\design\onboarding-references] for..." — Built the 4-slide first-run **Onboarding Screen** using bespoke illustrations generated in t...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/routing/app_router.dart, lib/features/settings/screens/settings_screen.dart, lib/main.dart, assets/images/onboarding/slide3_connected_ideas.jpg, assets/images/onboarding/slide4_local_sanctuary.jpg, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, test/onboarding_screen_test.dart
-
-### [2026-11-18 06:59:56] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "This is something annother ai model suggested to do out of.. can you check which screen..." — Here is how those transition patterns map onto **Tack's actual screens and routes**, includi...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/routing/app_router.dart, lib/features/settings/screens/settings_screen.dart, lib/main.dart, assets/images/onboarding/slide3_connected_ideas.jpg, assets/images/onboarding/slide4_local_sanctuary.jpg, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, test/onboarding_screen_test.dart
-
-### [2026-11-18 07:12:21] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Wherever suits best, do hem" — Implemented Tack's custom route and Hero transitions in a centralized helper without adding ...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 07:26:47] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After each any everything.. make a clear note and board like default one. A note that c..." — Created a complete, showcase-ready default **Note** and **Board** pair so new and upgrading ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 07:27:17] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After that flutter build apk split per abi" — Started `flutter build apk --split-per-abi` (running Gradle `assembleRelease`). Waiting for ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 07:28:55] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "After that flutter build apk split per abi" — Split-per-ABI release APKs built cleanly via `flutter build apk --split-per-abi` (exit code ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/features/notes/services/note_export_service.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/data/mock_initial_data.dart, lib/shared/data/workspace_repo_impl.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 11:40:35] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "What you mean by clicking on TOC and making them appear bottom? Fix that motion issue. ..." — Running `dart analyze` across the 11 modified files before adding and running regression tes...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/routing/app_router.dart, lib/core/theme/smooth_border.dart, lib/features/folders/screens/folder_view_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/widgets/neo_note_card.dart, pubspec.lock, pubspec.yaml, lib/shared/widgets/tack_card_open_container.dart
-
-### [2026-11-18 11:44:23] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "What you mean by clicking on TOC and making them appear bottom? Fix that motion issue. ..." — `dart analyze` passed cleanly with zero errors or warnings across all 12 files. Waiting for ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/routing/app_router.dart, lib/core/theme/smooth_border.dart, lib/features/folders/screens/folder_view_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/widgets/neo_note_card.dart, pubspec.lock, pubspec.yaml, test/phase2_ui_audit_test.dart, lib/shared/widgets/tack_card_open_container.dart
-
-### [2026-11-18 11:46:26] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "What you mean by clicking on TOC and making them appear bottom? Fix that motion issue. ..." — Fixed all three motion issues: **TOC position & scroll precision**, **`To do` <-> `Completed...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: test/phase2_ui_audit_test.dart
-
-### [2026-11-18 11:52:02] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Improve the Tack Insert and Transform modal screen UI. Now it feels more likely to be A..." — `dart analyze` passed with zero issues and `impeccable doctor` found zero findings. Waiting ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/features/notes/widgets/slash_command_sheet.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 11:52:22] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Improve the Tack Insert and Transform modal screen UI. Now it feels more likely to be A..." — Redesigned the **Insert & Transform** modal and inline `/` bar in `slash_command_sheet.dart`...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/features/notes/widgets/slash_command_sheet.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:12:53] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Colors are not swiching in color palette. I already told you like in a color mode, the ..." — Running the full `flutter test` verification suite across all 73 tests (including the new pa...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_header_bar.dart, lib/shared/widgets/ios_menu_button.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:14:01] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Colors are not swiching in color palette. I already told you like in a color mode, the ..." — Fixed the two test assertions in `test/phase2_ui_audit_test.dart` (`DMSans` font-family weig...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_header_bar.dart, lib/shared/widgets/ios_menu_button.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:15:47] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Colors are not swiching in color palette. I already told you like in a color mode, the ..." — All 73 tests passed (`+73: All tests passed!`). Waiting for the final `dart analyze lib/ tes...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_header_bar.dart, lib/shared/widgets/ios_menu_button.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:16:24] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Colors are not swiching in color palette. I already told you like in a color mode, the ..." — Fixed live color palette switching with darker-variant theming, redesigned the inline Table ...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_header_bar.dart, lib/shared/widgets/ios_menu_button.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:17:09] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Explain why when we switch between the hovering or clicking animation is beyond what th..." — This happens because the **tap/hover `InkWell` is wrapped around an invisible `48dp` touch-t...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_header_bar.dart, lib/shared/widgets/ios_menu_button.dart, test/phase2_ui_audit_test.dart, test/tack_icons_test.dart
-
-### [2026-11-18 12:24:40] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "The above mentioned thing need to be fixed at the point. Those aren't meant to happen. ..." — `dart analyze` (0 new issues) and `impeccable doctor` (`findings: []`) passed. Running the f...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_header_bar.dart
-
-### [2026-11-18 12:25:16] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "The above mentioned thing need to be fixed at the point. Those aren't meant to happen. ..." — Implemented a permanent architectural fix across the app so hover, press, and splash overlay...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_header_bar.dart
-
-### [2026-11-18 12:26:27] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — Launched a parallel codebase-wide audit across 4 tracks (Core & Shared Widgets, App Features...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_colors.dart, lib/core/theme/app_typography.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_header_bar.dart
-
-### [2026-11-18 12:30:41] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Audit complete. All verified UI/UX findings across `lib/features/whiteboard/` and `lib/featu...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 12:30:43] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — Received the audit report for `whiteboard/` and `notes/widgets/mermaid/`; waiting for the re...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 12:31:04] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Audit complete across `lib/core/theme/`, `lib/core/routing/tack_routes.dart`, and all 19 fil...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Referenced**: lib/core/routing/tack_routes.dart
-
-### [2026-11-18 12:31:08] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — Received the `core/theme/` & `shared/widgets/` audit report as well (including real TalkBack...
-- **Model**: gemini-4-hydrogen-xhigh
-
 ### [2026-11-18 12:32:33] Checkpoint
 - **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Completed the code-level UI/UX integrity audit across the 8 target feature directories (`hom...
 - **Model**: gemini-4-hydrogen-xhigh
@@ -240,3 +111,136 @@
 - **Summary**: [gemini-3.8-flash-medium] Chat: "npm i @vishnuvmx/recall-memory got a v0.5.0. update to it." — `@vishnuvmx/recall-memory` has been updated to **`v0.5.0`** across both global and workspace...
 - **Model**: gemini-3.8-flash-medium
 - **Modified**: AI_STUDIO_INSTRUCTIONS.md, package-lock.json, package.json
+
+### [2026-11-20 12:45:49] Checkpoint
+- **Summary**: 120fps performance optimizations, fluid spring motion, and AI Studio system instructions completed
+
+### [2026-11-21 03:20:51] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Cleaned up the unused locals and added an onboarding uniform-image-size assertion; `flutter ...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart
+
+### [2026-11-21 03:21:55] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Updated the `What's New` headline assertion in `phase2_ui_audit_test.dart`; `flutter analyze...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:22:17] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Fixed all of the UI issues and stripped out the AI-slop card-in-card / left-stripe / rainbow...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:34:17] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "give the commands to run in emulator" — Run these in PowerShell from `d:\edita-android\notes`:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:50:23] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "what kindoff stroke is this?" — Found the exact cause — a **double-painted `SmoothRectangleBorder`** bug — and fixed it in b...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:50:44] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "what kindoff stroke is this?" — That was a **double-painted `SmoothRectangleBorder` bug** (creating a hollow "railroad track...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:51:39] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "I have never asked to colorize these icons btw.. make them black again" — Changed all 4 `NoteEditorScreen` AppBar icons (Back, Outline, Edit/Read, and `...` menu) bac...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:52:12] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "I have never asked to colorize these icons btw.. make them black again" — Done — all 4 AppBar controls in note_editor_screen.dart (Back, Document Outline, Edit/Read t...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:53:23] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Make those active state rounded perfectly..." — Done! Updated `_buildDockToolButton` in whiteboard_canvas_screen.dart to `useCircleShape: tr...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:55:41] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Make these part UI differently.. not like this itself.. this feels like android UI itself." — Replaced the generic solid Android `AppBar` on the whiteboard with a full-bleed edge-to-edge...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:55:58] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Make these part UI differently.. not like this itself.. this feels like android UI itself." — Replaced the solid Android `AppBar` in whiteboard_canvas_screen.dart with a **full-bleed edg...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:58:20] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "The thickness of icon and those font weights not match together, better decrease font w..." — Done — decreased the font weight on task reminder and status badges so the text matches the ...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:59:39] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "These as well as make them white bg and black icons." — Updated `EditorFormattingToolbar` and the editor status footer to clean white (`tokens.surfa...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 03:59:57] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "These as well as make them white bg and black icons." — Done — both the keyboard formatting toolbar and the bottom status footer are now clean white...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:01:24] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Image preview in notes, is getting cutout or clipped, fix that" — Fixed the image lightbox clipping in `_ImageLightboxViewer` by moving `InteractiveViewer` to...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:01:48] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Image preview in notes, is getting cutout or clipped, fix that" — Fixed the image lightbox cutout/clipping in rich_note_content_view.dart:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:03:29] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove these in onboarding Also have meaning ful description one line in onboarding not..." — **Removed Floating Tiles Overlay** — onboarding_slide_stage.dart: Deleted `_FloatingWorkspac...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:06:54] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "This template.. Can we remove that for this version. The border radius of outer is perf..." — Removed the Templates drawer from Quick Capture and unified all inner radii (`16dp` concentr...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:07:14] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "This template.. Can we remove that for this version. The border radius of outer is perf..." — Done! Updated create_item_sheet.dart:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:10:10] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "remove this entire section and related codes from notes workspace." — Removed `FrontmatterPropertiesBar` and deleted `frontmatter_properties_bar.dart`. `flutter a...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:10:29] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "remove this entire section and related codes from notes workspace." — Removed the entire Frontmatter Properties Bar (`In Review`, `Urgent`, `aliases`, `Edit`, and...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:10:45] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Hot reload was rejected: Const class cannot remove fields: Library:'package:notes/featu..." — That's expected — Flutter's Hot Reload (`r`) can't remove fields from a `const` class (`Onbo...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:13:23] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "This UI need to be polished. This one screams AI generated. remove that icon and the ro..." — Polished task_reminder_sheet.dart to remove the AI-generated look:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-21 04:15:34] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove the over scrolling state issues in pages. otherwise we can scroll lot that every..." — Replaced all `BouncingScrollPhysics` across the app with `ClampingScrollPhysics` and added a...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/main.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/smart_bottom_nav_bar.dart
+
+### [2026-11-21 04:15:56] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove the over scrolling state issues in pages. otherwise we can scroll lot that every..." — Removed all blank-void overscroll behavior across the entire app:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/main.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/smart_bottom_nav_bar.dart
+
+### [2026-11-21 04:18:38] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "better the brfore fuck. This thing is Fking UI. Revert the UI. Do it beetter. Why the f..." — My fault on that broken shrink-wrapped grid — replaced it properly in task_reminder_sheet.dart:
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/main.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/smart_bottom_nav_bar.dart

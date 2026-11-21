@@ -638,7 +638,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
                 )
               : ListView(
                   shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const ClampingScrollPhysics(),
                   children: isFiltering
                       ? [
                           _GroupedCommandListCard(
@@ -675,7 +675,7 @@ class _SlashAndBlockActionsSheetState extends State<SlashAndBlockActionsSheet> {
     return ListView(
       key: const ValueKey('sheet_transform'),
       shrinkWrap: true,
-      physics: const BouncingScrollPhysics(),
+      physics: const ClampingScrollPhysics(),
       children: [
         // Line reorder / duplicate bar
         Container(

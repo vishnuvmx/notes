@@ -29,4 +29,7 @@
 - [coding-style.md](rules/coding-style.md)
 - [design-system.md](rules/design-system.md)
 - [workflows.md](rules/workflows.md)
+
+## Proposed (awaiting `recall approve`)
+- [InteractiveViewer was wrapped inside Center(](lessons/mem_014-interactiveviewer-was-wrapped-inside-center.md) (mem_014)
 <!-- recall:index:end -->

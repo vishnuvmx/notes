@@ -7,6 +7,7 @@ import 'package:notes/core/theme/app_theme.dart';
 import 'package:notes/core/theme/theme_provider.dart';
 import 'package:notes/features/home/screens/home_screen.dart';
 import 'package:notes/features/onboarding/screens/onboarding_screen.dart';
+import 'package:notes/features/onboarding/widgets/onboarding_slide_stage.dart';
 import 'package:notes/shared/data/i_workspace_repo.dart';
 import 'package:notes/shared/models/base_item.dart';
 import 'package:notes/shared/providers/workspace_provider.dart';
@@ -137,6 +138,8 @@ void main() {
         );
         expect(ctaSize.height, greaterThanOrEqualTo(AppSpacing.minTouchTarget));
 
+        final stage1Size = tester.getSize(find.byType(OnboardingSlideStage));
+
         // Slide 1 -> Slide 2 (uses floating_cloud_meadows.jpg hero)
         await tester.tap(find.byKey(const ValueKey('onboarding_primary_cta')));
         await tester.pumpAndSettle();
@@ -144,6 +147,7 @@ void main() {
           find.text('All your ideas,\nweightlessly organized'),
           findsOneWidget,
         );
+        expect(tester.getSize(find.byType(OnboardingSlideStage)), stage1Size);
         final cloudImageFinder = find.byWidgetPredicate((w) {
           if (w is! Image) return false;
           final provider = w.image is ResizeImage
@@ -158,11 +162,13 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('onboarding_primary_cta')));
         await tester.pumpAndSettle();
         expect(find.text('#Tags and\n[[WikiLinks]]'), findsOneWidget);
+        expect(tester.getSize(find.byType(OnboardingSlideStage)), stage1Size);
 
         // Slide 3 -> Slide 4: Skip vanishes (no redundant exits) and CTA reads Start Writing
         await tester.tap(find.byKey(const ValueKey('onboarding_primary_cta')));
         await tester.pumpAndSettle();
         expect(find.text('Everything in\nyour control'), findsOneWidget);
+        expect(tester.getSize(find.byType(OnboardingSlideStage)), stage1Size);
         expect(find.text('Skip'), findsNothing);
         expect(find.text('Start Writing'), findsOneWidget);
 
