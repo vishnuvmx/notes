@@ -1,23 +1,47 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/native/tack_core_bridge.dart';
 import '../../core/theme/app_colors.dart';
-import 'i_workspace_repo.dart';
+import '../../features/notes/models/text_note.dart';
+import '../../features/whiteboard/models/whiteboard_item.dart';
 import '../models/base_item.dart';
+import '../models/clipboard_item.dart';
 import '../models/item_serializer.dart';
+import '../models/sticky_note.dart';
+import 'i_workspace_repo.dart';
 import 'mock_initial_data.dart';
 
-/// Concrete implementation of IWorkspaceRepository backed by SharedPreferences JSON persistence.
-/// Includes corrupt-store backup & last-good fallback (`03` §7 P2, `08` §5) and
-/// automatic migration of legacy palette IDs and archived state (`05` §7.2).
+/// Concrete implementation of [IWorkspaceRepository].
+///
+/// Primary persistence engine: **Rust SQLite WAL + FTS5** via [TackCoreBridge],
+/// giving O(1) incremental per-item writes and sub-millisecond BM25 full-text
+/// search without serializing the entire workspace into XML SharedPreferences.
+///
+/// Includes automatic one-time migration from legacy SharedPreferences JSON
+/// storage and a seamless SharedPreferences fallback when native FFI or
+/// `path_provider` is unavailable (e.g., Web or unit-test harnesses).
 class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
   static const String _storageKey = 'tack_workspace_items_v2';
   static const String _lastGoodStorageKey = 'tack_workspace_items_v2_last_good';
-  static const String _corruptBackupStorageKey = 'tack_workspace_items_v2_corrupt_backup';
-  static const String _starterShowcaseSeededKey = 'tack_starter_showcase_v2_seeded';
+  static const String _corruptBackupStorageKey =
+      'tack_workspace_items_v2_corrupt_backup';
+  static const String _starterShowcaseSeededKey =
+      'tack_starter_showcase_v2_seeded';
+  static const String _sqliteMigratedKey = 'tack_sqlite_v2_migrated';
 
+  final String? _explicitDbPath;
   List<BaseWorkspaceItem> _items = [];
   bool _initialized = false;
+  int _dbHandle = 0;
+
+  LocalStorageWorkspaceRepository({String? dbPath}) : _explicitDbPath = dbPath;
+
+  bool get isUsingNativeSqlite => _dbHandle > 0;
 
   @override
   List<BaseWorkspaceItem> get cachedActiveItems =>
@@ -35,8 +59,88 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
   List<BaseWorkspaceItem> get cachedFavoriteItems =>
       _items.where((i) => i.isFavorite && !i.isTrash && !i.isArchived).toList();
 
+  void dispose() {
+    if (_dbHandle > 0) {
+      TackCoreBridge.instance.closeDatabase(_dbHandle);
+      _dbHandle = 0;
+    }
+  }
+
+  Future<String?> _resolveDatabasePath() async {
+    if (_explicitDbPath != null) return _explicitDbPath;
+    if (kIsWeb) return null;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      return '${dir.path}${Platform.pathSeparator}tack_workspace_v2.db';
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
+
+    // 1. Attempt to open native Rust SQLite WAL + FTS5 database
+    if (TackCoreBridge.instance.isAvailable) {
+      final dbPath = await _resolveDatabasePath();
+      if (dbPath != null) {
+        _dbHandle = TackCoreBridge.instance.openDatabase(dbPath);
+      }
+    }
+
+    if (_dbHandle > 0) {
+      await _initFromSqlite();
+    } else {
+      await _initFromSharedPreferences();
+    }
+
+    _initialized = true;
+  }
+
+  Future<void> _initFromSqlite() async {
+    final existingJson = TackCoreBridge.instance.loadAllItemsJson(_dbHandle);
+    final existingItems = existingJson != null
+        ? _tryDecodeItems(existingJson)
+        : null;
+
+    if (existingItems != null && existingItems.isNotEmpty) {
+      _items = existingItems.map(_migrateLegacyItem).toList();
+      return;
+    }
+
+    // Empty SQLite DB: check if legacy SharedPreferences data exists to migrate
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {
+      prefs = null;
+    }
+
+    final legacyJson = prefs?.getString(_storageKey);
+    if (legacyJson != null && legacyJson.isNotEmpty) {
+      final parsed = _tryDecodeItems(legacyJson);
+      if (parsed != null && parsed.isNotEmpty) {
+        _items = parsed.map(_migrateLegacyItem).toList();
+      } else {
+        await prefs?.setString(_corruptBackupStorageKey, legacyJson);
+        final lastGood = prefs?.getString(_lastGoodStorageKey);
+        final recovered = lastGood != null ? _tryDecodeItems(lastGood) : null;
+        _items = (recovered != null && recovered.isNotEmpty)
+            ? recovered.map(_migrateLegacyItem).toList()
+            : MockInitialData.getInitialItems();
+      }
+    } else {
+      _items = MockInitialData.getInitialItems();
+    }
+
+    _batchUpsertSqlite(_items);
+    try {
+      await prefs?.setBool(_sqliteMigratedKey, true);
+      await prefs?.setBool(_starterShowcaseSeededKey, true);
+    } catch (_) {}
+  }
+
+  Future<void> _initFromSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_storageKey);
 
@@ -45,47 +149,49 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
       if (parsed != null) {
         _items = parsed.map(_migrateLegacyItem).toList();
       } else {
-        // Preserve corrupt payload so user data is never silently lost (`03` §7 P2)
         await prefs.setString(_corruptBackupStorageKey, jsonString);
         final lastGood = prefs.getString(_lastGoodStorageKey);
         final recovered = lastGood != null ? _tryDecodeItems(lastGood) : null;
         if (recovered != null && recovered.isNotEmpty) {
           _items = recovered.map(_migrateLegacyItem).toList();
-          await _persistToDisk();
+          await _persistLegacySharedPreferences();
         } else {
           _items = MockInitialData.getInitialItems();
-          await _persistToDisk();
+          await _persistLegacySharedPreferences();
         }
       }
       if (!(prefs.getBool(_starterShowcaseSeededKey) ?? false)) {
         final now = DateTime.now();
         bool upgraded = false;
         for (int i = 0; i < _items.length; i++) {
-          final replacement = MockInitialData.tryUpgradeLegacyStarter(_items[i], now);
+          final replacement = MockInitialData.tryUpgradeLegacyStarter(
+            _items[i],
+            now,
+          );
           if (replacement != null) {
             _items[i] = replacement;
             upgraded = true;
           }
         }
         if (upgraded) {
-          await _persistToDisk();
+          await _persistLegacySharedPreferences();
         }
         await prefs.setBool(_starterShowcaseSeededKey, true);
       }
     } else {
-      // First launch: seed with clean starter items and persist
       _items = MockInitialData.getInitialItems();
-      await _persistToDisk();
+      await _persistLegacySharedPreferences();
       await prefs.setBool(_starterShowcaseSeededKey, true);
     }
-    _initialized = true;
   }
 
   List<BaseWorkspaceItem>? _tryDecodeItems(String rawJson) {
     try {
       final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
       return decoded
-          .map((e) => ItemSerializer.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) => ItemSerializer.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .whereType<BaseWorkspaceItem>()
           .toList();
     } catch (e) {
@@ -94,9 +200,6 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     }
   }
 
-  /// Normalizes legacy palette IDs (`terracotta -> peach`, `yellow -> amber`)
-  /// and migrates legacy `isArchived: true` items to `isFavorite: true, isArchived: false`
-  /// so nothing is hidden after retiring Archive (`05` §7.2).
   BaseWorkspaceItem _migrateLegacyItem(BaseWorkspaceItem item) {
     final normalizedPalette = AppColors.normalizePaletteId(item.paletteId);
     final shouldMigrateArchive = item.isArchived && !item.isTrash;
@@ -110,7 +213,59 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     return item;
   }
 
-  Future<void> _persistToDisk() async {
+  static String _extractSearchBody(BaseWorkspaceItem item) {
+    if (item is TextNote) return item.content;
+    if (item is StickyNote) return item.content;
+    if (item is ClipboardItem) return '${item.clipText} ${item.sourceApp}';
+    if (item is WhiteboardCanvasItem) {
+      return item.nodes.map((n) => n.text).join(' ');
+    }
+    return '';
+  }
+
+  static String _extractSearchTags(BaseWorkspaceItem item) {
+    if (item is TextNote) return item.tags.join(' ');
+    return '';
+  }
+
+  void _upsertSingleSqlite(BaseWorkspaceItem item) {
+    if (_dbHandle <= 0) return;
+    TackCoreBridge.instance.upsertItem(
+      handle: _dbHandle,
+      id: item.id,
+      itemType: item.type.name,
+      title: item.title,
+      bodyText: _extractSearchBody(item),
+      tagsText: _extractSearchTags(item),
+      isTrash: item.isTrash,
+      isArchived: item.isArchived,
+      isFavorite: item.isFavorite,
+      updatedAtMs: item.updatedAt.millisecondsSinceEpoch,
+      jsonPayload: jsonEncode(item.toJson()),
+    );
+  }
+
+  void _batchUpsertSqlite(List<BaseWorkspaceItem> items) {
+    if (_dbHandle <= 0 || items.isEmpty) return;
+    final batch = [
+      for (final item in items)
+        {
+          'id': item.id,
+          'itemType': item.type.name,
+          'title': item.title,
+          'bodyText': _extractSearchBody(item),
+          'tagsText': _extractSearchTags(item),
+          'isTrash': item.isTrash,
+          'isArchived': item.isArchived,
+          'isFavorite': item.isFavorite,
+          'updatedAtMs': item.updatedAt.millisecondsSinceEpoch,
+          'jsonPayload': jsonEncode(item.toJson()),
+        },
+    ];
+    TackCoreBridge.instance.upsertBatchJson(_dbHandle, jsonEncode(batch));
+  }
+
+  Future<void> _persistLegacySharedPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = _items.map((item) => item.toJson()).toList();
@@ -160,7 +315,28 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
   }
 
   @override
-  Future<List<BaseWorkspaceItem>> searchItems(String query, {ItemType? type}) async {
+  Future<List<BaseWorkspaceItem>> searchItems(
+    String query, {
+    ItemType? type,
+  }) async {
+    await _ensureInitialized();
+    if (query.trim().isEmpty) {
+      return getItemsByType(type);
+    }
+    if (_dbHandle > 0) {
+      final ids = TackCoreBridge.instance.searchItemIds(
+        _dbHandle,
+        query,
+        itemType: type?.name,
+      );
+      if (ids != null) {
+        final byId = {for (final item in _items) item.id: item};
+        return [
+          for (final id in ids)
+            if (byId[id] != null) byId[id]!,
+        ];
+      }
+    }
     final active = await getAllActiveItems();
     return active.where((item) {
       final matchesType = type == null || item.type == type;
@@ -189,7 +365,11 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     } else {
       _items.insert(0, normalized);
     }
-    await _persistToDisk();
+    if (_dbHandle > 0) {
+      _upsertSingleSqlite(normalized);
+    } else {
+      await _persistLegacySharedPreferences();
+    }
   }
 
   @override
@@ -197,11 +377,16 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     await _ensureInitialized();
     final index = _items.indexWhere((i) => i.id == id);
     if (index >= 0) {
-      _items[index] = _items[index].copyWith(
+      final updated = _items[index].copyWith(
         isTrash: true,
         updatedAt: DateTime.now(),
       );
-      await _persistToDisk();
+      _items[index] = updated;
+      if (_dbHandle > 0) {
+        _upsertSingleSqlite(updated);
+      } else {
+        await _persistLegacySharedPreferences();
+      }
     }
   }
 
@@ -210,12 +395,17 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     await _ensureInitialized();
     final index = _items.indexWhere((i) => i.id == id);
     if (index >= 0) {
-      _items[index] = _items[index].copyWith(
+      final updated = _items[index].copyWith(
         isTrash: false,
         isArchived: false,
         updatedAt: DateTime.now(),
       );
-      await _persistToDisk();
+      _items[index] = updated;
+      if (_dbHandle > 0) {
+        _upsertSingleSqlite(updated);
+      } else {
+        await _persistLegacySharedPreferences();
+      }
     }
   }
 
@@ -225,11 +415,16 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     final index = _items.indexWhere((i) => i.id == id);
     if (index >= 0) {
       final current = _items[index];
-      _items[index] = current.copyWith(
+      final updated = current.copyWith(
         isArchived: !current.isArchived,
         updatedAt: DateTime.now(),
       );
-      await _persistToDisk();
+      _items[index] = updated;
+      if (_dbHandle > 0) {
+        _upsertSingleSqlite(updated);
+      } else {
+        await _persistLegacySharedPreferences();
+      }
     }
   }
 
@@ -239,11 +434,16 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
     final index = _items.indexWhere((i) => i.id == id);
     if (index >= 0) {
       final current = _items[index];
-      _items[index] = current.copyWith(
+      final updated = current.copyWith(
         isFavorite: !current.isFavorite,
         updatedAt: DateTime.now(),
       );
-      await _persistToDisk();
+      _items[index] = updated;
+      if (_dbHandle > 0) {
+        _upsertSingleSqlite(updated);
+      } else {
+        await _persistLegacySharedPreferences();
+      }
     }
   }
 
@@ -251,13 +451,21 @@ class LocalStorageWorkspaceRepository implements IWorkspaceRepository {
   Future<void> deletePermanently(String id) async {
     await _ensureInitialized();
     _items.removeWhere((i) => i.id == id);
-    await _persistToDisk();
+    if (_dbHandle > 0) {
+      TackCoreBridge.instance.deleteItem(_dbHandle, id);
+    } else {
+      await _persistLegacySharedPreferences();
+    }
   }
 
   @override
   Future<void> emptyTrash() async {
     await _ensureInitialized();
     _items.removeWhere((i) => i.isTrash);
-    await _persistToDisk();
+    if (_dbHandle > 0) {
+      TackCoreBridge.instance.emptyTrash(_dbHandle);
+    } else {
+      await _persistLegacySharedPreferences();
+    }
   }
 }

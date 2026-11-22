@@ -1,3 +1,4 @@
+import '../../../core/native/tack_core_bridge.dart';
 import '../../../shared/models/base_item.dart';
 import '../../../shared/models/clipboard_item.dart';
 import '../../../shared/models/sticky_note.dart';
@@ -137,6 +138,23 @@ class WikiLinkService {
   /// Extracts all `[[...]]` and `![[...]]` links outside fenced code blocks.
   static List<ParsedWikiLink> extractAllLinks(String content) {
     if (content.isEmpty) return const [];
+    // Cross FFI only when document size amortizes marshalling cost.
+    if (content.length >= 128 && TackCoreBridge.instance.isAvailable) {
+      final nativeLinks = TackCoreBridge.instance.extractWikiLinks(content);
+      if (nativeLinks != null) {
+        return nativeLinks
+            .map(
+              (m) => ParsedWikiLink(
+                rawMatch: m['rawMatch'] as String? ?? '',
+                isEmbed: m['isEmbed'] as bool? ?? false,
+                target: m['target'] as String? ?? '',
+                anchor: m['anchor'] as String?,
+                alias: m['alias'] as String?,
+              ),
+            )
+            .toList(growable: false);
+      }
+    }
     final links = <ParsedWikiLink>[];
     final lines = content.split('\n');
     bool inFence = false;
@@ -197,7 +215,9 @@ class WikiLinkService {
   }
 
   /// Extracts all Markdown headings (`#` to `######`) outside fenced code blocks.
-  static List<({int level, String title, int lineIndex})> extractHeadings(String content) {
+  static List<({int level, String title, int lineIndex})> extractHeadings(
+    String content,
+  ) {
     final results = <({int level, String title, int lineIndex})>[];
     final lines = content.split('\n');
     bool inFence = false;
@@ -237,7 +257,11 @@ class WikiLinkService {
   }
 
   /// Extracts a clean preview snippet of either a whole note or a specific `#Heading` section.
-  static String extractSectionMarkdown(String content, {String? anchor, int maxLines = 6}) {
+  static String extractSectionMarkdown(
+    String content, {
+    String? anchor,
+    int maxLines = 6,
+  }) {
     if (content.trim().isEmpty) return '';
     final lines = content.split('\n');
 
@@ -265,7 +289,8 @@ class WikiLinkService {
 
       if (targetLevel != null) {
         final headingMatch = RegExp(r'^(#{1,6})\s+').firstMatch(trimmed);
-        if (headingMatch != null && headingMatch.group(1)!.length <= targetLevel) {
+        if (headingMatch != null &&
+            headingMatch.group(1)!.length <= targetLevel) {
           break;
         }
       }
@@ -293,7 +318,10 @@ class WikiLinkService {
   }
 
   /// Detects an active unclosed `[[query` or `![[query` immediately before the cursor.
-  static ActiveWikiTrigger? detectActiveWikiTrigger(String text, int cursorOffset) {
+  static ActiveWikiTrigger? detectActiveWikiTrigger(
+    String text,
+    int cursorOffset,
+  ) {
     if (cursorOffset < 2 || cursorOffset > text.length) return null;
     if (isInsideCodeFence(text, cursorOffset)) return null;
 
@@ -306,12 +334,16 @@ class WikiLinkService {
 
     final afterOpen = lineBeforeCursor.substring(openIdxInLine + 2);
     // Already closed or contains invalid brackets
-    if (afterOpen.contains(']]') || afterOpen.contains('[') || afterOpen.contains(']')) {
+    if (afterOpen.contains(']]') ||
+        afterOpen.contains('[') ||
+        afterOpen.contains(']')) {
       return null;
     }
 
-    final bool isEmbed = openIdxInLine > 0 && lineBeforeCursor[openIdxInLine - 1] == '!';
-    final int triggerStart = lineStart + (isEmbed ? openIdxInLine - 1 : openIdxInLine);
+    final bool isEmbed =
+        openIdxInLine > 0 && lineBeforeCursor[openIdxInLine - 1] == '!';
+    final int triggerStart =
+        lineStart + (isEmbed ? openIdxInLine - 1 : openIdxInLine);
 
     // Strip alias part if user already typed `|`
     final pipeIdx = afterOpen.indexOf('|');
@@ -335,7 +367,10 @@ class WikiLinkService {
   }
 
   /// Detects an active `/command` typed at the start of a line (outside code blocks).
-  static ActiveSlashTrigger? detectActiveSlashTrigger(String text, int cursorOffset) {
+  static ActiveSlashTrigger? detectActiveSlashTrigger(
+    String text,
+    int cursorOffset,
+  ) {
     if (cursorOffset < 1 || cursorOffset > text.length) return null;
     if (isInsideCodeFence(text, cursorOffset)) return null;
 
@@ -343,7 +378,8 @@ class WikiLinkService {
     final lineStart = before.lastIndexOf('\n') + 1;
     final lineBeforeCursor = before.substring(lineStart);
 
-    final match = RegExp(r'^(\s*)\/([a-zA-Z0-9_-]*)$').firstMatch(lineBeforeCursor);
+    final match = RegExp(r'^(\s*)\/([a-zA-Z0-9_-]*)$')
+        .firstMatch(lineBeforeCursor);
     if (match == null) return null;
 
     final leadingSpaces = match.group(1)!.length;
@@ -358,7 +394,8 @@ class WikiLinkService {
 
   /// Computes both explicit Backlinks (`[[Title]]`, `![[Title]]`, Canvas Spec Cards)
   /// and Unlinked Mentions across the workspace.
-  static ({List<BacklinkEntry> linked, List<BacklinkEntry> unlinked}) computeBacklinks({
+  static ({List<BacklinkEntry> linked, List<BacklinkEntry> unlinked})
+  computeBacklinks({
     required BaseWorkspaceItem currentItem,
     required Iterable<BaseWorkspaceItem> allItems,
   }) {
@@ -371,13 +408,76 @@ class WikiLinkService {
         .aliases
         .map((a) => a.toLowerCase())
         .toSet();
+
+    // Native Rust batch scanner fast-path (single FFI crossing for entire workspace)
+    if (TackCoreBridge.instance.isAvailable) {
+      final itemList = allItems.toList(growable: false);
+      final byId = <String, BaseWorkspaceItem>{
+        for (final it in itemList) it.id: it,
+      };
+      final candidates = <Map<String, dynamic>>[
+        for (final c in itemList)
+          if (!c.isTrash && c.id != currentItem.id)
+            {
+              'id': c.id,
+              'title': c.title,
+              'isTrash': c.isTrash,
+              'isWhiteboard': c is WhiteboardCanvasItem,
+              'body': c is WhiteboardCanvasItem ? '' : contentOfItem(c),
+              'canvasNodes': c is WhiteboardCanvasItem
+                  ? [
+                      for (final n in c.nodes)
+                        {
+                          'id': n.id,
+                          'text': n.text,
+                          'linkedNoteId': n.linkedNoteId,
+                        },
+                    ]
+                  : const <Map<String, dynamic>>[],
+            },
+      ];
+      final resp = TackCoreBridge.instance.computeBacklinks({
+        'currentId': currentItem.id,
+        'currentTitle': currentTitle,
+        'aliases': lowerAliases.toList(growable: false),
+        'candidates': candidates,
+      });
+      if (resp != null) {
+        List<BacklinkEntry> decodeList(dynamic raw) {
+          if (raw is! List) return const [];
+          final out = <BacklinkEntry>[];
+          for (final entry in raw) {
+            if (entry is! Map) continue;
+            final src = byId[entry['sourceId']];
+            if (src == null) continue;
+            out.add(
+              BacklinkEntry(
+                sourceItem: src,
+                contextSnippet: entry['contextSnippet'] as String? ?? '',
+                isCanvasNodeLink: entry['isCanvasNodeLink'] as bool? ?? false,
+                canvasNodeId: entry['canvasNodeId'] as String?,
+                unlinkedMatchOffset: entry['unlinkedMatchOffset'] as int?,
+                unlinkedMatchLength: entry['unlinkedMatchLength'] as int?,
+              ),
+            );
+          }
+          return out;
+        }
+
+        return (
+          linked: decodeList(resp['linked']),
+          unlinked: decodeList(resp['unlinked']),
+        );
+      }
+    }
     bool matchesTarget(String rawTarget) {
       if (rawTarget == currentItem.id) return true;
       final lower = rawTarget.toLowerCase();
       return lower == lowerTitle || lowerAliases.contains(lower);
     }
 
-    final canMatchUnlinked = currentTitle.length >= 3 &&
+    final canMatchUnlinked =
+        currentTitle.length >= 3 &&
         lowerTitle != 'untitled note' &&
         lowerTitle != 'new sticky' &&
         lowerTitle != 'new whiteboard';
@@ -430,13 +530,20 @@ class WikiLinkService {
       } else if (canMatchUnlinked) {
         // Look for whole-word case-insensitive plain-text mention outside [[...]]
         final escaped = RegExp.escape(currentTitle);
-        final wordRegex = RegExp('(?<![\\[\\w])$escaped(?![\\]\\w])', caseSensitive: false);
+        final wordRegex = RegExp(
+          '(?<![\\[\\w])$escaped(?![\\]\\w])',
+          caseSensitive: false,
+        );
         final match = wordRegex.firstMatch(body);
         if (match != null) {
           unlinked.add(
             BacklinkEntry(
               sourceItem: candidate,
-              contextSnippet: _extractSnippetAtOffset(body, match.start, match.end),
+              contextSnippet: _extractSnippetAtOffset(
+                body,
+                match.start,
+                match.end,
+              ),
               unlinkedMatchOffset: match.start,
               unlinkedMatchLength: match.end - match.start,
             ),
@@ -457,8 +564,13 @@ class WikiLinkService {
         return cleaned.length > 96 ? '${cleaned.substring(0, 96)}...' : cleaned;
       }
     }
-    final firstNonEmpty = lines.firstWhere((l) => l.trim().isNotEmpty, orElse: () => '');
-    return firstNonEmpty.length > 96 ? '${firstNonEmpty.substring(0, 96)}...' : firstNonEmpty;
+    final firstNonEmpty = lines.firstWhere(
+      (l) => l.trim().isNotEmpty,
+      orElse: () => '',
+    );
+    return firstNonEmpty.length > 96
+        ? '${firstNonEmpty.substring(0, 96)}...'
+        : firstNonEmpty;
   }
 
   static String _extractSnippetAtOffset(String body, int start, int end) {
@@ -470,4 +582,3 @@ class WikiLinkService {
     return '$prefix$raw$suffix';
   }
 }
-

@@ -1,30 +1,5 @@
 # Session Log
 
-### [2026-11-19 11:26:45] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Running static analysis (`flutter analyze --no-pub`) now; I'll run the full test suite right...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, test/performance_120fps_test.dart
-
-### [2026-11-19 11:29:38] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Static analysis passed with zero issues. Running the full `flutter test` suite now.
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, test/performance_120fps_test.dart
-
-### [2026-11-19 11:30:57] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Fixed the `_cachedBacklinks` record type in `note_editor_screen.dart` and re-running the ful...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, test/performance_120fps_test.dart
-
-### [2026-11-19 11:32:19] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Updated those two asset-image assertions to unwrap `ResizeImage` (confirming bounded `cacheW...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart, test/performance_120fps_test.dart
-
-### [2026-11-19 11:32:50] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Tack has been optimized for **120fps (`8.33ms` frame budget)** across Android display negoti...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart, test/performance_120fps_test.dart
-
 ### [2026-11-19 11:39:51] Checkpoint
 - **Summary**: [gemini-4-neon-medium] Chat: "Make all the animations you did yesterday 120 fps smoother please.." — Applied the 120Hz animation upgrades across routes, spring pill tracks, card container trans...
 - **Model**: gemini-4-neon-medium
@@ -247,3 +222,28 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "Hot reload was rejected: Const class cannot remove fields: Library:'package:notes/featu..." — That's normal in Flutter — when fields are removed from a `const` class (`_ReleaseEntry` in ...
 - **Model**: gemini-4-neon-medium
 - **Modified**: lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 08:37:15] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Building native Rust `libtack_core.so` for all three Android ABIs (`arm64-v8a`, `armeabi-v7a...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, rust/tack_core/target/.rustc_info.json, rust/tack_core/target/CACHEDIR.TAG, rust/tack_core/target/aarch64-linux-android/CACHEDIR.TAG, rust/tack_core/target/aarch64-linux-android/release/.cargo-artifact-lock, rust/tack_core/target/aarch64-linux-android/release/.cargo-build-lock, rust/tack_core/target/aarch64-linux-android/release/.cargo-lock, rust/tack_core/target/aarch64-linux-android/release/.fingerprint/ahash-4ff17b9c580f7817/run-build-script-build-script-build
+
+### [2026-11-22 08:39:06] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Fixed the closure type in storage.rs and resumed building `libtack_core.so` for all three An...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, android/app/src/main/jniLibs/arm64-v8a/libtack_core.so, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, rust/tack_core/target/.rustc_info.json, rust/tack_core/target/CACHEDIR.TAG, rust/tack_core/target/aarch64-linux-android/CACHEDIR.TAG, rust/tack_core/target/aarch64-linux-android/release/.cargo-artifact-lock, rust/tack_core/target/aarch64-linux-android/release/.cargo-build-lock, rust/tack_core/target/aarch64-linux-android/release/.cargo-lock
+
+### [2026-11-22 08:43:22] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Formatted all modified Dart files and started `flutter analyze --no-pub` + `flutter test`; w...
+- **Model**: gemini-4-neon-medium
+- **Modified**: .gitignore, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, android/app/src/main/jniLibs/arm64-v8a/libtack_core.so, android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so, android/app/src/main/jniLibs/x86_64/libtack_core.so, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, scripts/build_rust_android.ps1, test/rust_core_engine_test.dart
+
+### [2026-11-22 08:47:36] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Running `flutter analyze --no-pub` and the full `flutter test` suite; waiting for results.
+- **Model**: gemini-4-neon-medium
+- **Modified**: .gitignore, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, android/app/src/main/jniLibs/arm64-v8a/libtack_core.so, android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so, android/app/src/main/jniLibs/x86_64/libtack_core.so, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, scripts/build_rust_android.ps1, test/rust_core_engine_test.dart
+
+### [2026-11-22 08:48:05] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Completed the **Full Engine Overhaul**, converting Tack's CPU-bound engines and Android stor...
+- **Model**: gemini-4-neon-medium
+- **Modified**: .gitignore, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, android/app/src/main/jniLibs/arm64-v8a/libtack_core.so, android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so, android/app/src/main/jniLibs/x86_64/libtack_core.so, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, scripts/build_rust_android.ps1, test/rust_core_engine_test.dart

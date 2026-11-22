@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/native/tack_core_bridge.dart';
+
 /// Semantic token kinds produced by language-specific lexers.
 enum _TokenKind {
   comment,
@@ -1296,6 +1298,37 @@ class CodeSyntaxHighlighter {
 
     final spans = <TextSpan>[];
     int lastIndex = 0;
+
+    // Native Rust zero-regex lexer fast-path
+    final nativeTokens = TackCoreBridge.instance.tokenizeCode(code, langKey);
+    if (nativeTokens != null) {
+      final tokenKinds = _TokenKind.values;
+      for (int i = 0; i + 2 < nativeTokens.length; i += 3) {
+        final start = nativeTokens[i];
+        final end = nativeTokens[i + 1];
+        final kindId = nativeTokens[i + 2];
+        if (start < lastIndex || end <= start || end > code.length) continue;
+        if (start > lastIndex) {
+          spans.add(
+            TextSpan(text: code.substring(lastIndex, start), style: style),
+          );
+        }
+        final kind = (kindId >= 0 && kindId < tokenKinds.length)
+            ? tokenKinds[kindId]
+            : _TokenKind.identifier;
+        spans.add(
+          TextSpan(
+            text: code.substring(start, end),
+            style: styles[kind] ?? style,
+          ),
+        );
+        lastIndex = end;
+      }
+      if (lastIndex < code.length) {
+        spans.add(TextSpan(text: code.substring(lastIndex), style: style));
+      }
+      return spans.isEmpty ? [TextSpan(text: code, style: style)] : spans;
+    }
 
     for (final match in grammar.regex.allMatches(code)) {
       if (match.start > lastIndex) {

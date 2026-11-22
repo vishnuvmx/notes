@@ -57,3 +57,6 @@ app.*.map.json
 # Impeccable per-developer local consent & cache
 /.impeccable/config.local.json
 /.impeccable/hook.cache.json
+
+# Rust build cache
+/rust/tack_core/target/

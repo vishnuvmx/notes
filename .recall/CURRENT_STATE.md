@@ -1,29 +1,41 @@
 # Previous Iteration State (Historical Context Only)
 
-> **Last Updated**: 2026-11-22 03:52:01 · **Model**: gemini-4-neon-medium
+> **Last Updated**: 2026-11-22 08:48:05 · **Model**: gemini-4-neon-medium
 > **AI AGENTS**: This records what happened in the PREVIOUS session. DO NOT execute these files or next steps unless the user explicitly asks to continue that specific work. Always prioritize the user's current prompt.
 
 ## Previous Progress
-[gemini-4-neon-medium] Chat: "Hot reload was rejected: Const class cannot remove fields: Library:'package:notes/featu..." — That's normal in Flutter — when fields are removed from a `const` class (`_ReleaseEntry` in ...
+[gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Completed the **Full Engine Overhaul**, converting Tack's CPU-bound engines and Android stor...
 
 ## Active Working Files & Symbol Map (Skip File Discovery)
-- `lib/features/about/widgets/release_notes_tab.dart` (388 lines): `_ReleaseEntry` (:20), `ReleaseNotesTab` (:38), `createState` (:42), `_ReleaseNotesTabState` (:45), `build` (:149), `_buildHeroReleaseBanner` (:218), `_buildReleaseRow` (:301), `_buildPreviousVersionCard` (:339)
-- `lib/features/graph/screens/knowledge_graph_screen.dart` (1139 lines): `_GraphNode` (:24), `_GraphEdge` (:50), `KnowledgeGraphScreen` (:65), `createState` (:72), `_KnowledgeGraphScreenState` (:75), `initState` (:95), `dispose` (:105), `_centerCamera` (:111), `_rebuildGraphIfNeeded` (:120), `addEdge` (:161), `_handleCanvasTapUp` (:357), `_openNodeItem` (:377)
-- `lib/features/home/screens/home_screen.dart` (771 lines): `HomeScreen` (:35), `createState` (:53), `_HomeScreenState` (:56), `_openItem` (:59), `_openCaptureSheet` (:67), `_handleBottomNavTap` (:77), `_titleForTab` (:90), `_subtitleForTab` (:105), `_showSortSheet` (:118), `build` (:205), `_stackIndexForTab` (:317), `_LibraryView` (:333)
-- `lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart` (2433 lines): `MermaidDiagramCard` (:18), `createState` (:25), `_MermaidDiagramCardState` (:28), `initState` (:34), `didUpdateWidget` (:40), `dispose` (:48), `_openInWhiteboard` (:55), `_convertToWhiteboardItem` (:67), `_computeErEntitiesForBoard` (:385), `build` (:393), `_buildRawCodeView` (:427), `_buildDiagramView` (:452)
-- `lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart` (1490 lines): `_branchAccentColor` (:24), `MermaidZoomViewer` (:33), `build` (:48), `MermaidErWidget` (:84), `build` (:97), `_buildEntityCard` (:165), `_buildKeyBadge` (:296), `_ErLayoutResult` (:328), `_computeErLayout` (:340), `_ErRelationPainter` (:419), `paint` (:433), `_drawStyledPath` (:588)
-- `lib/features/notes/widgets/rich_note_content_view.dart` (4008 lines): `RichNoteNavigationController` (:36), `jumpToHeading` (:51), `RichNoteContentView` (:61), `createState` (:98), `_RichNoteContentViewState` (:101), `initState` (:110), `didUpdateWidget` (:116), `dispose` (:125), `_keyForHeading` (:131), `_unfoldCoveringSections` (:134), `_jumpToHeadingLine` (:170), `scrollToTarget` (:171)
-- `lib/features/whiteboard/screens/whiteboard_canvas_screen.dart` (6516 lines): `CanvasSnapshot` (:36), `CanvasHistoryManager` (:48), `recordSnapshot` (:56), `clear` (:84), `WhiteboardCanvasScreen` (:92), `computeNodesBounds` (:103), `createState` (:167), `_WhiteboardCanvasScreenState` (:170), `selectEdgeForTesting` (:215), `selectNodeForTesting` (:217), `branchFromNodeForTesting` (:219), `deleteEdgeForTesting` (:222)
-- `test/task_reminders_test.dart` (579 lines): `_InMemoryWorkspaceRepo` (:18), `getAllActiveItems` (:29), `getItemsByType` (:32), `getFavoriteItems` (:38), `getArchivedItems` (:42), `getTrashItems` (:46), `searchItems` (:50), `getItemById` (:56), `saveItem` (:60), `moveToTrash` (:70), `restoreItem` (:73), `toggleArchive` (:76)
+- `lib/features/graph/screens/knowledge_graph_screen.dart` (1175 lines): `_GraphNode` (:26), `_GraphEdge` (:52), `KnowledgeGraphScreen` (:67), `createState` (:74), `_KnowledgeGraphScreenState` (:77), `initState` (:97), `dispose` (:107), `_centerCamera` (:113), `_rebuildGraphIfNeeded` (:122), `addEdge` (:163), `_handleCanvasTapUp` (:393), `_openNodeItem` (:413)
+- `lib/features/notes/services/wiki_link_service.dart` (585 lines): `ParsedWikiLink` (:10), `ActiveWikiTrigger` (:37), `ActiveSlashTrigger` (:54), `BacklinkEntry` (:67), `WikiLinkService` (:87), `parseToken` (:93), `contentOfItem` (:131), `extractAllLinks` (:139), `findHeadingLineIndex` (:246), `isInsideCodeFence` (:308), `decodeList` (:446), `matchesTarget` (:473)
+- `lib/features/notes/widgets/code_syntax_highlighter.dart` (1414 lines): `_PatternRule` (:22), `_LanguageSpec` (:28), `_CompiledGrammar` (:48), `CodeSyntaxHighlighter` (:63), `_normalizeLanguage` (:79), `_grammarFor` (:163), `_buildSpec` (:169), `_isFollowedByCallParen` (:1389), `_isPascalCase` (:1402)
+- `lib/shared/data/workspace_repo_impl.dart` (472 lines): `LocalStorageWorkspaceRepository` (:28), `dispose` (:62), `_resolveDatabasePath` (:69), `_ensureInitialized` (:80), `_initFromSqlite` (:100), `_initFromSharedPreferences` (:143), `_tryDecodeItems` (:188), `_migrateLegacyItem` (:203), `_extractSearchBody` (:216), `_extractSearchTags` (:226), `_upsertSingleSqlite` (:231), `_batchUpsertSqlite` (:248)
+- `lib/core/native/tack_core_bridge.dart` (619 lines): `TackCoreBridge` (:181), `_openLibrary` (:213), `_tryInit` (:264), `_consumeCstr` (:354), `openDatabase` (:425), `closeDatabase` (:435), `upsertBatchJson` (:491), `deleteItem` (:501), `emptyTrash` (:511), `loadAllItemsJson` (:516), `tokenizeCode` (:586)
+- `rust/tack_core/src/graph.rs` (122 lines): `layout_graph` (:4)
+- `rust/tack_core/src/lib.rs` (294 lines): `into_cstr` (:61)
+- `rust/tack_core/src/storage.rs` (425 lines): `db_registry` (:9), `BatchItemRecord` (:16), `init_schema` (:29), `db_open` (:63), `db_close` (:80), `upsert_single` (:86), `db_upsert_item` (:141), `db_upsert_batch_json` (:184), `db_delete_item` (:219), `db_empty_trash` (:242), `db_load_all_json` (:266), `build_fts_query` (:289)
 
 ## Files Modified in Previous Task
-- `lib/features/about/widgets/release_notes_tab.dart`
+- `.gitignore`
 - `lib/features/graph/screens/knowledge_graph_screen.dart`
-- `lib/features/home/screens/home_screen.dart`
-- `lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart`
-- `lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart`
-- `lib/features/notes/widgets/rich_note_content_view.dart`
-- `lib/features/whiteboard/screens/whiteboard_canvas_screen.dart`
+- `lib/features/notes/services/wiki_link_service.dart`
+- `lib/features/notes/widgets/code_syntax_highlighter.dart`
+- `lib/shared/data/workspace_repo_impl.dart`
+- `android/app/src/main/jniLibs/arm64-v8a/libtack_core.so`
+- `android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so`
+- `android/app/src/main/jniLibs/x86_64/libtack_core.so`
+- `lib/core/native/tack_core_bridge.dart`
+- `rust/tack_core/.cargo/config.toml`
+- `rust/tack_core/Cargo.lock`
+- `rust/tack_core/Cargo.toml`
+- `rust/tack_core/src/graph.rs`
+- `rust/tack_core/src/lib.rs`
+- `rust/tack_core/src/storage.rs`
+- `rust/tack_core/src/syntax.rs`
+- `rust/tack_core/src/wikilinks.rs`
+- `scripts/build_rust_android.ps1`
+- `test/rust_core_engine_test.dart`
 
 ## Files Discussed / Referenced in Chat
 - `assets/images/onboarding/slide3_connected_ideas.jpg`

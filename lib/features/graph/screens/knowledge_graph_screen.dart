@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/native/tack_core_bridge.dart';
+
 import '../../../core/routing/tack_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -285,6 +287,40 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     if (nodes.length <= 1) {
       if (nodes.length == 1) nodes.first.position = center;
       return;
+    }
+
+    // Native Rust fast-path (flat f32 buffers, zero per-step heap allocations)
+    if (TackCoreBridge.instance.isAvailable) {
+      final indexById = <String, int>{
+        for (int i = 0; i < nodes.length; i++) nodes[i].id: i,
+      };
+      final positions = [for (final n in nodes) n.position];
+      final flatEdges = <int>[];
+      for (final edge in edges) {
+        final src = indexById[edge.sourceId];
+        final dst = indexById[edge.targetId];
+        if (src != null && dst != null) {
+          flatEdges.add(src);
+          flatEdges.add(dst);
+          flatEdges.add(edge.kind == _GraphEdgeKind.tag ? 1 : 0);
+        }
+      }
+      final pinnedIdx = (_isLocalMode && widget.focusItemId != null)
+          ? (indexById[widget.focusItemId!] ?? -1)
+          : -1;
+      if (TackCoreBridge.instance.layoutGraph(
+        positions: positions,
+        flatEdges: flatEdges,
+        pinnedIndex: pinnedIdx,
+        center: center,
+        canvasSize: _kCanvasSize,
+        iterations: 70,
+      )) {
+        for (int i = 0; i < nodes.length; i++) {
+          nodes[i].position = positions[i];
+        }
+        return;
+      }
     }
 
     final byId = {for (final n in nodes) n.id: n};

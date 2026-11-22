@@ -1,0 +1,20 @@
+[package]
+name = "tack_core"
+version = "0.1.0"
+edition = "2021"
+description = "Native Rust performance engines for Tack (Graph Layout, SQLite FTS5 Storage, Wiki-Links/Backlinks, Syntax Lexer)"
+
+[lib]
+name = "tack_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

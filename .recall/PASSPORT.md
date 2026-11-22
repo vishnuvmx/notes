@@ -26,12 +26,12 @@
 
 ## 4. Core Modules & Exported Surface
 - `lib/core/constants/app_constants.dart`: `AppConstants`
+- `lib/core/native/tack_core_bridge.dart`: `TackCoreBridge`
 - `lib/core/routing/app_router.dart`: `TackRootNavigator`
 - `lib/core/routing/tack_routes.dart`: `TackRoutes`
 - `lib/core/services/onboarding_service.dart`: `OnboardingService`
 - `lib/core/services/pinned_notification_service.dart`: `PinnedNotificationService`
 - `lib/core/services/process_text_service.dart`: `IncomingTextData`, `ProcessTextService`
-- `lib/core/services/task_reminder_service.dart`: `TaskReminderPayload`, `TaskReminderService`
 
 > _[Passport capped at 4200 chars. Use `recall context` or `recall where` for details.]_
 <!-- recall:passport:end -->
