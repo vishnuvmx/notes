@@ -1,41 +1,38 @@
 # Previous Iteration State (Historical Context Only)
 
-> **Last Updated**: 2026-11-22 08:48:05 · **Model**: gemini-4-neon-medium
+> **Last Updated**: 2026-11-22 09:54:48 · **Model**: gemini-4-neon-high
 > **AI AGENTS**: This records what happened in the PREVIOUS session. DO NOT execute these files or next steps unless the user explicitly asks to continue that specific work. Always prioritize the user's current prompt.
 
 ## Previous Progress
-[gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Completed the **Full Engine Overhaul**, converting Tack's CPU-bound engines and Android stor...
+[gemini-4-neon-high] Chat: "app closes when app opens." — Fixed the crash on launch and rebuilt all three split-per-ABI release APKs:
 
 ## Active Working Files & Symbol Map (Skip File Discovery)
-- `lib/features/graph/screens/knowledge_graph_screen.dart` (1175 lines): `_GraphNode` (:26), `_GraphEdge` (:52), `KnowledgeGraphScreen` (:67), `createState` (:74), `_KnowledgeGraphScreenState` (:77), `initState` (:97), `dispose` (:107), `_centerCamera` (:113), `_rebuildGraphIfNeeded` (:122), `addEdge` (:163), `_handleCanvasTapUp` (:393), `_openNodeItem` (:413)
-- `lib/features/notes/services/wiki_link_service.dart` (585 lines): `ParsedWikiLink` (:10), `ActiveWikiTrigger` (:37), `ActiveSlashTrigger` (:54), `BacklinkEntry` (:67), `WikiLinkService` (:87), `parseToken` (:93), `contentOfItem` (:131), `extractAllLinks` (:139), `findHeadingLineIndex` (:246), `isInsideCodeFence` (:308), `decodeList` (:446), `matchesTarget` (:473)
-- `lib/features/notes/widgets/code_syntax_highlighter.dart` (1414 lines): `_PatternRule` (:22), `_LanguageSpec` (:28), `_CompiledGrammar` (:48), `CodeSyntaxHighlighter` (:63), `_normalizeLanguage` (:79), `_grammarFor` (:163), `_buildSpec` (:169), `_isFollowedByCallParen` (:1389), `_isPascalCase` (:1402)
-- `lib/shared/data/workspace_repo_impl.dart` (472 lines): `LocalStorageWorkspaceRepository` (:28), `dispose` (:62), `_resolveDatabasePath` (:69), `_ensureInitialized` (:80), `_initFromSqlite` (:100), `_initFromSharedPreferences` (:143), `_tryDecodeItems` (:188), `_migrateLegacyItem` (:203), `_extractSearchBody` (:216), `_extractSearchTags` (:226), `_upsertSingleSqlite` (:231), `_batchUpsertSqlite` (:248)
-- `lib/core/native/tack_core_bridge.dart` (619 lines): `TackCoreBridge` (:181), `_openLibrary` (:213), `_tryInit` (:264), `_consumeCstr` (:354), `openDatabase` (:425), `closeDatabase` (:435), `upsertBatchJson` (:491), `deleteItem` (:501), `emptyTrash` (:511), `loadAllItemsJson` (:516), `tokenizeCode` (:586)
-- `rust/tack_core/src/graph.rs` (122 lines): `layout_graph` (:4)
-- `rust/tack_core/src/lib.rs` (294 lines): `into_cstr` (:61)
-- `rust/tack_core/src/storage.rs` (425 lines): `db_registry` (:9), `BatchItemRecord` (:16), `init_schema` (:29), `db_open` (:63), `db_close` (:80), `upsert_single` (:86), `db_upsert_item` (:141), `db_upsert_batch_json` (:184), `db_delete_item` (:219), `db_empty_trash` (:242), `db_load_all_json` (:266), `build_fts_query` (:289)
+- `android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt` (907 lines): `MainActivity` (:30), `showQuickCaptureNotificationOn` (:39), `showFallbackStatusNotification` (:97), `getRenderMode` (:158), `onFlutterUiDisplayed` (:162), `onCreate` (:167), `attachSplashOverlayUntilFirstFrame` (:181), `removeSplashOverlay` (:205), `enableHighRefreshRate` (:211), `onNewIntent` (:234), `configureFlutterEngine` (:240), `onDestroy` (:367)
+- `lib/core/theme/app_colors.dart` (719 lines): `AppColors` (:10), `normalizePaletteId` (:335), `getPaletteById` (:347), `getPaletteByColor` (:358), `getHighlightColor` (:369), `tryParseHexColor` (:377), `TackColorPalette` (:400), `resolveFill` (:420), `resolveBandColor` (:423), `resolveCardColor` (:426), `resolveSoftBackground` (:428), `resolveTextColor` (:430)
+- `lib/core/theme/theme_provider.dart` (76 lines): `ThemeProvider` (:6), `isDarkMode` (:20), `loadSavedThemeMode` (:27), `_loadPersistedTheme` (:38), `setThemeMode` (:54), `toggleTheme` (:68)
+- `lib/features/home/screens/home_screen.dart` (785 lines): `HomeScreen` (:35), `createState` (:53), `_HomeScreenState` (:56), `_openItem` (:60), `_openCaptureSheet` (:68), `_handleBottomNavTap` (:78), `_titleForTab` (:91), `_subtitleForTab` (:106), `_showSortSheet` (:119), `build` (:206), `_stackIndexForTab` (:331), `_LibraryView` (:347)
+- `lib/features/tasks/screens/today_screen.dart` (1273 lines): `TodayScreen` (:37), `createState` (:44), `_TodayScreenState` (:47), `build` (:76), `_TodaysDailyNoteCard` (:376), `build` (:392), `buildDailyBody` (:398), `_SegmentedTasksCard` (:540), `build` (:570), `_TaskRow` (:870), `build` (:884), `_WorthRevisitingCard` (:1085)
+- `lib/main.dart` (139 lines): `main` (:16), `TackApp` (:64), `build` (:70), `_TackScrollBehavior` (:125), `getScrollPhysics` (:129)
+- `lib/shared/providers/workspace_provider.dart` (1249 lines): `WorkspaceProvider` (:25), `_nextId` (:39), `_invalidateDerivedCaches` (:83), `notifyListeners` (:105), `_applyPrefsSync` (:137), `_mergeFoldersFromItems` (:151), `_loadPrefsAndItems` (:163), `getItemById` (:184), `restoreItem` (:186), `_sortItemsList` (:390), `resolveEffectiveFolder` (:409), `getChildItems` (:428)
+- `lib/shared/widgets/smart_bottom_nav_bar.dart` (611 lines): `SmartBottomNavBar` (:19), `build` (:34), `_LiquidGlassDock` (:93), `createState` (:111), `_LiquidGlassDockState` (:114), `initState` (:129), `didUpdateWidget` (:139), `_springToSlot` (:148), `_handleDragUpdate` (:167), `_handleDragEnd` (:188), `dispose` (:204), `build` (:210)
 
 ## Files Modified in Previous Task
-- `.gitignore`
-- `lib/features/graph/screens/knowledge_graph_screen.dart`
-- `lib/features/notes/services/wiki_link_service.dart`
-- `lib/features/notes/widgets/code_syntax_highlighter.dart`
-- `lib/shared/data/workspace_repo_impl.dart`
-- `android/app/src/main/jniLibs/arm64-v8a/libtack_core.so`
-- `android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so`
-- `android/app/src/main/jniLibs/x86_64/libtack_core.so`
-- `lib/core/native/tack_core_bridge.dart`
-- `rust/tack_core/.cargo/config.toml`
-- `rust/tack_core/Cargo.lock`
-- `rust/tack_core/Cargo.toml`
-- `rust/tack_core/src/graph.rs`
-- `rust/tack_core/src/lib.rs`
-- `rust/tack_core/src/storage.rs`
-- `rust/tack_core/src/syntax.rs`
-- `rust/tack_core/src/wikilinks.rs`
-- `scripts/build_rust_android.ps1`
-- `test/rust_core_engine_test.dart`
+- `android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt`
+- `android/app/src/main/res/drawable-v21/launch_background.xml`
+- `android/app/src/main/res/drawable/launch_background.xml`
+- `lib/core/theme/app_colors.dart`
+- `lib/core/theme/theme_provider.dart`
+- `lib/features/home/screens/home_screen.dart`
+- `lib/features/tasks/screens/today_screen.dart`
+- `lib/main.dart`
+- `lib/shared/providers/workspace_provider.dart`
+- `lib/shared/widgets/smart_bottom_nav_bar.dart`
+- `lib/shared/widgets/tack_card_open_container.dart`
+- `pubspec.lock`
+- `pubspec.yaml`
+- `android/app/src/main/res/drawable-night-v21/launch_background.xml`
+- `android/app/src/main/res/values-night-v31/styles.xml`
+- `android/app/src/main/res/values-v31/styles.xml`
 
 ## Files Discussed / Referenced in Chat
 - `assets/images/onboarding/slide3_connected_ideas.jpg`

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/routing/app_router.dart';
@@ -26,16 +27,31 @@ void main() async {
     ),
   );
 
-  // Load saved theme preference, onboarding status, & repository items from local storage
-  final initialTheme = await ThemeProvider.loadSavedThemeMode();
-  final showOnboarding = await OnboardingService.shouldShowOnboarding();
+  // Boot SharedPreferences + Rust SQLite repository in parallel so Frame 1
+  // renders complete content immediately with zero blank/loading flash.
   final repository = LocalStorageWorkspaceRepository();
-  await repository.getAllActiveItems();
+  final results = await Future.wait<dynamic>([
+    SharedPreferences.getInstance(),
+    repository.getAllActiveItems(),
+  ]);
+  final prefs = results[0] as SharedPreferences;
+
+  final savedTheme = prefs.getString('app_theme_mode');
+  final initialTheme = savedTheme == 'light'
+      ? ThemeMode.light
+      : (savedTheme == 'dark' ? ThemeMode.dark : ThemeMode.system);
+  final showOnboarding = !(prefs.getBool(OnboardingService.prefKey) ?? false);
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => WorkspaceProvider(repository)),
+        ChangeNotifierProvider(
+          create: (_) => WorkspaceProvider(
+            repository,
+            preloadedPrefs: prefs,
+            preloadedRepository: true,
+          ),
+        ),
         ChangeNotifierProvider(
           create: (_) => ThemeProvider(initialMode: initialTheme),
         ),
@@ -48,15 +64,13 @@ void main() async {
 class TackApp extends StatelessWidget {
   final bool initialShowOnboarding;
 
-  const TackApp({
-    super.key,
-    this.initialShowOnboarding = false,
-  });
+  const TackApp({super.key, this.initialShowOnboarding = false});
 
   @override
   Widget build(BuildContext context) {
     final themeProv = context.watch<ThemeProvider>();
-    final isDark = themeProv.themeMode == ThemeMode.dark ||
+    final isDark =
+        themeProv.themeMode == ThemeMode.dark ||
         (themeProv.themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
@@ -101,9 +115,7 @@ class TackApp extends StatelessWidget {
             child: child ?? const SizedBox.shrink(),
           );
         },
-        home: TackRootNavigator(
-          initialShowOnboarding: initialShowOnboarding,
-        ),
+        home: TackRootNavigator(initialShowOnboarding: initialShowOnboarding),
       ),
     );
   }

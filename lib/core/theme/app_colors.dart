@@ -78,6 +78,85 @@ class AppColors {
   /// `action/primary` — Primary button fill in dark mode (#F5F6F8)
   static const Color darkActionPrimary = Color(0xFFF5F6F8);
 
+  // ================= Liquid Glass Navigation Tokens =================
+  static const Color lightGlassDockTop = Color(
+    0xCBE7EBF3,
+  ); // 80% cool frosted liquid glass
+  static const Color lightGlassDockBottom = Color(
+    0xB8D9E0EC,
+  ); // 72% refractive cool glass
+  static const Color lightGlassRimBright = Color(
+    0xFAFFFFFF,
+  ); // 98% top-left specular
+  static const Color lightGlassRimMid = Color(
+    0x66FFFFFF,
+  ); // 40% side refraction
+  static const Color lightGlassRimBottom = Color(
+    0xA6FFFFFF,
+  ); // 65% bottom bounce
+  static const Color lightGlassOuterHairline = Color(
+    0x2B111214,
+  ); // 17% crisp separation
+  static const Color lightGlassLensTop = Color(
+    0xFDFFFFFF,
+  ); // 99% crystalline white lens
+  static const Color lightGlassLensBottom = Color(
+    0xF2F5F7FB,
+  ); // 95% optical lens base
+  static const Color lightGlassLensRim = Color(0xFFFFFFFF);
+  static const Color lightGlassFabTop = Color(
+    0xEB1B1D22,
+  ); // 92% obsidian glass orb
+  static const Color lightGlassFabBottom = Color(
+    0xFA0E0F12,
+  ); // 98% deep ink base
+  static const Color lightGlassFabRim = Color(0x66FFFFFF); // 40% specular rim
+  static const Color lightGlassShadowAmbient = Color(
+    0x1F111214,
+  ); // 12% soft lift
+  static const Color lightGlassShadowContact = Color(
+    0x14111214,
+  ); // 8% contact edge
+
+  static const Color darkGlassDockTop = Color(
+    0xCC262933,
+  ); // 80% smoked obsidian glass
+  static const Color darkGlassDockBottom = Color(
+    0xBA171920,
+  ); // 73% deep smoked glass
+  static const Color darkGlassRimBright = Color(
+    0x61FFFFFF,
+  ); // 38% top-left specular
+  static const Color darkGlassRimMid = Color(0x1CFFFFFF); // 11% side refraction
+  static const Color darkGlassRimBottom = Color(
+    0x33FFFFFF,
+  ); // 20% bottom bounce
+  static const Color darkGlassOuterHairline = Color(
+    0x66000000,
+  ); // 40% crisp dark bevel
+  static const Color darkGlassLensTop = Color(
+    0x36FFFFFF,
+  ); // 21% frosted ice lens
+  static const Color darkGlassLensBottom = Color(
+    0x1EFFFFFF,
+  ); // 12% frosted ice lens
+  static const Color darkGlassLensRim = Color(
+    0x59FFFFFF,
+  ); // 35% lens catchlight
+  static const Color darkGlassFabTop = Color(
+    0xFAFFFFFF,
+  ); // 98% luminous frosted orb
+  static const Color darkGlassFabBottom = Color(
+    0xE6DFE3EC,
+  ); // 90% cool alabaster base
+  static const Color darkGlassFabRim = Color(0xFFFFFFFF);
+  static const Color darkGlassShadowAmbient = Color(
+    0x73000000,
+  ); // 45% ambient lift
+  static const Color darkGlassShadowContact = Color(
+    0x4D000000,
+  ); // 30% contact edge
+
   // ================= State Tokens (Light & Dark) =================
   static const Color lightStateSuccess = Color(0xFF1A7F5A); // 4.97:1 on white
   static const Color darkStateSuccess = Color(0xFF4FC79A);
@@ -341,72 +420,92 @@ class TackColorPalette {
   Color resolveFill(bool isDarkMode) => isDarkMode ? darkColor : lightColor;
 
   /// Edge band color on white/charcoal cards: vibrant in both modes.
-  Color resolveBandColor(bool isDarkMode) => isDarkMode ? lightColor : lightColor;
+  Color resolveBandColor(bool isDarkMode) =>
+      isDarkMode ? lightColor : lightColor;
 
-  Color resolveCardColor(bool isDarkMode) => isDarkMode ? darkColor : lightColor;
+  Color resolveCardColor(bool isDarkMode) =>
+      isDarkMode ? darkColor : lightColor;
   Color resolveSoftBackground(bool isDarkMode) =>
       isDarkMode ? darkColor.withValues(alpha: 0.35) : softBackground;
   Color resolveTextColor(bool isDarkMode) =>
       isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
 
   /// Darker palette variant in light/color mode (`indexColor`), luminous pastel in dark mode (`lightColor`).
-  Color resolveAccentColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+  Color resolveAccentColor(bool isDarkMode) =>
+      isDarkMode ? lightColor : indexColor;
 
   /// Soft note canvas background derived cleanly from the palette.
   Color resolveNoteCanvas(bool isDarkMode) => isDarkMode
-      ? Color.alphaBlend(darkColor.withValues(alpha: 0.44), AppColors.darkCanvas)
+      ? Color.alphaBlend(
+          darkColor.withValues(alpha: 0.44),
+          AppColors.darkCanvas,
+        )
       : softBackground;
 
   /// Bottom bar tint that sits flush on [resolveNoteCanvas].
   Color resolveNoteFooterBg(bool isDarkMode) => isDarkMode
-      ? Color.alphaBlend(darkColor.withValues(alpha: 0.56), AppColors.darkSurface)
+      ? Color.alphaBlend(
+          darkColor.withValues(alpha: 0.56),
+          AppColors.darkSurface,
+        )
       : Color.alphaBlend(lightColor.withValues(alpha: 0.14), softBackground);
 
   /// Subtle pill/chip fill & border tinted by the active palette's darker accent.
   Color resolveChipFill(bool isDarkMode) =>
-      resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.18 : 0.11);
+      resolveAccentColor(isDarkMode)
+          .withValues(alpha: isDarkMode ? 0.18 : 0.11);
 
   Color resolveChipBorder(bool isDarkMode) =>
-      resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.36 : 0.24);
+      resolveAccentColor(isDarkMode)
+          .withValues(alpha: isDarkMode ? 0.36 : 0.24);
 
   /// WCAG AA compliant (>= 4.5:1) accent color for bullets and ordered lists.
-  Color resolveBulletColor(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
-  Color resolveNumberPrefix(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+  Color resolveBulletColor(bool isDarkMode) =>
+      isDarkMode ? lightColor : indexColor;
+  Color resolveNumberPrefix(bool isDarkMode) =>
+      isDarkMode ? lightColor : indexColor;
 
   Color resolveTableHeaderBg(bool isDarkMode) => Color.alphaBlend(
-        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.16 : 0.10),
-        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
-      );
+    resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.16 : 0.10),
+    isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+  );
 
   Color resolveTableBorder(bool isDarkMode) => Color.alphaBlend(
-        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.30 : 0.22),
-        isDarkMode ? AppColors.darkBorderSubtle : AppColors.lightBorderSubtle,
-      );
+    resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.30 : 0.22),
+    isDarkMode ? AppColors.darkBorderSubtle : AppColors.lightBorderSubtle,
+  );
 
-  Color resolveCodeBlockBg(bool isDarkMode) => isDarkMode
-      ? AppColors.darkSunken
-      : AppColors.lightSunken;
+  Color resolveCodeBlockBg(bool isDarkMode) =>
+      isDarkMode ? AppColors.darkSunken : AppColors.lightSunken;
 
   Color resolveCodeHeaderBg(bool isDarkMode) => isDarkMode
-      ? Color.alphaBlend(AppColors.darkBorderSubtle.withValues(alpha: 0.6), AppColors.darkSunken)
-      : Color.alphaBlend(AppColors.lightBorderSubtle.withValues(alpha: 0.6), AppColors.lightSunken);
+      ? Color.alphaBlend(
+          AppColors.darkBorderSubtle.withValues(alpha: 0.6),
+          AppColors.darkSunken,
+        )
+      : Color.alphaBlend(
+          AppColors.lightBorderSubtle.withValues(alpha: 0.6),
+          AppColors.lightSunken,
+        );
 
   Color resolveCodeAccent(bool isDarkMode) =>
       isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
   Color resolveInlineCodeBg(bool isDarkMode) => Color.alphaBlend(
-        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.18 : 0.11),
-        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
-      );
+    resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.18 : 0.11),
+    isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+  );
 
-  Color resolveInlineCodeText(bool isDarkMode) => resolveAccentColor(isDarkMode);
+  Color resolveInlineCodeText(bool isDarkMode) =>
+      resolveAccentColor(isDarkMode);
 
-  Color resolveQuoteBar(bool isDarkMode) => isDarkMode ? lightColor : indexColor;
+  Color resolveQuoteBar(bool isDarkMode) =>
+      isDarkMode ? lightColor : indexColor;
 
   Color resolveQuoteBg(bool isDarkMode) => Color.alphaBlend(
-        resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.14 : 0.08),
-        isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
-      );
+    resolveAccentColor(isDarkMode).withValues(alpha: isDarkMode ? 0.14 : 0.08),
+    isDarkMode ? AppColors.darkSunken : AppColors.lightSurface,
+  );
 }
 
 /// ThemeExtension carrying all semantic tokens for Tack (docs/design/07-design-system.md §9).
@@ -511,6 +610,39 @@ class TackTokens extends ThemeExtension<TackTokens> {
   Color get success => stateSuccess;
   Color get warning => stateWarning;
   Color get info => stateInfo;
+
+  // Liquid Glass Navigation surface & optical tokens
+  Color get glassDockTop =>
+      isDark ? AppColors.darkGlassDockTop : AppColors.lightGlassDockTop;
+  Color get glassDockBottom =>
+      isDark ? AppColors.darkGlassDockBottom : AppColors.lightGlassDockBottom;
+  Color get glassRimBright =>
+      isDark ? AppColors.darkGlassRimBright : AppColors.lightGlassRimBright;
+  Color get glassRimMid =>
+      isDark ? AppColors.darkGlassRimMid : AppColors.lightGlassRimMid;
+  Color get glassRimBottom =>
+      isDark ? AppColors.darkGlassRimBottom : AppColors.lightGlassRimBottom;
+  Color get glassOuterHairline => isDark
+      ? AppColors.darkGlassOuterHairline
+      : AppColors.lightGlassOuterHairline;
+  Color get glassLensTop =>
+      isDark ? AppColors.darkGlassLensTop : AppColors.lightGlassLensTop;
+  Color get glassLensBottom =>
+      isDark ? AppColors.darkGlassLensBottom : AppColors.lightGlassLensBottom;
+  Color get glassLensRim =>
+      isDark ? AppColors.darkGlassLensRim : AppColors.lightGlassLensRim;
+  Color get glassFabTop =>
+      isDark ? AppColors.darkGlassFabTop : AppColors.lightGlassFabTop;
+  Color get glassFabBottom =>
+      isDark ? AppColors.darkGlassFabBottom : AppColors.lightGlassFabBottom;
+  Color get glassFabRim =>
+      isDark ? AppColors.darkGlassFabRim : AppColors.lightGlassFabRim;
+  Color get glassShadowAmbient => isDark
+      ? AppColors.darkGlassShadowAmbient
+      : AppColors.lightGlassShadowAmbient;
+  Color get glassShadowContact => isDark
+      ? AppColors.darkGlassShadowContact
+      : AppColors.lightGlassShadowContact;
 
   @override
   TackTokens copyWith({

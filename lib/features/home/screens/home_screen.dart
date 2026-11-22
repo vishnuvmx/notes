@@ -55,6 +55,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isCreatingBoard = false;
+  final Set<int> _mountedStackIndices = {0};
 
   void _openItem(BaseWorkspaceItem item, {bool startInEditMode = false}) {
     if (widget.onOpenItem != null) {
@@ -208,6 +209,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final activeTab = workspace.bottomNavIndex;
     final canPopApp = activeTab == 0;
 
+    final stackIdx = _stackIndexForTab(activeTab);
+    _mountedStackIndices.add(stackIdx);
+
     return PopScope(
       canPop: canPopApp,
       onPopInvokedWithResult: (didPop, result) {
@@ -253,54 +257,64 @@ class _HomeScreenState extends State<HomeScreen> {
         body: workspace.isLoading
             ? const Center(child: CircularProgressIndicator())
             : IndexedStack(
-                index: _stackIndexForTab(activeTab),
+                index: stackIdx,
                 children: [
                   // 0: Today
-                  RepaintBoundary(child: TodayScreen(onOpenItem: _openItem)),
+                  _mountedStackIndices.contains(0)
+                      ? RepaintBoundary(
+                          child: TodayScreen(onOpenItem: _openItem),
+                        )
+                      : const SizedBox.shrink(),
 
                   // 1: Library
-                  RepaintBoundary(
-                    child: _LibraryView(
-                      onOpenItem: _openItem,
-                      onCreateNote: () =>
-                          _openCaptureSheet(defaultType: ItemType.note),
-                    ),
-                  ),
+                  _mountedStackIndices.contains(1)
+                      ? RepaintBoundary(
+                          child: _LibraryView(
+                            onOpenItem: _openItem,
+                            onCreateNote: () =>
+                                _openCaptureSheet(defaultType: ItemType.note),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
 
                   // 2: Boards (tab index 3)
-                  RepaintBoundary(
-                    child: _BoardsView(
-                      onOpenItem: _openItem,
-                      onCreateBoard: () async {
-                        if (_isCreatingBoard) return;
-                        _isCreatingBoard = true;
-                        try {
-                          final board = await workspace.createQuickItem(
-                            title: 'Untitled Board',
-                            type: ItemType.whiteboard,
-                            paletteId: 'cyan',
-                          );
-                          if (mounted) _openItem(board);
-                        } catch (_) {
-                          if (context.mounted) {
-                            TackToast.show(
-                              context,
-                              message: 'Could not create board',
-                              icon: TackIcons.close,
-                              iconColor: tokens.danger,
-                            );
-                          }
-                        } finally {
-                          _isCreatingBoard = false;
-                        }
-                      },
-                    ),
-                  ),
+                  _mountedStackIndices.contains(2)
+                      ? RepaintBoundary(
+                          child: _BoardsView(
+                            onOpenItem: _openItem,
+                            onCreateBoard: () async {
+                              if (_isCreatingBoard) return;
+                              _isCreatingBoard = true;
+                              try {
+                                final board = await workspace.createQuickItem(
+                                  title: 'Untitled Board',
+                                  type: ItemType.whiteboard,
+                                  paletteId: 'cyan',
+                                );
+                                if (mounted) _openItem(board);
+                              } catch (_) {
+                                if (context.mounted) {
+                                  TackToast.show(
+                                    context,
+                                    message: 'Could not create board',
+                                    icon: TackIcons.close,
+                                    iconColor: tokens.danger,
+                                  );
+                                }
+                              } finally {
+                                _isCreatingBoard = false;
+                              }
+                            },
+                          ),
+                        )
+                      : const SizedBox.shrink(),
 
                   // 3: Search (tab index 4)
-                  RepaintBoundary(
-                    child: SearchCommandScreen(onOpenItem: _openItem),
-                  ),
+                  _mountedStackIndices.contains(3)
+                      ? RepaintBoundary(
+                          child: SearchCommandScreen(onOpenItem: _openItem),
+                        )
+                      : const SizedBox.shrink(),
                 ],
               ),
         bottomNavigationBar: SmartBottomNavBar(

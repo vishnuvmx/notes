@@ -615,55 +615,29 @@ class _SegmentedTasksCard extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.s4),
 
-              // 2. Top-Anchored Directional Switcher + Smooth 120Hz Size Interpolation
+              // 2. Crisp Instant Content Switch (no fade ghosting) + Smooth 120Hz Height Adjustment
               AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                reverseDuration: const Duration(milliseconds: 180),
+                duration: const Duration(milliseconds: 180),
+                reverseDuration: const Duration(milliseconds: 150),
                 curve: AppSpacing.silky120Hz,
                 alignment: Alignment.topCenter,
                 clipBehavior: Clip.hardEdge,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  reverseDuration: const Duration(milliseconds: 140),
-                  switchInCurve: AppSpacing.silky120Hz,
-                  switchOutCurve: Curves.easeInCubic,
-                  layoutBuilder: (currentChild, previousChildren) => Stack(
-                    alignment: Alignment.topCenter,
-                    children: [...previousChildren, ?currentChild],
-                  ),
-                  transitionBuilder: (child, animation) {
-                    final isTodo =
-                        child.key == const ValueKey(_TodayTaskTab.todo);
-                    final slide = Tween<Offset>(
-                      begin: Offset(isTodo ? -0.045 : 0.045, 0),
-                      end: Offset.zero,
-                    ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: slide,
-                        child: RepaintBoundary(child: child),
-                      ),
-                    );
-                  },
-                  child: KeyedSubtree(
-                    key: ValueKey(activeTab),
-                    child: activeTab == _TodayTaskTab.todo
-                        ? _buildGroupedTaskList(
-                            context,
-                            tokens,
-                            openTasks,
-                            emptyMessage: "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
-                            emptyActionLabel: "Open Today's Note",
-                            onEmptyAction: onOpenDailyNote,
-                          )
-                        : _buildGroupedTaskList(
-                            context,
-                            tokens,
-                            completedTasks,
-                            emptyMessage: 'No completed tasks yet today.',
-                          ),
-                  ),
+                child: RepaintBoundary(
+                  child: activeTab == _TodayTaskTab.todo
+                      ? _buildGroupedTaskList(
+                          context,
+                          tokens,
+                          openTasks,
+                          emptyMessage: "No open tasks yet. Start Today's Daily Note or add checklist items inside any note.",
+                          emptyActionLabel: "Open Today's Note",
+                          onEmptyAction: onOpenDailyNote,
+                        )
+                      : _buildGroupedTaskList(
+                          context,
+                          tokens,
+                          completedTasks,
+                          emptyMessage: 'No completed tasks yet today.',
+                        ),
                 ),
               ),
             ],

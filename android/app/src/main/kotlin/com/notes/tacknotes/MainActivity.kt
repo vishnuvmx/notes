@@ -14,8 +14,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.OpenableColumns
 import android.provider.Settings
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
@@ -152,11 +157,55 @@ class MainActivity : FlutterActivity() {
     // (which causes a brief blank/refresh flicker when returning to Tack).
     override fun getRenderMode(): RenderMode = RenderMode.texture
 
+    private var splashOverlayView: View? = null
+
+    override fun onFlutterUiDisplayed() {
+        removeSplashOverlay()
+        super.onFlutterUiDisplayed()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        attachSplashOverlayUntilFirstFrame()
         enableHighRefreshRate()
         createNotificationChannels()
         handleIntent(intent)
+    }
+
+    /**
+     * Covers the Activity with the matching Tack launch background while the
+     * Dart isolate boots and paints Frame 1 onto TextureView, then removes it
+     * on the exact frame Flutter reports UI displayed — eliminating the blank
+     * screen gap without blocking TextureView's SurfaceTexture creation.
+     */
+    private fun attachSplashOverlayUntilFirstFrame() {
+        try {
+            val root = findViewById<ViewGroup>(android.R.id.content) ?: return
+            val overlay = View(this).apply {
+                setBackgroundResource(R.drawable.launch_background)
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                isClickable = false
+                isFocusable = false
+            }
+            root.addView(overlay)
+            splashOverlayView = overlay
+
+            // Safety fallback so the overlay can never stay stuck.
+            Handler(Looper.getMainLooper()).postDelayed({
+                removeSplashOverlay()
+            }, 1200L)
+        } catch (_: Throwable) {
+            splashOverlayView = null
+        }
+    }
+
+    private fun removeSplashOverlay() {
+        val overlay = splashOverlayView ?: return
+        splashOverlayView = null
+        (overlay.parent as? ViewGroup)?.removeView(overlay)
     }
 
     private fun enableHighRefreshRate() {

@@ -1,53 +1,5 @@
 # Session Log
 
-### [2026-11-19 11:39:51] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "Make all the animations you did yesterday 120 fps smoother please.." — Applied the 120Hz animation upgrades across routes, spring pill tracks, card container trans...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/core/routing/tack_routes.dart, lib/core/theme/app_spacing.dart, lib/core/theme/app_theme.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/tack_card_open_container.dart
-
-### [2026-11-19 11:40:55] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "Make all the animations you did yesterday 120 fps smoother please.." — Restored the `Interval(0.28, 1.0)` exit curve on `TackAnimatedTransition` so reverse fades r...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/core/routing/tack_routes.dart, lib/core/theme/app_spacing.dart, lib/core/theme/app_theme.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/tack_card_open_container.dart
-
-### [2026-11-19 11:41:21] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "Make all the animations you did yesterday 120 fps smoother please.." — All of yesterday's animations have been tuned for silky **120Hz** compositing, zero per-fram...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, lib/core/routing/tack_routes.dart, lib/core/theme/app_spacing.dart, lib/core/theme/app_theme.dart, lib/features/about/screens/about_tack_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/tasks/screens/today_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/features/whiteboard/widgets/board_grid_card.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/empty_state_widget.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/tack_card_open_container.dart
-
-### [2026-11-19 11:43:49] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "Im going to use Google AI Studio for this project. Add custom instructions for your pro..." — I created AI_STUDIO_INSTRUCTIONS.md at the root of your project with ready-to-paste **System...
-- **Model**: gemini-4-neon-medium
-- **Modified**: AI_STUDIO_INSTRUCTIONS.md
-
-### [2026-11-20 12:42:13] Checkpoint
-- **Summary**: [gemini-3.8-flash-medium] Chat: "npm i @vishnuvmx/recall-memory got a v0.5.0. update to it." — Checking the current recall package installation and updating to `@vishnuvmx/recall-memory@0...
-- **Model**: gemini-3.8-flash-medium
-- **Modified**: AI_STUDIO_INSTRUCTIONS.md, package-lock.json, package.json
-
-### [2026-11-20 12:43:33] Checkpoint
-- **Summary**: [gemini-3.8-flash-medium] Chat: "npm i @vishnuvmx/recall-memory got a v0.5.0. update to it." — `@vishnuvmx/recall-memory` has been updated to **`v0.5.0`** across both global and workspace...
-- **Model**: gemini-3.8-flash-medium
-- **Modified**: AI_STUDIO_INSTRUCTIONS.md, package-lock.json, package.json
-
-### [2026-11-20 12:45:49] Checkpoint
-- **Summary**: 120fps performance optimizations, fluid spring motion, and AI Studio system instructions completed
-
-### [2026-11-21 03:20:51] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Cleaned up the unused locals and added an onboarding uniform-image-size assertion; `flutter ...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart
-
-### [2026-11-21 03:21:55] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Updated the `What's New` headline assertion in `phase2_ui_audit_test.dart`; `flutter analyze...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-21 03:22:17] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "also in smart bottom navigation those clicks on each button registers a ripple, remove ..." — Fixed all of the UI issues and stripped out the AI-slop card-in-card / left-stripe / rainbow...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
 ### [2026-11-21 03:34:17] Checkpoint
 - **Summary**: [gemini-4-neon-medium] Chat: "give the commands to run in emulator" — Run these in PowerShell from `d:\edita-android\notes`:
 - **Model**: gemini-4-neon-medium
@@ -247,3 +199,53 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "Full Engine Overhaul" — Completed the **Full Engine Overhaul**, converting Tack's CPU-bound engines and Android stor...
 - **Model**: gemini-4-neon-medium
 - **Modified**: .gitignore, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/notes/services/wiki_link_service.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/shared/data/workspace_repo_impl.dart, android/app/src/main/jniLibs/arm64-v8a/libtack_core.so, android/app/src/main/jniLibs/armeabi-v7a/libtack_core.so, android/app/src/main/jniLibs/x86_64/libtack_core.so, lib/core/native/tack_core_bridge.dart, rust/tack_core/.cargo/config.toml, rust/tack_core/Cargo.lock, rust/tack_core/Cargo.toml, rust/tack_core/src/graph.rs, rust/tack_core/src/lib.rs, rust/tack_core/src/storage.rs, rust/tack_core/src/syntax.rs, rust/tack_core/src/wikilinks.rs, scripts/build_rust_android.ps1, test/rust_core_engine_test.dart
+
+### [2026-11-22 09:34:58] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "Fix these things: The fade transition in toggling between Todo and Completed.. the cont..." — Removed `package:animations`, implemented the zero-rebuild GPU Container Transform and remov...
+- **Model**: gemini-4-neon-high
+- **Modified**: lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml
+
+### [2026-11-22 09:35:45] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "Fix these things: The fade transition in toggling between Todo and Completed.. the cont..." — Fixed both issues:
+- **Model**: gemini-4-neon-high
+- **Modified**: lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml
+
+### [2026-11-22 09:41:15] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "each time the app opens, it blanks out, then load contents, what the heck is happening?..." — Formatted modified files and running `flutter analyze`, `flutter test`, and Android Gradle K...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:44:30] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "each time the app opens, it blanks out, then load contents, what the heck is happening?..." — Found and fixed all **4 root causes** behind the blank-screen-then-load flash on app open:
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:47:17] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "can we make the smart bottom navigation liquid glass effect from apple? cause now it fe..." — `flutter analyze --no-pub` passed with `No issues found!`; waiting for `flutter test` to fin...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:47:37] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "can we make the smart bottom navigation liquid glass effect from apple? cause now it fe..." — Upgraded `SmartBottomNavBar` to an **Apple Liquid Glass** floating dock + detached Liquid Gl...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:48:22] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "flutter build apk split per abi" — Running `flutter build apk --release --split-per-abi` — waiting for Gradle to finish packagi...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:50:42] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "flutter build apk split per abi" — Release split-per-ABI APKs built cleanly (including the Apple Liquid Glass nav bar, zero-bla...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:53:45] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "app closes when app opens." — Found the exact crash-on-launch bug (`<bitmap android:src="@mipmap/ic_launcher">` in `launch...
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 09:54:48] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "app closes when app opens." — Fixed the crash on launch and rebuilt all three split-per-ABI release APKs:
+- **Model**: gemini-4-neon-high
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml

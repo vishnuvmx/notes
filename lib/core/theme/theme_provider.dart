@@ -10,8 +10,9 @@ class ThemeProvider extends ChangeNotifier {
   ThemeProvider({ThemeMode? initialMode}) {
     if (initialMode != null) {
       _themeMode = initialMode;
+    } else {
+      _loadPersistedTheme();
     }
-    _loadPersistedTheme();
   }
 
   ThemeMode get themeMode => _themeMode;

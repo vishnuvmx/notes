@@ -107,27 +107,63 @@ class WorkspaceProvider extends ChangeNotifier {
     super.notifyListeners();
   }
 
-  WorkspaceProvider(this._repository) {
+  WorkspaceProvider(
+    this._repository, {
+    SharedPreferences? preloadedPrefs,
+    bool preloadedRepository = false,
+  }) {
     _allActiveItems = List<BaseWorkspaceItem>.from(
       _repository.cachedActiveItems,
     );
-    _loadPrefsAndItems();
+    _trashItems = List<BaseWorkspaceItem>.from(_repository.cachedTrashItems);
+    _archivedItems = List<BaseWorkspaceItem>.from(
+      _repository.cachedArchivedItems,
+    );
+
+    if (preloadedPrefs != null) {
+      _applyPrefsSync(preloadedPrefs);
+    }
+    _mergeFoldersFromItems();
+
+    if (preloadedRepository) {
+      // Repository & prefs were already loaded in parallel in `main()` —
+      // skip redundant double-load & second full-tree rebuild on Frame 1.
+      unawaited(TaskReminderService.syncWorkspaceReminders(_allActiveItems));
+    } else {
+      _loadPrefsAndItems();
+    }
+  }
+
+  void _applyPrefsSync(SharedPreferences prefs) {
+    final savedFolders = prefs.getStringList(_foldersPrefsKey);
+    if (savedFolders != null && savedFolders.isNotEmpty) {
+      final merged = <String>['All Notes'];
+      for (final f in savedFolders) {
+        if (f.trim().isNotEmpty && !merged.contains(f.trim())) {
+          merged.add(f.trim());
+        }
+      }
+      _folders = merged;
+    }
+    _carryForwardTasksEnabled = prefs.getBool(_carryForwardPrefsKey) ?? true;
+  }
+
+  bool _mergeFoldersFromItems() {
+    bool foldersUpdated = false;
+    for (final item in _allActiveItems) {
+      final f = item.folderName?.trim();
+      if (f != null && f.isNotEmpty && !_folders.contains(f)) {
+        _folders.add(f);
+        foldersUpdated = true;
+      }
+    }
+    return foldersUpdated;
   }
 
   Future<void> _loadPrefsAndItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedFolders = prefs.getStringList(_foldersPrefsKey);
-      if (savedFolders != null && savedFolders.isNotEmpty) {
-        final merged = <String>['All Notes'];
-        for (final f in savedFolders) {
-          if (f.trim().isNotEmpty && !merged.contains(f.trim())) {
-            merged.add(f.trim());
-          }
-        }
-        _folders = merged;
-      }
-      _carryForwardTasksEnabled = prefs.getBool(_carryForwardPrefsKey) ?? true;
+      _applyPrefsSync(prefs);
     } catch (_) {
       // Fallback to defaults
     }
