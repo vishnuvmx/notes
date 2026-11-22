@@ -1440,7 +1440,12 @@ class _FlowchartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FlowchartPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _FlowchartPainter oldDelegate) =>
+      oldDelegate.diagram != diagram ||
+      oldDelegate.positions != positions ||
+      oldDelegate.nodeSizes != nodeSizes ||
+      oldDelegate.subgraphRects != subgraphRects ||
+      oldDelegate.isDark != isDark;
 }
 
 class _DiamondNodePainter extends CustomPainter {
@@ -1485,7 +1490,10 @@ class _DiamondNodePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DiamondNodePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _DiamondNodePainter oldDelegate) =>
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.isDark != isDark;
 }
 
 class _DatabaseNodePainter extends CustomPainter {
@@ -1556,7 +1564,10 @@ class _DatabaseNodePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DatabaseNodePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _DatabaseNodePainter oldDelegate) =>
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.isDark != isDark;
 }
 
 class _HexagonNodePainter extends CustomPainter {
@@ -1604,7 +1615,10 @@ class _HexagonNodePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _HexagonNodePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _HexagonNodePainter oldDelegate) =>
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.isDark != isDark;
 }
 
 // -------------------------------------------------------------
@@ -1836,7 +1850,11 @@ class _PieChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PieChartPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _PieChartPainter oldDelegate) =>
+      oldDelegate.slices != slices ||
+      oldDelegate.total != total ||
+      oldDelegate.colors != colors ||
+      oldDelegate.isDark != isDark;
 }
 
 // -------------------------------------------------------------

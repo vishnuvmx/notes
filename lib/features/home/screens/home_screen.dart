@@ -548,31 +548,37 @@ class _BoardsView extends StatelessWidget {
     return SafeArea(
       top: false,
       bottom: false,
-      child: ResponsiveCardGrid(
+      child: CustomScrollView(
         physics: const ClampingScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          gutter,
-          AppSpacing.s2,
-          gutter,
-          AppSpacing.s9 + MediaQuery.paddingOf(context).bottom,
-        ),
-        crossAxisCount: cols,
-        mainAxisSpacing: AppSpacing.cardGridGap,
-        crossAxisSpacing: AppSpacing.cardGridGap,
-        itemCount: boards.length,
-        itemBuilder: (context, index) {
-          final board = boards[index];
-          return BoardGridCard(
-            key: ValueKey('board_card_${board.id}'),
-            board: board,
-            openBuilder: (_) => buildWorkspaceItemDetailScreen(board),
-            onPeek: (openDetail) => CardPeekSheet.show(
-              context: context,
-              item: board,
-              onOpen: openDetail,
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              AppSpacing.s2,
+              gutter,
+              AppSpacing.s9 + MediaQuery.paddingOf(context).bottom,
             ),
-          );
-        },
+            sliver: SliverResponsiveCardGrid(
+              crossAxisCount: cols,
+              mainAxisSpacing: AppSpacing.cardGridGap,
+              crossAxisSpacing: AppSpacing.cardGridGap,
+              itemCount: boards.length,
+              itemBuilder: (context, index) {
+                final board = boards[index];
+                return BoardGridCard(
+                  key: ValueKey('board_card_${board.id}'),
+                  board: board,
+                  openBuilder: (_) => buildWorkspaceItemDetailScreen(board),
+                  onPeek: (openDetail) => CardPeekSheet.show(
+                    context: context,
+                    item: board,
+                    onOpen: openDetail,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

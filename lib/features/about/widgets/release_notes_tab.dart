@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/tack_icons.dart';
 import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../../shared/widgets/z_order_column.dart';
 
@@ -21,17 +20,13 @@ enum _ReleaseCategory {
 class _ReleaseEntry {
   final String title;
   final String summary;
-  final String badge;
   final String? syntaxHint;
-  final dynamic icon;
   final String paletteId;
   final _ReleaseCategory category;
 
   const _ReleaseEntry({
     required this.title,
     required this.summary,
-    required this.badge,
-    required this.icon,
     required this.paletteId,
     required this.category,
     this.syntaxHint,
@@ -54,20 +49,16 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     // Connected Specs & Slash Blocks
     _ReleaseEntry(
       title: 'Bi-Directional Wiki-Links & Backlinks',
-      badge: 'Knowledge Links',
       syntaxHint: '[[Note#Heading|Alias]]',
-      icon: TackIcons.link,
       paletteId: 'cyan',
       category: _ReleaseCategory.connected,
       summary:
-          'Link any note, section heading, or YAML alias inline with live autocomplete. '
+          'Link any note or section heading inline with live autocomplete. '
           'Every note includes a collapsible Backlinks & Unlinked Mentions panel with 1-tap link conversion.',
     ),
     _ReleaseEntry(
       title: 'Canvas Spec Cards & Live Board Embeds',
-      badge: 'Visual Specs',
       syntaxHint: '![[Board#nodeId]]',
-      icon: TackIcons.workflow,
       paletteId: 'peach',
       category: _ReleaseCategory.connected,
       summary:
@@ -76,9 +67,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     ),
     _ReleaseEntry(
       title: 'Slash (/) Command Palette & "Turn Into"',
-      badge: 'Block Engine',
       syntaxHint: '/toggle  •  /table  •  /toc',
-      icon: TackIcons.code,
       paletteId: 'lavender',
       category: _ReleaseCategory.editor,
       summary:
@@ -89,9 +78,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     // Structured Specs, Folding & Touch Tables
     _ReleaseEntry(
       title: 'Toggle Blocks & Heading Section Folding',
-      badge: 'Reader & Specs',
       syntaxHint: '>▸ Toggle Title',
-      icon: TackIcons.expandNavigation,
       paletteId: 'amber',
       category: _ReleaseCategory.editor,
       summary:
@@ -100,9 +87,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     ),
     _ReleaseEntry(
       title: 'Document Outline Drawer & Inline [TOC]',
-      badge: 'Navigation',
       syntaxHint: '[TOC]',
-      icon: TackIcons.nestedList,
       paletteId: 'cyan',
       category: _ReleaseCategory.editor,
       summary:
@@ -110,21 +95,8 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
           'or drop [TOC] anywhere in a note for an auto-generated Table of Contents card.',
     ),
     _ReleaseEntry(
-      title: 'YAML Frontmatter Properties Bar',
-      badge: 'Local .md',
-      syntaxHint: 'status  •  priority  •  aliases',
-      icon: TackIcons.layers,
-      paletteId: 'rose',
-      category: _ReleaseCategory.connected,
-      summary:
-          'Structured tactile chips for status, priority, target_date, aliases, and custom keys—stored '
-          'as 100% portable YAML frontmatter with zero lock-in.',
-    ),
-    _ReleaseEntry(
       title: 'Touch-First Visual Markdown Table Editor',
-      badge: 'Mobile Editor',
       syntaxHint: '1-Tap Edit Table',
-      icon: TackIcons.table,
       paletteId: 'lime',
       category: _ReleaseCategory.editor,
       summary:
@@ -134,21 +106,17 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
 
     // Daily Habit Loop, Hierarchy & Graph
     _ReleaseEntry(
-      title: "Templates Gallery & 1-Tap Today's Note",
-      badge: 'Daily Desk',
-      syntaxHint: '{{date}}  •  Carry-Forward',
-      icon: TackIcons.today,
+      title: "1-Tap Today's Daily Note & Task Carry-Forward",
+      syntaxHint: 'Daily Note  •  Carry-Forward',
       paletteId: 'amber',
       category: _ReleaseCategory.knowledge,
       summary:
-          'Launch Product Specs, Design Rulebooks, ADRs, Meeting, or Cornell templates—or save your own. '
-          "Today's Note automatically carries forward unfinished [ ] tasks from your previous daily note.",
+          "Start Today's Note in one tap from the Today desk—unfinished [ ] tasks from your previous "
+          'daily note carry forward automatically.',
     ),
     _ReleaseEntry(
       title: 'Custom Folders, Sub-Notes & Breadcrumbs',
-      badge: 'Hierarchy',
       syntaxHint: 'Folder › Parent › Sub-note',
-      icon: TackIcons.folderTree,
       paletteId: 'lavender',
       category: _ReleaseCategory.knowledge,
       summary:
@@ -157,9 +125,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     ),
     _ReleaseEntry(
       title: '2D Knowledge Graph & Section Transclusion',
-      badge: 'Knowledge Map',
       syntaxHint: 'Global & 1-Hop Local Graph',
-      icon: TackIcons.graph,
       paletteId: 'cyan',
       category: _ReleaseCategory.knowledge,
       summary:
@@ -170,14 +136,12 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
     // Soft Monochrome Redesign
     _ReleaseEntry(
       title: 'Soft Monochrome UI, Floating Nav & Today Triage',
-      badge: 'Redesign',
       syntaxHint: 'Today  •  Library  •  Boards  •  Search',
-      icon: TackIcons.sparkles,
       paletteId: 'coral',
       category: _ReleaseCategory.ux,
       summary:
           'Calm Soft Monochrome canvas with floating pill navigation, detached (+) Capture button, '
-          'week strip, segmented task/inbox triage, and responsive grid cards with tinted preview blocks.',
+          'segmented task triage, and responsive grid cards.',
     ),
   ];
 
@@ -335,54 +299,38 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
   }
 
   Widget _buildReleaseRow(_ReleaseEntry entry, TackTokens tokens) {
+    final headingColor = AppColors.getPaletteById(entry.paletteId)
+        .resolveAccentColor(tokens.isDark);
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.s4),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: tokens.canvasSunken,
-              borderRadius: AppSpacing.roundedSm,
-            ),
-            child: Center(
-              child: TackIcon(entry.icon, size: 17, color: tokens.textPrimary),
+          Text(
+            entry.title,
+            style: AppTypography.titleSm(
+              color: headingColor,
+              fontSize: 16.5,
+              weight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: AppSpacing.s3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.title,
-                  style: AppTypography.titleSm(
-                    color: tokens.textPrimary,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  entry.summary,
-                  style: AppTypography.bodySm(color: tokens.textSecondary),
-                ),
-                if (entry.syntaxHint != null) ...[
-                  const SizedBox(height: AppSpacing.s2),
-                  Text(
-                    entry.syntaxHint!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.mono(
-                      fontSize: 11.5,
-                      color: tokens.textTertiary,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          const SizedBox(height: 6),
+          Text(
+            entry.summary,
+            style: AppTypography.bodySm(color: tokens.textSecondary),
           ),
+          if (entry.syntaxHint != null) ...[
+            const SizedBox(height: AppSpacing.s2),
+            Text(
+              entry.syntaxHint!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.mono(
+                fontSize: 11.5,
+                color: tokens.textTertiary,
+              ),
+            ),
+          ],
         ],
       ),
     );

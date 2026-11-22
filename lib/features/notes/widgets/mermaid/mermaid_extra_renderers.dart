@@ -687,7 +687,11 @@ class _ErRelationPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ErRelationPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _ErRelationPainter oldDelegate) =>
+      oldDelegate.diagram != diagram ||
+      oldDelegate.positions != positions ||
+      oldDelegate.cardSizes != cardSizes ||
+      oldDelegate.isDark != isDark;
 }
 
 // -------------------------------------------------------------
@@ -1480,5 +1484,6 @@ class _MindmapBranchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MindmapBranchPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MindmapBranchPainter oldDelegate) =>
+      oldDelegate.edges != edges || oldDelegate.isDark != isDark;
 }

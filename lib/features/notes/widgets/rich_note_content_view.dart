@@ -59,6 +59,16 @@ class RichNoteNavigationController {
 /// Bullet & Numbered Lists, Interactive GFM Tables, Fenced Code Blocks,
 /// Wiki-Links, Whiteboard/Note Embeds, Clickable Links, Images, and Dividers.
 class RichNoteContentView extends StatefulWidget {
+  static final RegExp _tableSeparatorRegex = RegExp(
+    r'^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$',
+  );
+  static final RegExp _standaloneEmbedRegex = RegExp(
+    r'^\s*(!\[\[[^\[\]\n]+\]\])\s*$',
+  );
+  static final RegExp _standaloneImageRegex = RegExp(
+    r'^\s*!\[(.*?)\]\((.*?)\)\s*$',
+  );
+
   final String content;
   final ValueChanged<String>? onContentChanged;
   final ValueChanged<int>? onLineTap;
@@ -385,12 +395,18 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
                     trimmedCode.startsWith('mindmap')));
 
         if (isMermaid) {
-          widgets.add(MermaidDiagramCard(rawCode: code, paletteId: paletteId));
+          widgets.add(
+            RepaintBoundary(
+              child: MermaidDiagramCard(rawCode: code, paletteId: paletteId),
+            ),
+          );
         } else {
           widgets.add(
-            _wrapLineTap(
-              _buildFencedCodeBlock(context, lang, code, isDark, theme),
-              i,
+            RepaintBoundary(
+              child: _wrapLineTap(
+                _buildFencedCodeBlock(context, lang, code, isDark, theme),
+                i,
+              ),
             ),
           );
         }
@@ -402,13 +418,15 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       final blockMath = LatexMathService.tryConsumeBlockMath(lines, i);
       if (blockMath != null) {
         widgets.add(
-          _wrapLineTap(
-            BlockMathView(
-              expression: blockMath.expression,
-              rawSource: blockMath.rawSource,
-              paletteId: paletteId,
+          RepaintBoundary(
+            child: _wrapLineTap(
+              BlockMathView(
+                expression: blockMath.expression,
+                rawSource: blockMath.rawSource,
+                paletteId: paletteId,
+              ),
+              i,
             ),
-            i,
           ),
         );
         i = blockMath.nextLineIndex;
@@ -419,8 +437,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       if (line.contains('|') && (i + 1 < lines.length)) {
         final nextTrimmed = lines[i + 1].trim();
         if (nextTrimmed.contains('|') &&
-            RegExp(r'^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$')
-                .hasMatch(nextTrimmed)) {
+            RichNoteContentView._tableSeparatorRegex.hasMatch(nextTrimmed)) {
           final tableLines = <String>[line, lines[i + 1]];
           int j = i + 2;
           while (j < lines.length &&
@@ -430,9 +447,11 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             j++;
           }
           widgets.add(
-            _wrapLineTap(
-              _buildTable(context, tableLines, i, j, isDark, theme),
-              i,
+            RepaintBoundary(
+              child: _wrapLineTap(
+                _buildTable(context, tableLines, i, j, isDark, theme),
+                i,
+              ),
             ),
           );
           i = j;
@@ -441,7 +460,7 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       }
 
       // 2b. Standalone Workspace Embed: ![[Whiteboard]] or ![[Note#Section]]
-      final embedLineMatch = RegExp(r'^\s*(!\[\[[^\[\]\n]+\]\])\s*$')
+      final embedLineMatch = RichNoteContentView._standaloneEmbedRegex
           .firstMatch(line);
       if (embedLineMatch != null) {
         final parsedEmbed = WikiLinkService.parseToken(
@@ -453,11 +472,13 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
             workspaceItems,
           );
           widgets.add(
-            WorkspaceEmbedCard(
-              link: parsedEmbed,
-              resolvedItem: resolved,
-              hostPaletteId: paletteId,
-              onTap: () => onWikiLinkTap?.call(parsedEmbed),
+            RepaintBoundary(
+              child: WorkspaceEmbedCard(
+                link: parsedEmbed,
+                resolvedItem: resolved,
+                hostPaletteId: paletteId,
+                onTap: () => onWikiLinkTap?.call(parsedEmbed),
+              ),
             ),
           );
           i++;
@@ -466,7 +487,9 @@ class _RichNoteContentViewState extends State<RichNoteContentView> {
       }
 
       // 3. Standalone Image: ![alt](url)
-      final imgMatch = RegExp(r'^\s*!\[(.*?)\]\((.*?)\)\s*$').firstMatch(line);
+      final imgMatch = RichNoteContentView._standaloneImageRegex.firstMatch(
+        line,
+      );
       if (imgMatch != null) {
         final alt = imgMatch.group(1) ?? '';
         final url = imgMatch.group(2) ?? '';

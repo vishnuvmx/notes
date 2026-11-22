@@ -1,35 +1,5 @@
 # Session Log
 
-### [2026-11-18 13:22:37] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Flutter build apk split per abi" — `flutter build apk --split-per-abi` completed successfully in 151.4s (exit code `0`).
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 13:23:58] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "there are still file errors and how you completed build apk?" — Checking the full project with `flutter analyze` (`task-7553`) and inspecting the active fil...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart
-
-### [2026-11-18 13:24:58] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "build apk again please split per abi" — Started `flutter build apk --split-per-abi` (`task-7564`) while `flutter analyze` (`task-755...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart
-
-### [2026-11-18 13:28:11] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "build apk again please split per abi" — `flutter build apk --split-per-abi` completed again cleanly in **146.4s** (exit code `0`).
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart
-
-### [2026-11-18 13:30:32] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "build apk again please split per abi" — Fixed all 5 lint diagnostics shown in the Problems view, and verified `flutter analyze --no-...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/services/task_reminder_service.dart, lib/core/theme/app_theme.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
-
-### [2026-11-18 13:30:47] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "build apk again please split per abi" — All **5 diagnostics** from your Problems panel are now fixed:
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/services/task_reminder_service.dart, lib/core/theme/app_theme.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
-
 ### [2026-11-19 11:26:45] Checkpoint
 - **Summary**: [gemini-4-neon-medium] Chat: "App need to be optimised. 120fps." — Running static analysis (`flutter analyze --no-pub`) now; I'll run the full test suite right...
 - **Model**: gemini-4-neon-medium
@@ -247,3 +217,33 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "Remove the fucking UI test files phases please. you are making slops accepted by that." — Deleted `test/phase2_ui_audit_test.dart` (the 2,800-line UI audit phase test file).
 - **Model**: gemini-4-neon-medium
 - **Modified**: lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-22 03:39:58] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove Slop from this section in whiteboard" — Cleaned up the Spec Card modal in `whiteboard_canvas_screen.dart` (removed the cyan icon box...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 03:42:43] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove Slop from this section in whiteboard" — Cleaned up `_showAddSpecCardSheet` in whiteboard_canvas_screen.dart:
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 03:44:16] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "space between" — Done — added `mainAxisAlignment: MainAxisAlignment.spaceBetween` and a `12dp` minimum gap in...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 03:46:17] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Fix this section in what's new" — Updated **What's New** (release_notes_tab.dart) to match the clean Privacy & Legal style:
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/widgets/release_notes_tab.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 03:51:36] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Whole app optimise to 120fps." — Completed the whole-app **120fps (`8.33ms` frame budget)** optimization pass across all rema...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart
+
+### [2026-11-22 03:52:01] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Hot reload was rejected: Const class cannot remove fields: Library:'package:notes/featu..." — That's normal in Flutter — when fields are removed from a `const` class (`_ReleaseEntry` in ...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/widgets/release_notes_tab.dart, lib/features/graph/screens/knowledge_graph_screen.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart

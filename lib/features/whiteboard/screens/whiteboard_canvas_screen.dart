@@ -1516,7 +1516,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
   /// Bottom sheet to create a new Spec Card on the board or pin an existing Note/Sticky.
   void _showAddSpecCardSheet() {
     final tokens = context.tokens;
-    final isDark = tokens.isDark;
     final workspace = context.read<WorkspaceProvider>();
     final pinnableNotes = workspace.rawItems
         .where((i) => !i.isTrash && (i is TextNote || i is StickyNote))
@@ -1528,8 +1527,6 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            final cyanPalette = AppColors.getPaletteById('cyan');
-            final cyanAccent = cyanPalette.resolveAccentColor(isDark);
             final search = searchCtrl.text;
             final filtered = search.trim().isEmpty
                 ? pinnableNotes
@@ -1548,45 +1545,20 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
               padding: AppSpacing.modalSheetPadding,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cyanPalette.resolveChipFill(isDark),
-                          borderRadius: AppSpacing.roundedXs,
-                        ),
-                        child: TackIcon(
-                          TackIcons.notes,
-                          size: 18,
-                          color: cyanAccent,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Canvas Spec Card',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.titleSm(
-                                color: tokens.textPrimary,
-                                weight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              'Write a structured spec on the board or pin a live note',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption(
-                                color: tokens.textSecondary,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Spec Card',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleSm(
+                            color: tokens.textPrimary,
+                            fontSize: 17,
+                            weight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -1595,106 +1567,114 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                           minWidth: AppSpacing.minTouchTarget,
                           minHeight: AppSpacing.minTouchTarget,
                         ),
-                        icon: const TackIcon(TackIcons.close, size: 18),
+                        icon: TackIcon(
+                          TackIcons.close,
+                          size: 18,
+                          color: tokens.textSecondary,
+                        ),
                         onPressed: () => Navigator.of(sheetCtx).pop(),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Material(
-                    color: cyanPalette.resolveChipFill(isDark),
-                    shape: AppSpacing.smoothSm(
-                      side: BorderSide(
-                        color: cyanPalette.resolveChipBorder(isDark),
+                  const SizedBox(height: AppSpacing.s3),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(sheetCtx).pop();
+                      _addNode(CanvasNodeType.specCard);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tokens.actionPrimary,
+                      foregroundColor: tokens.actionPrimaryFg,
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(
+                        AppSpacing.minTouchTarget,
                       ),
+                      shape: AppSpacing.smoothMd(),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.of(sheetCtx).pop();
-                        _addNode(CanvasNodeType.specCard);
-                      },
-                      customBorder: AppSpacing.smoothSm(),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minHeight: AppSpacing.minTouchTarget,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              TackIcon(
-                                TackIcons.plus,
-                                size: 18,
-                                color: cyanAccent,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'New Blank Spec Card on Board',
-                                  style: AppTypography.bodySm(
-                                    color: tokens.textPrimary,
-                                    weight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    icon: TackIcon(
+                      TackIcons.plus,
+                      size: 17,
+                      color: tokens.actionPrimaryFg,
+                    ),
+                    label: Text(
+                      'New blank spec card',
+                      style: AppTypography.label(
+                        color: tokens.actionPrimaryFg,
+                        weight: FontWeight.w600,
                       ),
                     ),
                   ),
                   if (pinnableNotes.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.s5),
                     Text(
-                      'OR PIN AN EXISTING NOTE',
+                      'Pin an existing note',
                       style: AppTypography.caption(
-                        color: tokens.textSecondary,
-                        weight: FontWeight.w700,
+                        color: tokens.textTertiary,
+                        weight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: searchCtrl,
-                      onChanged: (_) => setModalState(() {}),
-                      style: AppTypography.bodySm(color: tokens.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'Filter notes...',
-                        isDense: true,
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: TackIcon(TackIcons.search, size: 16),
-                        ),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                        suffixIcon: search.isNotEmpty
-                            ? IconButton(
-                                tooltip: 'Clear search',
-                                constraints: const BoxConstraints(
-                                  minWidth: AppSpacing.minTouchTarget,
-                                  minHeight: AppSpacing.minTouchTarget,
+                    const SizedBox(height: AppSpacing.s2),
+                    Container(
+                      height: AppSpacing.minTouchTarget,
+                      decoration: ShapeDecoration(
+                        color: tokens.canvasSunken,
+                        shape: AppSpacing.smoothMd(),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s3,
+                      ),
+                      child: Row(
+                        children: [
+                          TackIcon(
+                            TackIcons.search,
+                            size: 16,
+                            color: tokens.textTertiary,
+                          ),
+                          const SizedBox(width: AppSpacing.s2),
+                          Expanded(
+                            child: TextField(
+                              controller: searchCtrl,
+                              onChanged: (_) => setModalState(() {}),
+                              style: AppTypography.bodySm(
+                                color: tokens.textPrimary,
+                              ),
+                              cursorColor: tokens.textPrimary,
+                              decoration: InputDecoration(
+                                hintText: 'Filter notes…',
+                                hintStyle: AppTypography.bodySm(
+                                  color: tokens.textTertiary,
                                 ),
-                                icon: const TackIcon(TackIcons.close, size: 16),
-                                onPressed: () {
-                                  searchCtrl.clear();
-                                  setModalState(() {});
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: tokens.canvasSunken,
-                        border: OutlineInputBorder(
-                          borderRadius: AppSpacing.roundedSm,
-                          borderSide: BorderSide.none,
-                        ),
+                                isDense: true,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                          if (search.isNotEmpty)
+                            IconButton(
+                              tooltip: 'Clear search',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                              icon: TackIcon(
+                                TackIcons.close,
+                                size: 15,
+                                color: tokens.textTertiary,
+                              ),
+                              onPressed: () {
+                                searchCtrl.clear();
+                                setModalState(() {});
+                              },
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.s3),
                     if (filtered.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1708,19 +1688,18 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                               textAlign: TextAlign.center,
                               style: AppTypography.bodySm(
                                 color: tokens.textSecondary,
-                                weight: FontWeight.w600,
+                                weight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: AppSpacing.s1),
                             SizedBox(
                               height: AppSpacing.minTouchTarget,
-                              child: TextButton.icon(
+                              child: TextButton(
                                 onPressed: () {
                                   searchCtrl.clear();
                                   setModalState(() {});
                                 },
-                                icon: const TackIcon(TackIcons.close, size: 15),
-                                label: const Text('Clear filter'),
+                                child: const Text('Clear filter'),
                               ),
                             ),
                           ],
@@ -1728,53 +1707,50 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                       )
                     else
                       Flexible(
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 6),
-                          itemBuilder: (_, idx) {
-                            final note = filtered[idx];
-                            final pal = AppColors.getPaletteById(
-                              note.paletteId,
-                            );
-                            return Material(
-                              color: tokens.canvasSunken,
-                              shape: AppSpacing.smoothSm(
-                                side: BorderSide(color: tokens.borderSubtle),
+                        child: Container(
+                          clipBehavior: Clip.antiAlias,
+                          decoration: ShapeDecoration(
+                            color: tokens.canvasSunken.withValues(alpha: 0.45),
+                            shape: AppSpacing.smoothMd(
+                              side: BorderSide(
+                                color: tokens.borderSubtle,
+                                width: 1,
                               ),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.of(sheetCtx).pop();
-                                  _addNode(
-                                    CanvasNodeType.specCard,
-                                    linkedNoteId: note.id,
-                                    customText: note.title,
-                                    customPaletteId: note.paletteId,
-                                    autoEdit: false,
-                                  );
-                                },
-                                customBorder: AppSpacing.smoothSm(),
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minHeight: AppSpacing.minTouchTarget,
-                                  ),
+                            ),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const ClampingScrollPhysics(),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) => Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: AppSpacing.s4,
+                              endIndent: AppSpacing.s4,
+                              color: tokens.borderSubtle,
+                            ),
+                            itemBuilder: (_, idx) {
+                              final note = filtered[idx];
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(sheetCtx).pop();
+                                    _addNode(
+                                      CanvasNodeType.specCard,
+                                      linkedNoteId: note.id,
+                                      customText: note.title,
+                                      customPaletteId: note.paletteId,
+                                      autoEdit: false,
+                                    );
+                                  },
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
+                                      horizontal: AppSpacing.s4,
+                                      vertical: 12,
                                     ),
                                     child: Row(
                                       children: [
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: pal.lightColor,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -1786,7 +1762,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                                                 overflow: TextOverflow.ellipsis,
                                                 style: AppTypography.bodySm(
                                                   color: tokens.textPrimary,
-                                                  weight: FontWeight.w700,
+                                                  weight: FontWeight.w600,
                                                 ),
                                               ),
                                               const SizedBox(height: 2),
@@ -1801,15 +1777,19 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        const TackIcon(TackIcons.pin, size: 15),
+                                        const SizedBox(width: AppSpacing.s2),
+                                        TackIcon(
+                                          TackIcons.chevronRight,
+                                          size: 15,
+                                          color: tokens.textTertiary,
+                                        ),
                                       ],
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                   ],
@@ -4120,6 +4100,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
           0,
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // Left floating identity pill: Back + Board Title
             Flexible(
@@ -4171,7 +4152,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
               ),
             ),
 
-            const SizedBox(width: AppSpacing.s2),
+            const SizedBox(width: AppSpacing.s3),
 
             // Right floating action pill: Undo · Redo · Export
             Container(
@@ -6305,13 +6286,36 @@ class _CanvasEdgesPainter extends CustomPainter {
   final List<CanvasEdge> edges;
   final String? selectedEdgeId;
   final bool isDark;
+  final int _geometryHash;
 
   _CanvasEdgesPainter({
     required this.nodes,
     required this.edges,
     this.selectedEdgeId,
     required this.isDark,
-  });
+  }) : _geometryHash = _computeGeometryHash(nodes, edges);
+
+  static int _computeGeometryHash(
+    List<CanvasNode> nodes,
+    List<CanvasEdge> edges,
+  ) {
+    int h = Object.hash(nodes.length, edges.length);
+    for (final n in nodes) {
+      h = Object.hash(h, n.id, n.x, n.y, n.width, n.height);
+    }
+    for (final e in edges) {
+      h = Object.hash(
+        h,
+        e.id,
+        e.fromNodeId,
+        e.toNodeId,
+        e.fromPort,
+        e.toPort,
+        e.label,
+      );
+    }
+    return h;
+  }
 
   static List<Offset> computeWaypoints(
     Offset start,
@@ -6504,5 +6508,8 @@ class _CanvasEdgesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CanvasEdgesPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _CanvasEdgesPainter oldDelegate) =>
+      oldDelegate._geometryHash != _geometryHash ||
+      oldDelegate.selectedEdgeId != selectedEdgeId ||
+      oldDelegate.isDark != isDark;
 }

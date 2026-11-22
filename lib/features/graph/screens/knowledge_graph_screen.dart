@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,12 +19,7 @@ import '../../../shared/widgets/tactile_ink_target.dart';
 import '../../notes/screens/note_editor_screen.dart';
 import '../../whiteboard/screens/whiteboard_canvas_screen.dart';
 
-enum _GraphEdgeKind {
-  wikiLink,
-  specBoard,
-  hierarchy,
-  tag,
-}
+enum _GraphEdgeKind { wikiLink, specBoard, hierarchy, tag }
 
 class _GraphNode {
   final String id;
@@ -70,10 +66,7 @@ class KnowledgeGraphScreen extends StatefulWidget {
   /// Optional item ID to start in 1-hop Local Graph mode.
   final String? focusItemId;
 
-  const KnowledgeGraphScreen({
-    super.key,
-    this.focusItemId,
-  });
+  const KnowledgeGraphScreen({super.key, this.focusItemId});
 
   @override
   State<KnowledgeGraphScreen> createState() => _KnowledgeGraphScreenState();
@@ -81,7 +74,8 @@ class KnowledgeGraphScreen extends StatefulWidget {
 
 class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   static const double _kCanvasSize = 1800.0;
-  final TransformationController _transformController = TransformationController();
+  final TransformationController _transformController =
+      TransformationController();
   final TextEditingController _searchController = TextEditingController();
 
   late bool _isLocalMode;
@@ -119,16 +113,19 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     final size = MediaQuery.sizeOf(context);
     final tx = (size.width / 2) - (_kCanvasSize / 2);
     final ty = ((size.height - 160) / 2) - (_kCanvasSize / 2);
-    _transformController.value = Matrix4.identity()..setTranslationRaw(tx, ty, 0.0);
+    _transformController.value = Matrix4.identity()
+      ..setTranslationRaw(tx, ty, 0.0);
   }
 
   void _rebuildGraphIfNeeded(List<BaseWorkspaceItem> rawItems) {
     final activeItems = rawItems
-        .where((i) =>
-            !i.isTrash &&
-            !i.isArchived &&
-            i.type != ItemType.clipboard &&
-            (_showBoards || i.type != ItemType.whiteboard))
+        .where(
+          (i) =>
+              !i.isTrash &&
+              !i.isArchived &&
+              i.type != ItemType.clipboard &&
+              (_showBoards || i.type != ItemType.whiteboard),
+        )
         .toList();
 
     final sig =
@@ -163,7 +160,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
 
     void addEdge(String a, String b, _GraphEdgeKind kind) {
       if (a == b || !nodeMap.containsKey(a) || !nodeMap.containsKey(b)) return;
-      final ordered = a.compareTo(b) < 0 ? '$a->$b:${kind.name}' : '$b->$a:${kind.name}';
+      final ordered = a.compareTo(b) < 0
+          ? '$a->$b:${kind.name}'
+          : '$b->$a:${kind.name}';
       if (edgeKeys.add(ordered)) {
         edgeList.add(_GraphEdge(sourceId: a, targetId: b, kind: kind));
       }
@@ -172,17 +171,23 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     // 2. Build edges from Wiki-Links, Spec Cards, Sub-Note parentId, and #tags
     for (final item in activeItems) {
       // Parent -> Sub-note hierarchy
-      if (_showHierarchy && item.parentId != null && nodeMap.containsKey(item.parentId)) {
+      if (_showHierarchy &&
+          item.parentId != null &&
+          nodeMap.containsKey(item.parentId)) {
         addEdge(item.parentId!, item.id, _GraphEdgeKind.hierarchy);
       }
 
       if (item is WhiteboardCanvasItem) {
         for (final cNode in item.nodes) {
-          if (cNode.linkedNoteId != null && nodeMap.containsKey(cNode.linkedNoteId)) {
+          if (cNode.linkedNoteId != null &&
+              nodeMap.containsKey(cNode.linkedNoteId)) {
             addEdge(item.id, cNode.linkedNoteId!, _GraphEdgeKind.specBoard);
           }
           for (final wl in WikiLinkService.extractAllLinks(cNode.text)) {
-            final target = WikiLinkService.resolveTarget(wl.target, activeItems);
+            final target = WikiLinkService.resolveTarget(
+              wl.target,
+              activeItems,
+            );
             if (target != null) {
               addEdge(item.id, target.id, _GraphEdgeKind.specBoard);
             }
@@ -206,20 +211,18 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
           final clean = rawTag.trim().toLowerCase();
           if (clean.isEmpty) continue;
           final tagId = 'tag:#$clean';
-          nodeMap.putIfAbsent(
-            tagId,
-            () {
-              final hash = clean.codeUnits.fold<int>(0, (a, b) => a * 31 + b);
-              final angle = (hash % 360) * (math.pi / 180.0);
-              return _GraphNode(
-                id: tagId,
-                label: '#$clean',
-                paletteId: 'lime',
-                isTagHub: true,
-                position: center + Offset(math.cos(angle) * 260, math.sin(angle) * 260),
-              );
-            },
-          );
+          nodeMap.putIfAbsent(tagId, () {
+            final hash = clean.codeUnits.fold<int>(0, (a, b) => a * 31 + b);
+            final angle = (hash % 360) * (math.pi / 180.0);
+            return _GraphNode(
+              id: tagId,
+              label: '#$clean',
+              paletteId: 'lime',
+              isTagHub: true,
+              position:
+                  center + Offset(math.cos(angle) * 260, math.sin(angle) * 260),
+            );
+          });
           addEdge(item.id, tagId, _GraphEdgeKind.tag);
         }
       }
@@ -229,16 +232,22 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     var filteredNodes = nodeMap.values.toList();
     var filteredEdges = edgeList;
 
-    if (_isLocalMode && widget.focusItemId != null && nodeMap.containsKey(widget.focusItemId)) {
+    if (_isLocalMode &&
+        widget.focusItemId != null &&
+        nodeMap.containsKey(widget.focusItemId)) {
       final focusId = widget.focusItemId!;
       final keepIds = <String>{focusId};
       for (final e in edgeList) {
         if (e.sourceId == focusId) keepIds.add(e.targetId);
         if (e.targetId == focusId) keepIds.add(e.sourceId);
       }
-      filteredNodes = filteredNodes.where((n) => keepIds.contains(n.id)).toList();
+      filteredNodes = filteredNodes
+          .where((n) => keepIds.contains(n.id))
+          .toList();
       filteredEdges = edgeList
-          .where((e) => keepIds.contains(e.sourceId) && keepIds.contains(e.targetId))
+          .where(
+            (e) => keepIds.contains(e.sourceId) && keepIds.contains(e.targetId),
+          )
           .toList();
     } else if (!_showOrphans) {
       final connectedIds = <String>{};
@@ -246,7 +255,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
         connectedIds.add(e.sourceId);
         connectedIds.add(e.targetId);
       }
-      filteredNodes = filteredNodes.where((n) => connectedIds.contains(n.id)).toList();
+      filteredNodes = filteredNodes
+          .where((n) => connectedIds.contains(n.id))
+          .toList();
     }
 
     // Recompute degrees
@@ -313,7 +324,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
         if (a == null || b == null) continue;
         final delta = b.position - a.position;
         final dist = math.max(delta.distance, 1.0);
-        final targetLen = edge.kind == _GraphEdgeKind.tag ? idealSpringLen * 1.15 : idealSpringLen;
+        final targetLen = edge.kind == _GraphEdgeKind.tag
+            ? idealSpringLen * 1.15
+            : idealSpringLen;
         final displacement = dist - targetLen;
         final pull = (delta / dist) * (displacement * springK);
         forces[a.id] = forces[a.id]! + pull;
@@ -364,8 +377,9 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   void _openNodeItem(_GraphNode node) {
     final workspace = context.read<WorkspaceProvider>();
     if (node.isTagHub) {
-      final rawTag =
-          node.label.startsWith('#') ? node.label.substring(1) : node.label;
+      final rawTag = node.label.startsWith('#')
+          ? node.label.substring(1)
+          : node.label;
       if (workspace.selectedTag?.toLowerCase() != rawTag.toLowerCase()) {
         workspace.setSelectedTag(rawTag);
       }
@@ -381,9 +395,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
         TackRoutes.sharedAxisHorizontal(WhiteboardCanvasScreen(item: item)),
       );
     } else {
-      Navigator.of(context).push(
-        TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: item)),
-      );
+      Navigator.of(context)
+          .push(TackRoutes.sharedAxisHorizontal(NoteEditorScreen(item: item)));
     }
   }
 
@@ -397,16 +410,19 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     final selectedNode = _selectedNodeId == null
         ? null
         : _nodes.cast<_GraphNode?>().firstWhere(
-              (n) => n?.id == _selectedNodeId,
-              orElse: () => null,
-            );
+            (n) => n?.id == _selectedNodeId,
+            orElse: () => null,
+          );
 
     final hasFiltersActive =
         !_showTags || !_showBoards || !_showHierarchy || !_showOrphans;
-    final hasSearchMiss = _query.isNotEmpty &&
+    final hasSearchMiss =
+        _query.isNotEmpty &&
         _nodes.isNotEmpty &&
         !_nodes.any((n) => n.label.toLowerCase().contains(_query));
-    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3);
+    final textScale = MediaQuery.textScalerOf(context)
+        .scale(1.0)
+        .clamp(1.0, 1.3);
 
     return PopScope(
       canPop: !_isSearching,
@@ -426,11 +442,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
           elevation: 0,
           scrolledUnderElevation: 0,
           leading: IconButton(
-            icon: TackIcon(
-              TackIcons.back,
-              size: 20,
-              color: tokens.textPrimary,
-            ),
+            icon: TackIcon(TackIcons.back, size: 20, color: tokens.textPrimary),
             onPressed: () {
               if (_isSearching) {
                 setState(() {
@@ -559,8 +571,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                           hasFiltersActive
                               ? 'No nodes match current filters'
                               : (_isLocalMode
-                                  ? 'No local connections yet'
-                                  : 'No connected notes yet'),
+                                    ? 'No local connections yet'
+                                    : 'No connected notes yet'),
                           textAlign: TextAlign.center,
                           style: AppTypography.title(color: tokens.textPrimary),
                         ),
@@ -569,8 +581,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                           hasFiltersActive
                               ? 'Reset one or more graph filters to see notes and boards again.'
                               : (_isLocalMode
-                                  ? 'Add [[Wiki-Links]], #tags, or switch to the Global Graph.'
-                                  : 'Link notes with [[Wiki-Links]], embed boards with ![[Board]], or add #tags to grow your knowledge graph.'),
+                                    ? 'Add [[Wiki-Links]], #tags, or switch to the Global Graph.'
+                                    : 'Link notes with [[Wiki-Links]], embed boards with ![[Board]], or add #tags to grow your knowledge graph.'),
                           textAlign: TextAlign.center,
                           style: AppTypography.bodySm(
                             color: tokens.textSecondary,
@@ -646,14 +658,16 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                   child: SizedBox(
                     width: _kCanvasSize,
                     height: _kCanvasSize,
-                    child: CustomPaint(
-                      painter: _KnowledgeGraphPainter(
-                        nodes: _nodes,
-                        edges: _edges,
-                        selectedNodeId: _selectedNodeId,
-                        searchQuery: _query,
-                        tokens: tokens,
-                        textScale: textScale,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _KnowledgeGraphPainter(
+                          nodes: _nodes,
+                          edges: _edges,
+                          selectedNodeId: _selectedNodeId,
+                          searchQuery: _query,
+                          tokens: tokens,
+                          textScale: textScale,
+                        ),
                       ),
                     ),
                   ),
@@ -889,8 +903,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                       node.isTagHub
                           ? TackIcons.tag
                           : (item is WhiteboardCanvasItem
-                              ? TackIcons.workflow
-                              : TackIcons.notes),
+                                ? TackIcons.workflow
+                                : TackIcons.notes),
                       size: 19,
                       color: accent,
                     ),
@@ -984,23 +998,23 @@ class _KnowledgeGraphPainter extends CustomPainter {
       final b = nodeMap[edge.targetId];
       if (a == null || b == null) continue;
 
-      final isHighlighted = selectedNodeId != null &&
+      final isHighlighted =
+          selectedNodeId != null &&
           (edge.sourceId == selectedNodeId || edge.targetId == selectedNodeId);
       final isDimmed = selectedNodeId != null && !isHighlighted;
 
       Color edgeColor;
       switch (edge.kind) {
         case _GraphEdgeKind.wikiLink:
-          edgeColor = isHighlighted
-              ? tokens.accentPin
-              : tokens.textSecondary;
+          edgeColor = isHighlighted ? tokens.accentPin : tokens.textSecondary;
           break;
         case _GraphEdgeKind.specBoard:
-          edgeColor = AppColors.getPaletteById('cyan').resolveAccentColor(isDark);
+          edgeColor = AppColors.getPaletteById('cyan')
+              .resolveAccentColor(isDark);
           break;
         case _GraphEdgeKind.hierarchy:
-          edgeColor =
-              AppColors.getPaletteById('lavender').resolveAccentColor(isDark);
+          edgeColor = AppColors.getPaletteById('lavender')
+              .resolveAccentColor(isDark);
           break;
         case _GraphEdgeKind.tag:
           edgeColor = tokens.textTertiary;
@@ -1011,8 +1025,9 @@ class _KnowledgeGraphPainter extends CustomPainter {
         ..color = edgeColor.withValues(
           alpha: isDimmed ? 0.14 : (isHighlighted ? 0.92 : 0.45),
         )
-        ..strokeWidth =
-            isHighlighted ? 2.4 : (edge.kind == _GraphEdgeKind.tag ? 1.1 : 1.6)
+        ..strokeWidth = isHighlighted
+            ? 2.4
+            : (edge.kind == _GraphEdgeKind.tag ? 1.1 : 1.6)
         ..style = PaintingStyle.stroke;
 
       canvas.drawLine(a.position, b.position, paint);
@@ -1021,11 +1036,12 @@ class _KnowledgeGraphPainter extends CustomPainter {
     // 3. Draw nodes & crisp labels
     for (final node in nodes) {
       final isSelected = node.id == selectedNodeId;
-      final matchesSearch = searchQuery.isNotEmpty &&
+      final matchesSearch =
+          searchQuery.isNotEmpty &&
           node.label.toLowerCase().contains(searchQuery);
       final isDimmed =
           (selectedNodeId != null && !activeNeighbors.contains(node.id)) ||
-              (searchQuery.isNotEmpty && !matchesSearch);
+          (searchQuery.isNotEmpty && !matchesSearch);
 
       final palette = AppColors.getPaletteById(node.paletteId);
       final fillColor = node.isTagHub
@@ -1077,7 +1093,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
         )..layout();
         emojiPainter.paint(
           canvas,
-          node.position - Offset(emojiPainter.width / 2, emojiPainter.height / 2),
+          node.position -
+              Offset(emojiPainter.width / 2, emojiPainter.height / 2),
         );
       }
 
