@@ -1,24 +1,5 @@
 # Session Log
 
-### [2026-11-18 12:32:41] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Completed the code-level UI/UX integrity audit across `lib/features/notes/screens/` and `lib...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 13:19:06] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — Formatting verification (`0 changed`), `dart analyze lib/ test/` (`0` errors, `0` warnings),...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 13:19:40] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — A project-wide UI/UX integrity audit and remediation pass has been completed across shared c...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-18 13:20:09] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Flutter build apk split per abi" — Started `flutter build apk --split-per-abi` (`assembleRelease`, task `task-7546`) and waitin...
-- **Model**: gemini-4-hydrogen-xhigh
-- **Modified**: lib/core/theme/app_theme.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/code_syntax_highlighter.dart, lib/features/notes/widgets/document_outline_sheet.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/markdown_text_editing_controller.dart, lib/features/notes/widgets/mermaid/mermaid_completion_bar.dart, lib/features/notes/widgets/mermaid/mermaid_diagram_card.dart, lib/features/notes/widgets/mermaid/mermaid_extra_renderers.dart, lib/features/notes/widgets/mermaid_template_sheet.dart, lib/features/notes/widgets/note_statistics_sheet.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/notes/widgets/whiteboard_embed_card.dart, lib/features/notes/widgets/wiki_link_components.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/sliding_pill_track.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/phase2_ui_audit_test.dart
-
 ### [2026-11-18 13:22:37] Checkpoint
 - **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Flutter build apk split per abi" — `flutter build apk --split-per-abi` completed successfully in 151.4s (exit code `0`).
 - **Model**: gemini-4-hydrogen-xhigh
@@ -246,3 +227,23 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "I found out some glitches in animation like when we go to another app then comeback to ..." — Found and fixed the exact root causes behind the blank/refresh flicker when switching to ano...
 - **Model**: gemini-4-neon-medium
 - **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/values-night/styles.xml, android/app/src/main/res/values/styles.xml
+
+### [2026-11-22 03:19:01] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "What are all the thing you added additional from git status of old commits in the curre..." — Right now `git status` is **clean** (the latest commit is `740d5e1`). Here is the complete, ...
+- **Model**: gemini-4-neon-medium
+- **Referenced**: assets/images/onboarding/slide3_connected_ideas.jpg, package.json, test/task_reminders_test.dart
+
+### [2026-11-22 03:25:45] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "About Tack & Release Notes This section. Remove Architecture section. Make our logo pro..." — Updated `AboutTackScreen` and `ReleaseNotesTab` per your exact specs (removed Architecture, ...
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-22 03:26:24] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "About Tack & Release Notes This section. Remove Architecture section. Make our logo pro..." — Done — updated about_tack_screen.dart and release_notes_tab.dart strictly to your specs:
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, test/phase2_ui_audit_test.dart
+
+### [2026-11-22 03:27:43] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "Remove the fucking UI test files phases please. you are making slops accepted by that." — Deleted `test/phase2_ui_audit_test.dart` (the 2,800-line UI audit phase test file).
+- **Model**: gemini-4-neon-medium
+- **Modified**: lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, test/phase2_ui_audit_test.dart

@@ -197,11 +197,12 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppSpacing.readMaxWidth),
           child: ListView(
+            physics: const ClampingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               gutter,
               AppSpacing.s3,
               gutter,
-              AppSpacing.s8 + bottomInset,
+              AppSpacing.s5 + bottomInset,
             ),
             children: [
               ZOrderColumn(
@@ -214,6 +215,7 @@ class _ReleaseNotesTabState extends State<ReleaseNotesTab> {
                   // 2. Category Filter Pills
                   SingleChildScrollView(
                     clipBehavior: Clip.hardEdge,
+                    physics: const ClampingScrollPhysics(),
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: _ReleaseCategory.values.map((cat) {
