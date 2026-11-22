@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
-import '../theme/app_theme.dart';
 
 /// Shared page-route transition factories tailored to Tack's navigation hierarchy.
 ///
@@ -18,16 +17,25 @@ class TackRoutes {
 
   static Route<T> sharedAxisHorizontal<T>(Widget page) {
     return PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 260),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
+      transitionDuration: const Duration(milliseconds: 160),
+      reverseTransitionDuration: const Duration(milliseconds: 130),
       pageBuilder: (_, _, _) => page,
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         return _SecondaryAxisMotion(
           secondaryAnimation: secondaryAnimation,
-          endOffset: const Offset(-0.08, 0),
-          child: TackAnimatedTransition(
-            animation: animation,
-            slideBegin: const Offset(0.14, 0),
+          endOffset: const Offset(-0.06, 0),
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0.08, 0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: AppSpacing.silky120Hz,
+                    reverseCurve: Curves.easeInCubic,
+                  ),
+                ),
             child: child,
           ),
         );
@@ -37,16 +45,25 @@ class TackRoutes {
 
   static Route<T> slideUp<T>(Widget page) {
     return PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 200),
+      transitionDuration: const Duration(milliseconds: 170),
+      reverseTransitionDuration: const Duration(milliseconds: 130),
       pageBuilder: (_, _, _) => page,
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         return _SecondaryAxisMotion(
           secondaryAnimation: secondaryAnimation,
-          endOffset: const Offset(0, -0.025),
-          child: TackAnimatedTransition(
-            animation: animation,
-            slideBegin: const Offset(0, 0.10),
+          endOffset: const Offset(0, -0.02),
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.08),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: AppSpacing.silky120Hz,
+                    reverseCurve: Curves.easeInCubic,
+                  ),
+                ),
             child: child,
           ),
         );

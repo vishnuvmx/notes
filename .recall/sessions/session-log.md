@@ -1,15 +1,5 @@
 # Session Log
 
-### [2026-11-21 03:34:17] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "give the commands to run in emulator" — Run these in PowerShell from `d:\edita-android\notes`:
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-21 03:50:23] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "what kindoff stroke is this?" — Found the exact cause — a **double-painted `SmoothRectangleBorder`** bug — and fixed it in b...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
 ### [2026-11-21 03:50:44] Checkpoint
 - **Summary**: [gemini-4-neon-medium] Chat: "what kindoff stroke is this?" — That was a **double-painted `SmoothRectangleBorder` bug** (creating a hollow "railroad track...
 - **Model**: gemini-4-neon-medium
@@ -249,3 +239,13 @@
 - **Summary**: [gemini-4-neon-high] Chat: "app closes when app opens." — Fixed the crash on launch and rebuilt all three split-per-ABI release APKs:
 - **Model**: gemini-4-neon-high
 - **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/drawable-v21/launch_background.xml, android/app/src/main/res/drawable/launch_background.xml, lib/core/theme/app_colors.dart, lib/core/theme/theme_provider.dart, lib/features/home/screens/home_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/main.dart, lib/shared/providers/workspace_provider.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, lib/shared/widgets/tack_card_open_container.dart, pubspec.lock, pubspec.yaml, android/app/src/main/res/drawable-night-v21/launch_background.xml, android/app/src/main/res/values-night-v31/styles.xml, android/app/src/main/res/values-v31/styles.xml
+
+### [2026-11-22 10:04:25] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "the plus icon now have a jitter issue. i dont want you to fix that. the reason why i sa..." — Formatted modified files and running `flutter analyze` and `flutter test`; waiting for results.
+- **Model**: gemini-4-neon-high
+- **Modified**: lib/core/routing/tack_routes.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/tack_card_open_container.dart
+
+### [2026-11-22 10:04:54] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "the plus icon now have a jitter issue. i dont want you to fix that. the reason why i sa..." — Understood — you're right. Users need things to open and close fast and reliably, not slow f...
+- **Model**: gemini-4-neon-high
+- **Modified**: lib/core/routing/tack_routes.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/tack_card_open_container.dart

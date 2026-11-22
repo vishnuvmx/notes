@@ -174,7 +174,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
   late List<CanvasEdge> _edges;
   final TransformationController _transformationController =
       TransformationController();
-  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  bool _savedOnExit = false;
   final FocusNode _canvasFocusNode = FocusNode();
 
   final CanvasHistoryManager _history = CanvasHistoryManager();
@@ -374,7 +374,14 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
 
   @override
   void dispose() {
-    _saveCanvasState();
+    if (!_savedOnExit) {
+      _savedOnExit = true;
+      final updated = _buildUpdatedBoardSnapshot();
+      final provider = _workspaceProvider;
+      if (provider != null) {
+        Future.microtask(() => provider.saveItem(updated));
+      }
+    }
     _cameraAnimController.dispose();
     _transformationController.dispose();
     _canvasFocusNode.dispose();
@@ -399,17 +406,21 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
     _cameraAnimController.forward(from: 0.0);
   }
 
-  void _saveCanvasState() {
+  WhiteboardCanvasItem _buildUpdatedBoardSnapshot() {
     final matrix = _transformationController.value;
     final zoom = matrix.getMaxScaleOnAxis().clamp(0.15, 3.0);
     final translation = matrix.getTranslation();
-    final updated = widget.item.copyWith(
+    return widget.item.copyWith(
       nodes: _nodes,
       edges: _edges,
       zoomScale: zoom,
       panOffset: Offset(translation.x, translation.y),
       updatedAt: DateTime.now(),
     );
+  }
+
+  void _saveCanvasState() {
+    final updated = _buildUpdatedBoardSnapshot();
     try {
       final provider =
           _workspaceProvider ??
@@ -454,6 +465,7 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
       });
       return;
     }
+    _savedOnExit = true;
     _saveCanvasState();
     Navigator.of(context).pop();
   }
@@ -3077,7 +3089,13 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
     return PopScope(
       canPop: _canPopWhiteboard(),
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
+        if (didPop) {
+          if (!_savedOnExit) {
+            _savedOnExit = true;
+            _saveCanvasState();
+          }
+          return;
+        }
         _handleWhiteboardBack();
       },
       child: KeyboardListener(
@@ -3134,81 +3152,77 @@ class _WhiteboardCanvasScreenState extends State<WhiteboardCanvasScreen>
                     setState(() => _isEdgeTouch = false);
                   }
                 },
-                child: InteractiveViewer(
-                  transformationController: _transformationController,
-                  boundaryMargin: const EdgeInsets.all(3000),
-                  minScale: 0.15,
-                  maxScale: 3.5,
-                  constrained: false,
-                  // When dragging a node or touching near screen edges (system back gesture zone), disable pan
-                  panEnabled:
-                      (_activeTool == 'pan' || _activeTool == 'select') &&
-                      !_isDraggingNode &&
-                      !_isEdgeTouch,
-                  child: GestureDetector(
-                    onTapUp: (details) =>
-                        _handleCanvasTap(details.localPosition),
-                    onDoubleTapDown: (details) {
-                      final tap = details.localPosition;
-                      for (final edge in _edges) {
-                        final from = _nodes.cast<CanvasNode?>().firstWhere(
-                          (n) => n?.id == edge.fromNodeId,
-                          orElse: () => null,
-                        );
-                        final to = _nodes.cast<CanvasNode?>().firstWhere(
-                          (n) => n?.id == edge.toNodeId,
-                          orElse: () => null,
-                        );
-                        if (from == null || to == null) continue;
+                child: RepaintBoundary(
+                  child: InteractiveViewer(
+                    transformationController: _transformationController,
+                    boundaryMargin: const EdgeInsets.all(3000),
+                    minScale: 0.15,
+                    maxScale: 3.5,
+                    constrained: false,
+                    // When dragging a node or touching near screen edges (system back gesture zone), disable pan
+                    panEnabled:
+                        (_activeTool == 'pan' || _activeTool == 'select') &&
+                        !_isDraggingNode &&
+                        !_isEdgeTouch,
+                    child: GestureDetector(
+                      onTapUp: (details) =>
+                          _handleCanvasTap(details.localPosition),
+                      onDoubleTapDown: (details) {
+                        final tap = details.localPosition;
+                        for (final edge in _edges) {
+                          final from = _nodes.cast<CanvasNode?>().firstWhere(
+                            (n) => n?.id == edge.fromNodeId,
+                            orElse: () => null,
+                          );
+                          final to = _nodes.cast<CanvasNode?>().firstWhere(
+                            (n) => n?.id == edge.toNodeId,
+                            orElse: () => null,
+                          );
+                          if (from == null || to == null) continue;
 
-                        final ports = _resolveEdgePorts(edge, from, to);
-                        final waypoints = _CanvasEdgesPainter.computeWaypoints(
-                          ports.start,
-                          edge.fromPort,
-                          ports.end,
-                          edge.toPort,
-                        );
+                          final ports = _resolveEdgePorts(edge, from, to);
+                          final waypoints =
+                              _CanvasEdgesPainter.computeWaypoints(
+                                ports.start,
+                                edge.fromPort,
+                                ports.end,
+                                edge.toPort,
+                              );
 
-                        for (int i = 0; i < waypoints.length - 1; i++) {
-                          if (_distToSegment(
-                                tap,
-                                waypoints[i],
-                                waypoints[i + 1],
-                              ) <=
-                              22.0) {
-                            _showEdgeEditDialog(edge);
-                            return;
+                          for (int i = 0; i < waypoints.length - 1; i++) {
+                            if (_distToSegment(
+                                  tap,
+                                  waypoints[i],
+                                  waypoints[i + 1],
+                                ) <=
+                                22.0) {
+                              _showEdgeEditDialog(edge);
+                              return;
+                            }
                           }
                         }
-                      }
-                    },
-                    child: RepaintBoundary(
-                      key: _repaintBoundaryKey,
+                      },
                       child: SizedBox(
                         width: _canvasSize,
                         height: _canvasSize,
                         child: Stack(
                           children: [
                             Positioned.fill(
-                              child: RepaintBoundary(
-                                child: CustomPaint(
-                                  painter: _CanvasGridPainter(
-                                    showGrid: _showGrid,
-                                    isDark: isDark,
-                                    opacity: _gridOpacity,
-                                  ),
+                              child: CustomPaint(
+                                painter: _CanvasGridPainter(
+                                  showGrid: _showGrid,
+                                  isDark: isDark,
+                                  opacity: _gridOpacity,
                                 ),
                               ),
                             ),
                             Positioned.fill(
-                              child: RepaintBoundary(
-                                child: CustomPaint(
-                                  painter: _CanvasEdgesPainter(
-                                    nodes: _nodes,
-                                    edges: _edges,
-                                    selectedEdgeId: _selectedEdgeId,
-                                    isDark: isDark,
-                                  ),
+                              child: CustomPaint(
+                                painter: _CanvasEdgesPainter(
+                                  nodes: _nodes,
+                                  edges: _edges,
+                                  selectedEdgeId: _selectedEdgeId,
+                                  isDark: isDark,
                                 ),
                               ),
                             ),
