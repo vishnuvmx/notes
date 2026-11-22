@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
@@ -146,16 +147,16 @@ class MainActivity : FlutterActivity() {
     private var pendingPayload: Map<String, Any?>? = null
     private var pendingPermissionResult: MethodChannel.Result? = null
 
+    // Use TextureView so Android retains the last rendered frame across app
+    // switches and recents transitions instead of tearing down SurfaceView
+    // (which causes a brief blank/refresh flicker when returning to Tack).
+    override fun getRenderMode(): RenderMode = RenderMode.texture
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableHighRefreshRate()
         createNotificationChannels()
         handleIntent(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        enableHighRefreshRate()
     }
 
     private fun enableHighRefreshRate() {
@@ -173,20 +174,10 @@ class MainActivity : FlutterActivity() {
                         it.physicalHeight == currentMode.physicalHeight
                 }
                 .maxByOrNull { it.refreshRate }
-            if (bestMode != null) {
+            if (bestMode != null && bestMode.modeId != currentMode.modeId) {
                 val params = window.attributes
-                var changed = false
-                if (params.preferredDisplayModeId != bestMode.modeId) {
-                    params.preferredDisplayModeId = bestMode.modeId
-                    changed = true
-                }
-                if (params.preferredRefreshRate != bestMode.refreshRate) {
-                    params.preferredRefreshRate = bestMode.refreshRate
-                    changed = true
-                }
-                if (changed) {
-                    window.attributes = params
-                }
+                params.preferredDisplayModeId = bestMode.modeId
+                window.attributes = params
             }
         }
     }

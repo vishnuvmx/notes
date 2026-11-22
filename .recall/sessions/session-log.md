@@ -1,13 +1,5 @@
 # Session Log
 
-### [2026-11-18 12:32:33] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Completed the code-level UI/UX integrity audit across the 8 target feature directories (`hom...
-- **Model**: gemini-4-hydrogen-xhigh
-
-### [2026-11-18 12:32:35] Checkpoint
-- **Summary**: [gemini-4-hydrogen-xhigh] Chat: "Perform a project-wide UI/UX integrity audit across the entire Flutter application. Ide..." — Received the third audit report (`features/home`, `search`, `tasks`, `folders`, `onboarding`...
-- **Model**: gemini-4-hydrogen-xhigh
-
 ### [2026-11-18 12:32:41] Checkpoint
 - **Summary**: [gemini-4-hydrogen-xhigh] Chat response: Completed the code-level UI/UX integrity audit across `lib/features/notes/screens/` and `lib...
 - **Model**: gemini-4-hydrogen-xhigh
@@ -244,3 +236,13 @@
 - **Summary**: [gemini-4-neon-medium] Chat: "better the brfore fuck. This thing is Fking UI. Revert the UI. Do it beetter. Why the f..." — My fault on that broken shrink-wrapped grid — replaced it properly in task_reminder_sheet.dart:
 - **Model**: gemini-4-neon-medium
 - **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/home/screens/home_screen.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/notes/widgets/editor_formatting_toolbar.dart, lib/features/notes/widgets/frontmatter_properties_bar.dart, lib/features/notes/widgets/rich_note_content_view.dart, lib/features/notes/widgets/slash_command_sheet.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/onboarding/widgets/onboarding_slide_stage.dart, lib/features/search/screens/search_command_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/features/tasks/widgets/task_reminder_sheet.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/main.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/responsive_card_grid.dart, lib/shared/widgets/smart_bottom_nav_bar.dart
+
+### [2026-11-22 03:12:54] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "I found out some glitches in animation like when we go to another app then comeback to ..." — Found and fixed the root causes of the app-switch blank flicker in `MainActivity.kt` and And...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/values-night/styles.xml, android/app/src/main/res/values/styles.xml
+
+### [2026-11-22 03:14:49] Checkpoint
+- **Summary**: [gemini-4-neon-medium] Chat: "I found out some glitches in animation like when we go to another app then comeback to ..." — Found and fixed the exact root causes behind the blank/refresh flicker when switching to ano...
+- **Model**: gemini-4-neon-medium
+- **Modified**: android/app/src/main/kotlin/com/notes/tacknotes/MainActivity.kt, android/app/src/main/res/values-night/styles.xml, android/app/src/main/res/values/styles.xml
