@@ -1,0 +1,68 @@
+# Multi-device AI QA workflow wired for Tack (com.notes.tacknotes)
+# Uses pierridotite/mobile-agent-testers persona methodology on GitHub's free Linux Android emulator runners.
+name: Tack Multi-Device QA (mobile-agent-testers)
+
+on:
+  workflow_dispatch:
+    inputs:
+      android_personas:
+        description: "Personas from qa/mobile-agent-testers/personas.json (comma-separated or 'all')"
+        default: "pixel_default_light,pixel_default_dark,compact_large_text,accessibility_200,tablet_landscape"
+      ref:
+        description: "Branch or commit SHA to test"
+        default: ""
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Build Tack debug APK
+        run: flutter pub get && flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tack-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+  test-android-matrix:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [30, 34]
+        profile: ["Nexus 5", "pixel_7"]
+        exclude:
+          - api-level: 30
+            profile: "pixel_7"
+          - api-level: 34
+            profile: "Nexus 5"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tack-debug-apk
+          path: artifacts/
+      - name: Run Tack across Android Emulator Matrix
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          profile: ${{ matrix.profile }}
+          arch: x86_64
+          script: |
+            adb install -r artifacts/app-debug.apk
+            adb shell monkey -p com.notes.tacknotes -c android.intent.category.LAUNCHER 1
+            sleep 4
+            python3 qa/mobile-agent-testers/screen.py ".ui-diff/ci/api${{ matrix.api-level }}" 01_today
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-screens-api-${{ matrix.api-level }}
+          path: .ui-diff/ci/

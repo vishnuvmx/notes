@@ -1,0 +1,12 @@
+{
+  "name": "tack-ui-diff",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Android multi-device pixel diff, bounding-box composite, blink GIF, and UI_change.md updater adapted from imuratalpay/ui-diff",
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0"
+  }
+}

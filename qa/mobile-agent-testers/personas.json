@@ -1,0 +1,111 @@
+[
+  {
+    "id": "pixel_default_light",
+    "upstream_persona": "malik_light",
+    "platform": "android",
+    "profile": "Primary Android user on Pixel 7, Light Mode, standard 1.0x typography.",
+    "goal": "Open Tack cleanly without blank flashes, toggle Today tasks, inspect Library grid, open/close a Note and a Board.",
+    "locale": "en-US",
+    "device": {
+      "name": "Pixel 7 (Light 1.0x)",
+      "profile": "pixel_7",
+      "android_api": 34,
+      "width": 1080,
+      "height": 2400,
+      "density": 420,
+      "font_scale": 1.0,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "pixel_default_dark",
+    "upstream_persona": "malik",
+    "platform": "android",
+    "profile": "Student, 21, taps fast, Dark Mode everywhere, expects crisp contrast on Liquid Glass nav bar and cards.",
+    "goal": "Navigate all 4 tabs, verify dark contrast, open and close a Whiteboard without crashing.",
+    "locale": "en-US",
+    "device": {
+      "name": "Pixel 7 (Dark 1.0x)",
+      "profile": "pixel_7",
+      "android_api": 34,
+      "width": 1080,
+      "height": 2400,
+      "density": 420,
+      "font_scale": 1.0,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "compact_large_text",
+    "upstream_persona": "anna",
+    "platform": "android",
+    "profile": "Retired teacher, 68, small phone, uses 1.3x large text, low patience for clipped labels or cramped targets.",
+    "goal": "Read Today tasks, switch To do / Completed, browse Library cards, and open Settings without text clipping.",
+    "locale": "en-GB",
+    "device": {
+      "name": "Compact Phone (Light 1.3x)",
+      "profile": "Nexus 5",
+      "android_api": 30,
+      "width": 1080,
+      "height": 1920,
+      "density": 440,
+      "font_scale": 1.3,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "accessibility_200",
+    "upstream_persona": "grace",
+    "platform": "android",
+    "profile": "Retired nurse, 74, low vision, uses Android 200% font scale (clamped safely by Tack's textScaler).",
+    "goal": "Verify every card, bottom nav bar, and header remains legible with zero RenderFlex overflow.",
+    "locale": "en-US",
+    "device": {
+      "name": "Pixel 7 (Light 2.0x Accessibility)",
+      "profile": "pixel_7",
+      "android_api": 34,
+      "width": 1080,
+      "height": 2400,
+      "density": 420,
+      "font_scale": 2.0,
+      "theme": "light",
+      "increase_contrast": true
+    }
+  },
+  {
+    "id": "tablet_landscape",
+    "upstream_persona": "lucia",
+    "platform": "android",
+    "profile": "Teacher, 47, uses a tablet, checks responsive multi-column grid spacing and floating dock proportions.",
+    "goal": "Verify responsive grid columns on Library & Boards and clean Whiteboard HUD spacing.",
+    "locale": "es-ES",
+    "device": {
+      "name": "Android Tablet (Light 1.0x)",
+      "profile": "pixel_tablet",
+      "android_api": 34,
+      "width": 1600,
+      "height": 2560,
+      "density": 320,
+      "font_scale": 1.0,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "small_phone_dark",
+    "upstream_persona": "felipe",
+    "platform": "android",
+    "profile": "Delivery rider, 27, compact 720p Android phone, dark mode, 1.15x font, taps quickly one-handed.",
+    "goal": "Quick-capture a note, toggle tasks, and jump between tabs smoothly without crowding.",
+    "locale": "pt-BR",
+    "device": {
+      "name": "Compact 720p (Dark 1.15x)",
+      "profile": "pixel_3a",
+      "android_api": 31,
+      "width": 720,
+      "height": 1280,
+      "density": 320,
+      "font_scale": 1.15,
+      "theme": "dark"
+    }
+  }
+]

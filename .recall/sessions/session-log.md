@@ -1,15 +1,5 @@
 # Session Log
 
-### [2026-11-21 03:50:44] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "what kindoff stroke is this?" — That was a **double-painted `SmoothRectangleBorder` bug** (creating a hollow "railroad track...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
-### [2026-11-21 03:51:39] Checkpoint
-- **Summary**: [gemini-4-neon-medium] Chat: "I have never asked to colorize these icons btw.. make them black again" — Changed all 4 `NoteEditorScreen` AppBar icons (Back, Outline, Edit/Read, and `...` menu) bac...
-- **Model**: gemini-4-neon-medium
-- **Modified**: android/gradle.properties, lib/features/about/screens/about_tack_screen.dart, lib/features/about/widgets/release_notes_tab.dart, lib/features/notes/screens/note_editor_screen.dart, lib/features/onboarding/screens/onboarding_screen.dart, lib/features/tasks/screens/today_screen.dart, lib/shared/widgets/app_search_field.dart, lib/shared/widgets/create_item_sheet.dart, lib/shared/widgets/smart_bottom_nav_bar.dart, test/onboarding_screen_test.dart, test/phase2_ui_audit_test.dart
-
 ### [2026-11-21 03:52:12] Checkpoint
 - **Summary**: [gemini-4-neon-medium] Chat: "I have never asked to colorize these icons btw.. make them black again" — Done — all 4 AppBar controls in note_editor_screen.dart (Back, Document Outline, Edit/Read t...
 - **Model**: gemini-4-neon-medium
@@ -249,3 +239,13 @@
 - **Summary**: [gemini-4-neon-high] Chat: "the plus icon now have a jitter issue. i dont want you to fix that. the reason why i sa..." — Understood — you're right. Users need things to open and close fast and reliably, not slow f...
 - **Model**: gemini-4-neon-high
 - **Modified**: lib/core/routing/tack_routes.dart, lib/features/whiteboard/screens/whiteboard_canvas_screen.dart, lib/shared/widgets/tack_card_open_container.dart
+
+### [2026-11-26 01:26:10] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "use https://github.com/pierridotite/mobile-agent-testers for testing our application ac..." — Integrated both **`pierridotite/mobile-agent-testers`** and **`imuratalpay/ui-diff`** into T...
+- **Model**: gemini-4-neon-high
+- **Modified**: .gitignore, .github/workflows/mobile-agent-testers.yml, UI_change.md, qa/mobile-agent-testers/TACK_BRIEF.md, qa/mobile-agent-testers/a11y.py, qa/mobile-agent-testers/personas.json, qa/mobile-agent-testers/run_matrix.ps1, qa/mobile-agent-testers/screen.py, qa/ui-diff/diff_runner.mjs, qa/ui-diff/package-lock.json, qa/ui-diff/package.json
+
+### [2026-11-26 01:27:24] Checkpoint
+- **Summary**: [gemini-4-neon-high] Chat: "will it take enough ram? or how will that work?" — Your PC currently has **15.7 GB total RAM** with **6.1 GB free** — plenty for this setup, be...
+- **Model**: gemini-4-neon-high
+- **Modified**: .gitignore, .github/workflows/mobile-agent-testers.yml, UI_change.md, qa/mobile-agent-testers/TACK_BRIEF.md, qa/mobile-agent-testers/a11y.py, qa/mobile-agent-testers/personas.json, qa/mobile-agent-testers/run_matrix.ps1, qa/mobile-agent-testers/screen.py, qa/ui-diff/diff_runner.mjs, qa/ui-diff/package-lock.json, qa/ui-diff/package.json

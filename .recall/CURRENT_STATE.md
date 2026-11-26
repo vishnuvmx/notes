@@ -1,21 +1,29 @@
 # Previous Iteration State (Historical Context Only)
 
-> **Last Updated**: 2026-11-22 10:04:54 · **Model**: gemini-4-neon-high
+> **Last Updated**: 2026-11-26 01:27:24 · **Model**: gemini-4-neon-high
 > **AI AGENTS**: This records what happened in the PREVIOUS session. DO NOT execute these files or next steps unless the user explicitly asks to continue that specific work. Always prioritize the user's current prompt.
 
 ## Previous Progress
-[gemini-4-neon-high] Chat: "the plus icon now have a jitter issue. i dont want you to fix that. the reason why i sa..." — Understood — you're right. Users need things to open and close fast and reliably, not slow f...
+[gemini-4-neon-high] Chat: "will it take enough ram? or how will that work?" — Your PC currently has **15.7 GB total RAM** with **6.1 GB free** — plenty for this setup, be...
 
 ## Active Working Files & Symbol Map (Skip File Discovery)
-- `lib/core/routing/tack_routes.dart` (172 lines): `TackRoutes` (:15), `_SecondaryAxisMotion` (:106), `createState` (:118), `_SecondaryAxisMotionState` (:121), `initState` (:126), `didUpdateWidget` (:132), `_initCurve` (:141), `dispose` (:156), `build` (:162)
-- `lib/features/whiteboard/screens/whiteboard_canvas_screen.dart` (6530 lines): `CanvasSnapshot` (:36), `CanvasHistoryManager` (:48), `recordSnapshot` (:56), `clear` (:84), `WhiteboardCanvasScreen` (:92), `computeNodesBounds` (:103), `createState` (:167), `_WhiteboardCanvasScreenState` (:170), `selectEdgeForTesting` (:215), `selectNodeForTesting` (:217), `branchFromNodeForTesting` (:219), `deleteEdgeForTesting` (:222)
-- `lib/shared/widgets/tack_card_open_container.dart` (80 lines): `TackCardOpenContainer` (:9), `_open` (:30), `build` (:55)
+- `qa/mobile-agent-testers/a11y.py` (90 lines): `_bounds` (:12), `_name` (:17), `_cut` (:25), `audit_android` (:35), `visit` (:39), `format_summary` (:74)
+- `qa/mobile-agent-testers/screen.py` (125 lines): `run_adb` (:20), `png_dimensions` (:29), `main` (:37)
+- `qa/ui-diff/diff_runner.mjs` (458 lines)
 - `test/task_reminders_test.dart` (579 lines): `_InMemoryWorkspaceRepo` (:18), `getAllActiveItems` (:29), `getItemsByType` (:32), `getFavoriteItems` (:38), `getArchivedItems` (:42), `getTrashItems` (:46), `searchItems` (:50), `getItemById` (:56), `saveItem` (:60), `moveToTrash` (:70), `restoreItem` (:73), `toggleArchive` (:76)
 
 ## Files Modified in Previous Task
-- `lib/core/routing/tack_routes.dart`
-- `lib/features/whiteboard/screens/whiteboard_canvas_screen.dart`
-- `lib/shared/widgets/tack_card_open_container.dart`
+- `.gitignore`
+- `.github/workflows/mobile-agent-testers.yml`
+- `UI_change.md`
+- `qa/mobile-agent-testers/TACK_BRIEF.md`
+- `qa/mobile-agent-testers/a11y.py`
+- `qa/mobile-agent-testers/personas.json`
+- `qa/mobile-agent-testers/run_matrix.ps1`
+- `qa/mobile-agent-testers/screen.py`
+- `qa/ui-diff/diff_runner.mjs`
+- `qa/ui-diff/package-lock.json`
+- `qa/ui-diff/package.json`
 
 ## Files Discussed / Referenced in Chat
 - `assets/images/onboarding/slide3_connected_ideas.jpg`

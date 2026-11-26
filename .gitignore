@@ -60,3 +60,7 @@ app.*.map.json
 
 # Rust build cache
 /rust/tack_core/target/
+
+# Local UI diff captures & QA node dependencies
+/.ui-diff/
+/qa/ui-diff/node_modules/
